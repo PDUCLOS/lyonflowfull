@@ -27,8 +27,13 @@ curl https://rclone.org/install.sh | sudo bash
 # 2. Setup Google Drive (OAuth interactif)
 rclone config
 # > New remote > name: gdrive > type: drive > scope: 1 (full) >
-# > root_folder_id: (optionnel) > service_account: blank > auto-config: Y
+# > root_folder_id: 1TO-4OwTlFr5s3v9-apu1MbA5jZ-yfNDR
+# > service_account: blank > auto-config: Y
 # > Suivre lien Google > copier token > OK
+#
+# Le root_folder_id correspond au folder dedie 'backups/lyonflow' cree par Patrice.
+# Avec ce root_folder_id, tous les chemins rclone sont relatifs a ce folder
+# (gdrive:2026-06-07_xxx.dump.gz.gpg au lieu de gdrive:backups/lyonflow/...).
 
 # 3. Tester
 echo "hello" | rclone rcat gdrive:backups/lyonflow/test.txt

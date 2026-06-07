@@ -18,9 +18,13 @@
 #
 # Usage :
 #   source .deploy.env
-#   GDRIVE_BACKUP_DEST=backups/lyonflow bash scripts/backup-offsite.sh
+#   GDRIVE_BACKUP_DEST=lyonflow bash scripts/backup-offsite.sh
 #   OU
 #   OFFSITE_SSH=user@backup.example.com:~/lyonflow bash scripts/backup-offsite.sh
+#
+# Folder Google Drive dedie : backups/lyonflow (ID: 1TO-4OwTlFr5s3v9-apu1MbA5jZ-yfNDR)
+# Configure rclone avec root_folder_id=1TO-4OwTlFr5s3v9-apu1MbA5jZ-yfNDR
+# pour que tous les chemins soient relatifs a ce folder.
 #
 # Cron : systemd timer lyonflow-backup.timer (deja en place Sprint VPS-2)
 # =============================================================================
