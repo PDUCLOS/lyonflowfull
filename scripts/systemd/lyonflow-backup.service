@@ -1,0 +1,37 @@
+# =============================================================================
+# systemd unit — lyonflow-backup.service (Sprint VPS-2)
+# =============================================================================
+# One-shot : exécuté par lyonflow-backup.timer tous les jours à 3h.
+# Lance ./scripts/backup.sh + push offsite (rsync).
+# =============================================================================
+
+[Unit]
+Description=LyonFlowFull backup (PostgreSQL + MinIO + offsite)
+Documentation=https://github.com/PDUCLOS/lyonflowfull
+After=docker.service
+
+[Service]
+Type=oneshot
+WorkingDirectory=/opt/lyonflow
+
+# Charge les secrets (POSTGRES_PASSWORD, etc.)
+EnvironmentFile=/opt/lyonflow/.env
+EnvironmentFile=-/opt/lyonflow/.deploy.env
+
+ExecStart=/opt/lyonflow/scripts/backup.sh
+ExecStartPost=/usr/bin/make -C /opt/lyonflow backup-offsite
+
+# Logs dans journalctl (visible via journalctl -u lyonflow-backup)
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=lyonflow-backup
+
+# Sécurité
+NoNewPrivileges=yes
+ProtectSystem=strict
+ReadWritePaths=/opt/lyonflow/backups
+ProtectHome=yes
+PrivateTmp=yes
+
+# Si le backup dure > 2h, considérer comme failed
+TimeoutStartSec=2h

@@ -2,9 +2,9 @@ name: CI LyonFlowFull
 
 on:
   push:
-    branches: [main, develop, "feature/**", "fix/**"]
+    branches: [main, develop, vps, "feature/**", "fix/**"]
   pull_request:
-    branches: [main, develop]
+    branches: [main, develop, vps]
 
 env:
   PYTHON_VERSION: "3.12"
@@ -141,6 +141,8 @@ jobs:
     name: Docker build
     runs-on: ubuntu-latest
     needs: [lint, test]
+    # Skip docker build on vps branch (no Dockerfile change needed, just deploy)
+    if: github.ref != 'refs/heads/vps'
     steps:
       - uses: actions/checkout@v4
 

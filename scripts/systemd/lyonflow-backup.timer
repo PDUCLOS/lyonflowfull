@@ -1,0 +1,21 @@
+# =============================================================================
+# systemd timer — lyonflow-backup.timer (Sprint VPS-2)
+# =============================================================================
+# Cron-like : déclenche lyonflow-backup.service tous les jours à 03:00.
+# Persistant : si le VPS était down à 03:00, ça lance au prochain boot.
+# =============================================================================
+
+[Unit]
+Description=LyonFlowFull daily backup (3h du matin)
+Documentation=https://github.com/PDUCLOS/lyonflowfull
+
+[Timer]
+# Tous les jours à 3h du matin
+OnCalendar=*-*-* 03:00:00
+# Si le VPS était down, lance au boot
+Persistent=true
+# Petit random delay (0-5min) pour éviter les spikes si plusieurs VPS
+RandomizedDelaySec=300
+
+[Install]
+WantedBy=timers.target

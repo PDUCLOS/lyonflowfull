@@ -1,0 +1,50 @@
+# =============================================================================
+# systemd unit — lyonflow.service (Sprint VPS-2)
+# =============================================================================
+# À copier sur le VPS dans /etc/systemd/system/lyonflow.service
+# Puis :
+#   sudo systemctl daemon-reload
+#   sudo systemctl enable lyonflow.service
+#   sudo systemctl start lyonflow.service
+#
+# Rôle : manager la stack docker-compose au boot du VPS, et la redémarrer
+# automatiquement en cas de crash. Évite de dépendre d'un process manuel.
+# =============================================================================
+
+[Unit]
+Description=LyonFlowFull stack (docker-compose)
+Documentation=https://github.com/PDUCLOS/lyonflowfull
+After=docker.service network-online.target
+Requires=docker.service network-online.target
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+WorkingDirectory=/opt/lyonflow
+
+# Charge .env et .deploy.env pour docker compose
+EnvironmentFile=/opt/lyonflow/.env
+EnvironmentFile=-/opt/lyonflow/.deploy.env
+
+ExecStart=/usr/bin/docker compose up -d --build
+ExecStop=/usr/bin/docker compose down
+ExecReload=/usr/bin/docker compose restart
+
+# Restart policy : si docker-compose crash, on restart
+Restart=on-failure
+RestartSec=30s
+
+# Limites ressources
+LimitNOFILE=65536
+MemoryMax=8G
+CPUQuota=400%
+
+# Sécurité
+NoNewPrivileges=yes
+ProtectSystem=strict
+ReadWritePaths=/opt/lyonflow
+ProtectHome=yes
+PrivateTmp=yes
+
+[Install]
+WantedBy=multi-user.target

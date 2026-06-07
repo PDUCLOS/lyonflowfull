@@ -55,6 +55,11 @@ extend-exclude = [
     "dist",
     ".eggs",
     "*.egg-info",
+    # Non-Python files (Makefile, nginx, shell scripts, systemd units)
+    "Makefile",
+    "nginx",
+    "scripts/systemd",
+    "scripts/*.sh",
 ]
 
 [tool.ruff.lint]
