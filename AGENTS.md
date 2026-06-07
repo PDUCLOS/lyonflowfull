@@ -5,36 +5,46 @@
 # du projet. À lire en premier par tout assistant IA.
 # =============================================================================
 
-# Phases du projet (état 2026-06-06)
+# Phases du projet (état 2026-06-07)
 # --------------------------------
 
-# PHASE 1 (en cours) — Production-ready LOCAL
-# - Tout le code doit fonctionner via `docker compose up -d --build`
-# - Le dashboard doit se lancer via `streamlit run dashboard/Accueil.py`
-# - Les 3 personas (usager, pro_tcl, elu) doivent naviguer
-# - Les 8 collecteurs Bronze, transforms Silver/Gold, ML XGBoost, FastAPI, RGPD
-# - Les 47 tests doivent passer (`pytest tests/`)
-# - DB local (docker) ou VPS PostgreSQL (51.83.159.224:5432)
+# PHASE 1 (livrée) — Production-ready LOCAL (branche `main`)
+# - Tout le code fonctionne via `docker compose up -d --build`
+# - Dashboard via `streamlit run dashboard/Accueil.py`
+# - 3 personas (usager, pro_tcl, elu) naviguent
+# - 8 collecteurs Bronze, transforms Silver/Gold, ML XGBoost, FastAPI, RGPD
+# - 47+ tests passent (`pytest tests/`)
 #
-# PHASE 2 (à venir — K8s dans un AUTRE répertoire) — NON ENCORE DÉMARRÉ
-# - Le user fournira un autre répertoire pour K8s
-# - Sera fait uniquement après validation Phase 1
-# - PAS dans ce repo
-# - kompose ou manifests custom
+# PHASE 2 (ACTIVE) — Déploiement VPS production (branche `vps`)
+# - Cible production unique : VPS 51.83.159.224
+# - Sprints VPS 1-4 livrés :
+#   * VPS-1 : TLS Let's Encrypt + healthcheck + hardening SSH/firewall
+#   * VPS-2 : systemd unit + backup timer + rollback + CI vps branch
+#   * VPS-3 : Prometheus + Alertmanager + Grafana + exporters (node, postgres, nginx, redis)
+#   * VPS-4 : métriques FastAPI custom (predictions, latency, personas, DAGs, MLflow, DB)
+# - Docs : docs/VPS_HARDENING.md, docs/MONITORING.md, docs/CONTROLE_VPS_VS_CLOUD_DEMO.md
 #
-# PHASE 3 (à venir — cloud démo Jedha) — après Phase 1 + Phase 2
-# - Déploiement sur cloud public (OVH, Scaleway, etc.)
-# - Pour certification Jedha RNCP 38777
+# PHASE 3 (dormante, futur AWS/GCP) — Kubernetes (branche `kubernetes`)
+# - NE PAS MERGER dans `vps` ni `main`
+# - Préparée pour EKS/GKE futur, pas de déploiement actif
+#
+# PHASE 4 (dormante, futur AWS/GCP) — Cloud démo Jedha (branche `cloud-demo`)
+# - NE PAS MERGER dans `vps` ni `main`
+# - Préparée pour POC cloud public ponctuel, pas active
 
-# Déploiement VPS
-# ---------------
+# Déploiement VPS (cible production unique)
+# -----------------------------------------
 # - VPS : 51.83.159.224 (Ubuntu, 6 CPU, 12 GB RAM, 100 GB SSD)
 # - SSH key : ~/.ssh/lyonflow_deploy
-# - DB : PostgreSQL 16 sur le VPS (conservera la base actuelle trafficlyon)
-# - Ancien projet trafficlyon en /opt/lyonflow/ — sera REMPLACÉ par LyonFlowFull
-#   MAIS en gardant la base PostgreSQL (les données sont OK)
+# - DB : PostgreSQL 16 sur le VPS (base actuelle conservée)
+# - Path déploiement : /opt/lyonflow/
+# - Reverse proxy : Nginx + TLS Let's Encrypt
+# - Process : systemd unit lyonflow.service
+# - Backup : timer systemd quotidien 03:00 → scripts/backup.sh
+# - Monitoring : docker-compose.monitoring.yml (Prometheus/Grafana/Alertmanager)
 # - NE PAS TOUCHER AU VPS tant que l'utilisateur n'a pas donné le feu vert
 # - Vérifier l'état du disque avant tout : df -h / (souvent à 100%)
+# - Commandes : make deploy-vps, make rollback-vps, make healthcheck-vps, make monitoring-up
 
 # Conventions de code
 # -------------------
@@ -57,22 +67,25 @@
 
 # Dette technique connue
 # -----------------------
-# - data binding : widgets Streamlit utilisent encore du mock data (src/data/mock/)
-#   Sprint 6+ = remplacer par requêtes DB réelles
-# - GNN : pas encore de training (seulement XGBoost)
+# - data binding : 41 widgets Streamlit utilisent encore du mock data
+#   (cf SPRINT_6_WIDGET_MIGRATION_CHECKLIST.md)
+# - GNN training : code livré, retrain Airflow planifié
 # - Composant React deck.gl : pas encore intégré
-# - Métriques Prometheus : pas en place
-# - Backup auto : pas en place
-# - K8s : pas en place (sera Phase 2)
 # - Tests E2E Playwright : pas en place
+#
+# Résolu en Phase 2 (vps) :
+# - Métriques Prometheus : OK (Sprint VPS-3 + VPS-4)
+# - Backup auto : OK (Sprint VPS-2, timer systemd)
+# - TLS production : OK (Sprint VPS-1, Let's Encrypt)
 
 # Règles strictes
 # ---------------
 # 1. Pas de push git sans accord explicite
 # 2. Pas de modif sur VPS sans accord explicite
-# 3. SQL paramétré PARTUT
+# 3. SQL paramétré PARTOUT
 # 4. Pas de credentials en dur
 # 5. Containers non-root
+# 6. Pas de merge `kubernetes` ou `cloud-demo` dans `vps` ou `main` (dormantes AWS/GCP)
 
 # Liens utiles
 # ------------

@@ -15,10 +15,13 @@ LyonFlowFull est une plateforme MLOps end-to-end de prédiction et d'analyse du 
 - Couche data complète (db_query + data_loader) — 6 widgets branchés DB
 - Migration 41 widgets restants documentée dans SPRINT_6_WIDGET_MIGRATION_CHECKLIST.md
 
-**Phases (état 2026-06-06)** :
-- ✅ Phase 1 — Production-ready local (ce repo, Sprints 1-7)
-- ⏸ Phase 2 — Kubernetes (autre répertoire, plan dans docs/K8S_MIGRATION_PLAN.md)
-- ⏸ Phase 3 — Cloud démo Jedha (plan dans docs/CLOUD_DEPLOY_OPTIONS.md)
+**Phases (état 2026-06-07)** :
+- ✅ Phase 1 — Production-ready local (branche `main`, Sprints 1-7)
+- ✅ **Phase 2 — Déploiement VPS production (branche `vps`, ACTIVE)** — Sprints VPS 1-4 : TLS Let's Encrypt, systemd, monitoring Prometheus + Grafana + Alertmanager, backup automatique, métriques FastAPI custom
+- ⏸ Phase 3 (futur, AWS/GCP) — Kubernetes (branche `kubernetes`, dormante)
+- ⏸ Phase 4 (futur, AWS/GCP) — Cloud démo Jedha (branche `cloud-demo`, dormante)
+
+**Cible production** : **VPS uniquement** (51.83.159.224). Les branches `kubernetes` et `cloud-demo` sont préparées pour un futur déploiement AWS/GCP mais NE SONT PAS MERGEES dans `vps` ni `main`.
 
 Voir [AGENTS.md](AGENTS.md) pour les conventions et la mémoire projet.
 
@@ -27,7 +30,8 @@ Voir [AGENTS.md](AGENTS.md) pour les conventions et la mémoire projet.
 ## Règles projet
 
 - **Pas de changement de repo/commit/push sans accord explicite de l'utilisateur**
-- Déploiement: **à définir** (décision en cours)
+- **Déploiement : VPS unique (51.83.159.224)** — branche `vps` = cible production
+- **Pas de merge `kubernetes` ni `cloud-demo` dans `vps` ou `main`** (dormantes, futur AWS/GCP)
 - Langue: français pour pipeline/docs, anglais pour code modèle
 - SQL paramétré partout, zéro f-string dans les requêtes
 
@@ -238,7 +242,44 @@ Visualisation sur carte Folium:
 
 ## Déploiement
 
-**À DÉFINIR** — décision en cours.
+**Cible production : VPS unique** — `51.83.159.224` (Ubuntu, 6 CPU, 12 GB RAM, 100 GB SSD).
+Branche `vps` = source de vérité du déploiement actif.
+
+### Stack VPS (branche `vps`)
+
+| Composant | Détail |
+|-----------|--------|
+| Reverse proxy | Nginx + TLS Let's Encrypt (Sprint VPS-1) |
+| Process supervisor | systemd unit `lyonflow.service` (Sprint VPS-2) |
+| Backup DB | systemd timer quotidien 03:00 → `scripts/backup.sh` (Sprint VPS-2) |
+| Rollback | `make rollback-vps` (Sprint VPS-2) |
+| Monitoring | Prometheus + Alertmanager + Grafana via `docker-compose.monitoring.yml` (Sprint VPS-3) |
+| Exporters | node, postgres, nginx, redis (Sprint VPS-3) |
+| Métriques custom | `src/api/metrics.py` — prédictions, latence, personas, DAGs, MLflow, DB (Sprint VPS-4) |
+| Stockage DB | `/opt/lyonflow/postgres_data` (volume Docker) |
+| Réseau | Ports internes sur 127.0.0.1 uniquement, Nginx seul exposé 80/443 |
+| Secrets | `.env` chmod 600, jamais en repo |
+
+### Commandes déploiement VPS
+
+```bash
+make check-deploy-env       # vérifie .deploy.env (chmod 600 + vars critiques)
+make deploy-vps             # rsync + restart systemd
+make healthcheck-vps        # ping /api/health + TLS check
+make rollback-vps           # rollback dernière release
+make monitoring-up          # stack Prometheus/Grafana/Alertmanager
+make tls-status             # statut cert Let's Encrypt
+```
+
+Docs détaillées :
+- [docs/VPS_HARDENING.md](docs/VPS_HARDENING.md) — durcissement SSH/firewall/users
+- [docs/MONITORING.md](docs/MONITORING.md) — Prometheus/Grafana/alertes
+- [docs/CONTROLE_VPS_VS_CLOUD_DEMO.md](docs/CONTROLE_VPS_VS_CLOUD_DEMO.md) — isolation vs branches dormantes
+
+### Branches dormantes (futur AWS/GCP, NE PAS MERGER)
+
+- `kubernetes` — Phase K8s complète (Kustomize + monitoring + GPU GNN). Cible : EKS / GKE futur.
+- `cloud-demo` — Phase démo Jedha (Scaleway Kapsule éphémère). Cible : POC cloud public ponctuel.
 
 ---
 

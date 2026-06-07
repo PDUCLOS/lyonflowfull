@@ -370,30 +370,55 @@ Tests actuels : 28 (persona UI) + 16 (intégration) + 3 (smoke) = **47 tests**.
 
 ## 9. Déploiement
 
+**Cible production unique : VPS** (`51.83.159.224`, Ubuntu 6 CPU / 12 GB RAM).
+Branche `vps` = source de vérité du déploiement actif.
+
 ### Déploiement local (Docker Compose)
 
 ```bash
 docker compose up -d --build
 ```
 
-### Déploiement sur VPS unique
+### Déploiement production VPS (branche `vps`)
 
-Voir [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md) pour le détail complet.
+Stack complète livrée via Sprints VPS 1-4 :
+- **VPS-1** TLS Let's Encrypt + healthcheck + hardening SSH/firewall
+- **VPS-2** systemd unit + backup timer + rollback automatique
+- **VPS-3** monitoring Prometheus + Alertmanager + Grafana + exporters
+- **VPS-4** métriques FastAPI custom (predictions, latency, personas)
 
 ```bash
-# Sur le VPS, après configuration SSH
-ssh deploy@vps
-cd /opt/lyonflow
-git pull
-docker compose up -d --build
-docker compose exec postgres psql -U lyonflow lyonflow < deploy/init-db.sql
+# Pré-flight (vérifie .deploy.env chmod 600 + vars critiques)
+make check-deploy-env
+
+# Déploiement initial
+make deploy-vps              # rsync + restart systemd
+make certbot-init            # cert TLS Let's Encrypt
+make monitoring-up           # stack Prometheus/Grafana
+
+# Opérations courantes
+make healthcheck-vps         # ping /api/health + TLS check
+make rollback-vps            # rollback dernière release
+make backup                  # backup DB manuel (timer auto 03:00)
+make tls-status              # statut cert Let's Encrypt
+make monitoring-logs         # logs stack monitoring
 ```
 
-### Migration vers Kubernetes (à venir — Sprint 6+)
+Docs :
+- [docs/VPS_HARDENING.md](docs/VPS_HARDENING.md) — durcissement (SSH, firewall, fail2ban, users)
+- [docs/MONITORING.md](docs/MONITORING.md) — Prometheus + Grafana + alertes
+- [docs/CONTROLE_VPS_VS_CLOUD_DEMO.md](docs/CONTROLE_VPS_VS_CLOUD_DEMO.md) — isolation vs autres branches
 
-Quand le projet le justifiera, un déploiement K8s est prévu dans un
-répertoire dédié. Le docker-compose actuel est compatible K8s via
-`kompose` ou migration manuelle des services.
+### Branches dormantes (futur AWS/GCP — ne pas merger)
+
+Le projet n'utilise QUE le VPS. Les branches suivantes sont préparées
+pour un éventuel déploiement cloud public, mais **ne doivent pas être
+mergées dans `vps` ni `main`** :
+
+| Branche | État | Cible future |
+|---------|------|--------------|
+| `kubernetes` | dormante | EKS / GKE |
+| `cloud-demo` | dormante | POC Scaleway / AWS ponctuel |
 
 ---
 

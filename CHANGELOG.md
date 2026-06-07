@@ -5,7 +5,62 @@ Toutes les modifications notables de ce projet sont documentées ici.
 Le format suit [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/),
 et ce projet adhère au [Semantic Versioning](https://semver.org/lang/fr/).
 
-## [0.5.0-rc1] - 2026-06-07 — Phase 3 Cloud demo Jedha (branche `cloud-demo`)
+## [0.6.0] - 2026-06-07 — VPS production (branche `vps`, ACTIVE)
+
+**Décision déploiement : VPS unique.** Branche `vps` = source de vérité du
+déploiement actif. Les branches `kubernetes` et `cloud-demo` restent dormantes,
+préparées pour un futur déploiement AWS/GCP, **non mergées dans `vps` ou `main`**.
+
+### Sprint VPS-1 — TLS + hardening
+
+- **TLS Let's Encrypt** via certbot (`make certbot-init`, `make certbot-renew`)
+- **nginx/ssl.conf** : HSTS, ciphers modernes, OCSP stapling
+- **scripts/check-deploy-env.sh** : vérifie `.deploy.env` chmod 600 + vars critiques
+- **docs/VPS_HARDENING.md** : SSH key-only, ufw firewall, fail2ban, users dédiés
+- **make healthcheck-vps**, **make tls-status**
+
+### Sprint VPS-2 — systemd + backup + rollback
+
+- **scripts/systemd/lyonflow.service** : process supervisor
+- **scripts/systemd/lyonflow-backup.timer** + `.service` : backup quotidien 03:00
+- **scripts/backup.sh** + **scripts/restore.sh** : pg_dump compressed + rétention 30j
+- **make rollback-vps** : rollback automatique dernière release
+- **make tag-vps** : tag versionné déploiements
+- CI `.github/workflows/ci.yml` : branche `vps` ajoutée
+
+### Sprint VPS-3 — monitoring Prometheus / Grafana / Alertmanager
+
+- **docker-compose.monitoring.yml** : Prometheus, Alertmanager, Grafana,
+  node-exporter, postgres-exporter, nginx-exporter, redis-exporter
+- **monitoring/prometheus/prometheus.yml** : scrape 15s, rétention 30j
+- **monitoring/prometheus/rules/** : alertes api.yml, database.yml, system.yml
+- **monitoring/alertmanager/alertmanager.yml** : webhook Discord/Slack
+- **monitoring/grafana/dashboards/** : lyonflow-overview.json + lyonflow-business.json
+- **nginx stub_status** sur localhost+Docker networks pour nginx-exporter
+- **docs/MONITORING.md** : guide complet
+- **make monitoring-up/down/status/logs**
+
+### Sprint VPS-4 — métriques FastAPI custom
+
+- **src/api/metrics.py** : Counter/Histogram/Gauge custom
+  - `lyonflow_predictions_total` (model, horizon, status)
+  - `lyonflow_prediction_latency_seconds` (model)
+  - `lyonflow_persona_requests_total` (persona, endpoint)
+  - `lyonflow_dag_runs_total` (dag_id, state)
+  - `lyonflow_mlflow_active_runs` (experiment_name)
+  - `lyonflow_db_query_duration_seconds` (query_type)
+- **prometheus_fastapi_instrumentator** : expose `/metrics` standard FastAPI
+  (http_requests_total, http_request_duration_seconds, process_*)
+- Instrumentation `/api/v1/predict/traffic` + `/api/v1/predict/velov`
+
+### Audit isolation
+
+- **docs/CONTROLE_VPS_VS_CLOUD_DEMO.md** : matrice 3 contextes (VPS / K8s / cloud-demo)
+  - Isolation physique VPS ↔ cloud-demo (cluster Scaleway séparé)
+  - Isolation logique VPS ↔ K8s (namespace + NetworkPolicy)
+  - Garde-fous PostgreSQL prod (volume `/opt/lyonflow/postgres_data`)
+
+## [0.5.0-rc1] - 2026-06-07 — Phase 3 Cloud demo Jedha (branche `cloud-demo`, DORMANTE)
 
 ### Ajouté
 - **Terraform Scaleway Kapsule** ephemere (control plane + 2 pools POP2)
@@ -15,7 +70,7 @@ et ce projet adhère au [Semantic Versioning](https://semver.org/lang/fr/).
 - **DEMO_SCRIPT.md** : minute par minute 20 min + parade pannes
 - Cout estime : ~0,40 €/h, ~2 € pour 3 repetitions + jour J
 
-## [0.4.0] - 2026-06-07 — Phase 2 Kubernetes complete (branche `kubernetes`)
+## [0.4.0] - 2026-06-07 — Phase 2 Kubernetes complete (branche `kubernetes`, DORMANTE)
 
 ### Ajouté
 - **Kustomize base + overlays** (dev/prod) : 8 services manifests
@@ -104,6 +159,7 @@ et ce projet adhère au [Semantic Versioning](https://semver.org/lang/fr/).
 - Sélecteur de persona dans la sidebar
 
 ### Notes
-- Phase 2 (Kubernetes) livree dans branche `kubernetes` (0.4.0)
-- Phase 3 (cloud demo Jedha) livree dans branche `cloud-demo` (0.5.0-rc1)
+- **Déploiement production actif** : VPS (branche `vps`, 0.6.0)
+- Branche `kubernetes` (0.4.0) : DORMANTE, préparée AWS/GCP futur
+- Branche `cloud-demo` (0.5.0-rc1) : DORMANTE, POC cloud ponctuel futur
 - VPS replacement : garder PostgreSQL, remplacer le reste
