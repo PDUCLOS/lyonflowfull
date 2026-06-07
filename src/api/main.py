@@ -22,8 +22,13 @@ import bcrypt
 import jwt
 from fastapi import Depends, FastAPI, Header, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
+from prometheus_fastapi_instrumentator import Instrumentator
 from pydantic import BaseModel, Field
 
+from src.api.metrics import (
+    PREDICTION_LATENCY,
+    PREDICTIONS_TOTAL,
+)
 from src.api.middleware.rate_limit import RateLimitMiddleware
 from src.config import get_settings, validate_settings
 from src.db import execute_query, test_connection
@@ -68,6 +73,18 @@ app.add_middleware(
 
 # Rate limit (en mémoire — Redis en prod)
 app.add_middleware(RateLimitMiddleware)
+
+# Prometheus instrumentation (Sprint VPS-4) — expose /metrics
+# - http_requests_total{job="fastapi",method,handler,status}
+# - http_request_duration_seconds histogram
+# - process_* metrics (CPU, RAM, fds)
+Instrumentator(
+    should_group_status_codes=True,
+    should_ignore_untemplated=True,
+    excluded_handlers=["/health", "/metrics"],
+    inprogress_name="lyonflow_http_inprogress",
+    inprogress_labels=True,
+).instrument(app).expose(app, endpoint="/metrics", include_in_schema=False)
 
 
 # -----------------------------------------------------------------------------
@@ -285,16 +302,23 @@ async def list_models(api_key: None = Depends(verify_api_key)):
 @app.post("/api/v1/predict/traffic", response_model=PredictTrafficResponse, tags=["predict"])
 async def predict_traffic(req: PredictTrafficRequest, api_key: None = Depends(verify_api_key)):
     """Prédit la vitesse trafic pour un nœud et un horizon."""
-    # Placeholder — appel MLflow en prod
-    # from src.models.xgboost_speed import predict_one
-    # prediction = predict_one(req.node_idx, req.horizon_minutes)
-    prediction = {
-        "predicted_speed_kmh": 28.4,
-        "confidence_low": 24.0,
-        "confidence_high": 32.0,
-        "model_name": "xgboost_speed",
-        "model_version": "1.2.0",
-    }
+    # Sprint VPS-4 : métriques ML
+    with PREDICTION_LATENCY.labels(model="xgboost_speed").time():
+        # Placeholder — appel MLflow en prod
+        # from src.models.xgboost_speed import predict_one
+        # prediction = predict_one(req.node_idx, req.horizon_minutes)
+        prediction = {
+            "predicted_speed_kmh": 28.4,
+            "confidence_low": 24.0,
+            "confidence_high": 32.0,
+            "model_name": "xgboost_speed",
+            "model_version": "1.2.0",
+        }
+    PREDICTIONS_TOTAL.labels(
+        model="xgboost_speed",
+        horizon_minutes=str(req.horizon_minutes),
+        status="success",
+    ).inc()
     log_audit(
         actor="api",
         action="predict_traffic",
@@ -313,10 +337,18 @@ async def predict_traffic(req: PredictTrafficRequest, api_key: None = Depends(ve
 @app.post("/api/v1/predict/velov", response_model=PredictVelovResponse, tags=["predict"])
 async def predict_velov(req: PredictVelovRequest, api_key: None = Depends(verify_api_key)):
     """Prédit la disponibilité Vélov pour une station et un horizon."""
+    # Sprint VPS-4 : métriques ML
+    with PREDICTION_LATENCY.labels(model="xgboost_velov").time():
+        predicted = 8.0
+    PREDICTIONS_TOTAL.labels(
+        model="xgboost_velov",
+        horizon_minutes=str(req.horizon_minutes),
+        status="success",
+    ).inc()
     return PredictVelovResponse(
         station_id=req.station_id,
         horizon_minutes=req.horizon_minutes,
-        predicted_bikes=8.0,
+        predicted_bikes=predicted,
         actual_bikes=None,
         model_name="xgboost_velov",
         prediction_timestamp=datetime.now().isoformat(),
