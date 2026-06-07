@@ -2,7 +2,7 @@
 # LyonFlowFull — AGENTS.md (mémoire projet pour assistants IA)
 # =============================================================================
 # Ce fichier est la source de vérité sur les décisions de phase et conventions
-# du projet. À lire en premier par tout assistant (Claude Code, Mavis, etc.)
+# du projet. À lire en premier par tout assistant IA.
 # =============================================================================
 
 # Phases du projet (état 2026-06-06)

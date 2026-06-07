@@ -361,4 +361,4 @@ réels. 1 semaine de Sprint 7 = hardening. 1 semaine optionnelle = GNN.
 
 ---
 
-*Document rédigé le 2026-06-06 par Mavis. Source : audits précédents (config/infra/CI/DAGs/src/tests/SQL + dashboard interface) + revue architecture pipeline.*
+*Document rédigé le 2026-06-06 (PDUCLOS). Source : audits précédents (config/infra/CI/DAGs/src/tests/SQL + dashboard interface) + revue architecture pipeline.*
