@@ -1,0 +1,54 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: lyonflow
+
+# Reutilise la base K8s de la branche kubernetes
+resources:
+  - ../../../kubernetes/base
+
+patches:
+  - path: patches/replicas-demo.yaml
+    target:
+      kind: Deployment
+      name: fastapi
+  - path: patches/replicas-demo.yaml
+    target:
+      kind: Deployment
+      name: streamlit
+  - path: patches/postgres-demo.yaml
+    target:
+      kind: StatefulSet
+      name: postgres
+  - path: patches/ingress-fastapi-demo.yaml
+    target:
+      kind: Ingress
+      name: fastapi
+  - path: patches/ingress-streamlit-demo.yaml
+    target:
+      kind: Ingress
+      name: streamlit
+  # GNN trainer desactive pour la demo (pas de GPU sur pool POP2 par defaut)
+  - patch: |-
+      $patch: delete
+      apiVersion: batch/v1
+      kind: CronJob
+      metadata:
+        name: gnn-retrain
+
+configMapGenerator:
+  - name: postgres-init
+    behavior: replace
+    files:
+      - init-db.sql=../../../deploy/init-db.sql
+  - name: lyonflow-config
+    behavior: merge
+    literals:
+      - ENV=demo
+      - LOG_LEVEL=INFO
+      - DEMO_MODE=true
+      - DEMO_SEED_DAYS=7
+
+commonAnnotations:
+  app.kubernetes.io/environment: demo-jedha
+  app.kubernetes.io/lifecycle: ephemeral

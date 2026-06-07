@@ -1,0 +1,31 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: lyonflow
+
+resources:
+  - ../../base
+
+patches:
+  - path: patches/postgres-prod.yaml
+    target:
+      kind: StatefulSet
+      name: postgres
+  - path: patches/hpa-prod.yaml
+    target:
+      kind: HorizontalPodAutoscaler
+      name: fastapi
+
+configMapGenerator:
+  - name: postgres-init
+    behavior: replace
+    files:
+      - init-db.sql=../../../deploy/init-db.sql
+  - name: lyonflow-config
+    behavior: merge
+    literals:
+      - ENV=prod
+      - LOG_LEVEL=INFO
+
+commonAnnotations:
+  app.kubernetes.io/environment: prod

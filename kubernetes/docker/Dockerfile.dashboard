@@ -1,0 +1,53 @@
+# LyonFlowFull — image Streamlit dashboard (production)
+# Build : docker buildx build -f kubernetes/docker/Dockerfile.dashboard \
+#           -t ghcr.io/pduclos/lyonflowfull-dashboard:$(git rev-parse --short HEAD) \
+#           --platform linux/amd64,linux/arm64 --push .
+
+ARG PYTHON_VERSION=3.11
+
+FROM python:${PYTHON_VERSION}-slim AS base
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
+    PIP_NO_CACHE_DIR=1 \
+    PIP_DISABLE_PIP_VERSION_CHECK=1
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+      libpq5 ca-certificates curl \
+      libpangoft2-1.0-0 libcairo2 libgdk-pixbuf2.0-0 libffi8 \
+    && rm -rf /var/lib/apt/lists/*
+
+RUN groupadd -g 1000 app && useradd -u 1000 -g 1000 -ms /bin/bash app
+
+FROM base AS builder
+RUN apt-get update && apt-get install -y --no-install-recommends \
+      gcc libpq-dev build-essential \
+    && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /build
+COPY requirements.txt ./
+RUN pip install --user --no-cache-dir -r requirements.txt
+
+FROM base AS runtime
+WORKDIR /app
+USER app
+
+COPY --from=builder --chown=app:app /root/.local /home/app/.local
+ENV PATH=/home/app/.local/bin:$PATH \
+    PYTHONPATH=/app \
+    STREAMLIT_SERVER_HEADLESS=true \
+    STREAMLIT_BROWSER_GATHER_USAGE_STATS=false
+
+COPY --chown=app:app dashboard/ ./dashboard/
+COPY --chown=app:app src/ ./src/
+COPY --chown=app:app config/ ./config/
+COPY --chown=app:app .streamlit/ ./.streamlit/
+
+EXPOSE 8501
+
+HEALTHCHECK --interval=30s --timeout=5s --start-period=20s --retries=3 \
+  CMD curl -fsSL http://127.0.0.1:8501/_stcore/health || exit 1
+
+CMD ["streamlit", "run", "dashboard/Accueil.py", \
+     "--server.port=8501", "--server.address=0.0.0.0", \
+     "--server.headless=true", \
+     "--server.enableCORS=false", "--server.enableXsrfProtection=true"]

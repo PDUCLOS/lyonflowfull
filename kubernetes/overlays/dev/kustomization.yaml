@@ -1,0 +1,52 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: lyonflow
+
+resources:
+  - ../../base
+
+patches:
+  - path: patches/replicas-dev.yaml
+    target:
+      kind: Deployment
+      name: fastapi
+  - path: patches/replicas-dev.yaml
+    target:
+      kind: Deployment
+      name: streamlit
+  - path: patches/hpa-dev.yaml
+    target:
+      kind: HorizontalPodAutoscaler
+      name: fastapi
+  - path: patches/hpa-dev.yaml
+    target:
+      kind: HorizontalPodAutoscaler
+      name: streamlit
+  - path: patches/postgres-dev.yaml
+    target:
+      kind: StatefulSet
+      name: postgres
+  - path: patches/ingress-dev.yaml
+    target:
+      kind: Ingress
+      name: fastapi
+  - path: patches/ingress-streamlit-dev.yaml
+    target:
+      kind: Ingress
+      name: streamlit
+
+# ConfigMap init Postgres (réel, depuis deploy/init-db.sql du projet)
+configMapGenerator:
+  - name: postgres-init
+    behavior: replace
+    files:
+      - init-db.sql=../../../deploy/init-db.sql
+  - name: lyonflow-config
+    behavior: merge
+    literals:
+      - ENV=dev
+      - LOG_LEVEL=DEBUG
+
+commonAnnotations:
+  app.kubernetes.io/environment: dev

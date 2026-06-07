@@ -1,0 +1,47 @@
+# LyonFlowFull — image GNN trainer (CUDA + torch geometric)
+# Build : docker buildx build -f kubernetes/docker/Dockerfile.gnn \
+#           -t ghcr.io/pduclos/lyonflowfull-gnn:latest \
+#           --platform linux/amd64 --push .
+#
+# Base CUDA 12.1 + cuDNN8 + Python 3.11. Compatible avec NVIDIA T4 / A10.
+
+FROM nvidia/cuda:12.1.1-cudnn8-runtime-ubuntu22.04
+
+ENV DEBIAN_FRONTEND=noninteractive \
+    PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
+    PIP_NO_CACHE_DIR=1
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+      python3.11 python3.11-venv python3-pip \
+      libpq5 libpq-dev gcc build-essential \
+      ca-certificates curl git \
+    && rm -rf /var/lib/apt/lists/* \
+    && update-alternatives --install /usr/bin/python python /usr/bin/python3.11 1
+
+RUN groupadd -g 1000 app && useradd -u 1000 -g 1000 -ms /bin/bash app
+
+WORKDIR /app
+
+# torch + geometric versions alignees CUDA 12.1
+RUN pip install --no-cache-dir \
+      torch==2.3.1 --index-url https://download.pytorch.org/whl/cu121
+RUN pip install --no-cache-dir \
+      torch-geometric==2.5.3 \
+      torch-scatter torch-sparse torch-cluster torch-spline-conv \
+      -f https://data.pyg.org/whl/torch-2.3.1+cu121.html
+
+COPY requirements.txt /tmp/lyonflow-requirements.txt
+RUN pip install --no-cache-dir -r /tmp/lyonflow-requirements.txt
+
+COPY --chown=app:app src/ ./src/
+COPY --chown=app:app training/ ./training/
+
+USER app
+ENV PYTHONPATH=/app
+
+# Verif CUDA dispo au boot (echec rapide si pas de GPU)
+ENTRYPOINT ["bash", "-c", \
+  "python -c 'import torch; assert torch.cuda.is_available(), \"CUDA introuvable\"; print(f\"CUDA {torch.version.cuda}, GPU {torch.cuda.get_device_name(0)}\")' && exec \"$@\"", "--"]
+
+CMD ["python", "-m", "training.stgcn.train_cli", "--help"]
