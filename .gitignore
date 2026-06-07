@@ -97,3 +97,13 @@ kubernetes/.sealed-secrets/
 kubernetes/base/secrets/sealed-secret.yaml
 kubernetes/.env
 kubernetes/backups/
+
+# cloud-demo — secrets et state Terraform
+cloud-demo/.env
+cloud-demo/kubeconfig
+cloud-demo/overlays/jedha-demo/sealed-secret.yaml
+cloud-demo/terraform/.terraform/
+cloud-demo/terraform/.terraform.lock.hcl
+cloud-demo/terraform/terraform.tfstate*
+cloud-demo/terraform/*.tfvars
+cloud-demo/dumps/
