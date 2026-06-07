@@ -182,8 +182,19 @@ healthcheck-vps:  ## Healthcheck post-deploy (HTTP + DB + nginx)
 deploy-vps: check-deploy-env  ## Déploie sur le VPS (Sprint VPS-1+VPS-2 : tag + rsync + healthcheck)
 	@echo "==[ Tag version deploy ]=="
 	@$(MAKE) tag-vps
-	@echo "==[ Rsync code ]=="
-	rsync -avz --exclude='.git' --exclude='.env' --exclude='.deploy.env' --exclude='uploads/' \
+	@echo "==[ Rsync code (exclude data dirs pour preserver state VPS) ]=="
+	rsync -avz \
+	      --exclude='.git' \
+	      --exclude='.env' \
+	      --exclude='.deploy.env' \
+	      --exclude='uploads/' \
+	      --exclude='backups/' \
+	      --exclude='postgres_data/' \
+	      --exclude='minio_data/' \
+	      --exclude='airflow_data/' \
+	      --exclude='mlflow_data/' \
+	      --exclude='grafana_data/' \
+	      --exclude='prometheus_data/' \
 	      -e "ssh -i $(SSH_KEY)" \
 	      ./ $(VPS_HOST):/opt/lyonflow/
 	@echo "==[ Restart stack ]=="
