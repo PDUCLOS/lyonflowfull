@@ -5,7 +5,74 @@ Toutes les modifications notables de ce projet sont documentées ici.
 Le format suit [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/),
 et ce projet adhère au [Semantic Versioning](https://semver.org/lang/fr/).
 
-## [0.1.0] - 2026-06-06
+## [0.5.0-rc1] - 2026-06-07 — Phase 3 Cloud demo Jedha (branche `cloud-demo`)
+
+### Ajouté
+- **Terraform Scaleway Kapsule** ephemere (control plane + 2 pools POP2)
+- **Overlay `jedha-demo`** extends `kubernetes/base` (1 replica, hosts demo)
+- **Scripts** `spin-up.sh` / `tear-down.sh` / `seed-demo-data.sh`
+- **Docs soutenance** `SOUTENANCE_RNCP_38777.md` (pitch + Q&A + URLs)
+- **DEMO_SCRIPT.md** : minute par minute 20 min + parade pannes
+- Cout estime : ~0,40 €/h, ~2 € pour 3 repetitions + jour J
+
+## [0.4.0] - 2026-06-07 — Phase 2 Kubernetes complete (branche `kubernetes`)
+
+### Ajouté
+- **Kustomize base + overlays** (dev/prod) : 8 services manifests
+- **Postgres StatefulSet** PostGIS 16 + PVC + backup CronJob daily
+- **FastAPI/Streamlit** Deployment + HPA + Ingress TLS + PDB
+- **Airflow Helm values** KubernetesExecutor + git-sync DAGs
+- **Monitoring** kube-prometheus-stack + ServiceMonitor + 9 alertes
+- **GNN trainer CronJob** nodeSelector GPU + tolerations + PVC weights
+- **4 Dockerfiles** (api, dashboard, airflow, gnn CUDA 12.1)
+- **CI workflow** `k8s-images.yml` buildx multi-arch + ghcr push + Trivy
+- **Tests de charge** k6 (100 VU API) + Locust (Streamlit sessions)
+- **Migration script** VPS→K8s avec checksums MD5 gold tables
+- **Documentation** DEPLOY.md, RUNBOOK.md, DECOMMISSION.md
+
+## [0.3.1] - 2026-06-07 — Fix pipeline (branche `main` + `vps`)
+
+### Corrige
+- **is_vacances/is_ferie** : 2 fonctions PL/pgSQL `_is_vacances(date)` /
+  `_is_ferie(date)` enrichissent depuis bronze.calendrier_scolaire /
+  bronze.jours_feries. Avant : valeur hardcodee `FALSE`.
+- **N+1 SQL silver_to_gold.py** : remplace boucle Python 4 sous-queries
+  par `INSERT...SELECT` avec window LAG/AVG + LATERAL meteo + JOIN
+  spatial. Speedup x100 estime sur 1000 capteurs.
+- **Doublon `src/ingestion/collectors.py`** : supprime (meme contenu
+  que `__init__.py`).
+
+### Change
+- `src/ingestion/__init__.py` expose **classes** (lazy) au lieu d'instances
+  pre-construites. Nouveaux : `REALTIME_COLLECTORS`, `MONTHLY_COLLECTORS`,
+  `ALL_COLLECTOR_CLASSES`.
+- DAGs `collect_bronze.py`, `collect_calendriers_monthly.py` : boucle
+  `for cls in COLLECTORS` au lieu d'instanciation hardcodee.
+- DAG `transform_silver_to_gold.py` : 3 fonctions Python nommees au
+  lieu de lambdas (XCom serialisation propre).
+
+### Conserve
+- MinIO path dans `src/ingestion/base.py` (deprecated mais opt-in).
+
+## [0.3.0] - 2026-06-06 — Phase 1 production-ready local (branche `main`)
+
+### Sprint 7 — GNN training
+
+#### Ajouté
+- **SpatioTemporalGCN** PyTorch Geometric (`training/stgcn/model.py`)
+- **STGCNDataset** + **STGCNTrainer** + **STGCNWrapper** production
+- DAG Airflow `retrain_gnn.py` (daily 03h sur GPU)
+- 19 tests (12 OK sans torch, 6 skip, 1 skip cuda.is_available)
+
+### Sprint 6 — Couche data offline-first
+
+#### Ajouté
+- `src/data/db_query.py` (~480L) : helpers SQL parametres typeSafe
+- `src/data/data_loader.py` (~280L) : cache + retry + fallback mock
+- 6 widgets migres vers DB (sur 47, voir `SPRINT_6_WIDGET_MIGRATION_CHECKLIST.md`)
+- Page RGPD live + 42 nouveaux tests
+
+## [0.1.0] - 2026-06-06 — Sprint 5
 
 ### Sprint 5 — Production-ready local
 
@@ -37,6 +104,6 @@ et ce projet adhère au [Semantic Versioning](https://semver.org/lang/fr/).
 - Sélecteur de persona dans la sidebar
 
 ### Notes
-- Phase 2 (Kubernetes) à venir dans un autre répertoire
-- Phase 3 (cloud démo Jedha) après Phase 1+2
+- Phase 2 (Kubernetes) livree dans branche `kubernetes` (0.4.0)
+- Phase 3 (cloud demo Jedha) livree dans branche `cloud-demo` (0.5.0-rc1)
 - VPS replacement : garder PostgreSQL, remplacer le reste
