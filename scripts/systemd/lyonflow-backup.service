@@ -18,8 +18,7 @@ WorkingDirectory=/opt/lyonflow
 EnvironmentFile=/opt/lyonflow/.env
 EnvironmentFile=-/opt/lyonflow/.deploy.env
 
-ExecStart=/opt/lyonflow/scripts/backup.sh
-ExecStartPost=/usr/bin/make -C /opt/lyonflow backup-offsite
+ExecStart=/opt/lyonflow/scripts/backup-offsite.sh
 
 # Logs dans journalctl (visible via journalctl -u lyonflow-backup)
 StandardOutput=journal

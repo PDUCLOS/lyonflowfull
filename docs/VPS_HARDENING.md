@@ -10,6 +10,46 @@
 Ce document décrit les étapes de durcissement du VPS (51.83.159.224) après
 le premier déploiement. À exécuter **une seule fois** (idempotent).
 
+## 0. 🔴 Règle backup OFFSITE (AVANT TOUT)
+
+**JAMAIS de backup persistant sur le VPS.** Le VPS est full à 100%
+(96G/96G, 583M libre). Tout backup local est impossible ET interdit.
+
+Le backup va **directement offsite** via `scripts/backup-offsite.sh` :
+- Stream `pg_dump | gzip | gpg | rclone rcat gdrive:...` (rien sur disque VPS)
+- OU ssh vers serveur backup privé (`OFFSITE_SSH=user@host:path`)
+
+Setup one-time sur le VPS :
+```bash
+# 1. Installer rclone
+curl https://rclone.org/install.sh | sudo bash
+
+# 2. Setup Google Drive (OAuth interactif)
+rclone config
+# > New remote > name: gdrive > type: drive > scope: 1 (full) >
+# > root_folder_id: (optionnel) > service_account: blank > auto-config: Y
+# > Suivre lien Google > copier token > OK
+
+# 3. Tester
+echo "hello" | rclone rcat gdrive:backups/lyonflow/test.txt
+rclone ls gdrive:backups/lyonflow/  # doit afficher test.txt
+
+# 4. Premier backup
+ssh -i ~/.ssh/lyonflow_deploy ubuntu@51.83.159.224 \
+  'GDRIVE_BACKUP_DEST=backups/lyonflow bash /opt/lyonflow/scripts/backup-offsite.sh'
+```
+
+Cron déjà en place via `lyonflow-backup.timer` (Sprint VPS-2) —
+configurer le `.service` pour appeler `backup-offsite.sh` au lieu de
+`backup.sh` (voir `scripts/systemd/lyonflow-backup.service`).
+
+**Cleanup immédiat** : supprimer les 476M de backups déjà sur le VPS
+(avant la nouvelle règle) :
+```bash
+ssh -i ~/.ssh/lyonflow_deploy ubuntu@51.83.159.224 \
+  'sudo rm -rf /opt/lyonflow/backups/* && echo OK'
+```
+
 ## 1. Firewall UFW (Uncomplicated Firewall)
 
 ```bash

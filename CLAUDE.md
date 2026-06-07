@@ -32,6 +32,7 @@ Voir [AGENTS.md](AGENTS.md) pour les conventions et la mémoire projet.
 - **Pas de changement de repo/commit/push sans accord explicite de l'utilisateur**
 - **Déploiement : VPS unique (51.83.159.224)** — branche `vps` = cible production
 - **Pas de merge `kubernetes` ni `cloud-demo` dans `vps` ou `main`** (dormantes, futur AWS/GCP)
+- **🔴 BACKUP OFFSITE OBLIGATOIRE** — JAMAIS de backup persistant sur le VPS (full à 100%, 583M libre sur 96G). Toujours offsite via `scripts/backup-offsite.sh` (Google Drive via rclone OU serveur SSH). Stream pur, rien d'écrit sur le disque VPS.
 - Langue: français pour pipeline/docs, anglais pour code modèle
 - SQL paramétré partout, zéro f-string dans les requêtes
 
