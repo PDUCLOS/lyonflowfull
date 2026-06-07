@@ -1,0 +1,82 @@
+# CronJob retrain ST-GRU-GNN (daily 03h UTC, sur GPU si dispo).
+#
+# nodeSelector + toleration pour cibler un node pool GPU (Scaleway G5 ou
+# equivalent). Si le node pool n'existe pas, le pod reste Pending — c'est
+# explicite et facile a diagnostiquer (kubectl describe pod).
+#
+# Si l'overlay n'a pas de GPU (dev), patcher pour retirer le selector
+# et fallback CPU torch (training plus lent mais fonctionnel).
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: gnn-retrain
+  labels:
+    app.kubernetes.io/name: gnn-trainer
+    app.kubernetes.io/component: ml-training
+spec:
+  schedule: "0 3 * * *"           # quotidien 03h UTC
+  successfulJobsHistoryLimit: 3
+  failedJobsHistoryLimit: 3
+  concurrencyPolicy: Forbid
+  jobTemplate:
+    spec:
+      backoffLimit: 1
+      ttlSecondsAfterFinished: 86400
+      template:
+        spec:
+          restartPolicy: Never
+          nodeSelector:
+            nvidia.com/gpu.present: "true"
+          tolerations:
+            - key: nvidia.com/gpu
+              operator: Exists
+              effect: NoSchedule
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 1000
+            fsGroup: 1000
+          containers:
+            - name: trainer
+              image: ghcr.io/pduclos/lyonflowfull-gnn:latest
+              imagePullPolicy: IfNotPresent
+              command:
+                - python
+                - -m
+                - training.stgcn.train_cli
+                - --epochs=80
+                - --batch-size=8
+                - --output-dir=/models
+                - --mlflow-experiment=stgcn-prod
+              envFrom:
+                - configMapRef:
+                    name: lyonflow-config
+              env:
+                - name: POSTGRES_PASSWORD
+                  valueFrom:
+                    secretKeyRef:
+                      name: lyonflow-secrets
+                      key: POSTGRES_PASSWORD
+                - name: MLFLOW_TRACKING_URI
+                  value: "http://mlflow.lyonflow.svc:5000"
+                - name: CUDA_VISIBLE_DEVICES
+                  value: "0"
+              resources:
+                requests:
+                  cpu: "4"
+                  memory: 16Gi
+                  nvidia.com/gpu: 1
+                limits:
+                  cpu: "8"
+                  memory: 32Gi
+                  nvidia.com/gpu: 1
+              volumeMounts:
+                - name: models
+                  mountPath: /models
+              securityContext:
+                allowPrivilegeEscalation: false
+                capabilities:
+                  drop: ["ALL"]
+          volumes:
+            - name: models
+              persistentVolumeClaim:
+                claimName: gnn-models

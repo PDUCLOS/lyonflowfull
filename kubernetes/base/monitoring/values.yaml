@@ -1,0 +1,146 @@
+## kube-prometheus-stack — values LyonFlowFull
+## helm upgrade --install kps prometheus-community/kube-prometheus-stack -n monitoring -f values.yaml
+
+fullnameOverride: kps
+
+defaultRules:
+  create: true
+  rules:
+    etcd: false                # Pas accessible sur K8s managé
+    kubeApiserverAvailability: true
+    kubeApiserverBurnrate: true
+    kubeApiserverHistogram: true
+    kubeApiserverSlos: true
+    kubeControllerManager: false  # idem managed
+    kubeProxy: false
+    kubeSchedulerAlerting: false
+    kubernetesApps: true
+    kubernetesResources: true
+    kubernetesStorage: true
+    kubernetesSystem: true
+    network: true
+    node: true
+    nodeExporterAlerting: true
+    nodeExporterRecording: true
+    prometheus: true
+    prometheusOperator: true
+
+alertmanager:
+  enabled: true
+  alertmanagerSpec:
+    storage:
+      volumeClaimTemplate:
+        spec:
+          accessModes: ["ReadWriteOnce"]
+          resources:
+            requests:
+              storage: 10Gi
+  ingress:
+    enabled: true
+    ingressClassName: nginx
+    annotations:
+      cert-manager.io/cluster-issuer: letsencrypt-prod
+    hosts:
+      - alerts.lyonflow.fr
+    tls:
+      - secretName: alertmanager-tls
+        hosts: [alerts.lyonflow.fr]
+  config:
+    global:
+      resolve_timeout: 5m
+    route:
+      group_by: ['namespace', 'alertname']
+      group_wait: 30s
+      group_interval: 5m
+      repeat_interval: 12h
+      receiver: 'discord-webhook'
+      routes:
+        - matchers: [severity = critical]
+          receiver: 'discord-webhook'
+          repeat_interval: 30m
+    receivers:
+      - name: 'discord-webhook'
+        webhook_configs:
+          - url: 'https://discord.com/api/webhooks/CHANGE_ME'
+            send_resolved: true
+
+prometheus:
+  enabled: true
+  prometheusSpec:
+    serviceMonitorSelectorNilUsesHelmValues: false   # scrute aussi les SM hors release
+    podMonitorSelectorNilUsesHelmValues: false
+    ruleSelectorNilUsesHelmValues: false
+    retention: 15d
+    retentionSize: 40GB
+    storageSpec:
+      volumeClaimTemplate:
+        spec:
+          accessModes: ["ReadWriteOnce"]
+          resources:
+            requests:
+              storage: 50Gi
+    resources:
+      requests:
+        cpu: 500m
+        memory: 2Gi
+      limits:
+        cpu: 2
+        memory: 4Gi
+  ingress:
+    enabled: true
+    ingressClassName: nginx
+    annotations:
+      cert-manager.io/cluster-issuer: letsencrypt-prod
+    hosts:
+      - prom.lyonflow.fr
+    tls:
+      - secretName: prometheus-tls
+        hosts: [prom.lyonflow.fr]
+
+grafana:
+  enabled: true
+  defaultDashboardsEnabled: true
+  adminPassword: ""             # auto-genere si vide, lu via secret
+  persistence:
+    enabled: true
+    size: 10Gi
+  ingress:
+    enabled: true
+    ingressClassName: nginx
+    annotations:
+      cert-manager.io/cluster-issuer: letsencrypt-prod
+    hosts:
+      - grafana.lyonflow.fr
+    tls:
+      - secretName: grafana-tls
+        hosts: [grafana.lyonflow.fr]
+  sidecar:
+    dashboards:
+      enabled: true
+      label: grafana_dashboard
+      searchNamespace: ALL
+    datasources:
+      enabled: true
+  additionalDataSources:
+    - name: PostgreSQL-lyonflow
+      type: postgres
+      url: postgres.lyonflow.svc:5432
+      database: lyonflow
+      user: lyonflow_ro
+      secureJsonData:
+        password: "${POSTGRES_RO_PASSWORD}"
+      jsonData:
+        sslmode: disable
+        postgresVersion: 1600
+
+nodeExporter:
+  enabled: true
+
+kubeStateMetrics:
+  enabled: true
+
+prometheusOperator:
+  resources:
+    requests:
+      cpu: 100m
+      memory: 256Mi

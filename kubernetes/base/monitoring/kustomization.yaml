@@ -1,0 +1,15 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: lyonflow
+
+resources:
+  - servicemonitor-fastapi.yaml
+  - servicemonitor-postgres.yaml
+  - servicemonitor-airflow.yaml
+  - prometheusrule-alerts.yaml
+
+# Note : Prometheus + Grafana + Alertmanager sont installes via Helm
+# dans le namespace `monitoring` (cf README.md + values.yaml).
+# Les ServiceMonitor de ce dossier sont scrutes via
+# serviceMonitorSelectorNilUsesHelmValues=false.

@@ -90,11 +90,12 @@ kubectl -n lyonflow logs deploy/fastapi -f
 | Airflow (Helm) | ✅ values prêtes |
 | FastAPI Deployment+HPA+Ingress | ✅ manifests prêts |
 | Streamlit Deployment+HPA+Ingress | ✅ manifests prêts |
-| GPU node pool GNN | ⏸ optionnel |
-| Prometheus + Grafana | ⏸ étape 11 |
-| Tests de charge | ⏸ étape 12 |
-| Migration données VPS → K8s | ⏸ étape 13 |
-| Décommissionnement VPS | ⏸ étape 14 |
+| GPU node pool GNN | ✅ CronJob + image CUDA |
+| Prometheus + Grafana | ✅ Helm values + ServiceMonitor + alertes |
+| Tests de charge | ✅ k6 + locust + run-loadtest.sh |
+| Migration données VPS → K8s | ✅ migrate-vps.sh (checksums gold) |
+| Décommissionnement VPS | ✅ DECOMMISSION.md checklist |
+| Dockerfiles ghcr.io | ✅ api/dashboard/airflow/gnn + CI build |
 
 ## Branches Git
 
