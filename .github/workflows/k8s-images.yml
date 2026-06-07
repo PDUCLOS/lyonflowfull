@@ -1,0 +1,85 @@
+name: K8s images — build & push
+
+on:
+  push:
+    branches: [kubernetes, main]
+    paths:
+      - "kubernetes/docker/**"
+      - "src/**"
+      - "dashboard/**"
+      - "training/**"
+      - "requirements.txt"
+      - ".github/workflows/k8s-images.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  packages: write
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NS: ghcr.io/${{ github.repository_owner }}
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: api
+            dockerfile: kubernetes/docker/Dockerfile.api
+            platforms: linux/amd64,linux/arm64
+          - name: dashboard
+            dockerfile: kubernetes/docker/Dockerfile.dashboard
+            platforms: linux/amd64,linux/arm64
+          - name: airflow
+            dockerfile: kubernetes/docker/Dockerfile.airflow
+            platforms: linux/amd64
+          - name: gnn
+            dockerfile: kubernetes/docker/Dockerfile.gnn
+            platforms: linux/amd64
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Login to ghcr.io
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Compute tags
+        id: tags
+        run: |
+          SHORT_SHA=$(git rev-parse --short HEAD)
+          BRANCH="${GITHUB_REF_NAME//\//-}"
+          IMG="${{ env.IMAGE_NS }}/lyonflowfull-${{ matrix.name }}"
+          echo "tags=${IMG}:latest,${IMG}:${BRANCH},${IMG}:${SHORT_SHA}" >> "$GITHUB_OUTPUT"
+
+      - name: Build & push
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: ${{ matrix.dockerfile }}
+          platforms: ${{ matrix.platforms }}
+          push: true
+          tags: ${{ steps.tags.outputs.tags }}
+          cache-from: type=gha,scope=${{ matrix.name }}
+          cache-to: type=gha,mode=max,scope=${{ matrix.name }}
+          provenance: false
+
+      - name: Trivy scan (image lookup)
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: ${{ env.IMAGE_NS }}/lyonflowfull-${{ matrix.name }}:latest
+          format: table
+          severity: CRITICAL,HIGH
+          exit-code: 0          # report-only pour ne pas bloquer push initial
+          ignore-unfixed: true

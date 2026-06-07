@@ -1,0 +1,109 @@
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: postgres-backup
+  labels:
+    app.kubernetes.io/name: postgres-backup
+    app.kubernetes.io/component: backup
+spec:
+  schedule: "0 2 * * *"          # quotidien 02h00 UTC
+  successfulJobsHistoryLimit: 3
+  failedJobsHistoryLimit: 3
+  concurrencyPolicy: Forbid
+  jobTemplate:
+    spec:
+      backoffLimit: 2
+      ttlSecondsAfterFinished: 86400
+      template:
+        spec:
+          restartPolicy: OnFailure
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 999
+            fsGroup: 999
+          containers:
+            - name: pg-dump
+              image: postgis/postgis:16-3.4
+              command:
+                - /bin/bash
+                - -c
+                - |
+                  set -euo pipefail
+                  TS=$(date -u +%Y%m%d_%H%M%S)
+                  FILE=/backup/lyonflow_${TS}.sql.gz
+                  echo "Dumping to ${FILE}"
+                  PGPASSWORD="${POSTGRES_PASSWORD}" pg_dump \
+                    -h postgres -U "${POSTGRES_USER}" -d "${POSTGRES_DB}" \
+                    --format=plain --no-owner --no-privileges \
+                    | gzip -9 > "${FILE}"
+                  echo "Backup size: $(du -h ${FILE} | cut -f1)"
+                  # Push vers Object Storage si configuré (mc alias dans secret)
+                  if [ -n "${OBJECT_STORAGE_ENDPOINT:-}" ]; then
+                    echo "Uploading to object storage..."
+                    apt-get update -qq && apt-get install -y -qq curl
+                    curl -fsSL https://dl.min.io/client/mc/release/linux-amd64/mc -o /tmp/mc
+                    chmod +x /tmp/mc
+                    /tmp/mc alias set obj "${OBJECT_STORAGE_ENDPOINT}" \
+                      "${OBJECT_STORAGE_KEY}" "${OBJECT_STORAGE_SECRET}"
+                    /tmp/mc cp "${FILE}" "obj/lyonflow-backups/$(basename ${FILE})"
+                  fi
+                  # Rétention locale : 7 derniers backups
+                  ls -t /backup/lyonflow_*.sql.gz | tail -n +8 | xargs -r rm -f
+              env:
+                - name: POSTGRES_DB
+                  valueFrom:
+                    configMapKeyRef:
+                      name: lyonflow-config
+                      key: POSTGRES_DB
+                - name: POSTGRES_USER
+                  valueFrom:
+                    configMapKeyRef:
+                      name: lyonflow-config
+                      key: POSTGRES_USER
+                - name: POSTGRES_PASSWORD
+                  valueFrom:
+                    secretKeyRef:
+                      name: lyonflow-secrets
+                      key: POSTGRES_PASSWORD
+                - name: OBJECT_STORAGE_ENDPOINT
+                  valueFrom:
+                    secretKeyRef:
+                      name: lyonflow-secrets
+                      key: OBJECT_STORAGE_ENDPOINT
+                      optional: true
+                - name: OBJECT_STORAGE_KEY
+                  valueFrom:
+                    secretKeyRef:
+                      name: lyonflow-secrets
+                      key: OBJECT_STORAGE_KEY
+                      optional: true
+                - name: OBJECT_STORAGE_SECRET
+                  valueFrom:
+                    secretKeyRef:
+                      name: lyonflow-secrets
+                      key: OBJECT_STORAGE_SECRET
+                      optional: true
+              resources:
+                requests:
+                  cpu: "200m"
+                  memory: 256Mi
+                limits:
+                  cpu: "500m"
+                  memory: 512Mi
+              volumeMounts:
+                - name: backup
+                  mountPath: /backup
+          volumes:
+            - name: backup
+              persistentVolumeClaim:
+                claimName: postgres-backup-pvc
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: postgres-backup-pvc
+spec:
+  accessModes: ["ReadWriteOnce"]
+  resources:
+    requests:
+      storage: 20Gi

@@ -1,0 +1,19 @@
+# ConfigMap qui charge deploy/init-db.sql comme script d'init Postgres.
+# Le contenu réel est injecté via kustomize `configMapGenerator` au build.
+# Voir overlay : configMapGenerator name: postgres-init
+#                files:
+#                  - ../../deploy/init-db.sql
+#
+# Ici on déclare juste un placeholder pour respecter la convention.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: postgres-init
+data:
+  README.txt: |
+    Ce ConfigMap doit être généré par l'overlay via :
+      configMapGenerator:
+        - name: postgres-init
+          behavior: replace
+          files:
+            - init-db.sql=../../../deploy/init-db.sql

@@ -91,3 +91,9 @@ site/
 
 # Local orchestration plans
 .mavis/
+
+# Kubernetes — secrets et clés
+kubernetes/.sealed-secrets/
+kubernetes/base/secrets/sealed-secret.yaml
+kubernetes/.env
+kubernetes/backups/

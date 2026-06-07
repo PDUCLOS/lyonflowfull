@@ -1,0 +1,100 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: streamlit
+  labels:
+    app.kubernetes.io/name: streamlit
+    app.kubernetes.io/component: dashboard
+spec:
+  replicas: 2
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: streamlit
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: streamlit
+        app.kubernetes.io/component: dashboard
+    spec:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        runAsGroup: 1000
+        fsGroup: 1000
+      containers:
+        - name: streamlit
+          image: ghcr.io/pduclos/lyonflowfull-dashboard:latest
+          imagePullPolicy: IfNotPresent
+          command:
+            - streamlit
+            - run
+            - dashboard/Accueil.py
+            - --server.port=8501
+            - --server.address=0.0.0.0
+            - --server.headless=true
+            - --server.enableCORS=false
+            - --server.enableXsrfProtection=true
+          ports:
+            - name: http
+              containerPort: 8501
+          envFrom:
+            - configMapRef:
+                name: lyonflow-config
+          env:
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: lyonflow-secrets
+                  key: POSTGRES_PASSWORD
+            - name: LYONFLOW_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: lyonflow-secrets
+                  key: LYONFLOW_API_KEY
+            - name: API_BASE_URL
+              value: "http://fastapi:8000"
+          resources:
+            requests:
+              cpu: "200m"
+              memory: 384Mi
+            limits:
+              cpu: "800m"
+              memory: 768Mi
+          livenessProbe:
+            httpGet:
+              path: /_stcore/health
+              port: 8501
+            initialDelaySeconds: 30
+            periodSeconds: 20
+          readinessProbe:
+            httpGet:
+              path: /_stcore/health
+              port: 8501
+            initialDelaySeconds: 10
+            periodSeconds: 5
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: ["ALL"]
+      topologySpreadConstraints:
+        - maxSkew: 1
+          topologyKey: kubernetes.io/hostname
+          whenUnsatisfiable: ScheduleAnyway
+          labelSelector:
+            matchLabels:
+              app.kubernetes.io/name: streamlit
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: streamlit-pdb
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: streamlit

@@ -1,0 +1,153 @@
+## Apache Airflow Helm chart values — LyonFlowFull
+## Version chart : 1.13.1 (Airflow 2.9.x)
+## helm upgrade --install airflow apache-airflow/airflow -n lyonflow -f values.yaml
+
+executor: KubernetesExecutor
+
+airflowVersion: "2.9.3"
+defaultAirflowTag: "2.9.3"
+
+# DAGs via git-sync
+dags:
+  gitSync:
+    enabled: true
+    repo: "https://github.com/PDUCLOS/lyonflowfull.git"
+    branch: "kubernetes"
+    subPath: "dags"
+    depth: 1
+    period: 60s
+    wait: 60
+
+# Metastore = postgres du namespace lyonflow
+data:
+  metadataConnection:
+    user: lyonflow
+    pass: "${POSTGRES_PASSWORD}"   # injecté depuis secret
+    host: postgres.lyonflow.svc.cluster.local
+    port: 5432
+    db: airflow
+    sslmode: disable
+
+# Pas de Postgres embedded (on utilise le nôtre)
+postgresql:
+  enabled: false
+
+# Redis utilisé seulement pour cache, pas pour Celery
+redis:
+  enabled: false
+
+# Webserver
+webserver:
+  replicas: 2
+  resources:
+    requests:
+      cpu: 300m
+      memory: 768Mi
+    limits:
+      cpu: 1
+      memory: 1.5Gi
+  service:
+    type: ClusterIP
+  ingress:
+    web:
+      enabled: true
+      ingressClassName: nginx
+      annotations:
+        cert-manager.io/cluster-issuer: letsencrypt-prod
+        nginx.ingress.kubernetes.io/proxy-body-size: "20m"
+      hosts:
+        - name: airflow.lyonflow.fr
+      tls:
+        - hosts:
+            - airflow.lyonflow.fr
+          secretName: airflow-tls
+
+# Scheduler — singleton
+scheduler:
+  replicas: 1
+  resources:
+    requests:
+      cpu: 500m
+      memory: 1Gi
+    limits:
+      cpu: 1
+      memory: 2Gi
+
+# Pas de workers Celery (KubernetesExecutor crée des pods à la demande)
+workers:
+  enabled: false
+
+# Triggerer pour deferred operators
+triggerer:
+  enabled: true
+  replicas: 1
+  resources:
+    requests:
+      cpu: 200m
+      memory: 512Mi
+
+# Fernet key / secret key depuis sealed-secret
+secrets:
+  enabled: false        # on injecte via extraEnv
+
+extraEnv: |
+  - name: AIRFLOW__CORE__FERNET_KEY
+    valueFrom:
+      secretKeyRef:
+        name: lyonflow-secrets
+        key: AIRFLOW_FERNET_KEY
+  - name: AIRFLOW__WEBSERVER__SECRET_KEY
+    valueFrom:
+      secretKeyRef:
+        name: lyonflow-secrets
+        key: AIRFLOW_SECRET_KEY
+  - name: POSTGRES_PASSWORD
+    valueFrom:
+      secretKeyRef:
+        name: lyonflow-secrets
+        key: POSTGRES_PASSWORD
+  - name: LYONFLOW_API_KEY
+    valueFrom:
+      secretKeyRef:
+        name: lyonflow-secrets
+        key: LYONFLOW_API_KEY
+
+# Image custom avec requirements.txt du projet
+images:
+  airflow:
+    repository: ghcr.io/pduclos/lyonflowfull-airflow
+    tag: "2.9.3-lyonflow"
+    pullPolicy: IfNotPresent
+
+# Logs persistents
+logs:
+  persistence:
+    enabled: true
+    size: 10Gi
+
+# Pas de StatsD / Flower
+statsd:
+  enabled: false
+flower:
+  enabled: false
+
+# Pod template par défaut pour KubernetesExecutor
+config:
+  kubernetes:
+    namespace: lyonflow
+    delete_worker_pods: "True"
+    delete_worker_pods_on_failure: "False"
+    worker_pods_creation_batch_size: "16"
+  core:
+    parallelism: "32"
+    dag_concurrency: "16"
+    max_active_runs_per_dag: "1"
+  scheduler:
+    catchup_by_default: "False"
+    max_tis_per_query: "16"
+
+# Admin user créé via Job init
+webserverSecretKey: ""  # sera injecté depuis secret
+createUserJob:
+  useHelmHooks: true
+  applyCustomEnv: true

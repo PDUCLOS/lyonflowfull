@@ -1,0 +1,35 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: lyonflow
+
+commonLabels:
+  app.kubernetes.io/part-of: lyonflowfull
+  app.kubernetes.io/managed-by: kustomize
+
+resources:
+  - namespace.yaml
+  - postgres
+  - redis
+  - mlflow
+  - fastapi
+  - streamlit
+  - secrets
+  - monitoring
+  - gnn-trainer
+
+# ConfigMap commun (env vars non-secret)
+configMapGenerator:
+  - name: lyonflow-config
+    literals:
+      - LOG_LEVEL=INFO
+      - POSTGRES_HOST=postgres
+      - POSTGRES_PORT=5432
+      - POSTGRES_DB=lyonflow
+      - POSTGRES_USER=lyonflow
+      - REDIS_URL=redis://redis:6379/0
+      - MLFLOW_TRACKING_URI=http://mlflow:5000
+      - LYON_LATITUDE=45.7640
+      - LYON_LONGITUDE=4.8357
+      - GRANDLYON_WFS_URL=https://download.data.grandlyon.com/wfs/grandlyon
+      - TCL_SIRI_LITE_URL=https://download.data.grandlyon.com/siri-lite/1.8/vehicle-monitoring.json

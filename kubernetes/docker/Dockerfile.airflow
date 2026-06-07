@@ -1,0 +1,25 @@
+# LyonFlowFull — image Airflow 2.9 custom (DAGs + requirements projet)
+# Build : docker buildx build -f kubernetes/docker/Dockerfile.airflow \
+#           -t ghcr.io/pduclos/lyonflowfull-airflow:2.9.3-lyonflow \
+#           --platform linux/amd64 --push .
+
+FROM apache/airflow:2.9.3-python3.11
+
+USER root
+RUN apt-get update && apt-get install -y --no-install-recommends \
+      gcc libpq-dev build-essential \
+    && rm -rf /var/lib/apt/lists/*
+
+USER airflow
+
+# Requirements projet — installes en sus de ceux d'Airflow
+COPY requirements.txt /tmp/lyonflow-requirements.txt
+RUN pip install --no-cache-dir -r /tmp/lyonflow-requirements.txt \
+    --constraint "https://raw.githubusercontent.com/apache/airflow/constraints-2.9.3/constraints-3.11.txt"
+
+# Code projet monte au runtime via git-sync ; on copie quand meme src/
+# pour permettre un debug rapide et les imports en dehors de git-sync.
+COPY --chown=airflow:0 src/ /opt/airflow/src/
+COPY --chown=airflow:0 training/ /opt/airflow/training/
+
+ENV PYTHONPATH=/opt/airflow
