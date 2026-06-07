@@ -32,12 +32,24 @@ TCL_LINES = [
 # Adresses lyonnaises de référence
 # -----------------------------------------------------------------------------
 LyonAddresses = [
-    "Part-Dieu, Lyon", "Place Bellecour, Lyon", "Hôtel de Ville, Lyon",
-    "Vieux Lyon", "Presqu'île, Lyon", "Confluence, Lyon",
-    "Croix-Rousse, Lyon", "Place des Terreaux, Lyon", "Opéra, Lyon",
-    "Parc de la Tête d'Or, Lyon", "Université Lyon 3, Lyon",
-    "Place Jean Macé, Lyon", "Saxe-Gambetta, Lyon", "Guillotière, Lyon",
-    "Mermoz, Lyon", "Monplaisir, Lyon", "Gerland, Lyon", "Vaise, Lyon",
+    "Part-Dieu, Lyon",
+    "Place Bellecour, Lyon",
+    "Hôtel de Ville, Lyon",
+    "Vieux Lyon",
+    "Presqu'île, Lyon",
+    "Confluence, Lyon",
+    "Croix-Rousse, Lyon",
+    "Place des Terreaux, Lyon",
+    "Opéra, Lyon",
+    "Parc de la Tête d'Or, Lyon",
+    "Université Lyon 3, Lyon",
+    "Place Jean Macé, Lyon",
+    "Saxe-Gambetta, Lyon",
+    "Guillotière, Lyon",
+    "Mermoz, Lyon",
+    "Monplaisir, Lyon",
+    "Gerland, Lyon",
+    "Vaise, Lyon",
 ]
 
 
@@ -114,22 +126,78 @@ MOCK_TRIP_RESULTS = {
 # Stations Vélov réelles (extrait)
 # -----------------------------------------------------------------------------
 VELOV_STATIONS = [
-    {"id": 1001, "name": "Part-Dieu - Vivier Merle", "lat": 45.7607, "lon": 4.8589,
-     "bikes_available": 12, "stands_available": 18, "distance_m": 0},
-    {"id": 1002, "name": "Bellecour - Place", "lat": 45.7575, "lon": 4.8324,
-     "bikes_available": 7, "stands_available": 23, "distance_m": 1200},
-    {"id": 1003, "name": "Hôtel de Ville - Louis Pradel", "lat": 45.7672, "lon": 4.8342,
-     "bikes_available": 15, "stands_available": 11, "distance_m": 900},
-    {"id": 1004, "name": "Saxe - Gambetta", "lat": 45.7496, "lon": 4.8461,
-     "bikes_available": 4, "stands_available": 22, "distance_m": 1800},
-    {"id": 1005, "name": "Place des Terreaux", "lat": 45.7673, "lon": 4.8343,
-     "bikes_available": 9, "stands_available": 17, "distance_m": 850},
-    {"id": 1006, "name": "Vaise - Gare", "lat": 45.7798, "lon": 4.8058,
-     "bikes_available": 18, "stands_available": 8, "distance_m": 3400},
-    {"id": 1007, "name": "Confluence - Pôle de loisirs", "lat": 45.7405, "lon": 4.8165,
-     "bikes_available": 22, "stands_available": 4, "distance_m": 2800},
-    {"id": 1008, "name": "Monplaisir - Lumière", "lat": 45.7440, "lon": 4.8607,
-     "bikes_available": 6, "stands_available": 20, "distance_m": 2100},
+    {
+        "id": 1001,
+        "name": "Part-Dieu - Vivier Merle",
+        "lat": 45.7607,
+        "lon": 4.8589,
+        "bikes_available": 12,
+        "stands_available": 18,
+        "distance_m": 0,
+    },
+    {
+        "id": 1002,
+        "name": "Bellecour - Place",
+        "lat": 45.7575,
+        "lon": 4.8324,
+        "bikes_available": 7,
+        "stands_available": 23,
+        "distance_m": 1200,
+    },
+    {
+        "id": 1003,
+        "name": "Hôtel de Ville - Louis Pradel",
+        "lat": 45.7672,
+        "lon": 4.8342,
+        "bikes_available": 15,
+        "stands_available": 11,
+        "distance_m": 900,
+    },
+    {
+        "id": 1004,
+        "name": "Saxe - Gambetta",
+        "lat": 45.7496,
+        "lon": 4.8461,
+        "bikes_available": 4,
+        "stands_available": 22,
+        "distance_m": 1800,
+    },
+    {
+        "id": 1005,
+        "name": "Place des Terreaux",
+        "lat": 45.7673,
+        "lon": 4.8343,
+        "bikes_available": 9,
+        "stands_available": 17,
+        "distance_m": 850,
+    },
+    {
+        "id": 1006,
+        "name": "Vaise - Gare",
+        "lat": 45.7798,
+        "lon": 4.8058,
+        "bikes_available": 18,
+        "stands_available": 8,
+        "distance_m": 3400,
+    },
+    {
+        "id": 1007,
+        "name": "Confluence - Pôle de loisirs",
+        "lat": 45.7405,
+        "lon": 4.8165,
+        "bikes_available": 22,
+        "stands_available": 4,
+        "distance_m": 2800,
+    },
+    {
+        "id": 1008,
+        "name": "Monplaisir - Lumière",
+        "lat": 45.7440,
+        "lon": 4.8607,
+        "bikes_available": 6,
+        "stands_available": 20,
+        "distance_m": 2100,
+    },
 ]
 
 
@@ -213,14 +281,24 @@ MOCK_TRAFFIC = {
     "congestion_color": "#FF9800",
     "bottlenecks_count": 14,
     "main_jams": [
-        {"road": "Cours Lafayette", "lat": 45.7542, "lon": 4.8411,
-         "speed_kmh": 14, "delay_min": 8, "severity": "high"},
-        {"road": "Quai Claude Bernard", "lat": 45.7513, "lon": 4.8360,
-         "speed_kmh": 18, "delay_min": 5, "severity": "medium"},
-        {"road": "Av. Berthelot", "lat": 45.7450, "lon": 4.8501,
-         "speed_kmh": 22, "delay_min": 3, "severity": "low"},
-        {"road": "Périphérique Nord", "lat": 45.7890, "lon": 4.8820,
-         "speed_kmh": 35, "delay_min": 2, "severity": "low"},
+        {"road": "Cours Lafayette", "lat": 45.7542, "lon": 4.8411, "speed_kmh": 14, "delay_min": 8, "severity": "high"},
+        {
+            "road": "Quai Claude Bernard",
+            "lat": 45.7513,
+            "lon": 4.8360,
+            "speed_kmh": 18,
+            "delay_min": 5,
+            "severity": "medium",
+        },
+        {"road": "Av. Berthelot", "lat": 45.7450, "lon": 4.8501, "speed_kmh": 22, "delay_min": 3, "severity": "low"},
+        {
+            "road": "Périphérique Nord",
+            "lat": 45.7890,
+            "lon": 4.8820,
+            "speed_kmh": 35,
+            "delay_min": 2,
+            "severity": "low",
+        },
     ],
     "predictions": {
         "h_plus_30min": {"average_speed_kmh": 19, "congestion_level": "dense"},
@@ -419,12 +497,32 @@ MOCK_RGPD_AUDIT: list[dict] = [
 
 
 MOCK_BRONZE_COUNTS: list[dict] = [
-    {"source": "Grand Lyon boucles (pvotrafic)", "table": "bronze.trafic_boucles", "n_rows": 12_400, "last_fetch": _NOW - timedelta(minutes=2)},
+    {
+        "source": "Grand Lyon boucles (pvotrafic)",
+        "table": "bronze.trafic_boucles",
+        "n_rows": 12_400,
+        "last_fetch": _NOW - timedelta(minutes=2),
+    },
     {"source": "Vélo'v GBFS", "table": "bronze.velov", "n_rows": 458, "last_fetch": _NOW - timedelta(minutes=3)},
-    {"source": "TCL SIRI Lite", "table": "bronze.tcl_vehicles", "n_rows": 587, "last_fetch": _NOW - timedelta(minutes=4)},
+    {
+        "source": "TCL SIRI Lite",
+        "table": "bronze.tcl_vehicles",
+        "n_rows": 587,
+        "last_fetch": _NOW - timedelta(minutes=4),
+    },
     {"source": "Open-Meteo weather", "table": "bronze.meteo", "n_rows": 24, "last_fetch": _NOW - timedelta(minutes=8)},
-    {"source": "Open-Meteo air quality", "table": "bronze.air_quality", "n_rows": 7, "last_fetch": _NOW - timedelta(minutes=10)},
-    {"source": "Grand Lyon chantiers", "table": "bronze.chantiers", "n_rows": 345, "last_fetch": _NOW - timedelta(hours=3)},
+    {
+        "source": "Open-Meteo air quality",
+        "table": "bronze.air_quality",
+        "n_rows": 7,
+        "last_fetch": _NOW - timedelta(minutes=10),
+    },
+    {
+        "source": "Grand Lyon chantiers",
+        "table": "bronze.chantiers",
+        "n_rows": 345,
+        "last_fetch": _NOW - timedelta(hours=3),
+    },
 ]
 """Counts des sources Bronze pour fallback get_bronze_source_counts."""
 
@@ -479,12 +577,14 @@ MOCK_RGPD_PURGE: list[dict] = [
         "retention_days": 30,
         "purged_at": _NOW - timedelta(days=i % 30),
     }
-    for i, (schema, table) in enumerate([
-        ("bronze", "trafic_boucles"),
-        ("bronze", "velov"),
-        ("bronze", "tcl_vehicles"),
-        ("bronze", "meteo"),
-    ])
+    for i, (schema, table) in enumerate(
+        [
+            ("bronze", "trafic_boucles"),
+            ("bronze", "velov"),
+            ("bronze", "tcl_vehicles"),
+            ("bronze", "meteo"),
+        ]
+    )
 ]
 """Historique purges RGPD pour fallback get_rgpd_purge_history."""
 
@@ -555,10 +655,22 @@ MOCK_WEATHER_HOURLY: list[dict] = [
 
 # Adresses mock Lyon — déjà LyonAddresses plus haut, on garde pour le data_loader
 LYON_ADDRESSES_MOCK: list[str] = [
-    "Part-Dieu, Lyon", "Place Bellecour, Lyon", "Hôtel de Ville, Lyon",
-    "Vieux Lyon", "Presqu'île, Lyon", "Confluence, Lyon",
-    "Croix-Rousse, Lyon", "Place des Terreaux, Lyon", "Opéra, Lyon",
-    "Parc de la Tête d'Or, Lyon", "Université Lyon 3, Lyon",
-    "Place Jean Macé, Lyon", "Saxe-Gambetta, Lyon", "Guillotière, Lyon",
-    "Mermoz, Lyon", "Monplaisir, Lyon", "Gerland, Lyon", "Vaise, Lyon",
+    "Part-Dieu, Lyon",
+    "Place Bellecour, Lyon",
+    "Hôtel de Ville, Lyon",
+    "Vieux Lyon",
+    "Presqu'île, Lyon",
+    "Confluence, Lyon",
+    "Croix-Rousse, Lyon",
+    "Place des Terreaux, Lyon",
+    "Opéra, Lyon",
+    "Parc de la Tête d'Or, Lyon",
+    "Université Lyon 3, Lyon",
+    "Place Jean Macé, Lyon",
+    "Saxe-Gambetta, Lyon",
+    "Guillotière, Lyon",
+    "Mermoz, Lyon",
+    "Monplaisir, Lyon",
+    "Gerland, Lyon",
+    "Vaise, Lyon",
 ]

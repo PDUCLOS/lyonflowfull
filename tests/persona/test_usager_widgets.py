@@ -15,7 +15,7 @@ sys.path.insert(0, str(WORKSPACE))
 
 def test_mock_data_usager_imports():
     """Le module mock data usager doit s'importer sans erreur."""
-    from src.data.mock import usager  # noqa: F401
+    from src.data.mock import usager
 
     assert hasattr(usager, "TCL_LINES")
     assert hasattr(usager, "MOCK_TRIP_RESULTS")
@@ -71,7 +71,7 @@ def test_mock_favorites_have_route_info():
 
 def test_widget_modules_importable():
     """Tous les modules widgets usager doivent s'importer."""
-    from dashboard.components.widgets import usager  # noqa: F401
+    from dashboard.components.widgets import usager
 
     # Vérifier que les fonctions principales sont exposées
     assert hasattr(usager, "render_search_bar")

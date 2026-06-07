@@ -8,7 +8,6 @@ Sprint 6 — binding DB :
 
 from __future__ import annotations
 
-import pandas as pd
 import streamlit as st
 
 from dashboard.components.navigation import render_sidebar_navigation
@@ -17,7 +16,6 @@ from src.data.data_loader import (
     load_rgpd_audit,
     load_rgpd_consents,
 )
-
 
 st.set_page_config(
     page_title="RGPD — LyonFlowFull",

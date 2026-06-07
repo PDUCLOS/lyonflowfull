@@ -2,8 +2,8 @@
 
 from __future__ import annotations
 
+from collections.abc import Generator
 from contextlib import contextmanager
-from typing import Generator, Optional
 
 import psycopg2
 import psycopg2.extras
@@ -13,9 +13,8 @@ from sqlalchemy.orm import Session, sessionmaker
 
 from src.config import get_settings
 
-
-_engine: Optional[Engine] = None
-_SessionLocal: Optional[sessionmaker] = None
+_engine: Engine | None = None
+_SessionLocal: sessionmaker | None = None
 
 
 def get_engine() -> Engine:
@@ -79,21 +78,19 @@ def raw_connection() -> Generator[psycopg2.extensions.connection, None, None]:
 
 def execute_query(query: str, params: tuple = ()) -> list[dict]:
     """Exécute une requête paramétrée, retourne les résultats en list[dict]."""
-    with raw_connection() as conn:
-        with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
-            cur.execute(query, params)
-            if cur.description:
-                return [dict(row) for row in cur.fetchall()]
-            return []
+    with raw_connection() as conn, conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
+        cur.execute(query, params)
+        if cur.description:
+            return [dict(row) for row in cur.fetchall()]
+        return []
 
 
-def execute_scalar(query: str, params: tuple = ()) -> Optional[object]:
+def execute_scalar(query: str, params: tuple = ()) -> object | None:
     """Retourne le premier scalar (première row, première col) ou None."""
-    with raw_connection() as conn:
-        with conn.cursor() as cur:
-            cur.execute(query, params)
-            row = cur.fetchone()
-            return row[0] if row else None
+    with raw_connection() as conn, conn.cursor() as cur:
+        cur.execute(query, params)
+        row = cur.fetchone()
+        return row[0] if row else None
 
 
 def test_connection() -> bool:

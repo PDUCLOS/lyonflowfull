@@ -90,8 +90,8 @@ def render_html_template(sections: dict[str, Any], template_name: str = "synthes
         delta_color = "#4CAF50" if delta > 0 else "#E74C3C"
         kpis_html += f"""
         <div class="kpi-card">
-            <div class="kpi-label">{k.get('label', '—')}</div>
-            <div class="kpi-value">{k.get('value', '—')}{k.get('unit', '')}</div>
+            <div class="kpi-label">{k.get("label", "—")}</div>
+            <div class="kpi-value">{k.get("value", "—")}{k.get("unit", "")}</div>
             <div class="kpi-delta" style="color: {delta_color};">{delta_str} vs YTD</div>
         </div>
         """
@@ -107,14 +107,14 @@ def render_html_template(sections: dict[str, Any], template_name: str = "synthes
             extra_content += f"""
             <div class="bottleneck-row">
                 <div>
-                    <b>#{b.get('rank', '—')} {b.get('zone', '—')}</b><br>
+                    <b>#{b.get("rank", "—")} {b.get("zone", "—")}</b><br>
                     <span style="font-size: 0.85rem; color: #666;">
-                        {len(b.get('lines_impacted', []))} lignes · {b.get('voyageurs_jour', 0):,} voy/j
+                        {len(b.get("lines_impacted", []))} lignes · {b.get("voyageurs_jour", 0):,} voy/j
                     </span>
                 </div>
                 <div style="text-align: right;">
-                    <b>{b.get('gain_min', 0)} min gagnées</b> · {b.get('cout_M_euros', 0)} M€<br>
-                    <span style="font-size: 0.85rem; color: #4CAF50;">ROI {b.get('roi_mois', 0)} mois</span>
+                    <b>{b.get("gain_min", 0)} min gagnées</b> · {b.get("cout_M_euros", 0)} M€<br>
+                    <span style="font-size: 0.85rem; color: #4CAF50;">ROI {b.get("roi_mois", 0)} mois</span>
                 </div>
             </div>
             """
@@ -158,9 +158,10 @@ def generate_pdf(html: str) -> bytes:
 
     # Essai 2 : reportlab (fallback)
     try:
+        from io import BytesIO
+
         from reportlab.lib.pagesizes import A4  # type: ignore
         from reportlab.pdfgen import canvas  # type: ignore
-        from io import BytesIO
 
         buffer = BytesIO()
         c = canvas.Canvas(buffer, pagesize=A4)
@@ -191,6 +192,7 @@ def generate_pdf(html: str) -> bytes:
 def _html_to_text(html: str) -> str:
     """Convertit HTML en texte brut simple (pour fallback reportlab)."""
     import re
+
     # Supprimer les balises
     text = re.sub(r"<[^>]+>", " ", html)
     # Supprimer les espaces multiples

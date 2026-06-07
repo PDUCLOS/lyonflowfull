@@ -13,7 +13,6 @@ from dashboard.components.widgets.pro_tcl import (
     render_otp_heatmap,
 )
 
-
 st.set_page_config(
     page_title="Heatmap OTP — Pro TCL · LyonFlowFull",
     page_icon="📊",

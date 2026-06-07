@@ -13,7 +13,6 @@ from dashboard.components.widgets.elu import (
     render_map_painter,
 )
 
-
 st.set_page_config(
     page_title="Simulateur aménagement — Élu · LyonFlowFull",
     page_icon="✏️",

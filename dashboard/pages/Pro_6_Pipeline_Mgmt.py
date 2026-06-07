@@ -9,7 +9,6 @@ from dashboard.components.persona_guard import apply_persona_guard
 from dashboard.components.theme import inject_theme
 from dashboard.components.widgets.pro_tcl import render_pipeline_management_page
 
-
 st.set_page_config(
     page_title="Pipeline Management — Pro TCL · LyonFlowFull",
     page_icon="🔧",

@@ -17,7 +17,6 @@ import logging
 
 from src.db import raw_connection
 
-
 logger = logging.getLogger(__name__)
 
 
@@ -261,30 +260,27 @@ ON CONFLICT (date, hour, line_ref, segment_id) DO UPDATE SET
 
 
 def _build_traffic_features() -> int:
-    with raw_connection() as conn:
-        with conn.cursor() as cur:
-            _ensure_helpers(cur)
-            cur.execute(_TRAFFIC_SQL)
-            n = cur.rowcount
+    with raw_connection() as conn, conn.cursor() as cur:
+        _ensure_helpers(cur)
+        cur.execute(_TRAFFIC_SQL)
+        n = cur.rowcount
     logger.info("gold.traffic_features_live: %d rows upserted", n)
     return n
 
 
 def _build_velov_features() -> int:
-    with raw_connection() as conn:
-        with conn.cursor() as cur:
-            _ensure_helpers(cur)
-            cur.execute(_VELOV_SQL)
-            n = cur.rowcount
+    with raw_connection() as conn, conn.cursor() as cur:
+        _ensure_helpers(cur)
+        cur.execute(_VELOV_SQL)
+        n = cur.rowcount
     logger.info("gold.velov_features: %d rows upserted", n)
     return n
 
 
 def _build_bus_delay_segments() -> int:
-    with raw_connection() as conn:
-        with conn.cursor() as cur:
-            _ensure_helpers(cur)
-            cur.execute(_BUS_DELAY_SQL)
-            n = cur.rowcount
+    with raw_connection() as conn, conn.cursor() as cur:
+        _ensure_helpers(cur)
+        cur.execute(_BUS_DELAY_SQL)
+        n = cur.rowcount
     logger.info("gold.bus_delay_segments: %d rows upserted", n)
     return n

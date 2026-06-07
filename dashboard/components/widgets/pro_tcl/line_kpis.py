@@ -67,7 +67,7 @@ def render_line_kpis(
                     </div>
                     <div>
                         <div style="opacity:0.6;font-size:0.7rem;">Fréq.</div>
-                        <div style="font-weight:600;">{kpis.get('frequency_min', 0)} min</div>
+                        <div style="font-weight:600;">{kpis.get("frequency_min", 0)} min</div>
                     </div>
                     <div>
                         <div style="opacity:0.6;font-size:0.7rem;">Charge</div>

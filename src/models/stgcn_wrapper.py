@@ -79,7 +79,9 @@ class STGCNWrapper:
             self._model.load_state_dict(ckpt["state_dict"])
             self._model.eval()
             self._is_loaded = True
-            logger.info("STGCN H+%dmin loaded (%d params)", self.horizon_min, sum(p.numel() for p in self._model.parameters()))
+            logger.info(
+                "STGCN H+%dmin loaded (%d params)", self.horizon_min, sum(p.numel() for p in self._model.parameters())
+            )
             return True
         except Exception as e:  # pragma: no cover
             logger.exception("Failed to load STGCN H+%dmin: %s", self.horizon_min, e)

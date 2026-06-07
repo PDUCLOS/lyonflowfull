@@ -20,17 +20,13 @@ def render_impact_projection(zone: str | None = None) -> None:
     # Modèle simplifié (Sprint 5 : GNN + XGBoost)
     col1, col2, col3, col4 = st.columns(4)
     with col1:
-        st.metric("Trafic VP", "-12%", delta_color="inverse",
-                  help="Réduction attendue du trafic véhicule particulier")
+        st.metric("Trafic VP", "-12%", delta_color="inverse", help="Réduction attendue du trafic véhicule particulier")
     with col2:
-        st.metric("Fréquentation bus", "+18%",
-                  help="Gain de fréquentation bus post-aménagement")
+        st.metric("Fréquentation bus", "+18%", help="Gain de fréquentation bus post-aménagement")
     with col3:
-        st.metric("Fréquentation vélo", "+45%",
-                  help="Si aménagement cyclable inclus")
+        st.metric("Fréquentation vélo", "+45%", help="Si aménagement cyclable inclus")
     with col4:
-        st.metric("CO₂", "-23%", delta_color="inverse",
-                  help="Réduction des émissions CO₂ sur la zone")
+        st.metric("CO₂", "-23%", delta_color="inverse", help="Réduction des émissions CO₂ sur la zone")
 
     st.markdown("---")
     st.markdown("**Hypothèses du modèle (Sprint 4) :**")

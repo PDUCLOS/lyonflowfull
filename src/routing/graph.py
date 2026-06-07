@@ -26,13 +26,11 @@ from __future__ import annotations
 
 import logging
 import time
-from typing import Optional
 
 import networkx as nx
 
 from src.config import get_settings
 from src.db import execute_query
-
 
 logger = logging.getLogger(__name__)
 
@@ -89,14 +87,12 @@ def build_routing_graph(
 
 
 def _is_cache_valid() -> bool:
-    return (
-        _graph_cache["graph"] is not None
-        and (time.time() - _graph_cache["built_at"]) < CACHE_TTL_SECONDS
-    )
+    return _graph_cache["graph"] is not None and (time.time() - _graph_cache["built_at"]) < CACHE_TTL_SECONDS
 
 
 def _db_available() -> bool:
     from src.db import test_connection
+
     return test_connection()
 
 
@@ -139,30 +135,31 @@ def _build_graph_from_db(
     if not rows:
         raise ValueError("Aucun segment dans silver.trafic_boucles_clean")
 
-    G = nx.Graph()
+    G = nx.Graph()  # noqa: N806
 
     # 1. Ajouter les nœuds
     for r in rows:
         channel_id = r["channel_id"]
-        G.add_node(channel_id, **{
-            "length_m": float(r["length_m"]),
-            "current_speed_kmh": float(r["current_speed_kmh"]),
-            "start_lon": float(r["start_lon"]),
-            "start_lat": float(r["start_lat"]),
-            "end_lon": float(r["end_lon"]),
-            "end_lat": float(r["end_lat"]),
-        })
+        G.add_node(
+            channel_id,
+            **{
+                "length_m": float(r["length_m"]),
+                "current_speed_kmh": float(r["current_speed_kmh"]),
+                "start_lon": float(r["start_lon"]),
+                "start_lat": float(r["start_lat"]),
+                "end_lon": float(r["end_lon"]),
+                "end_lat": float(r["end_lat"]),
+            },
+        )
 
     # 2. Construire les arêtes par matching d'endpoints
     #    On indexe les endpoints (start + end) et on groupe
     nodes_data = list(G.nodes(data=True))
     endpoint_index: dict[tuple[float, float], list[str]] = {}
     for cid, data in nodes_data:
-        for ep in [(data["start_lon"], data["start_lat"]),
-                   (data["end_lon"], data["end_lat"])]:
+        for ep in [(data["start_lon"], data["start_lat"]), (data["end_lon"], data["end_lat"])]:
             # Quantize for tolerance
-            key = (round(ep[0] / endpoint_tolerance_deg),
-                   round(ep[1] / endpoint_tolerance_deg))
+            key = (round(ep[0] / endpoint_tolerance_deg), round(ep[1] / endpoint_tolerance_deg))
             endpoint_index.setdefault(key, []).append(cid)
 
     # 3. Pour chaque endpoint partagé, créer les arêtes
@@ -171,7 +168,7 @@ def _build_graph_from_db(
         if len(cid_list) < 2:
             continue
         for i, u in enumerate(cid_list):
-            for v in cid_list[i + 1:]:
+            for v in cid_list[i + 1 :]:
                 edge = tuple(sorted([u, v]))
                 if edge not in edge_set:
                     edge_set.add(edge)
@@ -186,7 +183,7 @@ def _build_mock_graph() -> nx.Graph:
     Simule 12 segments dans le centre de Lyon (Part-Dieu, Bellecour, etc.)
     avec adjacences réalistes et vitesses mock.
     """
-    G = nx.Graph()
+    G = nx.Graph()  # noqa: N806
 
     # Centre Lyon : Presqu'île + Part-Dieu + Confluence
     # Format : (channel_id, start_lon, start_lat, end_lon, end_lat, length_m, speed)
@@ -215,12 +212,17 @@ def _build_mock_graph() -> nx.Graph:
     ]
 
     for cid, slon, slat, elon, elat, length, speed in segments:
-        G.add_node(cid, **{
-            "length_m": length,
-            "current_speed_kmh": speed,
-            "start_lon": slon, "start_lat": slat,
-            "end_lon": elon, "end_lat": elat,
-        })
+        G.add_node(
+            cid,
+            **{
+                "length_m": length,
+                "current_speed_kmh": speed,
+                "start_lon": slon,
+                "start_lat": slat,
+                "end_lon": elon,
+                "end_lat": elat,
+            },
+        )
 
     # Adjacences mockées (segments qui se touchent)
     adjacencies = [
@@ -254,7 +256,7 @@ def get_node_speed(graph: nx.Graph, node_id: str, horizon_minutes: int = 0) -> f
     return float(data.get("current_speed_kmh", 30.0))
 
 
-def get_nearest_node(graph: nx.Graph, lon: float, lat: float) -> Optional[str]:
+def get_nearest_node(graph: nx.Graph, lon: float, lat: float) -> str | None:
     """Trouve le nœud le plus proche d'un point (lon, lat)."""
     if graph.number_of_nodes() == 0:
         return None
@@ -263,8 +265,7 @@ def get_nearest_node(graph: nx.Graph, lon: float, lat: float) -> Optional[str]:
     nearest = None
     for node_id, data in graph.nodes(data=True):
         # Distance euclidienne sur les endpoints
-        for ep_lon, ep_lat in [(data["start_lon"], data["start_lat"]),
-                                (data["end_lon"], data["end_lat"])]:
+        for ep_lon, ep_lat in [(data["start_lon"], data["start_lat"]), (data["end_lon"], data["end_lat"])]:
             d = (ep_lon - lon) ** 2 + (ep_lat - lat) ** 2
             if d < min_dist:
                 min_dist = d

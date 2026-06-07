@@ -44,7 +44,7 @@ def render_kpi_cards() -> None:
                             text-align:center;height:170px;display:flex;flex-direction:column;
                             justify-content:space-between;">
                     <div style="font-size:0.75rem;opacity:0.7;text-transform:uppercase;
-                                letter-spacing:0.5px;">{k.get('label', '—')}</div>
+                                letter-spacing:0.5px;">{k.get("label", "—")}</div>
                     <div style="font-size:2.2rem;font-weight:700;color:#5C6BC0;line-height:1;">
                         {value_str}<span style="font-size:1rem;opacity:0.6;">{unit}</span>
                     </div>

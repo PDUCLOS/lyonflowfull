@@ -32,8 +32,18 @@ def render_trend_chart(kpi_key: str = "part_modale_tc") -> None:
     unit = kpi.get("unit", "")
 
     months = [
-        "Juil", "Août", "Sept", "Oct", "Nov", "Déc",
-        "Jan", "Fév", "Mar", "Avr", "Mai", "Juin",
+        "Juil",
+        "Août",
+        "Sept",
+        "Oct",
+        "Nov",
+        "Déc",
+        "Jan",
+        "Fév",
+        "Mar",
+        "Avr",
+        "Mai",
+        "Juin",
     ]
 
     try:
@@ -42,13 +52,16 @@ def render_trend_chart(kpi_key: str = "part_modale_tc") -> None:
         fig = go.Figure()
 
         # Courbe historique
-        fig.add_trace(go.Scatter(
-            x=months, y=history,
-            mode="lines+markers",
-            name=kpi.get("label", ""),
-            line={"color": "#5C6BC0", "width": 3},
-            marker={"size": 8},
-        ))
+        fig.add_trace(
+            go.Scatter(
+                x=months,
+                y=history,
+                mode="lines+markers",
+                name=kpi.get("label", ""),
+                line={"color": "#5C6BC0", "width": 3},
+                marker={"size": 8},
+            )
+        )
 
         # Ligne target
         if target:

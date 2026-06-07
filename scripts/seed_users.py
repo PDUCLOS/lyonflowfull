@@ -20,9 +20,9 @@ from pathlib import Path
 WORKSPACE = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(WORKSPACE))
 
-import bcrypt
+import bcrypt  # noqa: E402
 
-from src.db import execute_query
+from src.db import execute_query  # noqa: E402
 
 
 def seed_user(persona_id: str, username: str, password: str) -> bool:

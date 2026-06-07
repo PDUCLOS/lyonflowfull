@@ -21,39 +21,40 @@ import json
 import logging
 import time
 from dataclasses import dataclass, field
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from enum import Enum
-from typing import Any, Optional
+from typing import Any
 
 import httpx
 from tenacity import (
+    before_sleep_log,
     retry,
+    retry_if_exception_type,
     stop_after_attempt,
     wait_exponential,
-    retry_if_exception_type,
-    before_sleep_log,
 )
 
 from src.config import get_settings
 from src.db import execute_query
 
-
 logger = logging.getLogger(__name__)
 
 
-class HTTPMethod(str, Enum):
+class HTTPMethod(str, Enum):  # noqa: UP042
     GET = "GET"
     POST = "POST"
 
 
 class CollectorError(Exception):
     """Erreur remontée par un collecteur."""
+
     pass
 
 
 @dataclass
 class FetchResult:
     """Résultat d'un fetch brut."""
+
     source: str
     fetched_at: datetime
     raw_data: Any
@@ -61,7 +62,7 @@ class FetchResult:
     bytes_fetched: int = 0
     status_code: int = 200
     duration_ms: int = 0
-    error: Optional[str] = None
+    error: str | None = None
     metadata: dict = field(default_factory=dict)
 
 
@@ -96,8 +97,8 @@ class DataCollector(abc.ABC):
         # Compteurs métriques
         self.n_requests = 0
         self.n_failures = 0
-        self.last_success_at: Optional[datetime] = None
-        self.last_error: Optional[str] = None
+        self.last_success_at: datetime | None = None
+        self.last_error: str | None = None
 
     # -------------------------------------------------------------------------
     # À override
@@ -147,7 +148,7 @@ class DataCollector(abc.ABC):
             logger.exception(f"Collector {self.source} FAILED: {e}")
             return FetchResult(
                 source=self.source,
-                fetched_at=datetime.now(timezone.utc),
+                fetched_at=datetime.now(UTC),
                 raw_data=None,
                 error=str(e),
                 duration_ms=int((time.time() - start) * 1000),
@@ -203,10 +204,7 @@ class DataCollector(abc.ABC):
                 aws_secret_access_key=s.minio.root_password,
                 config=Config(signature_version="s3v4"),
             )
-            key = (
-                f"{self.source}/"
-                f"{result.fetched_at.strftime('%Y/%m/%d/%H%M%S')}_{self.source}.json"
-            )
+            key = f"{self.source}/{result.fetched_at.strftime('%Y/%m/%d/%H%M%S')}_{self.source}.json"
             s3.put_object(
                 Bucket=s.minio.bucket_bronze,
                 Key=key,
@@ -238,12 +236,12 @@ class DataCollector(abc.ABC):
             logger.debug("GDRIVE_FOLDER_ID_BRONZE non configuré, skip")
             return
         try:
+            import os
+
+            from google.auth.transport.requests import Request
             from google.oauth2.credentials import Credentials
             from googleapiclient.discovery import build
             from googleapiclient.http import MediaInMemoryUpload
-            from google.auth.transport.requests import Request
-            import os
-            import json as json_lib
 
             # Charge ou refresh le token
             creds = None
@@ -258,8 +256,7 @@ class DataCollector(abc.ABC):
                     creds.refresh(Request())
                 else:
                     logger.warning(
-                        f"GDrive token absent ou expiré : {token_path}. "
-                        "Lancez le flow OAuth au premier démarrage."
+                        f"GDrive token absent ou expiré : {token_path}. Lancez le flow OAuth au premier démarrage."
                     )
                     return
                 # Sauvegarde token rafraîchi
@@ -268,9 +265,7 @@ class DataCollector(abc.ABC):
 
             # Upload
             service = build("drive", "v3", credentials=creds, cache_discovery=False)
-            file_name = (
-                f"{result.fetched_at.strftime('%Y%m%d_%H%M%S')}_{self.source}.json"
-            )
+            file_name = f"{result.fetched_at.strftime('%Y%m%d_%H%M%S')}_{self.source}.json"
             parent_id = self.s.gdrive.folder_id_bronze_backup
 
             file_metadata = {
@@ -287,14 +282,8 @@ class DataCollector(abc.ABC):
                 mimetype="application/json",
                 resumable=False,
             )
-            file = (
-                service.files()
-                .create(body=file_metadata, media_body=media, fields="id,name,webViewLink")
-                .execute()
-            )
-            logger.info(
-                f"GDrive upload OK: {file.get('name')} → {file.get('webViewLink')}"
-            )
+            file = service.files().create(body=file_metadata, media_body=media, fields="id,name,webViewLink").execute()
+            logger.info(f"GDrive upload OK: {file.get('name')} → {file.get('webViewLink')}")
         except ImportError as e:
             logger.warning(f"google-api-python-client non installé: {e}")
         except Exception as e:
@@ -309,8 +298,7 @@ class DataCollector(abc.ABC):
         retry=retry_if_exception_type((httpx.HTTPError, ConnectionError, TimeoutError)),
         before_sleep=before_sleep_log(logger, logging.WARNING),
     )
-    def _http_get(self, url: str, params: Optional[dict] = None,
-                  headers: Optional[dict] = None) -> httpx.Response:
+    def _http_get(self, url: str, params: dict | None = None, headers: dict | None = None) -> httpx.Response:
         """GET request avec retry."""
         with httpx.Client(timeout=self.timeout) as client:
             r = client.get(url, params=params, headers=headers or {})
@@ -323,8 +311,7 @@ class DataCollector(abc.ABC):
         retry=retry_if_exception_type((httpx.HTTPError, ConnectionError, TimeoutError)),
         before_sleep=before_sleep_log(logger, logging.WARNING),
     )
-    def _http_post(self, url: str, json_data: Optional[dict] = None,
-                   headers: Optional[dict] = None) -> httpx.Response:
+    def _http_post(self, url: str, json_data: dict | None = None, headers: dict | None = None) -> httpx.Response:
         """POST request avec retry."""
         with httpx.Client(timeout=self.timeout) as client:
             r = client.post(url, json=json_data, headers=headers or {})
@@ -346,7 +333,4 @@ class DataCollector(abc.ABC):
         return 0
 
     def __repr__(self) -> str:
-        return (
-            f"<{self.__class__.__name__} source={self.source} "
-            f"requests={self.n_requests} failures={self.n_failures}>"
-        )
+        return f"<{self.__class__.__name__} source={self.source} requests={self.n_requests} failures={self.n_failures}>"

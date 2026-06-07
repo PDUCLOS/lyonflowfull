@@ -13,7 +13,6 @@ from dashboard.components.widgets.pro_tcl import (
     render_saeiv_export,
 )
 
-
 st.set_page_config(
     page_title="Export reporting — Pro TCL · LyonFlowFull",
     page_icon="📤",
@@ -48,19 +47,23 @@ elif export_format == "excel":
     if st.button("📤 Générer Excel", key="excel_export_btn"):
         # Simuler
         import io
-        from src.data.mock.pro_tcl import LINE_KPIS
+
         import pandas as pd
 
-        df = pd.DataFrame([
-            {
-                "Ligne": lid,
-                "OTP %": k.get("otp_pct"),
-                "Retard (min)": k.get("avg_delay_min"),
-                "Fréquence (min)": k.get("frequency_min"),
-                "Charge %": k.get("load_pct"),
-            }
-            for lid, k in LINE_KPIS.items()
-        ])
+        from src.data.mock.pro_tcl import LINE_KPIS
+
+        df = pd.DataFrame(
+            [
+                {
+                    "Ligne": lid,
+                    "OTP %": k.get("otp_pct"),
+                    "Retard (min)": k.get("avg_delay_min"),
+                    "Fréquence (min)": k.get("frequency_min"),
+                    "Charge %": k.get("load_pct"),
+                }
+                for lid, k in LINE_KPIS.items()
+            ]
+        )
         buffer = io.BytesIO()
         try:
             df.to_excel(buffer, index=False, engine="openpyxl")
@@ -93,10 +96,10 @@ elif export_format == "api":
         POST /api/v1/reports
         Content-Type: application/json
         {{
-          "start_date": "{report_config.get('start_date', '')}",
-          "end_date": "{report_config.get('end_date', '')}",
-          "lines": {report_config.get('lines', [])},
-          "sections": {report_config.get('sections', [])}
+          "start_date": "{report_config.get("start_date", "")}",
+          "end_date": "{report_config.get("end_date", "")}",
+          "lines": {report_config.get("lines", [])},
+          "sections": {report_config.get("sections", [])}
         }}
         """,
         language="json",

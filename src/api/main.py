@@ -16,21 +16,18 @@ import logging
 import os
 import secrets
 from contextlib import asynccontextmanager
-from datetime import datetime, timedelta
-from typing import Optional
+from datetime import UTC, datetime, timedelta
 
 import bcrypt
 import jwt
-import psycopg2.extras
 from fastapi import Depends, FastAPI, Header, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 
 from src.api.middleware.rate_limit import RateLimitMiddleware
 from src.config import get_settings, validate_settings
-from src.db import execute_query, execute_scalar, test_connection
+from src.db import execute_query, test_connection
 from src.rgpd.service import log_audit, log_data_subject_request
-
 
 logger = logging.getLogger(__name__)
 
@@ -106,8 +103,8 @@ def create_jwt(user_id: str, username: str, persona_id: str) -> str:
         "sub": user_id,
         "username": username,
         "persona": persona_id,
-        "iat": datetime.now(timezone.utc),
-        "exp": datetime.now(timezone.utc) + timedelta(hours=JWT_EXPIRY_HOURS),
+        "iat": datetime.now(UTC),
+        "exp": datetime.now(UTC) + timedelta(hours=JWT_EXPIRY_HOURS),
         "jti": secrets.token_urlsafe(16),  # unique token id
     }
     return jwt.encode(payload, secret, algorithm=JWT_ALGORITHM)
@@ -130,7 +127,7 @@ def decode_jwt(token: str) -> dict:
 # -----------------------------------------------------------------------------
 # Auth — header X-API-Key
 # -----------------------------------------------------------------------------
-async def verify_api_key(x_api_key: Optional[str] = Header(None)):
+async def verify_api_key(x_api_key: str | None = Header(None)):
     """Vérifie la présence de l'API key (sauf pour /health).
 
     Sécurité : l'auth est TOUJOURS vérifiée sauf si DISABLE_AUTH=true
@@ -141,10 +138,7 @@ async def verify_api_key(x_api_key: Optional[str] = Header(None)):
         return  # dev only — JAMAIS en prod
 
     if not s.api.key:
-        raise HTTPException(
-            status_code=500,
-            detail="LYONFLOW_API_KEY non configuré sur le serveur"
-        )
+        raise HTTPException(status_code=500, detail="LYONFLOW_API_KEY non configuré sur le serveur")
     if not x_api_key:
         raise HTTPException(
             status_code=401,
@@ -153,6 +147,7 @@ async def verify_api_key(x_api_key: Optional[str] = Header(None)):
         )
     # Comparaison constant-time (anti timing attack)
     import hmac
+
     if not hmac.compare_digest(x_api_key, s.api.key):
         raise HTTPException(status_code=401, detail="API key invalide")
 
@@ -170,7 +165,7 @@ class HealthResponse(BaseModel):
 class PredictTrafficRequest(BaseModel):
     node_idx: int
     horizon_minutes: int = 30
-    measurement_time: Optional[datetime] = None
+    measurement_time: datetime | None = None
 
 
 class PredictTrafficResponse(BaseModel):
@@ -193,7 +188,7 @@ class PredictVelovResponse(BaseModel):
     station_id: str
     horizon_minutes: int
     predicted_bikes: float
-    actual_bikes: Optional[int]
+    actual_bikes: int | None
     model_name: str
     prediction_timestamp: str
 
@@ -201,7 +196,7 @@ class PredictVelovResponse(BaseModel):
 class RecommendRequest(BaseModel):
     origin: str
     destination: str
-    departure_time: Optional[datetime] = None
+    departure_time: datetime | None = None
     modes_allowed: list[str] = Field(default_factory=lambda: ["transit", "bike", "walk"])
 
 
@@ -254,7 +249,7 @@ class BottleneckItem(BaseModel):
 class RgpdRequest(BaseModel):
     user_identifier: str  # hash anonyme
     request_type: str  # 'access' | 'deletion' | 'portability' | 'rectification'
-    notes: Optional[str] = None
+    notes: str | None = None
 
 
 # -----------------------------------------------------------------------------
@@ -280,19 +275,15 @@ async def list_models(api_key: None = Depends(verify_api_key)):
     # Placeholder — interrogation MLflow Registry
     return {
         "models": [
-            {"name": "xgboost_speed", "version": "1.2.0", "stage": "Production",
-             "metrics": {"mae": 1.96, "r2": 0.947}},
-            {"name": "xgboost_velov", "version": "1.0.0", "stage": "Production",
-             "metrics": {"mae": 4.2, "r2": 0.331}},
-            {"name": "stgcn_gnn", "version": "0.3.0", "stage": "Staging",
-             "metrics": {"mae": 2.8, "r2": 0.92}},
+            {"name": "xgboost_speed", "version": "1.2.0", "stage": "Production", "metrics": {"mae": 1.96, "r2": 0.947}},
+            {"name": "xgboost_velov", "version": "1.0.0", "stage": "Production", "metrics": {"mae": 4.2, "r2": 0.331}},
+            {"name": "stgcn_gnn", "version": "0.3.0", "stage": "Staging", "metrics": {"mae": 2.8, "r2": 0.92}},
         ]
     }
 
 
 @app.post("/api/v1/predict/traffic", response_model=PredictTrafficResponse, tags=["predict"])
-async def predict_traffic(req: PredictTrafficRequest,
-                           api_key: None = Depends(verify_api_key)):
+async def predict_traffic(req: PredictTrafficRequest, api_key: None = Depends(verify_api_key)):
     """Prédit la vitesse trafic pour un nœud et un horizon."""
     # Placeholder — appel MLflow en prod
     # from src.models.xgboost_speed import predict_one
@@ -320,8 +311,7 @@ async def predict_traffic(req: PredictTrafficRequest,
 
 
 @app.post("/api/v1/predict/velov", response_model=PredictVelovResponse, tags=["predict"])
-async def predict_velov(req: PredictVelovRequest,
-                        api_key: None = Depends(verify_api_key)):
+async def predict_velov(req: PredictVelovRequest, api_key: None = Depends(verify_api_key)):
     """Prédit la disponibilité Vélov pour une station et un horizon."""
     return PredictVelovResponse(
         station_id=req.station_id,
@@ -334,8 +324,7 @@ async def predict_velov(req: PredictVelovRequest,
 
 
 @app.post("/api/v1/recommend", response_model=RecommendResponse, tags=["recommend"])
-async def recommend(req: RecommendRequest,
-                    api_key: None = Depends(verify_api_key)):
+async def recommend(req: RecommendRequest, api_key: None = Depends(verify_api_key)):
     """Recommandation trajet multimodale (basée sur prédictions)."""
     # Placeholder — utilise src/routing/travel_recommender
     options = [
@@ -372,8 +361,7 @@ async def recommend(req: RecommendRequest,
 
 
 @app.post("/api/v1/itinerary", response_model=ItineraryResponse, tags=["routing"])
-async def itinerary(req: ItineraryRequest,
-                     api_key: None = Depends(verify_api_key)):
+async def itinerary(req: ItineraryRequest, api_key: None = Depends(verify_api_key)):
     """Calcule un itinéraire traffic-aware.
 
     Body:
@@ -488,7 +476,8 @@ async def login(req: LoginRequest, request: Request):
     rows = execute_query(query, (req.username,))
     if not rows:
         log_audit(
-            actor="user", action="login_failed",
+            actor="user",
+            action="login_failed",
             ip_address=request.client.host,
             details={"username": req.username},
         )
@@ -497,7 +486,8 @@ async def login(req: LoginRequest, request: Request):
     user = rows[0]
     if not bcrypt.checkpw(req.password.encode("utf-8"), user["password_hash"].encode("utf-8")):
         log_audit(
-            actor="user", action="login_failed",
+            actor="user",
+            action="login_failed",
             ip_address=request.client.host,
             details={"username": req.username, "reason": "bad_password"},
         )
@@ -510,7 +500,8 @@ async def login(req: LoginRequest, request: Request):
         persona_id=user["persona_id"],
     )
     log_audit(
-        actor=req.username, action="login_success",
+        actor=req.username,
+        action="login_success",
         ip_address=request.client.host,
         details={"persona": user["persona_id"]},
     )

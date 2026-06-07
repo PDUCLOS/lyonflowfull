@@ -17,7 +17,6 @@ from dashboard.components.widgets.elu import (
 )
 from src.data.mock.elu import BOTTLENECKS_TOP_10, KPI_12_MONTHS
 
-
 st.set_page_config(
     page_title="Synthèse exécutive — Élu · LyonFlowFull",
     page_icon="📈",

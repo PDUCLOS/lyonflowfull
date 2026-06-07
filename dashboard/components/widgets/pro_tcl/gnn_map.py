@@ -158,12 +158,12 @@ def _render_pydeck_map(merged: pd.DataFrame, horizon: int) -> None:
     # Couleur selon predicted_speed (0-130 km/h)
     def _speed_to_color(speed: float) -> list:
         if speed < 10:
-            return [231, 76, 60, 220]   # rouge (bouché)
+            return [231, 76, 60, 220]  # rouge (bouché)
         if speed < 20:
-            return [255, 152, 0, 220]   # orange
+            return [255, 152, 0, 220]  # orange
         if speed < 35:
-            return [255, 193, 7, 220]   # jaune
-        return [76, 175, 80, 220]       # vert (fluide)
+            return [255, 193, 7, 220]  # jaune
+        return [76, 175, 80, 220]  # vert (fluide)
 
     merged = merged.copy()
     merged["color"] = merged["predicted_speed"].apply(_speed_to_color)

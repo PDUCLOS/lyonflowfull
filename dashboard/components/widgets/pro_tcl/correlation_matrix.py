@@ -59,7 +59,7 @@ def render_correlation_matrix(line_id: str | None = None) -> None:
     # 2x2 grid
     for i in range(0, 4, 2):
         cols = st.columns(2)
-        for col, (key, title, sub, color) in zip(cols, quadrants[i:i+2]):
+        for col, (key, title, sub, color) in zip(cols, quadrants[i : i + 2]):
             with col:
                 n = counts.get(key, 0)
                 st.markdown(
@@ -78,17 +78,19 @@ def render_correlation_matrix(line_id: str | None = None) -> None:
 
     # Table détaillée
     st.markdown("##### 📋 Détail des segments")
-    df = pd.DataFrame([
-        {
-            "Ligne": s["line_id"],
-            "Segment": s["name"],
-            "Bus": "🟢 OK" if s["bus_state"] == "on_time" else "🔴 Retard",
-            "Trafic": "🟢 Fluide" if s["traffic_state"] == "fluid" else "🔴 Bloqué",
-            "Diagnostic": DIAGNOSIS_LABELS.get(s["diagnosis"], "—"),
-            "Retard (min)": s.get("delay_min", 0),
-        }
-        for s in segments
-    ])
+    df = pd.DataFrame(
+        [
+            {
+                "Ligne": s["line_id"],
+                "Segment": s["name"],
+                "Bus": "🟢 OK" if s["bus_state"] == "on_time" else "🔴 Retard",
+                "Trafic": "🟢 Fluide" if s["traffic_state"] == "fluid" else "🔴 Bloqué",
+                "Diagnostic": DIAGNOSIS_LABELS.get(s["diagnosis"], "—"),
+                "Retard (min)": s.get("delay_min", 0),
+            }
+            for s in segments
+        ]
+    )
     st.dataframe(df, use_container_width=True, hide_index=True)
 
     # Sprint 8 — Heatmap corrélation features (Gold)

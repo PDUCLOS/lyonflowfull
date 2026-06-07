@@ -48,7 +48,7 @@ def render_velov_widget(stations: list | None = None, max_stations: int = 3) -> 
             st.markdown(
                 f"""
                 <div class="lyonflow-card" style="border-left:4px solid {color};">
-                    <div style="font-size:0.85rem;font-weight:600;">{s.get('name', '—')}</div>
+                    <div style="font-size:0.85rem;font-weight:600;">{s.get("name", "—")}</div>
                     <div style="font-size:1.8rem;font-weight:700;margin:0.4rem 0;color:{color};">
                         🚲 {bikes}
                     </div>
@@ -56,7 +56,7 @@ def render_velov_widget(stations: list | None = None, max_stations: int = 3) -> 
                         {stands} places libres · {status}
                     </div>
                     <div style="font-size:0.7rem;opacity:0.5;margin-top:0.3rem;">
-                        {s.get('distance_m', 0)}m
+                        {s.get("distance_m", 0)}m
                     </div>
                 </div>
                 """,

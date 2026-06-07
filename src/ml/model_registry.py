@@ -79,10 +79,7 @@ def get_active_models() -> ModelKind:
         return ModelKind.STGCN
     if raw == "both":
         return ModelKind.BOTH
-    raise ValueError(
-        f"LYONFLOW_MODELS_ACTIVE='{raw}' invalide. "
-        f"Valeurs acceptées : xgboost, stgcn, both."
-    )
+    raise ValueError(f"LYONFLOW_MODELS_ACTIVE='{raw}' invalide. Valeurs acceptées : xgboost, stgcn, both.")
 
 
 def is_xgboost_enabled() -> bool:

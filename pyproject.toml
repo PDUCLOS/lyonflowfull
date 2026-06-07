@@ -89,11 +89,24 @@ ignore = [
     "F841",  # variables assignées non utilisées (souvent: current/target affichés par effet de bord)
     "C408",  # dict() vs {} (Plotly patterns)
 ]
+"dashboard/pages/*.py" = [
+    "RUF001", "RUF002", "RUF003",  # emojis UI (intentional: ×, ℹ, ➕)
+    "B905",  # zip without strict (Streamlit patterns)
+    "F841",  # variables affichées par effet de bord Streamlit
+]
+"dashboard/components/*.py" = [
+    "RUF001", "RUF002", "RUF003",  # emojis UI (intentional)
+    "B905",  # zip without strict
+    "F821",  # CSS dans string (theme.py), faux positif ruff
+    "F841",  # variables affichées par effet de bord
+    "UP017",  # datetime.UTC vs timezone.utc (cohérence avec Python 3.11+)
+]
 # Sprint 6/7 — conventions ML : X_train/Y_train, emojis UI, accents FR
 "src/data/db_query.py" = ["N806", "RUF001", "RUF002", "RUF003"]
 "src/data/data_loader.py" = ["N806", "RUF001", "RUF002", "RUF003"]
 "src/data/mock/*.py" = ["RUF001", "RUF002", "RUF003"]
 "src/models/stgcn_wrapper.py" = ["N806"]
+"src/ingestion/trafic_grandlyon.py" = ["RUF002"]  # × dans docstring (format rapport)
 "training/**/*.py" = [
     "N806",  # X_train/Y_train (math convention)
     "N803",  # X, Y, dt en arg (math convention)

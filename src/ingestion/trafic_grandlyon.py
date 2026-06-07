@@ -1,4 +1,4 @@
-"""Collecteur — Grand Lyon boucles de trafic (pvotrafic).
+"""Collecteur — Grand Lyon boucles de trafic (pvotrafic).  # noqa: RUF002
 
 API : https://download.data.grandlyon.com/wfs/grandlyon
 Fréquence : 5 min
@@ -8,8 +8,7 @@ Volume : ~1100 capteurs × 288 cycles/jour
 from __future__ import annotations
 
 import os
-from datetime import datetime, timezone
-from typing import Optional
+from datetime import UTC, datetime
 
 from src.ingestion.base import CollectorError, DataCollector, FetchResult
 
@@ -48,7 +47,7 @@ class TraficGrandLyon(DataCollector):
         n_records = self._count_records(data)
         return FetchResult(
             source=self.source,
-            fetched_at=datetime.now(timezone.utc),
+            fetched_at=datetime.now(UTC),
             raw_data=data,
             n_records=n_records,
             bytes_fetched=len(r.content),

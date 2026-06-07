@@ -110,7 +110,11 @@ def load_traffic(force_mock: bool = False) -> dict[str, Any]:
                 "lon": 4.83 + (int(row["node_idx"]) % 10) * 0.005,
                 "speed_kmh": float(row["avg_speed"]),
                 "delay_min": max(0, int((30 - float(row["avg_speed"])) / 5)),
-                "severity": "high" if float(row["avg_speed"]) < 15 else "medium" if float(row["avg_speed"]) < 25 else "low",
+                "severity": "high"
+                if float(row["avg_speed"]) < 15
+                else "medium"
+                if float(row["avg_speed"]) < 25
+                else "low",
             }
         )
 
@@ -364,16 +368,46 @@ def load_elu_kpis_dict(force_mock: bool = False) -> dict:
     if df.empty:
         # Fallback structure vide
         return {
-            "part_modale_tc": {"label": "Part modale TC", "current": 0, "unit": "%",
-                               "delta_ytd": 0, "target_2026": 0, "history": []},
-            "ponctualite": {"label": "Ponctualité", "current": 0, "unit": "%",
-                            "delta_ytd": 0, "target_2026": 0, "history": []},
-            "co2_evite_tonnes": {"label": "CO₂ évité", "current": 0, "unit": "t",
-                                  "delta_ytd": 0, "target_2026": 0, "history": []},
-            "bottlenecks_actifs": {"label": "Bottlenecks", "current": 0, "unit": "",
-                                   "delta_ytd": 0, "target_2026": 0, "history": []},
-            "satisfaction_pct": {"label": "Satisfaction", "current": 0, "unit": "%",
-                                 "delta_ytd": 0, "target_2026": 0, "history": []},
+            "part_modale_tc": {
+                "label": "Part modale TC",
+                "current": 0,
+                "unit": "%",
+                "delta_ytd": 0,
+                "target_2026": 0,
+                "history": [],
+            },
+            "ponctualite": {
+                "label": "Ponctualité",
+                "current": 0,
+                "unit": "%",
+                "delta_ytd": 0,
+                "target_2026": 0,
+                "history": [],
+            },
+            "co2_evite_tonnes": {
+                "label": "CO₂ évité",
+                "current": 0,
+                "unit": "t",
+                "delta_ytd": 0,
+                "target_2026": 0,
+                "history": [],
+            },
+            "bottlenecks_actifs": {
+                "label": "Bottlenecks",
+                "current": 0,
+                "unit": "",
+                "delta_ytd": 0,
+                "target_2026": 0,
+                "history": [],
+            },
+            "satisfaction_pct": {
+                "label": "Satisfaction",
+                "current": 0,
+                "unit": "%",
+                "delta_ytd": 0,
+                "target_2026": 0,
+                "history": [],
+            },
         }
 
     kpis = {}

@@ -52,12 +52,12 @@ def render_news_section() -> None:
     for ann in announcements:
         st.markdown(
             f"""
-            <div style="background:#1A1D24;border-left:4px solid {ann['color']};
+            <div style="background:#1A1D24;border-left:4px solid {ann["color"]};
                         border-radius:8px;padding:0.8rem 1rem;margin:0.5rem 0;">
                 <div style="font-size:0.7rem;opacity:0.6;text-transform:uppercase;
-                            letter-spacing:0.5px;">{ann['type']} {ann['icon']}</div>
+                            letter-spacing:0.5px;">{ann["type"]} {ann["icon"]}</div>
                 <div style="margin-top:0.3rem;font-size:0.95rem;line-height:1.5;">
-                    {ann['text']}
+                    {ann["text"]}
                 </div>
             </div>
             """,

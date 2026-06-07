@@ -24,11 +24,16 @@ logger = logging.getLogger(__name__)
 
 FEATURE_COLS = [
     "station_id_encoded",
-    "bikes_lag_1", "bikes_lag_2", "bikes_lag_3",
+    "bikes_lag_1",
+    "bikes_lag_2",
+    "bikes_lag_3",
     "rolling_mean_3h",
-    "hour_sin", "hour_cos",
-    "temperature_c", "rain_mm",
-    "is_vacances", "is_ferie",
+    "hour_sin",
+    "hour_cos",
+    "temperature_c",
+    "rain_mm",
+    "is_vacances",
+    "is_ferie",
 ]
 
 
@@ -65,8 +70,12 @@ class XGBoostVelovModel:
         y_test = test["target_bikes"]
 
         model = xgb.XGBRegressor(
-            n_estimators=150, max_depth=5, learning_rate=0.1,
-            objective="reg:squarederror", random_state=42, n_jobs=-1,
+            n_estimators=150,
+            max_depth=5,
+            learning_rate=0.1,
+            objective="reg:squarederror",
+            random_state=42,
+            n_jobs=-1,
         )
         model.fit(X_train, y_train, eval_set=[(X_test, y_test)], verbose=False)
 

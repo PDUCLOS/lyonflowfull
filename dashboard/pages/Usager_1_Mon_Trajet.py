@@ -28,7 +28,6 @@ from dashboard.components.widgets.usager import (
 )
 from src.data.mock.usager import MOCK_TRIP_RESULTS
 
-
 st.set_page_config(
     page_title="Mon trajet — LyonFlowFull",
     page_icon="🧭",
@@ -94,14 +93,16 @@ if st.session_state.get("results_loaded"):
     with itin_col1:
         st.session_state.setdefault("itin_origin", "Part-Dieu")
         origin_input = st.text_input(
-            "🟢 Départ", value=st.session_state["itin_origin"],
+            "🟢 Départ",
+            value=st.session_state["itin_origin"],
             key="itin_origin_input",
         )
         st.session_state["itin_origin"] = origin_input
     with itin_col2:
         st.session_state.setdefault("itin_destination", "Bellecour")
         dest_input = st.text_input(
-            "🔴 Arrivée", value=st.session_state["itin_destination"],
+            "🔴 Arrivée",
+            value=st.session_state["itin_destination"],
             key="itin_dest_input",
         )
         st.session_state["itin_destination"] = dest_input
@@ -114,8 +115,7 @@ if st.session_state.get("results_loaded"):
             key="itin_horizon",
         )
 
-    if st.button("🚗 Calculer l'itinéraire", type="primary",
-                 use_container_width=True, key="itin_calc_btn"):
+    if st.button("🚗 Calculer l'itinéraire", type="primary", use_container_width=True, key="itin_calc_btn"):
         render_itinerary_result(
             origin=st.session_state["itin_origin"],
             destination=st.session_state["itin_destination"],
@@ -143,6 +143,4 @@ if st.session_state.get("results_loaded"):
             render_alternative_card(opt)
 
     st.markdown("---")
-    st.caption(
-        "Mode démonstration · Données simulées · Sprint 6+ : branchement PostgreSQL Gold"
-    )
+    st.caption("Mode démonstration · Données simulées · Sprint 6+ : branchement PostgreSQL Gold")

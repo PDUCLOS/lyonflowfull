@@ -9,21 +9,21 @@ Exposed API:
 """
 
 from src.db.connection import (
-    get_engine,
-    get_session_factory,
-    session_scope,
-    raw_connection,
     execute_query,
     execute_scalar,
+    get_engine,
+    get_session_factory,
+    raw_connection,
+    session_scope,
     test_connection,
 )
 
 __all__ = [
-    "get_engine",
-    "get_session_factory",
-    "session_scope",
-    "raw_connection",
     "execute_query",
     "execute_scalar",
+    "get_engine",
+    "get_session_factory",
+    "raw_connection",
+    "session_scope",
     "test_connection",
 ]

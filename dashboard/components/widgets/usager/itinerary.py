@@ -61,8 +61,9 @@ def render_itinerary_result(
     dest_coords = _resolve_address(destination)
 
     if not origin_coords:
-        st.error(f"❌ Adresse d'origine non reconnue : '{origin}'. "
-                 f"Essayez : {', '.join(list(ADDRESS_COORDS.keys())[:5])}...")
+        st.error(
+            f"❌ Adresse d'origine non reconnue : '{origin}'. Essayez : {', '.join(list(ADDRESS_COORDS.keys())[:5])}..."
+        )
         return
     if not dest_coords:
         st.error(f"❌ Adresse de destination non reconnue : '{destination}'.")
@@ -118,16 +119,16 @@ def _render_summary(
             "🕐 Durée totale",
             f"{itinerary.total_duration_min:.1f} min",
             delta=(
-                f"+{comparison['delta_s']/60:.1f} min vs maintenant"
+                f"+{comparison['delta_s'] / 60:.1f} min vs maintenant"
                 if comparison and comparison["delta_s"] > 0
-                else f"{comparison['delta_s']/60:.1f} min vs maintenant"
+                else f"{comparison['delta_s'] / 60:.1f} min vs maintenant"
                 if comparison
                 else None
             ),
             delta_color="inverse" if comparison and comparison["delta_s"] > 0 else "normal",
         )
     with col2:
-        st.metric("📏 Distance", f"{itinerary.total_length_m/1000:.2f} km")
+        st.metric("📏 Distance", f"{itinerary.total_length_m / 1000:.2f} km")
     with col3:
         st.metric("🚗 Vitesse moyenne", f"{itinerary.average_speed_kmh:.1f} km/h")
     with col4:
@@ -135,7 +136,7 @@ def _render_summary(
 
     if comparison:
         st.caption(
-            f"📊 Comparaison : maintenant = {comparison['current_duration_s']/60:.1f} min · "
+            f"📊 Comparaison : maintenant = {comparison['current_duration_s'] / 60:.1f} min · "
             f"H+{horizon_minutes}min = {itinerary.total_duration_min:.1f} min"
         )
 
@@ -151,25 +152,30 @@ def _render_map(
         from streamlit_folium import st_folium
 
         # Centre sur le milieu de l'itinéraire
-        all_lons = [origin_coords[0], dest_coords[0]] + \
-                  [s.start_lon for s in itinerary.segments] + \
-                  [s.end_lon for s in itinerary.segments]
-        all_lats = [origin_coords[1], dest_coords[1]] + \
-                  [s.start_lat for s in itinerary.segments] + \
-                  [s.end_lat for s in itinerary.segments]
+        all_lons = (
+            [origin_coords[0], dest_coords[0]]
+            + [s.start_lon for s in itinerary.segments]
+            + [s.end_lon for s in itinerary.segments]
+        )
+        all_lats = (
+            [origin_coords[1], dest_coords[1]]
+            + [s.start_lat for s in itinerary.segments]
+            + [s.end_lat for s in itinerary.segments]
+        )
         center_lat = sum(all_lats) / len(all_lats)
         center_lon = sum(all_lons) / len(all_lons)
 
-        m = folium.Map(location=[center_lat, center_lon], zoom=13,
-                       tiles="CartoDB positron")
+        m = folium.Map(location=[center_lat, center_lon], zoom=13, tiles="CartoDB positron")
 
         # Markers
         folium.Marker(
-            origin_coords, popup=f"🟢 {itinerary.origin_node}",
+            origin_coords,
+            popup=f"🟢 {itinerary.origin_node}",
             icon=folium.Icon(color="green", icon="play"),
         ).add_to(m)
         folium.Marker(
-            dest_coords, popup=f"🔴 {itinerary.destination_node}",
+            dest_coords,
+            popup=f"🔴 {itinerary.destination_node}",
             icon=folium.Icon(color="red", icon="stop"),
         ).add_to(m)
 
@@ -188,7 +194,7 @@ def _render_map(
                     f"<b>{seg.channel_id}</b><br>"
                     f"📏 {seg.length_m:.0f} m<br>"
                     f"🚗 {seg.speed_kmh:.0f} km/h<br>"
-                    f"🕐 {seg.duration_s/60:.1f} min"
+                    f"🕐 {seg.duration_s / 60:.1f} min"
                 ),
             ).add_to(m)
 
@@ -217,7 +223,7 @@ def _render_segments(itinerary: Itinerary) -> None:
                     <div style="flex:1;">
                         <div style="font-weight:600;font-size:0.9rem;">{seg.channel_id}</div>
                         <div style="font-size:0.8rem;opacity:0.7;">
-                            📏 {seg.length_m:.0f} m · 🚗 {seg.speed_kmh:.0f} km/h · 🕐 {seg.duration_s/60:.1f} min
+                            📏 {seg.length_m:.0f} m · 🚗 {seg.speed_kmh:.0f} km/h · 🕐 {seg.duration_s / 60:.1f} min
                         </div>
                     </div>
                 </div>

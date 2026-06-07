@@ -14,7 +14,6 @@ from airflow.operators.python import PythonOperator
 
 from src.ingestion import MONTHLY_COLLECTORS, DataCollector
 
-
 logger = logging.getLogger(__name__)
 
 
@@ -45,7 +44,6 @@ with DAG(
     max_active_runs=1,
     tags=["bronze", "ingestion", "calendrier"],
 ) as dag:
-
     for cls in MONTHLY_COLLECTORS:
         PythonOperator(
             task_id=f"collect_{cls.__name__.lower()}",

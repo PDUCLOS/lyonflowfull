@@ -5,16 +5,15 @@ side-effect au chargement du module (HTTP, env, etc.). Instanciation à
 la demande dans les DAGs Airflow.
 """
 
+from src.ingestion.air_quality import AirQualityOpenMeteo
 from src.ingestion.base import CollectorError, DataCollector, FetchResult
+from src.ingestion.calendrier_scolaire import CalendrierScolaire
+from src.ingestion.chantiers import ChantiersGrandLyon
+from src.ingestion.jours_feries import JoursFeries
+from src.ingestion.meteo import MeteoOpenMeteo
+from src.ingestion.tcl_siri_lite import TclSiriLite
 from src.ingestion.trafic_grandlyon import TraficGrandLyon
 from src.ingestion.velov import VelovCollector
-from src.ingestion.meteo import MeteoOpenMeteo
-from src.ingestion.air_quality import AirQualityOpenMeteo
-from src.ingestion.chantiers import ChantiersGrandLyon
-from src.ingestion.tcl_siri_lite import TclSiriLite
-from src.ingestion.calendrier_scolaire import CalendrierScolaire
-from src.ingestion.jours_feries import JoursFeries
-
 
 REALTIME_COLLECTORS: list[type[DataCollector]] = [
     TraficGrandLyon,
@@ -30,24 +29,22 @@ MONTHLY_COLLECTORS: list[type[DataCollector]] = [
     JoursFeries,
 ]
 
-ALL_COLLECTOR_CLASSES: list[type[DataCollector]] = (
-    REALTIME_COLLECTORS + MONTHLY_COLLECTORS
-)
+ALL_COLLECTOR_CLASSES: list[type[DataCollector]] = REALTIME_COLLECTORS + MONTHLY_COLLECTORS
 
 
 __all__ = [
+    "ALL_COLLECTOR_CLASSES",
+    "MONTHLY_COLLECTORS",
+    "REALTIME_COLLECTORS",
+    "AirQualityOpenMeteo",
+    "CalendrierScolaire",
+    "ChantiersGrandLyon",
+    "CollectorError",
     "DataCollector",
     "FetchResult",
-    "CollectorError",
+    "JoursFeries",
+    "MeteoOpenMeteo",
+    "TclSiriLite",
     "TraficGrandLyon",
     "VelovCollector",
-    "MeteoOpenMeteo",
-    "AirQualityOpenMeteo",
-    "ChantiersGrandLyon",
-    "TclSiriLite",
-    "CalendrierScolaire",
-    "JoursFeries",
-    "REALTIME_COLLECTORS",
-    "MONTHLY_COLLECTORS",
-    "ALL_COLLECTOR_CLASSES",
 ]

@@ -69,8 +69,8 @@ def render_traffic_widget(traffic: dict | None = None) -> None:
                     f"""
                     <div class="lyonflow-card" style="text-align:center;padding:0.6rem;">
                         <div style="font-size:0.75rem;opacity:0.6;">{label}</div>
-                        <div style="font-size:1.3rem;font-weight:600;">{p.get('average_speed_kmh', 0)} km/h</div>
-                        <div style="font-size:0.85rem;">{p.get('congestion_level', '—')}</div>
+                        <div style="font-size:1.3rem;font-weight:600;">{p.get("average_speed_kmh", 0)} km/h</div>
+                        <div style="font-size:0.85rem;">{p.get("congestion_level", "—")}</div>
                     </div>
                     """,
                     unsafe_allow_html=True,

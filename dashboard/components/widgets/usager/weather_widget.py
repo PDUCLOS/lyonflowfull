@@ -80,9 +80,9 @@ def render_weather_widget(weather: dict | None = None) -> None:
                 st.markdown(
                     f"""
                     <div class="lyonflow-card" style="text-align:center;padding:0.5rem;">
-                        <div style="font-size:0.75rem;opacity:0.6;">{h.get('hour')}h</div>
-                        <div style="font-size:1.5rem;">{h.get('icon', '')}</div>
-                        <div style="font-size:0.9rem;font-weight:600;">{h.get('temp_c', 0)}°</div>
+                        <div style="font-size:0.75rem;opacity:0.6;">{h.get("hour")}h</div>
+                        <div style="font-size:1.5rem;">{h.get("icon", "")}</div>
+                        <div style="font-size:0.9rem;font-weight:600;">{h.get("temp_c", 0)}°</div>
                     </div>
                     """,
                     unsafe_allow_html=True,

@@ -168,8 +168,7 @@ def render_dag_list() -> None:
             color = {"success": "🟢", "running": "🔄", "failed": "🔴"}.get(status, "⚪")
             st.markdown(f"{color} {status}")
         with cols[5]:
-            if st.button("▶️ Trigger", key=f"trigger_{dag['dag_id']}",
-                        use_container_width=True):
+            if st.button("▶️ Trigger", key=f"trigger_{dag['dag_id']}", use_container_width=True):
                 _trigger_dag(dag["dag_id"])
 
 
@@ -188,13 +187,43 @@ def render_health_panel() -> None:
     if not results:
         # Affichage mock
         results = [
-            {"name": "bronze_freshness", "status": "ok", "details": "Bronze trafic: 4 min",
-             "metric_value": 4.0, "threshold": 30.0, "timestamp": "2026-06-06T15:00:00"},
-            {"name": "bronze_volume", "status": "ok", "details": "522k records/24h", "metric_value": 522000, "threshold": 1000},
-            {"name": "silver_nulls", "status": "ok", "details": "Nulls vitesse: 0.2%", "metric_value": 0.2, "threshold": 5.0},
+            {
+                "name": "bronze_freshness",
+                "status": "ok",
+                "details": "Bronze trafic: 4 min",
+                "metric_value": 4.0,
+                "threshold": 30.0,
+                "timestamp": "2026-06-06T15:00:00",
+            },
+            {
+                "name": "bronze_volume",
+                "status": "ok",
+                "details": "522k records/24h",
+                "metric_value": 522000,
+                "threshold": 1000,
+            },
+            {
+                "name": "silver_nulls",
+                "status": "ok",
+                "details": "Nulls vitesse: 0.2%",
+                "metric_value": 0.2,
+                "threshold": 5.0,
+            },
             {"name": "silver_doublons", "status": "ok", "details": "0 doublons", "metric_value": 0, "threshold": 0},
-            {"name": "predictions_presentes", "status": "ok", "details": "124 prédictions/2h", "metric_value": 124, "threshold": 100},
-            {"name": "drift_baseline", "status": "warning", "details": "1 rapport drift (à analyser)", "metric_value": 1, "threshold": 1},
+            {
+                "name": "predictions_presentes",
+                "status": "ok",
+                "details": "124 prédictions/2h",
+                "metric_value": 124,
+                "threshold": 100,
+            },
+            {
+                "name": "drift_baseline",
+                "status": "warning",
+                "details": "1 rapport drift (à analyser)",
+                "metric_value": 1,
+                "threshold": 1,
+            },
         ]
 
     cols = st.columns(3)
@@ -214,7 +243,7 @@ def render_health_panel() -> None:
                         {icon} {status.upper()}
                     </div>
                     <div style="font-size:0.75rem;opacity:0.7;margin-top:0.2rem;">
-                        {r.get('details', '')}
+                        {r.get("details", "")}
                     </div>
                 </div>
                 """,
@@ -281,6 +310,7 @@ def _trigger_dag(dag_id: str) -> None:
     """Trigger manuel d'un DAG (mock — appel Airflow API en prod)."""
     with st.spinner(f"Trigger {dag_id}..."):
         import time
+
         time.sleep(0.5)
         # En prod : POST /api/v1/dags/{dag_id}/dagRuns
         st.success(f"✅ {dag_id} déclenché — voir Airflow UI pour progression")

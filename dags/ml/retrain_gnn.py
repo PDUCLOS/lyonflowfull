@@ -66,8 +66,7 @@ def _send_email_notification(
     to_email = to_email or os.getenv("LYONFLOW_NOTIFICATION_EMAIL", "")
     if not to_email:
         logger.info(
-            "[email no-op] destinataire vide. Pour activer : set "
-            "LYONFLOW_NOTIFICATION_EMAIL dans .env. Subject: %s",
+            "[email no-op] destinataire vide. Pour activer : set LYONFLOW_NOTIFICATION_EMAIL dans .env. Subject: %s",
             subject,
         )
         return False
@@ -77,8 +76,7 @@ def _send_email_notification(
     smtp_pwd = os.getenv("LYONFLOW_SMTP_PASSWORD", "")
     if not smtp_host or not smtp_user:
         logger.warning(
-            "[email skipped] SMTP_HOST ou SMTP_USER manquant. "
-            "Body (à destination de %s):\n%s",
+            "[email skipped] SMTP_HOST ou SMTP_USER manquant. Body (à destination de %s):\n%s",
             to_email,
             body,
         )
@@ -184,9 +182,7 @@ def _train_remote_ec2() -> dict:
     """
     host = os.getenv("EC2_TRAINING_HOST")
     if not host:
-        raise RuntimeError(
-            "EC2_TRAINING_HOST non défini. Configure l'IP de l'instance GPU dans .env"
-        )
+        raise RuntimeError("EC2_TRAINING_HOST non défini. Configure l'IP de l'instance GPU dans .env")
 
     s3_bucket = os.getenv("LYONFLOW_MODELS_S3_BUCKET", "")
     s3_arg = f"--upload-s3 s3://{s3_bucket}/models/" if s3_bucket else ""
@@ -205,8 +201,10 @@ def _train_remote_ec2() -> dict:
 
     ssh_cmd = [
         "ssh",
-        "-i", os.path.expanduser("~/.ssh/lyonflow_ec2"),
-        "-o", "StrictHostKeyChecking=no",
+        "-i",
+        os.path.expanduser("~/.ssh/lyonflow_ec2"),
+        "-o",
+        "StrictHostKeyChecking=no",
         f"ubuntu@{host}",
         remote_cmd,
     ]
@@ -359,9 +357,7 @@ def _train_remote_ec2() -> dict:
     """
     host = os.getenv("EC2_TRAINING_HOST")
     if not host:
-        raise RuntimeError(
-            "EC2_TRAINING_HOST non défini. Configure l'IP de l'instance GPU dans .env"
-        )
+        raise RuntimeError("EC2_TRAINING_HOST non défini. Configure l'IP de l'instance GPU dans .env")
 
     # Commande distante : lance le CLI avec upload S3 automatique
     s3_bucket = os.getenv("LYONFLOW_MODELS_S3_BUCKET", "")
@@ -381,8 +377,10 @@ def _train_remote_ec2() -> dict:
 
     ssh_cmd = [
         "ssh",
-        "-i", os.path.expanduser("~/.ssh/lyonflow_ec2"),
-        "-o", "StrictHostKeyChecking=no",
+        "-i",
+        os.path.expanduser("~/.ssh/lyonflow_ec2"),
+        "-o",
+        "StrictHostKeyChecking=no",
         f"ubuntu@{host}",
         remote_cmd,
     ]

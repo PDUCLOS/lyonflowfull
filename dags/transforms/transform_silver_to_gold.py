@@ -15,7 +15,6 @@ from airflow.operators.python import PythonOperator
 
 from src.transformation import transform_silver_to_gold
 
-
 logger = logging.getLogger(__name__)
 
 
@@ -47,7 +46,6 @@ with DAG(
     max_active_runs=1,
     tags=["transform", "gold"],
 ) as dag:
-
     PythonOperator(
         task_id="build_traffic_features",
         python_callable=_build_traffic,

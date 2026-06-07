@@ -22,13 +22,13 @@ def render_alert_card(alert: dict) -> None:
             <div style="display:flex;align-items:center;gap:0.6rem;">
                 <div style="font-size:1.4rem;">{icon}</div>
                 <div style="flex:1;">
-                    <div style="font-weight:600;">{alert.get('title', '—')}</div>
-                    <div style="font-size:0.85rem;opacity:0.7;">{alert.get('description', '')}</div>
+                    <div style="font-weight:600;">{alert.get("title", "—")}</div>
+                    <div style="font-size:0.85rem;opacity:0.7;">{alert.get("description", "")}</div>
                 </div>
             </div>
             <div style="margin-top:0.5rem;padding:0.5rem 0.7rem;background:{color}22;
                         border-radius:4px;font-size:0.85rem;">
-                💡 <b>Action :</b> {alert.get('action', '')}
+                💡 <b>Action :</b> {alert.get("action", "")}
             </div>
         </div>
         """,

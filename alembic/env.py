@@ -5,14 +5,13 @@ Configure Alembic pour utiliser notre config + DB.
 
 from __future__ import annotations
 
-import os
 import sys
 from logging.config import fileConfig
 from pathlib import Path
 
-from alembic import context
 from sqlalchemy import engine_from_config, pool
 
+from alembic import context
 
 # Ajouter le workspace au path
 WORKSPACE = Path(__file__).resolve().parents[1]
@@ -21,7 +20,6 @@ sys.path.insert(0, str(WORKSPACE))
 # Import des settings + Base
 from src.config import get_settings  # noqa: E402
 
-
 # Config Alembic
 config = context.config
 
@@ -29,8 +27,7 @@ config = context.config
 settings = get_settings()
 config.set_main_option(
     "sqlalchemy.url",
-    f"postgresql://{settings.db.user}:{settings.db.password}"
-    f"@{settings.db.host}:{settings.db.port}/{settings.db.db}",
+    f"postgresql://{settings.db.user}:{settings.db.password}@{settings.db.host}:{settings.db.port}/{settings.db.db}",
 )
 
 # Config logging

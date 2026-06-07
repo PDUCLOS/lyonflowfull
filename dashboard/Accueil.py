@@ -21,7 +21,6 @@ from src.persona.manager import (
     get_current_persona_config,
 )
 
-
 st.set_page_config(
     page_title="LyonFlowFull",
     page_icon="🚦",

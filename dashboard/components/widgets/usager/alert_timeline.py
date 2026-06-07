@@ -44,8 +44,8 @@ def render_alert_timeline(alerts: list) -> None:
                 <div style="background:{color};width:8px;height:8px;border-radius:50%;
                             margin-top:6px;flex-shrink:0;"></div>
                 <div style="flex:1;font-size:0.9rem;">
-                    <b>{icon} {alert.get('title', '—')}</b>
-                    <div style="font-size:0.8rem;opacity:0.7;">{alert.get('description', '')}</div>
+                    <b>{icon} {alert.get("title", "—")}</b>
+                    <div style="font-size:0.8rem;opacity:0.7;">{alert.get("description", "")}</div>
                 </div>
             </div>
             """,

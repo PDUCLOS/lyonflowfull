@@ -14,7 +14,6 @@ from dashboard.components.widgets.elu import (
 )
 from src.data.mock.elu import BOTTLENECKS_TOP_10, KPI_12_MONTHS
 
-
 st.set_page_config(
     page_title="Rapport CM — Élu · LyonFlowFull",
     page_icon="📄",
@@ -83,7 +82,4 @@ sections = {
 render_pdf_generator(sections)
 
 st.markdown("---")
-st.caption(
-    "LyonFlowFull · Génération PDF via WeasyPrint (HTML→PDF) · "
-    "Fallback reportlab si WeasyPrint indisponible"
-)
+st.caption("LyonFlowFull · Génération PDF via WeasyPrint (HTML→PDF) · Fallback reportlab si WeasyPrint indisponible")

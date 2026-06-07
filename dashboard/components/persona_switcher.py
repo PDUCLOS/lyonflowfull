@@ -13,7 +13,6 @@ from __future__ import annotations
 
 import streamlit as st
 
-from src.persona.auth import is_authenticated
 from src.persona.manager import (
     get_current_persona,
     is_current_persona_authenticated,
@@ -53,20 +52,20 @@ def _render_cards(personas: list[dict], current: str) -> None:
                             border-radius:12px;padding:20px;height:200px;
                             display:flex;flex-direction:column;justify-content:space-between;">
                     <div>
-                        <div style="font-size:2.5rem;">{p['icon']}</div>
+                        <div style="font-size:2.5rem;">{p["icon"]}</div>
                         <div style="font-size:1.3rem;font-weight:600;
-                                    margin-top:8px;color:{p['color_primary']};">
-                            {p['label']}
+                                    margin-top:8px;color:{p["color_primary"]};">
+                            {p["label"]}
                         </div>
                         <div style="font-size:0.85rem;opacity:0.7;
-                                    margin-top:4px;">{p['short_label']}</div>
+                                    margin-top:4px;">{p["short_label"]}</div>
                         <div style="font-size:0.9rem;margin-top:12px;opacity:0.85;">
-                            {p['description']}
+                            {p["description"]}
                         </div>
                     </div>
                     <div style="font-size:0.75rem;opacity:0.6;">
-                        {('🔒 Protégé' if p['auth_required'] else '🔓 Accès libre')}
-                        {'  •  ✅ Actif' if is_active else ''}
+                        {("🔒 Protégé" if p["auth_required"] else "🔓 Accès libre")}
+                        {"  •  ✅ Actif" if is_active else ""}
                     </div>
                 </div>
                 """,

@@ -71,12 +71,13 @@ def render_otp_heatmap(otp_data: dict | None = None, days: int = 1, height: int 
                 x=[f"{h}h" for h in range(24)],
                 y=lines,
                 colorscale=[
-                    [0.0, "#E74C3C"],   # rouge si <70
-                    [0.3, "#FF9800"],   # orange 70-80
-                    [0.6, "#FFCD00"],   # jaune 80-90
-                    [1.0, "#4CAF50"],   # vert >90
+                    [0.0, "#E74C3C"],  # rouge si <70
+                    [0.3, "#FF9800"],  # orange 70-80
+                    [0.6, "#FFCD00"],  # jaune 80-90
+                    [1.0, "#4CAF50"],  # vert >90
                 ],
-                zmin=60, zmax=98,
+                zmin=60,
+                zmax=98,
                 text=text_data,
                 texttemplate="%{text}",
                 textfont={"size": 10},
@@ -85,7 +86,7 @@ def render_otp_heatmap(otp_data: dict | None = None, days: int = 1, height: int 
             )
         )
         fig.update_layout(
-            title=f"OTP par ligne × heure ({'aujourd\'hui' if days == 1 else f'moyenne {days}j'})",
+            title=f"OTP par ligne × heure ({"aujourd'hui" if days == 1 else f'moyenne {days}j'})",
             xaxis_title="Heure",
             yaxis_title="Ligne",
             height=height,
@@ -96,8 +97,7 @@ def render_otp_heatmap(otp_data: dict | None = None, days: int = 1, height: int 
     except ImportError:
         # Fallback
         df = pd.DataFrame(z_data, index=lines, columns=[f"{h}h" for h in range(24)])
-        st.dataframe(df.style.background_gradient(cmap="RdYlGn", vmin=60, vmax=98),
-                     height=height)
+        st.dataframe(df.style.background_gradient(cmap="RdYlGn", vmin=60, vmax=98), height=height)
 
 
 def render_otp_heatmap_mini(otp_data: dict | None = None, height: int = 200) -> None:

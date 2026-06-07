@@ -35,8 +35,7 @@ def render_map_painter(height: int = 400) -> dict:
         from streamlit_folium import st_folium
 
         # Carte avec marqueurs des bottlenecks existants
-        m = folium.Map(location=[45.76, 4.84], zoom_start=12,
-                       tiles="CartoDB positron")
+        m = folium.Map(location=[45.76, 4.84], zoom_start=12, tiles="CartoDB positron")
 
         coords = {
             "Rue Garibaldi": (45.7575, 4.8461),

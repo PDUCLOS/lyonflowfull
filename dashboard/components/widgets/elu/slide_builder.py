@@ -35,10 +35,12 @@ def render_slide_builder() -> list:
 
     slides = []
     for i, t in enumerate(slide_types, 1):
-        slides.append({
-            "order": i,
-            "type": t,
-            "content": {},  # Sera rempli par le générateur PDF
-        })
+        slides.append(
+            {
+                "order": i,
+                "type": t,
+                "content": {},  # Sera rempli par le générateur PDF
+            }
+        )
 
     return slides

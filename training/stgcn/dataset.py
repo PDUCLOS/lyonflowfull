@@ -254,9 +254,7 @@ def build_tensors_from_df(
     cfg = config or DatasetConfig()
 
     # Pivot : (measurement_time × node_idx) → matrix (T, N)
-    pivot_speed = df.pivot_table(
-        index="measurement_time", columns="node_idx", values="speed_norm", aggfunc="mean"
-    )
+    pivot_speed = df.pivot_table(index="measurement_time", columns="node_idx", values="speed_norm", aggfunc="mean")
     timestamps = pivot_speed.index
     num_timesteps, num_nodes = pivot_speed.shape
 
@@ -275,9 +273,7 @@ def build_tensors_from_df(
     # Sliding windows
     total_window = cfg.seq_len + cfg.horizon
     if num_timesteps < total_window:
-        raise ValueError(
-            f"Pas assez de timesteps ({num_timesteps}) pour seq_len+horizon={total_window}"
-        )
+        raise ValueError(f"Pas assez de timesteps ({num_timesteps}) pour seq_len+horizon={total_window}")
 
     num_samples = (num_timesteps - total_window) // cfg.stride + 1
     X = np.zeros((num_samples, cfg.seq_len, num_nodes, cfg.in_channels), dtype=np.float32)

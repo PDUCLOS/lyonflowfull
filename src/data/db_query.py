@@ -539,8 +539,7 @@ def get_bronze_source_counts(hours: int = 1) -> pd.DataFrame:
         # Une requête par table (pas de UNION sur des tables hétérogènes)
         try:
             count = execute_scalar(
-                f"SELECT COUNT(*) FROM bronze.{table} "
-                f"WHERE fetched_at >= NOW() - make_interval(hours => %s)",
+                f"SELECT COUNT(*) FROM bronze.{table} WHERE fetched_at >= NOW() - make_interval(hours => %s)",
                 (hours,),
             )
             last = execute_scalar(f"SELECT MAX(fetched_at) FROM bronze.{table}")
@@ -707,4 +706,3 @@ def get_amenagements_passes(limit: int = 50) -> pd.DataFrame:
         LIMIT %s
     """
     return _df_from_query(query, (limit,))
-

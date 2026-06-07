@@ -8,13 +8,10 @@ Tous les chemins (DB, MinIO, modèles) sont dérivés des env vars.
 
 from __future__ import annotations
 
-import os
 from pathlib import Path
-from typing import Optional
 
 from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
-
 
 # Workspace root (used for resolving relative paths in tests)
 WORKSPACE_ROOT = Path(__file__).resolve().parents[2]
@@ -22,6 +19,7 @@ WORKSPACE_ROOT = Path(__file__).resolve().parents[2]
 
 class DatabaseSettings(BaseSettings):
     """Connexion PostgreSQL."""
+
     host: str = Field(default="localhost", alias="POSTGRES_HOST")
     port: int = Field(default=5432, alias="POSTGRES_PORT")
     db: str = Field(default="lyonflow", alias="POSTGRES_DB")
@@ -49,6 +47,7 @@ class DatabaseSettings(BaseSettings):
 
 class MinioSettings(BaseSettings):
     """MinIO S3-compatible storage (optionnel — Google Drive est préféré)."""
+
     enabled: bool = Field(default=False, alias="MINIO_ENABLED")
     endpoint: str = Field(default="localhost:9000", alias="MINIO_ENDPOINT")
     root_user: str = Field(default="minio", alias="MINIO_ROOT_USER")
@@ -75,6 +74,7 @@ class GoogleDriveSettings(BaseSettings):
 
     Alternative MLflow : filesystem + rclone sync vers Drive
     """
+
     enabled: bool = Field(default=True, alias="GDRIVE_ENABLED")
     credentials_path: str = Field(
         default="/app/secrets/gdrive_credentials.json",
@@ -91,17 +91,20 @@ class GoogleDriveSettings(BaseSettings):
 
 class RedisSettings(BaseSettings):
     """Redis (cache + Celery broker)."""
+
     url: str = Field(default="redis://localhost:6379/0", alias="REDIS_URL")
 
 
 class MLflowSettings(BaseSettings):
     """MLflow tracking."""
+
     tracking_uri: str = Field(default="http://localhost:5000", alias="MLFLOW_TRACKING_URI")
     experiment_name: str = "lyonflow-traffic"
 
 
 class APISettings(BaseSettings):
     """FastAPI."""
+
     key: str = Field(default="", alias="LYONFLOW_API_KEY")
     host: str = "0.0.0.0"
     port: int = 8000
@@ -110,6 +113,7 @@ class APISettings(BaseSettings):
 
 class AirflowSettings(BaseSettings):
     """Airflow."""
+
     admin_username: str = Field(default="admin", alias="AIRFLOW_ADMIN_USERNAME")
     admin_password: str = Field(default="", alias="AIRFLOW_ADMIN_PASSWORD")
     secret_key: str = Field(default="", alias="AIRFLOW_SECRET_KEY")
@@ -118,6 +122,7 @@ class AirflowSettings(BaseSettings):
 
 class MLSettings(BaseSettings):
     """Hyperparamètres ML."""
+
     seq_len: int = Field(default=120, alias="SEQ_LEN")
     horizons: list[int] = Field(default=[6, 12, 36], alias="HORIZONS")
     hidden_channels: int = Field(default=128, alias="HIDDEN_CHANNELS")
@@ -143,25 +148,26 @@ class MLSettings(BaseSettings):
     gnn_map_visible: bool = Field(default=False, alias="LYONFLOW_DASHBOARD_GNN_MAP")
     # Dashboard Model Monitoring complet (lit MLflow live).
     # Préparé dans Pro_7_Model_Monitoring, masqué par défaut.
-    model_monitoring_visible: bool = Field(
-        default=False, alias="LYONFLOW_DASHBOARD_MODEL_MONITORING"
-    )
+    model_monitoring_visible: bool = Field(default=False, alias="LYONFLOW_DASHBOARD_MODEL_MONITORING")
 
 
 class LyonGeoSettings(BaseSettings):
     """Coordonnées Lyon centre (par défaut)."""
+
     latitude: float = 45.7640
     longitude: float = 4.8357
 
 
 class AlertSettings(BaseSettings):
     """Alerting."""
-    webhook_url: Optional[str] = Field(default=None, alias="LYONFLOW_ALERT_WEBHOOK_URL")
+
+    webhook_url: str | None = Field(default=None, alias="LYONFLOW_ALERT_WEBHOOK_URL")
     log_file: str = "/app/logs/alerts.log"
 
 
 class Settings(BaseSettings):
     """Settings agrégés."""
+
     model_config = SettingsConfigDict(
         env_file=".env",
         env_file_encoding="utf-8",
@@ -189,7 +195,7 @@ class Settings(BaseSettings):
 
 
 # Singleton
-_settings: Optional[Settings] = None
+_settings: Settings | None = None
 
 
 def get_settings() -> Settings:
@@ -216,6 +222,4 @@ def validate_settings() -> None:
         missing.append("AIRFLOW_ADMIN_PASSWORD (required in production)")
 
     if missing:
-        raise RuntimeError(
-            f"Variables d'environnement manquantes : {', '.join(missing)}"
-        )
+        raise RuntimeError(f"Variables d'environnement manquantes : {', '.join(missing)}")

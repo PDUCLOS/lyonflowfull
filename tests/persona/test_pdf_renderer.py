@@ -11,7 +11,7 @@ sys.path.insert(0, str(WORKSPACE))
 
 def test_pdf_renderer_imports():
     """Le module src/reporting/pdf_renderer doit s'importer."""
-    from src.reporting import pdf_renderer  # noqa: F401
+    from src.reporting import pdf_renderer
 
     assert hasattr(pdf_renderer, "render_html_template")
     assert hasattr(pdf_renderer, "generate_pdf")
@@ -98,5 +98,6 @@ def test_generate_pdf_returns_bytes():
         # Si ni WeasyPrint ni reportlab ne sont installés
         if "weasyprint" in str(e) or "reportlab" in str(e):
             import pytest
+
             pytest.skip(f"Librairie PDF non installée : {e}")
         raise

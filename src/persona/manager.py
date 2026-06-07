@@ -16,7 +16,6 @@ from src.persona.personas_loader import (
     load_personas_config,
 )
 
-
 _SESSION_KEY = "lyonflow_persona"
 _SESSION_AUTH_KEY = "lyonflow_auth"
 
@@ -42,9 +41,7 @@ def set_current_persona(persona_id: str) -> None:
     """
     available = [p["id"] for p in list_personas()]
     if persona_id not in available:
-        raise ValueError(
-            f"Persona '{persona_id}' inconnu. Disponibles : {available}"
-        )
+        raise ValueError(f"Persona '{persona_id}' inconnu. Disponibles : {available}")
     st.session_state[_SESSION_KEY] = persona_id
     # Reset auth quand on change de persona
     st.session_state[_SESSION_AUTH_KEY] = False
@@ -121,10 +118,10 @@ class PersonaManager:
             <div style="background:{self.color_primary}22;border-left:4px solid {self.color_primary};
                         padding:8px 12px;border-radius:4px;margin-bottom:12px;">
                 <div style="font-size:1.4rem;font-weight:600;">
-                    {self.config.get('icon', '👤')} {self.config.get('label', self.persona_id)}
+                    {self.config.get("icon", "👤")} {self.config.get("label", self.persona_id)}
                 </div>
                 <div style="font-size:0.85rem;opacity:0.8;">
-                    {self.config.get('description', '')}
+                    {self.config.get("description", "")}
                 </div>
             </div>
             """,

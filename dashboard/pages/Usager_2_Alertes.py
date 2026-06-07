@@ -14,7 +14,6 @@ from dashboard.components.widgets.usager import (
 )
 from src.data.mock.usager import MOCK_ALERTS
 
-
 st.set_page_config(
     page_title="Alertes — LyonFlowFull",
     page_icon="🔔",

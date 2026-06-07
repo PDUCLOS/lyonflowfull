@@ -15,7 +15,6 @@ from datetime import datetime, timedelta
 from airflow import DAG
 from airflow.operators.python import PythonOperator
 
-
 logger = logging.getLogger(__name__)
 
 
@@ -58,6 +57,7 @@ def _build_spatial_mapping() -> int:
         h3_id = None
         try:
             import h3
+
             h3_id = h3.latlng_to_cell(lat, lon, 13)
         except (ImportError, Exception) as e:
             logger.debug(f"h3 non dispo: {e}")
@@ -80,9 +80,18 @@ def _build_spatial_mapping() -> int:
                     geom_wgs84 = EXCLUDED.geom_wgs84,
                     updated_at = NOW()
             """
-            execute_query(cur_query, (
-                node_idx, channel_id, matrix_i, matrix_j, h3_id, lon, lat,
-            ))
+            execute_query(
+                cur_query,
+                (
+                    node_idx,
+                    channel_id,
+                    matrix_i,
+                    matrix_j,
+                    h3_id,
+                    lon,
+                    lat,
+                ),
+            )
             n_inserted += 1
         except Exception as e:
             logger.warning(f"Skip channel {channel_id}: {e}")

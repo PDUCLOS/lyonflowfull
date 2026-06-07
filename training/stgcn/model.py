@@ -133,8 +133,7 @@ class SpatioTemporalGCN:
         """Construit le modèle. Lève STGCNImportError si torch indisponible."""
         if not is_available():
             raise STGCNImportError(
-                "torch + torch_geometric sont requis pour SpatioTemporalGCN. "
-                "pip install torch torch-geometric"
+                "torch + torch_geometric sont requis pour SpatioTemporalGCN. pip install torch torch-geometric"
             )
 
         import torch
@@ -163,9 +162,7 @@ class SpatioTemporalGCN:
         self._gcn_layers = nn.ModuleList()
         self._gcn_norms = nn.ModuleList()
         for _ in range(cfg.gcn_layers):
-            self._gcn_layers.append(
-                _safe_gcn_conv(cfg.hidden_channels, cfg.hidden_channels)
-            )
+            self._gcn_layers.append(_safe_gcn_conv(cfg.hidden_channels, cfg.hidden_channels))
             self._gcn_norms.append(nn.LayerNorm(cfg.hidden_channels))
 
         # Tête de prédiction
@@ -320,9 +317,7 @@ def build_module(config: STGCNConfig | None = None):
             inner_self.gcn_layers = nn.ModuleList(
                 [_safe_gcn_conv(cfg.hidden_channels, cfg.hidden_channels) for _ in range(cfg.gcn_layers)]
             )
-            inner_self.gcn_norms = nn.ModuleList(
-                [nn.LayerNorm(cfg.hidden_channels) for _ in range(cfg.gcn_layers)]
-            )
+            inner_self.gcn_norms = nn.ModuleList([nn.LayerNorm(cfg.hidden_channels) for _ in range(cfg.gcn_layers)])
             inner_self.head = nn.Linear(cfg.hidden_channels, cfg.out_channels)
             inner_self.dropout = nn.Dropout(cfg.dropout)
             inner_self.leaky_relu = nn.LeakyReLU(cfg.leaky_relu_slope)

@@ -46,19 +46,21 @@ def render_segment_table(line_id: str | None = None, height: int = 400) -> None:
         st.info("Aucun segment.")
         return
 
-    df = pd.DataFrame([
-        {
-            "Ligne": s["line_id"],
-            "Segment": s["name"],
-            "Bus": s["bus_state"],
-            "Trafic": s["traffic_state"],
-            "Diagnostic": s["diagnosis"],
-            "Retard": s.get("delay_min", 0),
-            "Lat": s["lat"],
-            "Lon": s["lon"],
-        }
-        for s in segments
-    ])
+    df = pd.DataFrame(
+        [
+            {
+                "Ligne": s["line_id"],
+                "Segment": s["name"],
+                "Bus": s["bus_state"],
+                "Trafic": s["traffic_state"],
+                "Diagnostic": s["diagnosis"],
+                "Retard": s.get("delay_min", 0),
+                "Lat": s["lat"],
+                "Lon": s["lon"],
+            }
+            for s in segments
+        ]
+    )
 
     # Filtre par diagnostic
     diagnostic_filter = st.multiselect(

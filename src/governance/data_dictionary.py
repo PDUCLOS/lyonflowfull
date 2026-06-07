@@ -6,10 +6,8 @@ Module de support pour la traçabilité, RGPD, et la documentation automatique.
 from __future__ import annotations
 
 import logging
-from typing import Optional
 
 from src.db import execute_query
-
 
 logger = logging.getLogger(__name__)
 
@@ -21,8 +19,8 @@ def register_data_dictionary_entry(
     data_type: str,
     description: str,
     pii_level: str = "none",
-    source: Optional[str] = None,
-    example_value: Optional[str] = None,
+    source: str | None = None,
+    example_value: str | None = None,
 ) -> None:
     """Enregistre/met à jour une entrée du dictionnaire de données.
 
@@ -49,17 +47,26 @@ def register_data_dictionary_entry(
             example_value = EXCLUDED.example_value,
             updated_at = NOW()
     """
-    execute_query(query, (
-        schema_name, table_name, column_name, data_type, description,
-        pii_level, source, example_value,
-    ))
+    execute_query(
+        query,
+        (
+            schema_name,
+            table_name,
+            column_name,
+            data_type,
+            description,
+            pii_level,
+            source,
+            example_value,
+        ),
+    )
 
 
 def register_lineage(
     source_table: str,
     target_table: str,
     transformation: str,
-    dag_id: Optional[str] = None,
+    dag_id: str | None = None,
 ) -> None:
     """Enregistre une relation de lignée entre 2 tables."""
     query = """
@@ -131,38 +138,112 @@ def auto_register_schema() -> None:
     """
     entries = [
         # Bronze
-        ("bronze", "trafic_boucles", "fetched_at", "TIMESTAMPTZ",
-         "Date/heure d'ingestion depuis l'API", "none", "Grand Lyon WFS"),
-        ("bronze", "trafic_boucles", "raw_data", "JSONB",
-         "Réponse API brute (FeatureCollection GeoJSON)", "none", "Grand Lyon WFS"),
-        ("bronze", "trafic_boucles", "channel_id", "TEXT",
-         "ID du capteur (extrait depuis raw_data)", "low", "extracted"),
+        (
+            "bronze",
+            "trafic_boucles",
+            "fetched_at",
+            "TIMESTAMPTZ",
+            "Date/heure d'ingestion depuis l'API",
+            "none",
+            "Grand Lyon WFS",
+        ),
+        (
+            "bronze",
+            "trafic_boucles",
+            "raw_data",
+            "JSONB",
+            "Réponse API brute (FeatureCollection GeoJSON)",
+            "none",
+            "Grand Lyon WFS",
+        ),
+        (
+            "bronze",
+            "trafic_boucles",
+            "channel_id",
+            "TEXT",
+            "ID du capteur (extrait depuis raw_data)",
+            "low",
+            "extracted",
+        ),
         # Silver
-        ("silver", "trafic_boucles_clean", "vitesse_kmh", "NUMERIC",
-         "Vitesse moyenne mesurée (km/h)", "none", "extracted"),
-        ("silver", "trafic_boucles_clean", "geom_wgs84", "GEOMETRY",
-         "Géométrie LineString EPSG:4326", "none", "PostGIS"),
-        ("silver", "velov_clean", "bikes_available", "INTEGER",
-         "Nombre de vélos disponibles", "none", "GBFS"),
-        ("silver", "tcl_vehicles_clean", "delay_seconds", "INTEGER",
-         "Retard du véhicule en secondes", "none", "SIRI Lite"),
+        (
+            "silver",
+            "trafic_boucles_clean",
+            "vitesse_kmh",
+            "NUMERIC",
+            "Vitesse moyenne mesurée (km/h)",
+            "none",
+            "extracted",
+        ),
+        (
+            "silver",
+            "trafic_boucles_clean",
+            "geom_wgs84",
+            "GEOMETRY",
+            "Géométrie LineString EPSG:4326",
+            "none",
+            "PostGIS",
+        ),
+        ("silver", "velov_clean", "bikes_available", "INTEGER", "Nombre de vélos disponibles", "none", "GBFS"),
+        (
+            "silver",
+            "tcl_vehicles_clean",
+            "delay_seconds",
+            "INTEGER",
+            "Retard du véhicule en secondes",
+            "none",
+            "SIRI Lite",
+        ),
         # Gold
-        ("gold", "traffic_features_live", "speed_kmh", "NUMERIC",
-         "Vitesse instantanée (feature ML)", "none", "computed"),
-        ("gold", "traffic_features_live", "speed_lag_1", "NUMERIC",
-         "Vitesse au timestep précédent (lag)", "none", "computed"),
-        ("gold", "infrastructure_bottlenecks", "diagnosis", "TEXT",
-         "Classification: ok/infra/operations/bus_lane_ok", "none", "computed"),
+        (
+            "gold",
+            "traffic_features_live",
+            "speed_kmh",
+            "NUMERIC",
+            "Vitesse instantanée (feature ML)",
+            "none",
+            "computed",
+        ),
+        (
+            "gold",
+            "traffic_features_live",
+            "speed_lag_1",
+            "NUMERIC",
+            "Vitesse au timestep précédent (lag)",
+            "none",
+            "computed",
+        ),
+        (
+            "gold",
+            "infrastructure_bottlenecks",
+            "diagnosis",
+            "TEXT",
+            "Classification: ok/infra/operations/bus_lane_ok",
+            "none",
+            "computed",
+        ),
         # RGPD
-        ("rgpd", "user_consents", "user_identifier", "TEXT",
-         "Hash anonyme de l'utilisateur (SHA256)", "medium", "computed"),
-        ("rgpd", "audit_log", "actor", "TEXT",
-         "Acteur ayant effectué l'action (anonymisé)", "low", "computed"),
-        ("rgpd", "audit_log", "ip_address", "TEXT",
-         "Adresse IP hashée (SHA256)", "medium", "computed"),
+        (
+            "rgpd",
+            "user_consents",
+            "user_identifier",
+            "TEXT",
+            "Hash anonyme de l'utilisateur (SHA256)",
+            "medium",
+            "computed",
+        ),
+        ("rgpd", "audit_log", "actor", "TEXT", "Acteur ayant effectué l'action (anonymisé)", "low", "computed"),
+        ("rgpd", "audit_log", "ip_address", "TEXT", "Adresse IP hashée (SHA256)", "medium", "computed"),
         # Governance
-        ("governance", "data_dictionary", "pii_level", "TEXT",
-         "Niveau PII (none/low/medium/high) RGPD", "none", "manual"),
+        (
+            "governance",
+            "data_dictionary",
+            "pii_level",
+            "TEXT",
+            "Niveau PII (none/low/medium/high) RGPD",
+            "none",
+            "manual",
+        ),
     ]
     for entry in entries:
         try:
@@ -179,17 +260,25 @@ def auto_register_schema() -> None:
             logger.warning(f"Failed to register {entry[0]}.{entry[1]}.{entry[2]}: {e}")
 
     # Lignée
-    register_lineage("bronze.trafic_boucles", "silver.trafic_boucles_clean",
-                     "Parse JSON + dédup + géométrie", "transform_bronze_to_silver")
-    register_lineage("silver.trafic_boucles_clean", "gold.traffic_features_live",
-                     "lags + deltas + temporel + météo", "transform_silver_to_gold")
-    register_lineage("bronze.velov", "silver.velov_clean",
-                     "Parse GBFS", "transform_bronze_to_silver")
-    register_lineage("silver.velov_clean", "gold.velov_features",
-                     "Label encoding + lags", "transform_silver_to_gold")
-    register_lineage("bronze.tcl_vehicles", "silver.tcl_vehicles_clean",
-                     "Parse SIRI Lite", "transform_bronze_to_silver")
-    register_lineage("silver.tcl_vehicles_clean", "gold.bus_delay_segments",
-                     "Aggregation by hour/line", "transform_silver_to_gold")
+    register_lineage(
+        "bronze.trafic_boucles",
+        "silver.trafic_boucles_clean",
+        "Parse JSON + dédup + géométrie",
+        "transform_bronze_to_silver",
+    )
+    register_lineage(
+        "silver.trafic_boucles_clean",
+        "gold.traffic_features_live",
+        "lags + deltas + temporel + météo",
+        "transform_silver_to_gold",
+    )
+    register_lineage("bronze.velov", "silver.velov_clean", "Parse GBFS", "transform_bronze_to_silver")
+    register_lineage("silver.velov_clean", "gold.velov_features", "Label encoding + lags", "transform_silver_to_gold")
+    register_lineage(
+        "bronze.tcl_vehicles", "silver.tcl_vehicles_clean", "Parse SIRI Lite", "transform_bronze_to_silver"
+    )
+    register_lineage(
+        "silver.tcl_vehicles_clean", "gold.bus_delay_segments", "Aggregation by hour/line", "transform_silver_to_gold"
+    )
 
     logger.info("Data governance auto-registration complete")

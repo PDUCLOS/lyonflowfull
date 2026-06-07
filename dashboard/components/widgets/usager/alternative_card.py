@@ -18,16 +18,16 @@ def render_alternative_card(option: dict) -> None:
                     padding:0.8rem 1rem;margin:0.5rem 0;">
             <div style="display:flex;align-items:center;justify-content:space-between;">
                 <div style="display:flex;align-items:center;gap:0.8rem;">
-                    <div style="font-size:1.8rem;">{option.get('mode_icon', '🚦')}</div>
+                    <div style="font-size:1.8rem;">{option.get("mode_icon", "🚦")}</div>
                     <div>
-                        <div style="font-weight:600;">{option.get('mode_label', '—')}</div>
-                        <div style="font-size:0.8rem;opacity:0.6;">{option.get('why', '')}</div>
+                        <div style="font-weight:600;">{option.get("mode_label", "—")}</div>
+                        <div style="font-size:0.8rem;opacity:0.6;">{option.get("why", "")}</div>
                     </div>
                 </div>
                 <div style="text-align:right;">
-                    <div style="font-size:1.2rem;font-weight:600;">{option.get('duration_text', '—')}</div>
+                    <div style="font-size:1.2rem;font-weight:600;">{option.get("duration_text", "—")}</div>
                     <div style="font-size:0.8rem;opacity:0.7;">
-                        {option.get('cost_eur', 0):.2f}€ · {option.get('co2_g', 0)}g CO₂
+                        {option.get("cost_eur", 0):.2f}€ · {option.get("co2_g", 0)}g CO₂
                     </div>
                 </div>
             </div>

@@ -13,7 +13,6 @@ from dashboard.components.widgets.elu import (
     render_roi_calculator,
 )
 
-
 st.set_page_config(
     page_title="Bottlenecks prioritaires — Élu · LyonFlowFull",
     page_icon="🎯",
@@ -27,8 +26,7 @@ render_sidebar_navigation()
 st.title("🎯 Bottlenecks prioritaires — Investissements")
 
 st.caption(
-    "Classement par impact voyageurs × gain estimé × ROI. "
-    "Critères SYTRAL : accessibilité, ponctualité, report modal."
+    "Classement par impact voyageurs × gain estimé × ROI. Critères SYTRAL : accessibilité, ponctualité, report modal."
 )
 
 st.markdown("---")

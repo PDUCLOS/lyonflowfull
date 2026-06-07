@@ -10,12 +10,10 @@ from dashboard.components.theme import inject_theme
 from dashboard.components.widgets.pro_tcl import (
     render_before_after_chart,
     render_frequency_slider,
-    render_line_kpis,
     render_line_selector,
     render_otp_projection,
 )
 from src.data.mock.pro_tcl import LINE_KPIS
-
 
 st.set_page_config(
     page_title="Simulateur fréquences — Pro TCL · LyonFlowFull",

@@ -31,11 +31,20 @@ logger = logging.getLogger(__name__)
 
 # Features utilisées
 FEATURE_COLS = [
-    "speed_kmh", "speed_lag_1", "speed_lag_2", "speed_lag_3",
-    "speed_delta_1", "rolling_mean_5min",
-    "hour_sin", "hour_cos", "day_sin", "day_cos",
-    "temperature_c", "rain_mm",
-    "is_vacances", "is_ferie",
+    "speed_kmh",
+    "speed_lag_1",
+    "speed_lag_2",
+    "speed_lag_3",
+    "speed_delta_1",
+    "rolling_mean_5min",
+    "hour_sin",
+    "hour_cos",
+    "day_sin",
+    "day_cos",
+    "temperature_c",
+    "rain_mm",
+    "is_vacances",
+    "is_ferie",
 ]
 
 # Pas d'échantillonnage Gold (5 min)
@@ -145,10 +154,7 @@ class XGBoostSpeedModel:
             except Exception as e:  # pragma: no cover
                 logger.warning("MLflow tracking failed (non-bloquant): %s", e)
 
-        logger.info(
-            f"XGBoost speed H+{horizon_minutes}min trained: "
-            f"MAE={metrics['mae']:.2f}, R²={metrics['r2']:.3f}"
-        )
+        logger.info(f"XGBoost speed H+{horizon_minutes}min trained: MAE={metrics['mae']:.2f}, R²={metrics['r2']:.3f}")
         return metrics
 
     def predict(

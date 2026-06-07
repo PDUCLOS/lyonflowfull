@@ -14,7 +14,6 @@ from dashboard.components.widgets.pro_tcl import (
     render_otp_heatmap_mini,
 )
 
-
 st.set_page_config(
     page_title="PCC Live — Pro TCL · LyonFlowFull",
     page_icon="📡",
@@ -43,6 +42,7 @@ with q1:
 with q2:
     st.markdown("##### ⚠️ NE — Alertes live (détail)")
     from src.data.mock.pro_tcl import PREDICTED_ALERTS
+
     severity_colors = {"critical": "#E74C3C", "warning": "#FF9800", "info": "#2196F3"}
     for alert in PREDICTED_ALERTS:
         severity = alert.get("severity", "info")
@@ -52,13 +52,13 @@ with q2:
             <div style="background:#1A1D24;border-left:4px solid {color};
                         border-radius:6px;padding:0.6rem;margin:0.4rem 0;">
                 <div style="font-weight:600;font-size:0.9rem;">
-                    {alert.get('line_icon')} {alert.get('title')}
+                    {alert.get("line_icon")} {alert.get("title")}
                 </div>
                 <div style="font-size:0.75rem;opacity:0.7;margin-top:0.2rem;">
-                    {alert.get('description')}
+                    {alert.get("description")}
                 </div>
                 <div style="font-size:0.75rem;color:#4CAF50;margin-top:0.3rem;">
-                    💡 {alert.get('recommendation')}
+                    💡 {alert.get("recommendation")}
                 </div>
             </div>
             """,
@@ -72,14 +72,15 @@ with q3:
 with q4:
     st.markdown("##### 🎯 SE — Top bottlenecks")
     from src.data.mock.pro_tcl import TOP_BOTTLENECKS
+
     for b in TOP_BOTTLENECKS[:5]:
         st.markdown(
             f"""
             <div style="background:#1A1D24;border-radius:6px;padding:0.5rem 0.7rem;
                         margin:0.3rem 0;font-size:0.85rem;">
-                <div style="font-weight:600;">#{b['rank']} {b['zone']}</div>
+                <div style="font-weight:600;">#{b["rank"]} {b["zone"]}</div>
                 <div style="opacity:0.7;font-size:0.75rem;">
-                    {len(b['lines'])} lignes · {b['voyageurs_jour']:,} voy/j · ROI {b['roi_mois']} mois
+                    {len(b["lines"])} lignes · {b["voyageurs_jour"]:,} voy/j · ROI {b["roi_mois"]} mois
                 </div>
             </div>
             """,

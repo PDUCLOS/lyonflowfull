@@ -28,18 +28,21 @@ def render_line_comparison(line_ids: list | None = None) -> None:
     data = []
     for lid in line_ids:
         k = kpis_dict.get(lid, {})
-        data.append({
-            "Ligne": lid,
-            "OTP %": k.get("otp_pct", 0),
-            "Retard (min)": k.get("avg_delay_min", 0),
-            "Fréquence (min)": k.get("frequency_min", 0),
-            "Charge %": k.get("load_pct", 0),
-            "Tendance": k.get("trend", "—"),
-        })
+        data.append(
+            {
+                "Ligne": lid,
+                "OTP %": k.get("otp_pct", 0),
+                "Retard (min)": k.get("avg_delay_min", 0),
+                "Fréquence (min)": k.get("frequency_min", 0),
+                "Charge %": k.get("load_pct", 0),
+                "Tendance": k.get("trend", "—"),
+            }
+        )
 
     df = pd.DataFrame(data)
     st.dataframe(
-        df.style.background_gradient(subset=["OTP %"], cmap="RdYlGn", vmin=60, vmax=98)
-                  .background_gradient(subset=["Charge %"], cmap="RdYlGn_r", vmin=30, vmax=100),
+        df.style.background_gradient(subset=["OTP %"], cmap="RdYlGn", vmin=60, vmax=98).background_gradient(
+            subset=["Charge %"], cmap="RdYlGn_r", vmin=30, vmax=100
+        ),
         use_container_width=True,
     )

@@ -22,9 +22,7 @@ def inject_theme() -> None:
     density = pm.theme.get("density", "normal")
 
     # Espacement selon la densité
-    padding = {"compact": "0.4rem", "normal": "0.8rem", "dense": "0.2rem"}.get(
-        density, "0.8rem"
-    )
+    padding = {"compact": "0.4rem", "normal": "0.8rem", "dense": "0.2rem"}.get(density, "0.8rem")
 
     css = f"""
     <style>
@@ -89,9 +87,9 @@ def inject_theme() -> None:
     }}
 
     /* Hide Streamlit default menu in production */
-    #MainMenu {visibility: hidden;}
-    footer {visibility: hidden;}
+    #MainMenu {visibility: hidden;}  # noqa: F821
+    footer {visibility: hidden;}  # noqa: F821
     /* Hide native sidebar nav — on a notre propre nav custom par persona */
-    [data-testid="stSidebarNav"] {display: none !important;}
+    [data-testid="stSidebarNav"] {display: none !important;}  # noqa: F821
     """
     st.markdown(css, unsafe_allow_html=True)

@@ -13,14 +13,12 @@ from __future__ import annotations
 import logging
 import time
 from collections import defaultdict
-from typing import Optional
 
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.requests import Request
 from starlette.responses import JSONResponse
 
 from src.rgpd.service import log_audit
-
 
 logger = logging.getLogger(__name__)
 
@@ -91,7 +89,7 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
             return xff.split(",")[0].strip()
         return request.client.host if request.client else "unknown"
 
-    def _match_rule(self, path: str) -> Optional[tuple[str, int, int]]:
+    def _match_rule(self, path: str) -> tuple[str, int, int] | None:
         """Matche le path avec une règle de rate limit.
 
         Returns:

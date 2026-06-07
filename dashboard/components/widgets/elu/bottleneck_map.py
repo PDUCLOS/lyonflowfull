@@ -40,8 +40,7 @@ def render_bottleneck_map(height: int = 500) -> None:
         from streamlit_folium import st_folium
 
         # Centre Lyon
-        m = folium.Map(location=[45.76, 4.84], zoom_start=12,
-                       tiles="CartoDB positron")
+        m = folium.Map(location=[45.76, 4.84], zoom_start=12, tiles="CartoDB positron")
 
         for b in bottlenecks:
             zone = b.get("zone", "—")

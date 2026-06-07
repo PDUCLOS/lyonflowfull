@@ -42,13 +42,19 @@ def render_roi_calculator(line_id: str | None = None) -> None:
     with col1:
         valeur_temps = st.slider(
             "Valeur du temps (€/h)",
-            min_value=8, max_value=30, value=15, step=1,
+            min_value=8,
+            max_value=30,
+            value=15,
+            step=1,
             key="roi_valeur_temps",
         )
     with col2:
         jours_an = st.slider(
             "Jours d'usage par an",
-            min_value=200, max_value=350, value=250, step=10,
+            min_value=200,
+            max_value=350,
+            value=250,
+            step=10,
             key="roi_jours_an",
         )
 
@@ -65,12 +71,18 @@ def render_roi_calculator(line_id: str | None = None) -> None:
     st.markdown("---")
     c1, c2, c3 = st.columns(3)
     with c1:
-        st.metric("Gain annuel estimé", f"{gain_annuel/1_000_000:.2f} M€")
+        st.metric("Gain annuel estimé", f"{gain_annuel / 1_000_000:.2f} M€")
     with c2:
-        st.metric("ROI", f"{int(roi_mois)} mois",
-                  delta=f"~{12/roi_mois:.1f}x en 1 an" if roi_mois > 0 else None,
-                  delta_color="normal")
+        st.metric(
+            "ROI",
+            f"{int(roi_mois)} mois",
+            delta=f"~{12 / roi_mois:.1f}x en 1 an" if roi_mois > 0 else None,
+            delta_color="normal",
+        )
     with c3:
-        st.metric("Bénéfice net 5 ans", f"{benefice_5ans/1_000_000:.1f} M€",
-                  delta="positif" if benefice_5ans > 0 else "négatif",
-                  delta_color="normal" if benefice_5ans > 0 else "inverse")
+        st.metric(
+            "Bénéfice net 5 ans",
+            f"{benefice_5ans / 1_000_000:.1f} M€",
+            delta="positif" if benefice_5ans > 0 else "négatif",
+            delta_color="normal" if benefice_5ans > 0 else "inverse",
+        )

@@ -336,9 +336,7 @@ def get_latest_run(model_name: str, experiment: str | None = None) -> dict | Non
     return None
 
 
-def compare_models(
-    model_a: str, model_b: str, metric: str = "mae", experiment: str | None = None
-) -> dict:
+def compare_models(model_a: str, model_b: str, metric: str = "mae", experiment: str | None = None) -> dict:
     """Compare 2 modèles sur une métrique donnée (dernier run de chaque).
 
     Returns:

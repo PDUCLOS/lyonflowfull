@@ -35,8 +35,7 @@ def render_otp_projection(simulation: dict, base_otp: float = 78.0) -> None:
     with c1:
         st.metric("OTP actuel", f"{base_otp:.1f}%")
     with c2:
-        st.metric("OTP projeté", f"{new_otp:.1f}%",
-                  delta=f"{actual_delta:+.1f}pts", delta_color="normal")
+        st.metric("OTP projeté", f"{new_otp:.1f}%", delta=f"{actual_delta:+.1f}pts", delta_color="normal")
     with c3:
         st.metric("IC 95%", f"[{ic_low:.1f}%, {ic_high:.1f}%]")
 
@@ -46,7 +45,7 @@ def render_otp_projection(simulation: dict, base_otp: float = 78.0) -> None:
                     border-radius:6px;padding:0.8rem;margin-top:0.5rem;">
             <div style="font-size:0.85rem;opacity:0.7;">Impact estimé</div>
             <div style="font-size:1.3rem;font-weight:600;color:{color};">
-                {buses_added:+d} bus sur la plage {simulation.get('period_start', 17)}h-{simulation.get('period_end', 19)}h
+                {buses_added:+d} bus sur la plage {simulation.get("period_start", 17)}h-{simulation.get("period_end", 19)}h
             </div>
             <div style="font-size:0.85rem;margin-top:0.4rem;opacity:0.8;">
                 Gain voyageurs estimé : {int(abs(actual_delta) * 1500):,}/jour (sur la base de 1500 voyageurs/point OTP)

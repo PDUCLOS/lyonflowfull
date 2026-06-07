@@ -140,8 +140,8 @@ def test_build_tensors_shape():
     X, edge_index, Y = build_tensors_from_df(df, ei, config=cfg)
     assert X.ndim == 4
     assert X.shape[1] == 10  # seq_len
-    assert X.shape[2] == 5   # num_nodes
-    assert X.shape[3] == 5   # in_channels
+    assert X.shape[2] == 5  # num_nodes
+    assert X.shape[3] == 5  # in_channels
     assert Y.shape == (X.shape[0], 5)  # (num_samples, num_nodes)
     assert edge_index.shape == ei.shape
 

@@ -77,17 +77,13 @@ class TestTrackerNoOp:
     def test_tracker_initialized_in_noop_mode(self, monkeypatch):
         """Si serveur pas joignable → tracker en no-op."""
         # On force le no-op en mockant is_tracking_server_reachable
-        monkeypatch.setattr(
-            "src.ml.mlflow_integration.is_tracking_server_reachable", lambda: False
-        )
+        monkeypatch.setattr("src.ml.mlflow_integration.is_tracking_server_reachable", lambda: False)
         tracker = MLflowTracker()
         assert tracker._noop is True
 
     def test_noop_start_run_yields_noop_run(self, monkeypatch):
         """Le context manager yield un _NoopRun quand MLflow indispo."""
-        monkeypatch.setattr(
-            "src.ml.mlflow_integration.is_tracking_server_reachable", lambda: False
-        )
+        monkeypatch.setattr("src.ml.mlflow_integration.is_tracking_server_reachable", lambda: False)
         tracker = MLflowTracker()
         with tracker.start_run("test_run") as r:
             assert r is not None
@@ -97,9 +93,7 @@ class TestTrackerNoOp:
 
     def test_noop_log_methods_dont_crash(self, monkeypatch):
         """Les méthodes log_* sont silencieuses en no-op."""
-        monkeypatch.setattr(
-            "src.ml.mlflow_integration.is_tracking_server_reachable", lambda: False
-        )
+        monkeypatch.setattr("src.ml.mlflow_integration.is_tracking_server_reachable", lambda: False)
         tracker = MLflowTracker()
         with tracker.start_run("test"):
             tracker.log_params({"foo": "bar"})
@@ -111,9 +105,7 @@ class TestTrackerNoOp:
 
     def test_noop_run_id_is_none(self, monkeypatch):
         """run_id retourne None en no-op mode."""
-        monkeypatch.setattr(
-            "src.ml.mlflow_integration.is_tracking_server_reachable", lambda: False
-        )
+        monkeypatch.setattr("src.ml.mlflow_integration.is_tracking_server_reachable", lambda: False)
         tracker = MLflowTracker()
         assert tracker.run_id is None
 

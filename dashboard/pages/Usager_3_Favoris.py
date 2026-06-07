@@ -13,7 +13,6 @@ from dashboard.components.widgets.usager import (
 )
 from src.data.mock.usager import MOCK_FAVORITES
 
-
 st.set_page_config(
     page_title="Mes favoris — LyonFlowFull",
     page_icon="⭐",

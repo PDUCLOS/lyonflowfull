@@ -91,3 +91,4 @@ site/
 
 # Local orchestration plans
 .mavis/
+.claude/

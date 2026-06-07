@@ -100,12 +100,12 @@ def compute_metrics(y_pred: np.ndarray, y_true: np.ndarray) -> dict[str, float]:
     err = y_pred - y_true
 
     mae = float(np.mean(np.abs(err)))
-    rmse = float(np.sqrt(np.mean(err ** 2)))
+    rmse = float(np.sqrt(np.mean(err**2)))
     # MAPE : éviter division par 0
     nonzero = np.abs(y_true) > 1e-6
     mape = float(np.mean(np.abs(err[nonzero] / y_true[nonzero])) * 100) if nonzero.any() else 0.0
     # R²
-    ss_res = float(np.sum(err ** 2))
+    ss_res = float(np.sum(err**2))
     ss_tot = float(np.sum((y_true - y_true.mean()) ** 2))
     r2 = 1.0 - (ss_res / ss_tot) if ss_tot > 0 else 0.0
 
@@ -147,10 +147,7 @@ class STGCNTrainer:
         early_stopping_patience: int = 5,
     ):
         if not is_available():
-            raise RuntimeError(
-                "STGCNTrainer requires torch + torch_geometric. "
-                "pip install torch torch-geometric"
-            )
+            raise RuntimeError("STGCNTrainer requires torch + torch_geometric. pip install torch torch-geometric")
 
         self.dataset = dataset
         self.config = config or STGCNConfig(num_nodes=dataset.X.shape[2])
@@ -200,12 +197,12 @@ class STGCNTrainer:
 
             # Reload synthetic ou DB
             if hasattr(self.dataset, "_df") and self.dataset._df is not None:
-                X, edge_index, Y = build_tensors_from_df(
-                    self.dataset._df, self.dataset.edge_index, config=cfg
-                )
+                X, edge_index, Y = build_tensors_from_df(self.dataset._df, self.dataset.edge_index, config=cfg)
             else:
                 # Re-synthetic avec ce horizon
-                ds = STGCNDataset.synthetic(num_nodes=self.dataset.X.shape[2], seq_len=cfg.seq_len, horizon=horizon_steps)
+                ds = STGCNDataset.synthetic(
+                    num_nodes=self.dataset.X.shape[2], seq_len=cfg.seq_len, horizon=horizon_steps
+                )
                 X, edge_index, Y = ds.tensors()
         else:
             X, edge_index, Y = self.dataset.tensors()
@@ -331,9 +328,7 @@ class STGCNTrainer:
                         pred = model(xb, edge_index_t).squeeze(-1)
                         val_preds.append(pred.numpy())
                         val_targets.append(yb.numpy())
-                final_metrics = compute_metrics(
-                    np.concatenate(val_preds), np.concatenate(val_targets)
-                )
+                final_metrics = compute_metrics(np.concatenate(val_preds), np.concatenate(val_targets))
 
                 # Save model
                 model_path = self.model_dir / f"stgcn_h{horizon_min}.pt"
@@ -394,4 +389,3 @@ class STGCNTrainer:
                 logger.exception("H+%dmin failed: %s", h, e)
                 results[h] = {"error": str(e)}
         return results
-

@@ -16,12 +16,12 @@ from src.data.mock.pro_tcl import ALL_BUSES
 def _delay_to_color(delay_min: int) -> list:
     """Retourne une couleur RGB selon le retard."""
     if delay_min == 0:
-        return [76, 175, 80, 220]   # vert
+        return [76, 175, 80, 220]  # vert
     if delay_min <= 3:
-        return [255, 193, 7, 220]   # jaune
+        return [255, 193, 7, 220]  # jaune
     if delay_min <= 6:
-        return [255, 152, 0, 220]   # orange
-    return [231, 76, 60, 220]       # rouge
+        return [255, 152, 0, 220]  # orange
+    return [231, 76, 60, 220]  # rouge
 
 
 def render_network_map(buses: list | None = None, height: int = 400) -> None:
@@ -81,10 +81,8 @@ def render_network_map(buses: list | None = None, height: int = 400) -> None:
             initial_view_state=view_state,
             map_style="https://basemaps.cartocdn.com/gl/positron-gl-style/style.json",
             tooltip={
-                "html": "<b>{bus_id}</b><br/>Ligne: {line_id}<br/>"
-                        "Segment: {segment}<br/>Retard: {delay_min} min",
-                "style": {"backgroundColor": "#1A1D24", "color": "white",
-                          "padding": "8px", "borderRadius": "4px"},
+                "html": "<b>{bus_id}</b><br/>Ligne: {line_id}<br/>Segment: {segment}<br/>Retard: {delay_min} min",
+                "style": {"backgroundColor": "#1A1D24", "color": "white", "padding": "8px", "borderRadius": "4px"},
             },
         )
 

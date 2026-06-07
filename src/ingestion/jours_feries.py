@@ -7,10 +7,13 @@ Volume : ~11 jours/an
 
 from __future__ import annotations
 
+import logging
 import os
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from src.ingestion.base import CollectorError, DataCollector, FetchResult
+
+logger = logging.getLogger(__name__)
 
 
 class JoursFeries(DataCollector):
@@ -46,7 +49,7 @@ class JoursFeries(DataCollector):
         n_records = sum(len(v) for v in all_data.values())
         return FetchResult(
             source=self.source,
-            fetched_at=datetime.now(timezone.utc),
+            fetched_at=datetime.now(UTC),
             raw_data=all_data,
             n_records=n_records,
             status_code=200,

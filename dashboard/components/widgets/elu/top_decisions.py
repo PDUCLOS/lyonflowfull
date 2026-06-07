@@ -43,7 +43,7 @@ def render_top_decisions(n: int = 5) -> None:
                             Lignes : {lignes} · {voyageurs:,} voyageurs/jour
                         </div>
                         <div style="font-size:0.9rem;margin-top:0.4rem;">
-                            💡 <b>{b.get('description', '—')}</b>
+                            💡 <b>{b.get("description", "—")}</b>
                         </div>
                         <div style="display:flex;gap:1.2rem;margin-top:0.5rem;
                                     font-size:0.85rem;">

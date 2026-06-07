@@ -14,7 +14,6 @@ from dashboard.components.widgets.pro_tcl import (
     render_segment_table,
 )
 
-
 st.set_page_config(
     page_title="Corrélation bus × trafic — Pro TCL · LyonFlowFull",
     page_icon="🔗",
@@ -51,6 +50,7 @@ with col2:
     st.markdown("##### 🧠 Analyse causale (1er segment problématique)")
     # Trouver le 1er segment infra
     from src.data.mock.pro_tcl import SEGMENTS
+
     segments = SEGMENTS
     if target_line:
         segments = [s for s in segments if s["line_id"] == target_line]

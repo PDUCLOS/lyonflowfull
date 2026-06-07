@@ -33,7 +33,7 @@ def render_alert_ticker(alerts: list | None = None) -> None:
         items.append(
             f'<span style="background:{color};color:white;padding:2px 10px;'
             f'border-radius:10px;margin-right:12px;font-size:0.85rem;">'
-            f'{icon} {a.get("title", "—")}</span>'
+            f"{icon} {a.get('title', '—')}</span>"
         )
 
     # Ticker CSS simple

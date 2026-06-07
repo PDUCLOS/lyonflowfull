@@ -21,7 +21,6 @@ from dashboard.components.navigation import render_sidebar_navigation
 from dashboard.components.persona_guard import apply_persona_guard
 from dashboard.components.theme import inject_theme
 
-
 # Config
 UPLOAD_DIR = Path(os.getenv("LYONFLOW_UPLOAD_DIR", "/app/uploads"))
 UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
@@ -66,10 +65,7 @@ if uploaded_files:
     for uploaded_file in uploaded_files:
         # Check size
         if uploaded_file.size > MAX_FILE_SIZE:
-            st.error(
-                f"❌ {uploaded_file.name} est trop gros "
-                f"({uploaded_file.size / 1_000_000:.1f} MB > 100 MB)"
-            )
+            st.error(f"❌ {uploaded_file.name} est trop gros ({uploaded_file.size / 1_000_000:.1f} MB > 100 MB)")
             continue
 
         # Save
@@ -83,6 +79,7 @@ if uploaded_files:
             n_uploaded += 1
             # Audit log
             from src.rgpd.service import log_audit
+
             log_audit(
                 actor="streamlit_user",
                 action="file_uploaded",
@@ -143,14 +140,13 @@ else:
         with col4:
             st.caption(datetime.fromtimestamp(stat.st_mtime).strftime("%H:%M"))
 
-        with col5:
-            with open(f, "rb") as fp:
-                st.download_button(
-                    label="📥 DL",
-                    data=fp.read(),
-                    file_name=f.name,
-                    key=f"dl_{f.name}",
-                )
+        with col5, open(f, "rb") as fp:
+            st.download_button(
+                label="📥 DL",
+                data=fp.read(),
+                file_name=f.name,
+                key=f"dl_{f.name}",
+            )
 
 st.markdown("---")
 

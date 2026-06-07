@@ -15,7 +15,6 @@ from airflow.operators.python import PythonOperator
 
 from src.ingestion import REALTIME_COLLECTORS, DataCollector
 
-
 logger = logging.getLogger(__name__)
 
 
@@ -52,7 +51,6 @@ with DAG(
     max_active_runs=1,
     tags=["bronze", "ingestion"],
 ) as dag:
-
     for cls in REALTIME_COLLECTORS:
         PythonOperator(
             task_id=f"collect_{cls.__name__.lower()}",

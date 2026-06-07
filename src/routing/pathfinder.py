@@ -12,14 +12,11 @@ Fonctions :
 from __future__ import annotations
 
 import logging
-import math
 from dataclasses import dataclass, field
-from typing import Optional
 
 import networkx as nx
 
-from src.routing.graph import build_routing_graph, get_node_speed, get_nearest_node
-
+from src.routing.graph import build_routing_graph, get_nearest_node, get_node_speed
 
 logger = logging.getLogger(__name__)
 
@@ -27,6 +24,7 @@ logger = logging.getLogger(__name__)
 @dataclass
 class ItinerarySegment:
     """Un segment dans l'itinéraire."""
+
     channel_id: str
     length_m: float
     speed_kmh: float
@@ -40,6 +38,7 @@ class ItinerarySegment:
 @dataclass
 class Itinerary:
     """Itinéraire complet."""
+
     origin_node: str
     destination_node: str
     horizon_minutes: int
@@ -61,7 +60,7 @@ def shortest_path(
     horizon_minutes: int = 0,
     weight_attr: str = "length_m",
     speed_attr: str = "current_speed_kmh",
-) -> Optional[Itinerary]:
+) -> Itinerary | None:
     """Calcule le plus court chemin traffic-aware.
 
     Le poids effectif de chaque arête est :
@@ -89,9 +88,7 @@ def shortest_path(
     weighted = _build_traffic_aware_graph(graph, horizon_minutes)
 
     try:
-        path_nodes = nx.shortest_path(
-            weighted, origin_node, destination_node, weight="travel_time_s"
-        )
+        path_nodes = nx.shortest_path(weighted, origin_node, destination_node, weight="travel_time_s")
     except nx.NetworkXNoPath:
         logger.warning(f"Pas de chemin entre {origin_node} et {destination_node}")
         return None
@@ -109,16 +106,18 @@ def shortest_path(
         duration = (length / (speed * 1000 / 3600)) if speed > 0 else 0
         total_length += length
         total_duration += duration
-        segments.append(ItinerarySegment(
-            channel_id=node_id,
-            length_m=length,
-            speed_kmh=speed,
-            duration_s=duration,
-            start_lon=data["start_lon"],
-            start_lat=data["start_lat"],
-            end_lon=data["end_lon"],
-            end_lat=data["end_lat"],
-        ))
+        segments.append(
+            ItinerarySegment(
+                channel_id=node_id,
+                length_m=length,
+                speed_kmh=speed,
+                duration_s=duration,
+                start_lon=data["start_lon"],
+                start_lat=data["start_lat"],
+                end_lon=data["end_lon"],
+                end_lat=data["end_lat"],
+            )
+        )
 
     avg_speed = (total_length / (total_duration / 3600 * 1000)) if total_duration > 0 else 0
 
@@ -137,7 +136,7 @@ def shortest_path(
 def _build_traffic_aware_graph(graph: nx.Graph, horizon_minutes: int) -> nx.Graph:
     """Construit un graphe pondéré par le temps de trajet traffic-aware."""
     weighted = graph.copy()
-    for u, v, data in weighted.edges(data=True):
+    for u, v, _data in weighted.edges(data=True):
         speed_u = get_node_speed(graph, u, horizon_minutes)
         speed_v = get_node_speed(graph, v, horizon_minutes)
         # On prend la vitesse la plus défavorable (plus conservative)
@@ -171,7 +170,7 @@ def compute_itinerary(
     destination_lat: float,
     horizon_minutes: int = 0,
     use_cache: bool = True,
-) -> Optional[Itinerary]:
+) -> Itinerary | None:
     """API haut-niveau : 2 points GPS → itinéraire détaillé.
 
     Args:

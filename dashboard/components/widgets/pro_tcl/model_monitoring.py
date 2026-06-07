@@ -107,8 +107,7 @@ def render_model_registry() -> None:
     # Bandeau source (transparence MLflow)
     if summary.get("available"):
         st.success(
-            f"🟢 **MLflow live** · {summary.get('run_count', 0)} runs · "
-            f"{len(summary.get('model_names', []))} modèles"
+            f"🟢 **MLflow live** · {summary.get('run_count', 0)} runs · {len(summary.get('model_names', []))} modèles"
         )
     else:
         st.warning(
@@ -168,9 +167,7 @@ def _render_model_registry_table(models: list[dict]) -> None:
         with cols[1]:
             st.code(m.get("version", "—"))
         with cols[2]:
-            stage_color = {"Production": "#4CAF50", "Staging": "#FF9800"}.get(
-                m.get("stage", ""), "#666"
-            )
+            stage_color = {"Production": "#4CAF50", "Staging": "#FF9800"}.get(m.get("stage", ""), "#666")
             st.markdown(
                 f'<span style="background:{stage_color};color:white;padding:2px 8px;'
                 f'border-radius:8px;font-size:0.75rem;">{m.get("stage", "—")}</span>',
@@ -331,19 +328,23 @@ def render_metrics_comparison() -> None:
         st.metric("MAE", f"{xgb_h60['metrics']['mae']:.2f} km/h")
         st.metric("R²", f"{xgb_h60['metrics']['r2']:.3f}")
         st.metric("Samples", f"{xgb_h60['n_training_samples']:,}")
-        st.metric("Features", xgb_h60['feature_count'])
+        st.metric("Features", xgb_h60["feature_count"])
 
     with cols[1]:
         st.markdown("**ST-GCN GNN H+60min (Staging)**")
         st.metric(
-            "MAE", f"{gnn_h60['metrics']['mae']:.2f} km/h",
+            "MAE",
+            f"{gnn_h60['metrics']['mae']:.2f} km/h",
             delta=f"{gnn_h60['metrics']['mae'] - xgb_h60['metrics']['mae']:+.2f} vs XGBoost",
             delta_color="inverse",
         )
-        st.metric("R²", f"{gnn_h60['metrics']['r2']:.3f}",
-                  delta=f"{gnn_h60['metrics']['r2'] - xgb_h60['metrics']['r2']:+.3f} vs XGBoost")
+        st.metric(
+            "R²",
+            f"{gnn_h60['metrics']['r2']:.3f}",
+            delta=f"{gnn_h60['metrics']['r2'] - xgb_h60['metrics']['r2']:+.3f} vs XGBoost",
+        )
         st.metric("Samples", f"{gnn_h60['n_training_samples']:,}")
-        st.metric("Features", gnn_h60['feature_count'])
+        st.metric("Features", gnn_h60["feature_count"])
 
     st.caption(
         "💡 Le GNN capture les dépendances spatiales entre segments. "
@@ -364,15 +365,25 @@ def render_training_history() -> None:
         import plotly.graph_objects as go
 
         fig = go.Figure()
-        fig.add_trace(go.Scatter(
-            x=days, y=mae_speed_h60, mode="lines+markers",
-            name="XGBoost Speed H+60min", line={"color": "#4CAF50", "width": 3},
-        ))
-        fig.add_trace(go.Scatter(
-            x=days, y=mae_velov_h30, mode="lines+markers",
-            name="XGBoost Velov H+30min", line={"color": "#FF9800", "width": 3},
-            yaxis="y2",
-        ))
+        fig.add_trace(
+            go.Scatter(
+                x=days,
+                y=mae_speed_h60,
+                mode="lines+markers",
+                name="XGBoost Speed H+60min",
+                line={"color": "#4CAF50", "width": 3},
+            )
+        )
+        fig.add_trace(
+            go.Scatter(
+                x=days,
+                y=mae_velov_h30,
+                mode="lines+markers",
+                name="XGBoost Velov H+30min",
+                line={"color": "#FF9800", "width": 3},
+                yaxis="y2",
+            )
+        )
         fig.update_layout(
             title="MAE evolution",
             xaxis_title="Jour",
@@ -424,12 +435,12 @@ def render_drift_panel() -> None:
                 <div style="display:flex;align-items:center;gap:0.6rem;">
                     <div style="font-size:1.3rem;">{icon}</div>
                     <div style="flex:1;">
-                        <div style="font-weight:600;">{d['model']}</div>
+                        <div style="font-weight:600;">{d["model"]}</div>
                         <div style="font-size:0.8rem;opacity:0.7;">
-                            Drift score: {d['drift_score']:.2f} / seuil {d['threshold']} · {d['detected_at']}
+                            Drift score: {d["drift_score"]:.2f} / seuil {d["threshold"]} · {d["detected_at"]}
                         </div>
-                        {('<div style="font-size:0.8rem;color:#FF9800;margin-top:0.2rem;">⚠️ ' + ', '.join(d.get('features_drifted', [])) + '</div>') if d.get('features_drifted') else ''}
-                        {('<div style="font-size:0.8rem;margin-top:0.2rem;">→ ' + d.get('action', '') + '</div>') if d.get('action') else ''}
+                        {('<div style="font-size:0.8rem;color:#FF9800;margin-top:0.2rem;">⚠️ ' + ", ".join(d.get("features_drifted", [])) + "</div>") if d.get("features_drifted") else ""}
+                        {('<div style="font-size:0.8rem;margin-top:0.2rem;">→ ' + d.get("action", "") + "</div>") if d.get("action") else ""}
                     </div>
                 </div>
             </div>

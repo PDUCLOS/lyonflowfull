@@ -36,25 +36,21 @@ SEGMENTS_DATA = [
     ("C3", "Guichard → Jean Macé", 45.7456, 4.8417, "on_time", "fluid", "ok"),
     ("C3", "Jean Macé → Guillotière", 45.7431, 4.8408, "delayed", "jammed", "infra"),
     ("C3", "Guillotière → Terminus", 45.7324, 4.8325, "on_time", "jammed", "bus_lane_ok"),
-
     ("C13", "Vaise → Gorge de Loup", 45.7798, 4.8058, "on_time", "fluid", "ok"),
     ("C13", "Gorge de Loup → Échangeur", 45.7722, 4.8059, "delayed", "jammed", "infra"),
     ("C13", "Échangeur → Terreaux", 45.7673, 4.8343, "on_time", "fluid", "ok"),
     ("C13", "Terreaux → Hôtel de Ville", 45.7672, 4.8342, "delayed", "jammed", "infra"),
     ("C13", "Hôtel de Ville → Part-Dieu", 45.7622, 4.8462, "delayed", "jammed", "infra"),
-
     ("T1", "Hôtel de Ville → Perrache", 45.7672, 4.8342, "delayed", "jammed", "infra"),
     ("T1", "Perrache → Confluence", 45.7405, 4.8165, "on_time", "fluid", "ok"),
     ("T1", "Debourg → Mermoz", 45.7324, 4.8545, "on_time", "jammed", "bus_lane_ok"),
     ("T1", "Mermoz → Université", 45.7310, 4.8700, "delayed", "jammed", "infra"),
     ("T1", "Université → La Doua", 45.7800, 4.8800, "on_time", "fluid", "ok"),
-
     ("T3", "Part-Dieu → Villette", 45.7607, 4.8589, "on_time", "jammed", "bus_lane_ok"),
     ("T3", "Villette → Mermoz", 45.7310, 4.8700, "delayed", "fluid", "operations"),
     ("T3", "Mermoz → Bachut", 45.7290, 4.8700, "delayed", "jammed", "infra"),
     ("T3", "Bachut → Meyzieu", 45.7680, 4.9890, "on_time", "fluid", "ok"),
     ("T3", "Meyzieu → Terminus", 45.7690, 5.0030, "on_time", "fluid", "ok"),
-
     ("M_A", "Perrache → Ampère", 45.7480, 4.8340, "on_time", "fluid", "ok"),
     ("M_A", "Ampère → Bellecour", 45.7575, 4.8324, "on_time", "fluid", "ok"),
     ("M_A", "Bellecour → Hôtel de Ville", 45.7672, 4.8342, "on_time", "jammed", "ok"),
@@ -79,9 +75,9 @@ SEGMENTS = [
 # Couleurs par diagnostic
 DIAGNOSIS_COLORS = {
     "ok": "#4CAF50",
-    "infra": "#E74C3C",      # rouge — bottleneck infrastructure
-    "operations": "#FF9800", # orange — problème exploitation
-    "bus_lane_ok": "#2196F3" # bleu — voie bus fonctionne
+    "infra": "#E74C3C",  # rouge — bottleneck infrastructure
+    "operations": "#FF9800",  # orange — problème exploitation
+    "bus_lane_ok": "#2196F3",  # bleu — voie bus fonctionne
 }
 
 DIAGNOSIS_LABELS = {
@@ -117,13 +113,19 @@ def _generate_otp_grid(line_id: str, base_otp: float) -> dict:
 
 # OTP moyen par ligne (entre 75% et 92%)
 LINE_BASE_OTP = {
-    "M_A": 91.5, "M_B": 89.8, "M_C": 87.2, "M_D": 85.4,
-    "T1": 82.3, "T2": 84.1, "T3": 79.6, "T6": 86.7,
-    "C3": 76.4, "C13": 78.9,
+    "M_A": 91.5,
+    "M_B": 89.8,
+    "M_C": 87.2,
+    "M_D": 85.4,
+    "T1": 82.3,
+    "T2": 84.1,
+    "T3": 79.6,
+    "T6": 86.7,
+    "C3": 76.4,
+    "C13": 78.9,
 }
 
-OTP_GRID = {line_id: _generate_otp_grid(line_id, base_otp)
-            for line_id, base_otp in LINE_BASE_OTP.items()}
+OTP_GRID = {line_id: _generate_otp_grid(line_id, base_otp) for line_id, base_otp in LINE_BASE_OTP.items()}
 
 
 # -----------------------------------------------------------------------------
@@ -159,14 +161,16 @@ def _generate_bus_positions(line_id: str, n_buses: int = 5) -> list:
     for i in range(n_buses):
         seg = random.choice(line_segs)
         delay = random.randint(0, 8) if random.random() < 0.4 else 0
-        buses.append({
-            "bus_id": f"{line_id}_BUS_{i+1:03d}",
-            "line_id": line_id,
-            "lat": seg["lat"] + random.uniform(-0.005, 0.005),
-            "lon": seg["lon"] + random.uniform(-0.005, 0.005),
-            "delay_min": delay,
-            "segment": seg["name"],
-        })
+        buses.append(
+            {
+                "bus_id": f"{line_id}_BUS_{i + 1:03d}",
+                "line_id": line_id,
+                "lat": seg["lat"] + random.uniform(-0.005, 0.005),
+                "lon": seg["lon"] + random.uniform(-0.005, 0.005),
+                "delay_min": delay,
+                "segment": seg["name"],
+            }
+        )
     return buses
 
 
@@ -238,16 +242,51 @@ PREDICTED_ALERTS = [
 # Top bottlenecks (vue PCC Live)
 # -----------------------------------------------------------------------------
 TOP_BOTTLENECKS = [
-    {"rank": 1, "zone": "Rue Garibaldi", "lines": ["T1", "C3", "C13", "M_D"],
-     "voyageurs_jour": 120000, "gain_min": 7, "cout_M_euros": 2.3, "roi_mois": 18},
-    {"rank": 2, "zone": "Cours Lafayette", "lines": ["T1", "C3"],
-     "voyageurs_jour": 85000, "gain_min": 4, "cout_M_euros": 1.1, "roi_mois": 12},
-    {"rank": 3, "zone": "Carrefour Part-Dieu", "lines": ["T1", "T3", "T4", "C3"],
-     "voyageurs_jour": 210000, "gain_min": 12, "cout_M_euros": 4.5, "roi_mois": 24},
-    {"rank": 4, "zone": "Quai Claude Bernard", "lines": ["T1", "C5", "C18"],
-     "voyageurs_jour": 62000, "gain_min": 3, "cout_M_euros": 1.8, "roi_mois": 15},
-    {"rank": 5, "zone": "Av. Berthelot", "lines": ["T2", "C12"],
-     "voyageurs_jour": 48000, "gain_min": 2, "cout_M_euros": 1.1, "roi_mois": 12},
+    {
+        "rank": 1,
+        "zone": "Rue Garibaldi",
+        "lines": ["T1", "C3", "C13", "M_D"],
+        "voyageurs_jour": 120000,
+        "gain_min": 7,
+        "cout_M_euros": 2.3,
+        "roi_mois": 18,
+    },
+    {
+        "rank": 2,
+        "zone": "Cours Lafayette",
+        "lines": ["T1", "C3"],
+        "voyageurs_jour": 85000,
+        "gain_min": 4,
+        "cout_M_euros": 1.1,
+        "roi_mois": 12,
+    },
+    {
+        "rank": 3,
+        "zone": "Carrefour Part-Dieu",
+        "lines": ["T1", "T3", "T4", "C3"],
+        "voyageurs_jour": 210000,
+        "gain_min": 12,
+        "cout_M_euros": 4.5,
+        "roi_mois": 24,
+    },
+    {
+        "rank": 4,
+        "zone": "Quai Claude Bernard",
+        "lines": ["T1", "C5", "C18"],
+        "voyageurs_jour": 62000,
+        "gain_min": 3,
+        "cout_M_euros": 1.8,
+        "roi_mois": 15,
+    },
+    {
+        "rank": 5,
+        "zone": "Av. Berthelot",
+        "lines": ["T2", "C12"],
+        "voyageurs_jour": 48000,
+        "gain_min": 2,
+        "cout_M_euros": 1.1,
+        "roi_mois": 12,
+    },
 ]
 
 
