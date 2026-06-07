@@ -1,0 +1,710 @@
+"""Couche d'accès aux données Gold/Silver pour les widgets dashboard.
+
+Ce module encapsule les requêtes SQL paramétrées vers les tables Gold/Silver
+de l'architecture Medallion, et fournit une API typée simple pour les widgets
+Streamlit. Toutes les fonctions:
+
+* Utilisent du SQL paramétré (psycopg2 %s, JAMAIS de f-string)
+* Retournent des `pandas.DataFrame` (pratique pour Streamlit/Plotly)
+* Ont un fallback gracieux vers `src.data.mock` si la DB est down
+* Sont testables hors ligne (les tests monkeypatchent ``_is_db_available``)
+
+Pattern d'utilisation dans un widget::
+
+    from src.data.db_query import get_latest_traffic, get_traffic_aggregates
+
+    df = get_latest_traffic(limit=50)  # DataFrame ou mock fallback
+    st.dataframe(df)
+
+Pour les widgets, voir le pattern dans ``dashboard/components/widgets/usager/traffic_widget.py``.
+"""
+
+from __future__ import annotations
+
+import logging
+
+import pandas as pd
+
+from src.db.connection import execute_query, execute_scalar, test_connection
+
+logger = logging.getLogger(__name__)
+
+
+# -----------------------------------------------------------------------------
+# Disponibilité DB (cache de healthcheck pour éviter des pings à chaque render)
+# -----------------------------------------------------------------------------
+
+_db_available_cache: bool | None = None
+
+
+def _is_db_available() -> bool:
+    """Teste la connexion DB. Cache le résultat pendant la durée du process.
+
+    Returns:
+        True si la DB répond, False sinon.
+    """
+    global _db_available_cache
+    if _db_available_cache is None:
+        _db_available_cache = test_connection()
+        if not _db_available_cache:
+            logger.warning(
+                "DB non disponible — les widgets basculeront sur les données mock. "
+                "Vérifiez POSTGRES_HOST/POSTGRES_PORT/POSTGRES_PASSWORD dans .env"
+            )
+    return _db_available_cache
+
+
+def reset_db_cache() -> None:
+    """Reset le cache (utile pour les tests)."""
+    global _db_available_cache
+    _db_available_cache = None
+
+
+# -----------------------------------------------------------------------------
+# Helpers internes
+# -----------------------------------------------------------------------------
+
+
+def _df_from_query(query: str, params: tuple = ()) -> pd.DataFrame:
+    """Exécute une requête et retourne un DataFrame. Vide si erreur/disponible."""
+    try:
+        rows = execute_query(query, params)
+        return pd.DataFrame(rows)
+    except Exception as e:  # pragma: no cover — fallback path
+        logger.warning("DB query failed, returning empty DataFrame: %s", e)
+        return pd.DataFrame()
+
+
+def _with_fallback(df: pd.DataFrame, fallback_df: pd.DataFrame) -> pd.DataFrame:
+    """Si df est vide ET la DB n'est pas dispo, retourne fallback_df (mock)."""
+    if df.empty and not _is_db_available():
+        return fallback_df
+    return df
+
+
+# =============================================================================
+# Traffic (Gold)
+# =============================================================================
+
+
+def get_latest_traffic(limit: int = 100) -> pd.DataFrame:
+    """Récupère les N dernières mesures de vitesse depuis Gold.
+
+    Args:
+        limit: Nombre de lignes à retourner (défaut 100).
+
+    Returns:
+        DataFrame avec colonnes: measurement_time, node_idx, channel_id,
+        speed_kmh, importance_code. Vide si DB down (mock fallback).
+    """
+    query = """
+        SELECT measurement_time, node_idx, channel_id, speed_kmh, importance_code
+        FROM gold.traffic_features_live
+        ORDER BY measurement_time DESC
+        LIMIT %s
+    """
+    df = _df_from_query(query, (limit,))
+    if df.empty and not _is_db_available():
+        from src.data.mock.usager import MOCK_TRAFFIC_FEATURES
+
+        return pd.DataFrame(MOCK_TRAFFIC_FEATURES[:limit])
+    return df
+
+
+def get_traffic_timeseries_for_node(node_idx: int, hours: int = 24) -> pd.DataFrame:
+    """Time series trafic pour un nœud (mock fallback)."""
+    # Pas de query SQL ici — c'est un alias utilisé par les widgets démo.
+    from src.data.mock.usager import MOCK_TRAFFIC_TIMESERIES
+
+    return pd.DataFrame(MOCK_TRAFFIC_TIMESERIES)
+
+
+def get_traffic_for_node(node_idx: int, hours: int = 24) -> pd.DataFrame:
+    """Série temporelle de vitesse pour un nœud donné.
+
+    Args:
+        node_idx: Index du nœud dans gold.dim_spatial_grid_mapping.
+        hours: Fenêtre temporelle en heures (défaut 24).
+
+    Returns:
+        DataFrame avec colonnes: measurement_time, speed_kmh, speed_lag_1,
+        rolling_mean_5min, hour_sin, hour_cos.
+    """
+    query = """
+        SELECT measurement_time, speed_kmh, speed_lag_1, speed_lag_2,
+               speed_delta_1, rolling_mean_5min, hour_sin, hour_cos,
+               temperature_c, rain_mm, is_vacances
+        FROM gold.traffic_features_live
+        WHERE node_idx = %s
+          AND measurement_time >= NOW() - make_interval(hours => %s)
+        ORDER BY measurement_time ASC
+    """
+    return _df_from_query(query, (node_idx, hours))
+
+
+def get_traffic_predictions(horizon_minutes: int = 60, limit: int = 200) -> pd.DataFrame:
+    """Prédictions de trafic Gold (XGBoost + GNN si dispo).
+
+    Args:
+        horizon_minutes: Horizon de prédiction en minutes (5/15/30/60/180/360).
+        limit: Nombre max de lignes.
+
+    Returns:
+        DataFrame: prediction_timestamp, target_timestamp, node_idx, model_name,
+        model_version, predicted_speed, confidence_low, confidence_high, actual_speed.
+    """
+    query = """
+        SELECT prediction_timestamp, target_timestamp, horizon_minutes,
+               node_idx, model_name, model_version, predicted_speed,
+               confidence_low, confidence_high, actual_speed
+        FROM gold.trafic_predictions
+        WHERE horizon_minutes = %s
+        ORDER BY prediction_timestamp DESC
+        LIMIT %s
+    """
+    return _df_from_query(query, (horizon_minutes, limit))
+
+
+def get_traffic_bottlenecks(top: int = 20) -> pd.DataFrame:
+    """Top N nœuds avec la vitesse médiane la plus basse sur 1h.
+
+    Args:
+        top: Nombre de nœuds à retourner (défaut 20).
+
+    Returns:
+        DataFrame: node_idx, channel_id, avg_speed, min_speed, observations.
+    """
+    query = """
+        SELECT node_idx, channel_id,
+               AVG(speed_kmh) AS avg_speed,
+               MIN(speed_kmh) AS min_speed,
+               COUNT(*) AS observations
+        FROM gold.traffic_features_live
+        WHERE measurement_time >= NOW() - INTERVAL '1 hour'
+        GROUP BY node_idx, channel_id
+        ORDER BY avg_speed ASC
+        LIMIT %s
+    """
+    df = _df_from_query(query, (top,))
+    if df.empty and not _is_db_available():
+        from src.data.mock.usager import MOCK_TRAFFIC_BOTTLENECKS
+
+        return pd.DataFrame(MOCK_TRAFFIC_BOTTLENECKS[:top])
+    return df
+
+
+def get_predictions_vs_actuals(limit: int = 1000) -> pd.DataFrame:
+    """Backtesting — comparaisons prédictions vs réalité.
+
+    Returns:
+        DataFrame: horizon_minutes, model_name, predicted_speed, actual_speed,
+        error_kmh, error_pct.
+    """
+    query = """
+        SELECT horizon_minutes, model_name, predicted_speed, actual_speed,
+               error_kmh, error_pct
+        FROM gold.predictions_vs_actuals
+        ORDER BY prediction_id DESC
+        LIMIT %s
+    """
+    df = _df_from_query(query, (limit,))
+    if df.empty and not _is_db_available():
+        from src.data.mock.usager import MOCK_PREDICTIONS_VS_ACTUALS
+
+        return pd.DataFrame(MOCK_PREDICTIONS_VS_ACTUALS[:limit])
+    return df
+
+
+# =============================================================================
+# Vélov (Gold)
+# =============================================================================
+
+
+def get_velov_stations_geo() -> pd.DataFrame:
+    """Stations Vélov avec leur géolocalisation (Silver).
+
+    Returns:
+        DataFrame: station_id, station_name, bikes_available, docks_available,
+        lat, lng, is_operational.
+    """
+    query = """
+        SELECT station_id, station_name, bikes_available, docks_available,
+               ST_Y(geom_wgs84) AS lat, ST_X(geom_wgs84) AS lng,
+               is_operational
+        FROM silver.velov_clean
+        WHERE measurement_time >= NOW() - INTERVAL '15 minutes'
+        ORDER BY station_id
+    """
+    df = _df_from_query(query)
+    if df.empty and not _is_db_available():
+        from src.data.mock.usager import MOCK_VELOV_STATIONS_GEO
+
+        return pd.DataFrame(MOCK_VELOV_STATIONS_GEO)
+    return df
+
+
+def get_velov_predictions(horizon_minutes: int = 30, limit: int = 500) -> pd.DataFrame:
+    """Prédictions de disponibilité Vélov.
+
+    Args:
+        horizon_minutes: Horizon (30 ou 60).
+        limit: Nombre max de lignes.
+
+    Returns:
+        DataFrame: prediction_timestamp, target_timestamp, station_id,
+        station_id_encoded, predicted_bikes, confidence_low, confidence_high.
+    """
+    query = """
+        SELECT prediction_timestamp, target_timestamp, horizon_minutes,
+               station_id, station_id_encoded, predicted_bikes,
+               confidence_low, confidence_high
+        FROM gold.velov_predictions
+        WHERE horizon_minutes = %s
+        ORDER BY prediction_timestamp DESC
+        LIMIT %s
+    """
+    df = _df_from_query(query, (horizon_minutes, limit))
+    if df.empty and not _is_db_available():
+        from src.data.mock.usager import MOCK_TRAFIC_PREDICTIONS
+
+        return pd.DataFrame([p for p in MOCK_TRAFIC_PREDICTIONS if p["horizon_minutes"] == horizon_minutes][:limit])
+    return df
+
+
+def get_velov_features_for_station(station_id_encoded: int, hours: int = 24) -> pd.DataFrame:
+    """Features d'une station Vélov (pour debug / audit widget)."""
+    query = """
+        SELECT measurement_time, station_id, bikes_available,
+               bikes_lag_1, bikes_lag_2, bikes_lag_3, rolling_mean_3h,
+               hour_sin, hour_cos, temperature_c, rain_mm,
+               is_vacances, is_ferie
+        FROM gold.velov_features
+        WHERE station_id_encoded = %s
+          AND measurement_time >= NOW() - make_interval(hours => %s)
+        ORDER BY measurement_time ASC
+    """
+    return _df_from_query(query, (station_id_encoded, hours))
+
+
+# =============================================================================
+# Bus (Gold)
+# =============================================================================
+
+
+def get_bus_delay_segments(line_ref: str | None = None, days: int = 7) -> pd.DataFrame:
+    """Retard moyen bus par tronçon/ligne/jour/heure.
+
+    Args:
+        line_ref: Filtrer sur une ligne (None = toutes).
+        days: Fenêtre en jours (défaut 7).
+
+    Returns:
+        DataFrame: date, hour, line_ref, segment_id, avg_delay_seconds,
+        n_observations.
+    """
+    if line_ref:
+        query = """
+            SELECT date, hour, line_ref, segment_id, avg_delay_seconds, n_observations
+            FROM gold.bus_delay_segments
+            WHERE line_ref = %s
+              AND date >= CURRENT_DATE - %s
+            ORDER BY date DESC, hour DESC
+        """
+        return _df_from_query(query, (line_ref, days))
+    query = """
+        SELECT date, hour, line_ref, segment_id, avg_delay_seconds, n_observations
+        FROM gold.bus_delay_segments
+        WHERE date >= CURRENT_DATE - %s
+        ORDER BY date DESC, hour DESC
+    """
+    df = _df_from_query(query, (days,))
+    if df.empty and not _is_db_available():
+        from src.data.mock.usager import MOCK_BUS_DELAYS
+
+        return pd.DataFrame(MOCK_BUS_DELAYS)
+    return df
+
+
+def get_infrastructure_bottlenecks(top: int = 30) -> pd.DataFrame:
+    """Bottlenecks infrastructure (croisement bus × trafic).
+
+    Returns:
+        DataFrame: segment_id, line_refs, diagnosis, impact_score,
+        voyageurs_jour, geom.
+    """
+    query = """
+        SELECT bottleneck_id, segment_id, line_refs, diagnosis, impact_score,
+               voyageurs_jour,
+               ST_Y(ST_Centroid(geom_wgs84)) AS lat,
+               ST_X(ST_Centroid(geom_wgs84)) AS lng
+        FROM gold.infrastructure_bottlenecks
+        ORDER BY impact_score DESC
+        LIMIT %s
+    """
+    df = _df_from_query(query, (top,))
+    if df.empty and not _is_db_available():
+        from src.data.mock.usager import MOCK_INFRA_BOTTLENECKS
+
+        return pd.DataFrame(MOCK_INFRA_BOTTLENECKS[:top])
+    return df
+
+
+# =============================================================================
+# Spatial (Gold)
+# =============================================================================
+
+
+def get_spatial_mapping() -> pd.DataFrame:
+    """Mapping nœuds GNN ↔ channel_id (capteurs).
+
+    Returns:
+        DataFrame: node_idx, channel_id, matrix_i, matrix_j, h3_id, lat, lng.
+    """
+    query = """
+        SELECT node_idx, channel_id, matrix_i, matrix_j, h3_id,
+               ST_Y(geom_wgs84) AS lat, ST_X(geom_wgs84) AS lng
+        FROM gold.dim_spatial_grid_mapping
+        ORDER BY node_idx
+    """
+    df = _df_from_query(query)
+    if df.empty and not _is_db_available():
+        from src.data.mock.usager import MOCK_SPATIAL_MAPPING
+
+        return pd.DataFrame(MOCK_SPATIAL_MAPPING)
+    return df
+
+
+def get_gnn_adjacency() -> pd.DataFrame:
+    """Arêtes du graphe GNN (K=2 grid_disk, bidirectionnel)."""
+    query = """
+        SELECT node_u, node_v, is_connected, distance_m
+        FROM gold.dim_gnn_adjacency
+        WHERE is_connected = TRUE
+    """
+    df = _df_from_query(query)
+    if df.empty and not _is_db_available():
+        from src.data.mock.usager import MOCK_GNN_ADJACENCY
+
+        return pd.DataFrame(MOCK_GNN_ADJACENCY)
+    return df
+
+
+# =============================================================================
+# RGPD
+# =============================================================================
+
+
+def get_rgpd_audit_log(limit: int = 100) -> pd.DataFrame:
+    """Logs d'audit RGPD (registre Article 30).
+
+    Returns:
+        DataFrame: event_time, actor, action, resource_type, resource_id,
+        ip_address, user_agent.
+    """
+    query = """
+        SELECT event_time, actor, action, resource_type, resource_id,
+               ip_address::text AS ip_address, user_agent
+        FROM rgpd.audit_log
+        ORDER BY event_time DESC
+        LIMIT %s
+    """
+    df = _df_from_query(query, (limit,))
+    if df.empty and not _is_db_available():
+        from src.data.mock.usager import MOCK_RGPD_AUDIT
+
+        return pd.DataFrame(MOCK_RGPD_AUDIT[:limit])
+    return df
+
+
+def get_rgpd_consents_summary() -> pd.DataFrame:
+    """Résumé des consents par type (analytics, tracking, marketing, all)."""
+    query = """
+        SELECT consent_type,
+               SUM(CASE WHEN granted THEN 1 ELSE 0 END) AS granted_count,
+               SUM(CASE WHEN NOT granted THEN 1 ELSE 0 END) AS denied_count,
+               COUNT(*) AS total
+        FROM rgpd.user_consents
+        WHERE granted_at >= NOW() - INTERVAL '90 days'
+        GROUP BY consent_type
+        ORDER BY consent_type
+    """
+    df = _df_from_query(query)
+    if df.empty and not _is_db_available():
+        from src.data.mock.usager import MOCK_RGPD_CONSENTS_SUMMARY
+
+        return pd.DataFrame(MOCK_RGPD_CONSENTS_SUMMARY)
+    return df
+
+
+def get_rgpd_data_subject_requests(limit: int = 50) -> pd.DataFrame:
+    """DSR (Demandes Subjects Request) — Article 15/17/20."""
+    query = """
+        SELECT request_id, user_identifier, request_type, status,
+               requested_at, completed_at, notes
+        FROM rgpd.data_subject_requests
+        ORDER BY requested_at DESC
+        LIMIT %s
+    """
+    df = _df_from_query(query, (limit,))
+    if df.empty and not _is_db_available():
+        from src.data.mock.usager import MOCK_RGPD_DSR
+
+        return pd.DataFrame(MOCK_RGPD_DSR[:limit])
+    return df
+
+
+def get_rgpd_purge_history(limit: int = 50) -> pd.DataFrame:
+    """Historique des purges RGPD."""
+    query = """
+        SELECT schema_name, table_name, rows_purged, retention_days, purged_at
+        FROM rgpd.purge_log
+        ORDER BY purged_at DESC
+        LIMIT %s
+    """
+    df = _df_from_query(query, (limit,))
+    if df.empty and not _is_db_available():
+        from src.data.mock.usager import MOCK_RGPD_PURGE
+
+        return pd.DataFrame(MOCK_RGPD_PURGE[:limit])
+    return df
+
+
+# =============================================================================
+# Monitoring / Health
+# =============================================================================
+
+
+def get_data_freshness(schema: str = "bronze", table: str = "trafic_boucles") -> pd.Timestamp | None:
+    """Retourne le timestamp de la dernière ligne d'une table.
+
+    Args:
+        schema: 'bronze' | 'silver' | 'gold'.
+        table: Nom de la table (sans préfixe schéma).
+
+    Returns:
+        Timestamp de la dernière mesure, ou None si DB down / table vide.
+    """
+    # Whitelist pour éviter SQL injection sur schema/table (psycopg2 %s ne protège pas les identifiants)
+    allowed = {
+        ("bronze", "trafic_boucles"),
+        ("bronze", "velov"),
+        ("bronze", "tcl_vehicles"),
+        ("bronze", "meteo"),
+        ("bronze", "air_quality"),
+        ("bronze", "chantiers"),
+        ("silver", "trafic_boucles_clean"),
+        ("silver", "velov_clean"),
+        ("silver", "tcl_vehicles_clean"),
+        ("silver", "meteo_hourly"),
+        ("silver", "chantiers_actifs"),
+        ("gold", "traffic_features_live"),
+        ("gold", "velov_features"),
+        ("gold", "velov_predictions"),
+        ("gold", "trafic_predictions"),
+    }
+    if (schema, table) not in allowed:
+        logger.warning("Schema/table (%s.%s) not whitelisted in db_query", schema, table)
+        return None
+
+    query = f"SELECT MAX(fetched_at) FROM {schema}.{table}"  # safe: identifiants whitelistés
+    try:
+        result = execute_scalar(query)
+        return pd.Timestamp(result) if result else None
+    except Exception as e:  # pragma: no cover
+        logger.warning("Freshness check failed for %s.%s: %s", schema, table, e)
+        return None
+
+
+def get_bronze_source_counts(hours: int = 1) -> pd.DataFrame:
+    """Compte de lignes ingérées par source Bronze sur les N dernières heures.
+
+    Returns:
+        DataFrame: source, n_rows, last_fetch.
+    """
+    sources = [
+        ("trafic_boucles", "Grand Lyon boucles (pvotrafic)"),
+        ("velov", "Vélo'v GBFS"),
+        ("tcl_vehicles", "TCL SIRI Lite"),
+        ("meteo", "Open-Meteo weather"),
+        ("air_quality", "Open-Meteo air quality"),
+        ("chantiers", "Grand Lyon chantiers"),
+    ]
+    if not _is_db_available():
+        from src.data.mock.usager import MOCK_BRONZE_COUNTS
+
+        return pd.DataFrame(MOCK_BRONZE_COUNTS)
+
+    rows = []
+    for table, label in sources:
+        # Une requête par table (pas de UNION sur des tables hétérogènes)
+        try:
+            count = execute_scalar(
+                f"SELECT COUNT(*) FROM bronze.{table} "
+                f"WHERE fetched_at >= NOW() - make_interval(hours => %s)",
+                (hours,),
+            )
+            last = execute_scalar(f"SELECT MAX(fetched_at) FROM bronze.{table}")
+            rows.append(
+                {
+                    "source": label,
+                    "table": f"bronze.{table}",
+                    "n_rows": int(count or 0),
+                    "last_fetch": pd.Timestamp(last) if last else None,
+                }
+            )
+        except Exception as e:  # pragma: no cover
+            logger.warning("Bronze count failed for %s: %s", table, e)
+            rows.append({"source": label, "table": f"bronze.{table}", "n_rows": 0, "last_fetch": None})
+    return pd.DataFrame(rows)
+
+
+# =============================================================================
+# Utilitaires de rendu
+# =============================================================================
+
+
+def safe_dataframe(df: pd.DataFrame, empty_message: str = "Aucune donnée disponible.") -> pd.DataFrame:
+    """Helper UI — retourne le DataFrame, ou un DataFrame placeholder si vide.
+
+    Usage dans un widget Streamlit::
+
+        df = get_latest_traffic(limit=50)
+        df = safe_dataframe(df, "Aucune mesure trafic récente — vérifiez le pipeline.")
+        st.dataframe(df)
+    """
+    if df.empty:
+        return pd.DataFrame({"info": [empty_message]})
+    return df
+
+
+# =============================================================================
+# Météo, alertes, segments, buses, kpis, amenagements
+# Sprint 8 — Sprint 6 widget migration complète
+# =============================================================================
+
+
+def get_weather_hourly(hours: int = 24) -> pd.DataFrame:
+    """Météo horaire (open-meteo Silver) — pour le widget météo."""
+    query = """
+        SELECT
+            measurement_time,
+            temperature_c,
+            rain_mm,
+            wind_kmh,
+            humidity_pct,
+            condition_label
+        FROM silver.meteo_hourly
+        WHERE measurement_time >= NOW() - make_interval(hours => %s)
+        ORDER BY measurement_time DESC
+    """
+    return _df_from_query(query, (hours,))
+
+
+def get_recent_alerts(hours: int = 24, limit: int = 50) -> pd.DataFrame:
+    """Alertes récentes (predictions + events).
+
+    Source: agrégat de plusieurs tables (gold.trafic_predictions, chantiers,
+    etc.). Pour l'instant mock — sera remplacé par une vue matérialisée
+    ``gold.v_recent_alerts`` quand le pipeline tournera.
+    """
+    query = """
+        SELECT
+            alert_id,
+            alert_time,
+            severity,
+            line_ref,
+            title,
+            description,
+            action
+        FROM gold.v_recent_alerts
+        WHERE alert_time >= NOW() - make_interval(hours => %s)
+        ORDER BY alert_time DESC
+        LIMIT %s
+    """
+    return _df_from_query(query, (hours, limit))
+
+
+def get_segments(limit: int = 200) -> pd.DataFrame:
+    """Liste des segments routiers (top 200 par importance)."""
+    query = """
+        SELECT
+            segment_id,
+            channel_id,
+            importance_code,
+            longueur_m,
+            ST_Y(ST_StartPoint(geom_wgs84)) AS lat_start,
+            ST_X(ST_StartPoint(geom_wgs84)) AS lng_start,
+            ST_Y(ST_EndPoint(geom_wgs84)) AS lat_end,
+            ST_X(ST_EndPoint(geom_wgs84)) AS lng_end
+        FROM silver.trafic_segments_clean
+        ORDER BY importance_code DESC, segment_id
+        LIMIT %s
+    """
+    return _df_from_query(query, (limit,))
+
+
+def get_correlation_matrix(limit: int = 50) -> pd.DataFrame:
+    """Matrice de corrélation entre features Gold (pour heatmap)."""
+    query = """
+        SELECT feature_x, feature_y, correlation, p_value, n_samples
+        FROM gold.fact_correlation_matrix
+        ORDER BY abs(correlation) DESC
+        LIMIT %s
+    """
+    return _df_from_query(query, (limit,))
+
+
+def get_buses_positions(limit: int = 200) -> pd.DataFrame:
+    """Positions temps réel des bus TCL."""
+    query = """
+        SELECT
+            vehicle_ref,
+            line_ref,
+            ST_Y(geom_wgs84) AS lat,
+            ST_X(geom_wgs84) AS lng,
+            bearing,
+            delay_seconds,
+            recorded_at
+        FROM silver.tcl_vehicles_clean
+        WHERE recorded_at >= NOW() - INTERVAL '5 minutes'
+        LIMIT %s
+    """
+    return _df_from_query(query, (limit,))
+
+
+def get_kpis_12_months() -> pd.DataFrame:
+    """KPIs ville sur 12 mois (vue matérialisée pour le persona Élu)."""
+    query = """
+        SELECT
+            kpi_key,
+            month,
+            value,
+            delta_pct,
+            target_value
+        FROM gold.mv_kpis_12_months
+        ORDER BY kpi_key, month
+    """
+    return _df_from_query(query)
+
+
+def get_amenagements_passes(limit: int = 50) -> pd.DataFrame:
+    """Aménagements passés (historique pour le persona Élu)."""
+    query = """
+        SELECT
+            amenagement_id,
+            name,
+            zone,
+            type,
+            cout_eur,
+            date_debut,
+            date_fin,
+            impact_part_modale_tc,
+            impact_congestion_pct,
+            impact_co2_tonnes_an,
+            description
+        FROM gold.amenagements_history
+        ORDER BY date_fin DESC
+        LIMIT %s
+    """
+    return _df_from_query(query, (limit,))
+

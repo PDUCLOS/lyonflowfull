@@ -1,0 +1,93 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# C extensions
+*.so
+
+# Distribution / packaging
+.Python
+build/
+dist/
+*.egg-info/
+*.egg
+MANIFEST
+
+# Virtual environments
+.venv/
+venv/
+env/
+
+# pytest / coverage
+.pytest_cache/
+.coverage
+htmlcov/
+coverage.xml
+.tox/
+.nox/
+
+# mypy
+.mypy_cache/
+
+# ruff
+.ruff_cache/
+
+# Logs
+logs/
+*.log
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDEs
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Streamlit
+.streamlit/secrets.toml
+
+# Airflow
+airflow.db
+airflow.cfg
+
+# Docker
+docker-data/
+postgres-data/
+minio-data/
+
+# Backups
+backups/*.sql
+backups/*.dump
+backups/*.tar.gz
+
+# Models (gros fichiers)
+models/*.pt
+models/*.pkl
+models/*.joblib
+
+# Uploads
+uploads/
+
+# Deploy config (info VPS sensible)
+.deploy.env
+
+# Env
+.env
+.env.local
+.env.production
+
+# Secrets
+secrets/
+*.pem
+*.key
+
+# Generated docs
+docs/_build/
+site/
+
+# Local orchestration plans
+.mavis/

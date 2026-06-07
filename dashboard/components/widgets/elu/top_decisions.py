@@ -1,0 +1,60 @@
+"""Widget — Top décisions à arbitrer ce trimestre.
+
+Sprint 8 — Bottlenecks via data_loader.load_bottlenecks_top().
+"""
+
+from __future__ import annotations
+
+import streamlit as st
+
+from src.data.data_loader import load_bottlenecks_top
+
+
+def render_top_decisions(n: int = 5) -> None:
+    """Affiche les N décisions à arbitrer ce trimestre.
+
+    Args:
+        n: nombre de décisions à afficher.
+    """
+    st.markdown(f"##### 🎯 Top {n} décisions à arbitrer")
+
+    bottlenecks = load_bottlenecks_top(force_mock=False)
+    for i, b in enumerate(bottlenecks[:n], 1):
+        zone = b.get("zone", "—")
+        lignes = ", ".join(b.get("lines_impacted", []))
+        voyageurs = b.get("voyageurs_jour", 0)
+        gain = b.get("gain_min", 0)
+        cout = b.get("cout_M_euros", 0)
+        roi = b.get("roi_mois", 0)
+        delai = b.get("delai_mois", 0)
+
+        st.markdown(
+            f"""
+            <div class="lyonflow-card" style="margin:0.5rem 0;">
+                <div style="display:flex;align-items:start;gap:1rem;">
+                    <div style="background:#3F51B5;color:white;width:32px;height:32px;
+                                border-radius:50%;display:flex;align-items:center;
+                                justify-content:center;font-weight:700;flex-shrink:0;">
+                        {i}
+                    </div>
+                    <div style="flex:1;">
+                        <div style="font-weight:600;font-size:1rem;">{zone}</div>
+                        <div style="font-size:0.85rem;opacity:0.7;margin:2px 0;">
+                            Lignes : {lignes} · {voyageurs:,} voyageurs/jour
+                        </div>
+                        <div style="font-size:0.9rem;margin-top:0.4rem;">
+                            💡 <b>{b.get('description', '—')}</b>
+                        </div>
+                        <div style="display:flex;gap:1.2rem;margin-top:0.5rem;
+                                    font-size:0.85rem;">
+                            <span>⏱ <b>{gain} min</b> gagnées</span>
+                            <span>💰 <b>{cout} M€</b></span>
+                            <span>📅 <b>{delai} mois</b> travaux</span>
+                            <span style="color:#4CAF50;">📈 ROI <b>{int(roi)} mois</b></span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )

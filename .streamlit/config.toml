@@ -1,0 +1,31 @@
+# =============================================================================
+# LyonFlowFull — Streamlit config
+# =============================================================================
+# La navigation native Streamlit est DÉSACTIVÉE (hideSidebarNav = true).
+# On utilise la navigation custom par persona via dashboard/components/navigation.py
+# (qui filtre les pages selon le persona courant).
+# =============================================================================
+
+[server]
+headless = true
+runOnSave = false
+fileWatcherType = "none"
+maxUploadSize = 100  # MB — pour le file manager
+
+[browser]
+gatherUsageStats = false
+serverAddress = "0.0.0.0"
+serverPort = 8501
+
+[theme]
+base = "dark"
+primaryColor = "#4A90D9"
+backgroundColor = "#0E1117"
+secondaryBackgroundColor = "#1A1D24"
+textColor = "#FAFAFA"
+font = "sans serif"
+
+[ui]
+hideSidebarNav = true   # ← clé : on cache la nav native, navigation custom
+# Les autres options utiles :
+# showHideSidebar = true   # permet de replier la sidebar

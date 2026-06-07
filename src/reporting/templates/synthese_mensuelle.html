@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <title>{{ title }}</title>
+    <style>
+        @page { size: A4; margin: 2cm; }
+        body { font-family: 'Helvetica', 'Arial', sans-serif; color: #222; }
+        .header { border-bottom: 3px solid #3F51B5; padding-bottom: 1rem; margin-bottom: 1.5rem; }
+        .header h1 { color: #3F51B5; margin: 0; }
+        .header .meta { color: #666; font-size: 0.85rem; margin-top: 0.3rem; }
+        .kpi-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.8rem; margin: 1rem 0; }
+        .kpi-card { background: #F5F5F5; border-left: 4px solid #3F51B5; padding: 0.8rem; border-radius: 4px; }
+        .kpi-label { font-size: 0.75rem; color: #666; }
+        .kpi-value { font-size: 1.8rem; font-weight: 700; color: #3F51B5; }
+        .kpi-delta { font-size: 0.85rem; color: #4CAF50; }
+        .section { margin: 1.5rem 0; page-break-inside: avoid; }
+        .section h2 { color: #3F51B5; border-bottom: 1px solid #DDD; padding-bottom: 0.3rem; }
+        .bottleneck-row { display: flex; justify-content: space-between; padding: 0.5rem; border-bottom: 1px solid #EEE; }
+        .footer { margin-top: 2rem; padding-top: 1rem; border-top: 1px solid #DDD; font-size: 0.7rem; color: #999; text-align: center; }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>{{ title }}</h1>
+        <div class="meta">LyonFlowFull · Métropole de Lyon · {{ date }}</div>
+    </div>
+    {{ content }}
+    <div class="footer">
+        Document généré par LyonFlowFull · Données open data Grand Lyon · {{ date }}
+    </div>
+</body>
+</html>

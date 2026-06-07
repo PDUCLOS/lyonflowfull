@@ -1,0 +1,46 @@
+"""Collecteur — TCL SIRI Lite (bus/tram positions temps réel).
+
+API : https://download.data.grandlyon.com/siri-lite/...
+Fréquence : 5 min
+Volume : ~600 véhicules en circulation aux heures de pointe
+Auth : aucune (open data)
+"""
+
+from __future__ import annotations
+
+import os
+from datetime import datetime, timezone
+
+from src.ingestion.base import CollectorError, DataCollector, FetchResult
+
+
+class TclSiriLite(DataCollector):
+    """Collecteur SIRI Lite TCL (positions bus/tram)."""
+
+    def __init__(self):
+        super().__init__(
+            source="tcl_siri_lite",
+            bronze_table="tcl_vehicles",
+            timeout=60,
+        )
+        self.url = os.getenv(
+            "TCL_SIRI_LITE_URL",
+            "https://download.data.grandlyon.com/siri-lite/1.8/vehicle-monitoring.json",
+        )
+
+    def fetch_raw(self) -> FetchResult:
+        try:
+            r = self._http_get(self.url)
+            data = r.json()
+        except Exception as e:
+            raise CollectorError(f"Erreur fetch SIRI Lite: {e}") from e
+
+        n_records = self._count_records(data)
+        return FetchResult(
+            source=self.source,
+            fetched_at=datetime.now(timezone.utc),
+            raw_data=data,
+            n_records=n_records,
+            bytes_fetched=len(r.content),
+            status_code=r.status_code,
+        )

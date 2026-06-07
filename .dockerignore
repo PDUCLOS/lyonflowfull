@@ -1,0 +1,64 @@
+# =============================================================================
+# LyonFlowFull — .dockerignore
+# =============================================================================
+# Fichiers exclus du contexte Docker (performance build)
+# =============================================================================
+
+# Git
+.git/
+.gitignore
+.github/
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+*.egg-info/
+.eggs/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+.coverage.*
+
+# Virtual envs
+.venv/
+venv/
+env/
+
+# Tests (non embarqués en prod)
+tests/
+
+# IDEs
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Docs
+docs/
+*.md
+LICENSE
+
+# Backups
+backups/
+
+# Modèles ML (gros, montés via volume)
+models/
+
+# Logs
+logs/
+*.log
+
+# Env
+.env
+.env.local
+.env.example
+!deploy/init-db.sql

@@ -1,0 +1,291 @@
+# =============================================================================
+# LyonFlowFull — Personas
+# =============================================================================
+# Cerveau de l'interface. Pilote l'affichage, l'auth, le routing et le thème
+# selon le persona sélectionné.
+#
+# Pour ajouter un persona :
+#   1. Ajouter un bloc sous `personas:`
+#   2. Définir ses pages dans `navigation:`
+#   3. Créer le mot de passe dans .env (PERSONA_<ID>_PASSWORD) si auth requise
+#
+# Convention de nommage des fichiers pages : <Persona>_<Ordre>_<Nom>.py
+# Exemple : Usager_1_Mon_Trajet.py
+# =============================================================================
+
+version: "1.0"
+last_updated: "2026-06-05"
+
+default_persona: usager
+
+# -----------------------------------------------------------------------------
+# Personas
+# -----------------------------------------------------------------------------
+personas:
+
+  # ---------------------------------------------------------------------------
+  # 1. USAGER — Vue grand public
+  # ---------------------------------------------------------------------------
+  usager:
+    id: usager
+    label: "Usager"
+    short_label: "Particulier"
+    icon: "🌱"
+    description: "Vue simplifiée pour les Lyonnais au quotidien"
+    color_primary: "#4CAF50"
+    color_accent: "#81C784"
+    color_bg: "#0E1117"
+
+    landing_page: "Usager_1_Mon_Trajet"
+
+    access:
+      auth_required: false
+      password_env: null
+      role: public
+
+    default_filters:
+      mode_transport: "all"
+      horizon: "live"
+      perimeter: "lyon_metropole"
+
+    theme:
+      density: "compact"
+      show_kpi: false
+      show_technical: false
+      max_alerts_shown: 3
+      refresh_interval_sec: 60
+
+    hidden_widgets:
+      - otp_heatmap
+      - correlation_matrix
+      - bottleneck_ranking
+      - saeiv_export
+      - scenario_painter
+      - pdf_generator
+      - benchmark_cities
+      - line_kpis
+      - export_pdf_button
+
+  # ---------------------------------------------------------------------------
+  # 2. PRO TCL — Control room
+  # ---------------------------------------------------------------------------
+  pro_tcl:
+    id: pro_tcl
+    label: "Pro TCL"
+    short_label: "Opérateur réseau"
+    icon: "🎛"
+    description: "Control room pour la régulation et l'exploitation TCL"
+    color_primary: "#FF9800"
+    color_accent: "#FFB74D"
+    color_bg: "#0E1117"
+
+    landing_page: "Pro_1_PCC_Live"
+
+    access:
+      auth_required: true
+      password_env: "PERSONA_PRO_TCL_PASSWORD"
+      role: "tcl_operator"
+
+    default_filters:
+      mode_transport: "transit"
+      horizon: "live"
+      perimeter: "reseau_tcl"
+      lines: []
+
+    theme:
+      density: "dense"
+      show_kpi: true
+      show_technical: true
+      max_alerts_shown: 50
+      refresh_interval_sec: 30
+
+    hidden_widgets:
+      - weather_widget
+      - velov_widget
+      - scenario_painter
+      - pdf_generator
+      - benchmark_cities
+      - why_explainer
+
+  # ---------------------------------------------------------------------------
+  # 3. ÉLU — Vue exécutive
+  # ---------------------------------------------------------------------------
+  elu:
+    id: elu
+    label: "Élu"
+    short_label: "Décideur Grand Lyon"
+    icon: "🏛"
+    description: "Vue exécutive et stratégique pour les décideurs Grand Lyon"
+    color_primary: "#3F51B5"
+    color_accent: "#5C6BC0"
+    color_bg: "#0E1117"
+
+    landing_page: "Elu_1_Synthese"
+
+    access:
+      auth_required: true
+      password_env: "PERSONA_ELU_PASSWORD"
+      role: "elu_grand_lyon"
+
+    default_filters:
+      mode_transport: "all"
+      horizon: "month"
+      perimeter: "lyon_metropole"
+
+    theme:
+      density: "normal"
+      show_kpi: true
+      show_technical: false
+      max_alerts_shown: 0
+      refresh_interval_sec: 300
+
+    hidden_widgets:
+      - alert_ticker
+      - otp_heatmap
+      - correlation_matrix
+      - saeiv_export
+      - why_explainer
+      - velov_widget
+      - weather_widget
+
+# -----------------------------------------------------------------------------
+# Pages communes à tous les personas
+# -----------------------------------------------------------------------------
+common_pages:
+  - id: "RGPD_Conformite"
+    label: "RGPD & Conformité"
+    icon: "🔒"
+    file: "9_RGPD_Conformite.py"
+  - id: "A_Propos"
+    label: "À propos"
+    icon: "ℹ️"
+    file: "A_Propos.py"
+
+# -----------------------------------------------------------------------------
+# Navigation par persona
+# -----------------------------------------------------------------------------
+navigation:
+
+  usager:
+    - label: "Mon trajet"
+      icon: "🧭"
+      file: "Usager_1_Mon_Trajet.py"
+      description: "Trouve le meilleur itinéraire multimodal"
+    - label: "Alertes"
+      icon: "🔔"
+      file: "Usager_2_Alertes.py"
+      description: "Notifications proactives sur tes trajets habituels"
+    - label: "Mes favoris"
+      icon: "⭐"
+      file: "Usager_3_Favoris.py"
+      description: "Tes trajets récurrents sauvegardés"
+
+  pro_tcl:
+    - label: "PCC Live"
+      icon: "📡"
+      file: "Pro_1_PCC_Live.py"
+      description: "Vue 4 quadrants temps réel"
+    - label: "Heatmap OTP"
+      icon: "📊"
+      file: "Pro_2_Heatmap_OTP.py"
+      description: "Ponctualité par ligne × heure"
+    - label: "Corrélation bus × trafic"
+      icon: "🔗"
+      file: "Pro_3_Correlation.py"
+      description: "Diagnostic infrastructure"
+    - label: "Simulateur fréquences"
+      icon: "🎚"
+      file: "Pro_4_Simulateur.py"
+      description: "Impact d'ajout de bus sur l'OTP"
+    - label: "Export reporting"
+      icon: "📤"
+      file: "Pro_5_Export.py"
+      description: "Vers SAEIV / Hastus / Excel"
+    - label: "Pipeline Management"
+      icon: "🔧"
+      file: "Pro_6_Pipeline_Mgmt.py"
+      description: "DAGs Airflow + health checks + fraîcheur"
+    - label: "Model Monitoring"
+      icon: "🧠"
+      file: "Pro_7_Model_Monitoring.py"
+      description: "MLflow registry + métriques + drift"
+
+  elu:
+    - label: "Synthèse exécutive"
+      icon: "📈"
+      file: "Elu_1_Synthese.py"
+      description: "5 KPIs + décisions à arbitrer"
+    - label: "Bottlenecks prioritaires"
+      icon: "🎯"
+      file: "Elu_2_Bottlenecks.py"
+      description: "Top 10 zones classées par ROI"
+    - label: "Avant / Après"
+      icon: "⏪"
+      file: "Elu_3_Avant_Apres.py"
+      description: "Impact des aménagements passés"
+    - label: "Simulateur aménagement"
+      icon: "✏️"
+      file: "Elu_4_Simulateur.py"
+      description: "Projection d'impact d'un nouvel aménagement"
+    - label: "Rapport conseil municipal"
+      icon: "📄"
+      file: "Elu_5_Rapport.py"
+      description: "Génération PDF présentation CM"
+
+# -----------------------------------------------------------------------------
+# Catalogue des widgets
+# -----------------------------------------------------------------------------
+# Liste de référence — chaque widget sera implémenté dans
+# dashboard/components/widgets/<nom>.py et enregistré dans le registry.
+widgets_catalog:
+  - search_bar
+  - recommendation_card
+  - alternative_card
+  - why_explainer
+  - weather_widget
+  - velov_widget
+  - traffic_widget
+  - alert_card
+  - alert_ticker
+  - alert_timeline
+  - alert_settings
+  - favorite_list
+  - recurrent_trip_card
+  - network_map
+  - line_selector
+  - date_range_picker
+  - otp_heatmap
+  - otp_heatmap_mini
+  - line_kpis
+  - line_comparison
+  - otp_filters
+  - correlation_matrix
+  - segment_table
+  - cause_analysis
+  - frequency_slider
+  - otp_projection
+  - before_after_chart
+  - hastus_export
+  - report_builder
+  - schedule_picker
+  - format_selector
+  - saeiv_export
+  - kpi_cards
+  - executive_summary
+  - trend_chart
+  - top_decisions
+  - news_section
+  - bottleneck_ranking
+  - bottleneck_map
+  - roi_calculator
+  - project_selector
+  - delta_kpis
+  - map_painter
+  - impact_projection
+  - cost_estimate
+  - pdf_generator
+  - template_selector
+  - slide_builder
+  - benchmark_cities
+  - export_button
+  - export_pdf_button
