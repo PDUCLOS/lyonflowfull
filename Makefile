@@ -8,7 +8,8 @@
         test-smoke coverage build up down restart logs ps shell-db shell-api \
         shell-streamlit backup restore clean seed-users docs \
         deploy-vps rollback-vps tag-vps certbot-init certbot-renew \
-        healthcheck-vps check-deploy-env tls-status
+        healthcheck-vps check-deploy-env tls-status \
+        monitoring-up monitoring-down monitoring-status monitoring-logs
 
 # Variables
 PYTHON := python3
@@ -237,6 +238,36 @@ backup-offsite:  ## Push backup vers serveur distant (rsync over SSH)
 	@rsync -avz --delete -e "ssh -i $(SSH_KEY)" \
 	    backups/ $$OFFSITE_HOST:~/lyonflow-backups/
 	@echo "✅ Backup offsite synced"
+
+# -----------------------------------------------------------------------------
+# Monitoring (Sprint VPS-3) — Prometheus + Alertmanager + Grafana
+# -----------------------------------------------------------------------------
+MONITORING_COMPOSE := docker compose -f docker-compose.yml -f docker-compose.monitoring.yml
+
+monitoring-up:  ## Démarre la stack monitoring (Prometheus + Grafana + Alertmanager)
+	$(MONITORING_COMPOSE) up -d prometheus alertmanager grafana node-exporter postgres-exporter nginx-exporter redis-exporter
+	@echo ""
+	@echo "✅ Stack monitoring démarrée :"
+	@echo "  - Prometheus    : http://localhost:9090"
+	@echo "  - Alertmanager  : http://localhost:9093"
+	@echo "  - Grafana       : http://localhost:3000 (admin / \$$GRAFANA_ADMIN_PASSWORD)"
+	@echo ""
+	@echo "⚠️  Expose via Nginx sur /grafana/, /prometheus/, /alertmanager/"
+
+monitoring-down:  ## Stoppe la stack monitoring
+	$(MONITORING_COMPOSE) stop prometheus alertmanager grafana node-exporter postgres-exporter nginx-exporter redis-exporter
+
+monitoring-status:  ## Status des services monitoring
+	@$(MONITORING_COMPOSE) ps prometheus alertmanager grafana node-exporter postgres-exporter nginx-exporter redis-exporter 2>/dev/null || echo "Stack monitoring pas démarrée"
+	@echo ""
+	@echo "==[ Targets Prometheus ]=="
+	@curl -fsS http://localhost:9090/api/v1/targets 2>/dev/null | python3 -c "import json,sys; d=json.load(sys.stdin); [print(f\"  {t['labels']['job']:20s} {t['health']:10s} {t['lastScrape'][:19]}\") for t in d.get('data',{}).get('activeTargets',[])]" 2>/dev/null || echo "  (Prometheus pas accessible)"
+	@echo ""
+	@echo "==[ Alertes actives ]=="
+	@curl -fsS http://localhost:9090/api/v1/alerts 2>/dev/null | python3 -c "import json,sys; d=json.load(sys.stdin); [print(f\"  [{a['labels']['severity']}] {a['labels']['alertname']}: {a['annotations']['summary']}\") for a in d.get('data',{}).get('alerts',[])]" 2>/dev/null || echo "  (Prometheus pas accessible)"
+
+monitoring-logs:  ## Logs monitoring
+	$(MONITORING_COMPOSE) logs -f prometheus alertmanager grafana
 
 # -----------------------------------------------------------------------------
 # Docs

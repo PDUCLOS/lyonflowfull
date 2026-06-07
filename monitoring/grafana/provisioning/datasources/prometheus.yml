@@ -1,0 +1,22 @@
+# =============================================================================
+# monitoring/grafana/provisioning/datasources/prometheus.yml
+# =============================================================================
+# Auto-provisionne la datasource Prometheus au démarrage de Grafana.
+# Sprint VPS-3.
+# =============================================================================
+
+apiVersion: 1
+
+datasources:
+  - name: Prometheus
+    type: prometheus
+    access: proxy
+    url: http://prometheus:9090
+    isDefault: true
+    editable: false
+    jsonData:
+      timeInterval: 15s
+      httpMethod: POST
+      manageAlerts: true
+      prometheusType: Prometheus
+      prometheusVersion: 2.54.1

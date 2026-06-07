@@ -1,0 +1,84 @@
+# =============================================================================
+# monitoring/prometheus/rules/database.yml — Alertes PostgreSQL
+# =============================================================================
+# Sprint VPS-3 : surveille connexions, locks, replication, disk.
+# =============================================================================
+
+groups:
+  - name: database-critical
+    interval: 30s
+    rules:
+      # DB connections > 85% du max (Postgres default max_connections=100)
+      - alert: DatabaseHighConnections
+        expr: |
+          pg_stat_activity_count / 100 > 0.85
+        for: 5m
+        labels:
+          severity: warning
+          component: database
+        annotations:
+          summary: "DB connections > 85%"
+          description: "{{ $value | humanizePercentage }} des connexions utilisées ({{ with query (printf \"pg_stat_activity_count = %d\" $value) }}{{ . | first | label_value }}{{ end }})."
+
+      # DB down
+      - alert: DatabaseDown
+        expr: |
+          pg_up == 0
+        for: 1m
+        labels:
+          severity: critical
+          component: database
+        annotations:
+          summary: "PostgreSQL DOWN (1min)"
+          description: "PostgreSQL ne répond pas. Tout le pipeline est bloqué."
+
+      # Long-running queries > 5min
+      - alert: DatabaseLongQueries
+        expr: |
+          pg_stat_activity_max_tx_duration > 300
+        for: 2m
+        labels:
+          severity: warning
+          component: database
+        annotations:
+          summary: "Long-running query > 5min"
+          description: "Une transaction dure depuis {{ $value }}s."
+
+      # Locks en attente > 10
+      - alert: DatabaseLockContention
+        expr: |
+          pg_locks_count > 10
+        for: 5m
+        labels:
+          severity: warning
+          component: database
+        annotations:
+          summary: "Lock contention (10+ locks waiting)"
+          description: "{{ $value }} locks en attente. Risque de blocage."
+
+  - name: database-disk
+    interval: 1m
+    rules:
+      # Disk > 85% (le VPS a un 100GB SSD, souvent à 100% selon audit)
+      - alert: DiskSpaceHigh
+        expr: |
+          (node_filesystem_avail_bytes{mountpoint="/"} / node_filesystem_size_bytes{mountpoint="/"}) < 0.15
+        for: 10m
+        labels:
+          severity: critical
+          component: vps-host
+        annotations:
+          summary: "Disk > 85% utilisé"
+          description: "Disque VPS à {{ $value | humanizePercentage }} restant. Risque de saturation imminente."
+
+      # WAL size > 10GB (réplication en retard)
+      - alert: DatabaseWalSizeHigh
+        expr: |
+          pg_wal_lsn_diff > 10737418240
+        for: 30m
+        labels:
+          severity: warning
+          component: database
+        annotations:
+          summary: "WAL PostgreSQL > 10GB"
+          description: "WAL accumulé = {{ $value | humanizeBytes }}. Backup/réplication en retard."
