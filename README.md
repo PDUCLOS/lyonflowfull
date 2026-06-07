@@ -6,7 +6,16 @@
 #
 # Auteur: Patrice DUCLOS — Senior Data Analyst, Jedha RNCP 38777
 # Repo: PDUCLOS/lyonflowfull
-# Version: 0.1.0 (Sprint 5)
+# Version: 0.5.0-rc1 (Phase 3 demo prête, Phase 2 K8s prête, Phase 1 v0.3.1)
+#
+# Branches :
+#   - main         : Phase 1 production-ready local + fixes pipeline
+#   - vps          : snapshot Phase 1 deployé sur VPS
+#   - kubernetes   : Phase 2 manifests Kustomize (production K8s)
+#   - cloud-demo   : Phase 3 Scaleway Kapsule (démo soutenance Jedha)
+#
+# Voir docs/GIT_STRUCTURE.md pour le workflow branches/merges.
+# Voir docs/REPO_STRUCTURE.md pour l'arbre annoté du repo.
 # =============================================================================
 
 # Table des matières
