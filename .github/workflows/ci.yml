@@ -57,6 +57,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          # gitleaks-action a besoin de l'historique complet pour comparer
+          # PR base..head. Sinon "fatal: ambiguous argument" + exit 1.
+          fetch-depth: 0
 
       - name: pip-audit
         continue-on-error: true  # report-only : 49 vulns reportées mais CI ne bloque pas (cf CHANGELOG v0.3.1)
