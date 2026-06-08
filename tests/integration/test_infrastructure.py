@@ -145,15 +145,22 @@ def test_dag_files_exist():
 
 
 def test_init_db_sql_exists():
-    """Le SQL d'init doit exister et contenir les schémas."""
+    """Le SQL d'init doit exister et contenir les schémas Medallion.
+
+    Note: init-db.sql est genere via pg_dump (sans IF NOT EXISTS). On
+    accepte les 2 formes pour rester robuste a une re-generation depuis
+    la prod. Les schemas rgpd/governance sont crees par alembic migration,
+    pas par init-db.sql.
+    """
+    import re
+
     sql_path = WORKSPACE / "deploy" / "init-db.sql"
     assert sql_path.exists()
     content = sql_path.read_text()
-    assert "CREATE SCHEMA IF NOT EXISTS bronze" in content
-    assert "CREATE SCHEMA IF NOT EXISTS silver" in content
-    assert "CREATE SCHEMA IF NOT EXISTS gold" in content
-    assert "CREATE SCHEMA IF NOT EXISTS rgpd" in content
-    assert "CREATE SCHEMA IF NOT EXISTS governance" in content
+    # Match "CREATE SCHEMA bronze" ou "CREATE SCHEMA IF NOT EXISTS bronze"
+    for schema in ("bronze", "silver", "gold"):
+        pattern = rf"CREATE SCHEMA(\s+IF NOT EXISTS)?\s+{schema}\b"
+        assert re.search(pattern, content), f"Schema {schema} non trouve dans init-db.sql"
 
 
 def test_dockerfile_exists():
