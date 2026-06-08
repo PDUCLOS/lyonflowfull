@@ -45,6 +45,17 @@
 # - NE PAS TOUCHER AU VPS tant que l'utilisateur n'a pas donné le feu vert
 # - Vérifier l'état du disque avant tout : df -h / (souvent à 100%)
 # - Commandes : make deploy-vps, make rollback-vps, make healthcheck-vps, make monitoring-up
+#
+# Règle CRITIQUE : toute correction faite SUR le VPS doit aussi être commitée dans git
+# --------------------------------------------------------------------------
+# Si tu patch un fichier en place sur le VPS (sed, edit, etc.), tu dois
+# IMPÉRATIVEMENT aussi :
+#   1. Récupérer la version patchée (scp vers le Mac)
+#   2. L'appliquer dans le repo local (branche vps)
+#   3. git commit + push
+# Sinon le prochain deploy (rsync + restart) ÉCRASE ta correction.
+# Idem pour les installs pip dans un container : ajouter au requirements.txt
+# correspondant dans le repo.
 
 # Conventions de code
 # -------------------

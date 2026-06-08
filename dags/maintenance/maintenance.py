@@ -152,12 +152,12 @@ with DAG(
     tags=["maintenance", "purge"],
 ) as dag_purge:
     retentions = [
-        ("bronze.trafic_boucles", 45),
-        ("bronze.velov", 14),
+        ("bronze.trafic_boucles", 7),
+        ("bronze.velov", 7),
         ("bronze.tcl_vehicles", 7),
-        ("bronze.meteo", 365),
-        ("bronze.air_quality", 365),
-        ("bronze.chantiers", 365),
+        ("bronze.meteo", 7),
+        ("bronze.air_quality", 7),
+        ("bronze.chantiers", 7),
     ]
     for table, days in retentions:
         PythonOperator(
