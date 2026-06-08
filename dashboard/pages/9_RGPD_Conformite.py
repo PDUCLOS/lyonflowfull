@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import streamlit as st
 
+from dashboard.components.data_status import render_data_status_banner
 from dashboard.components.navigation import render_sidebar_navigation
 from dashboard.components.theme import inject_theme
 from src.data.data_loader import (
@@ -27,6 +28,7 @@ inject_theme()
 render_sidebar_navigation()
 
 st.title("🔒 RGPD & Conformité")
+render_data_status_banner()
 
 st.markdown(
     """

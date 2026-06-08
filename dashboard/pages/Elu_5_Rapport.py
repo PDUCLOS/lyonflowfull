@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import streamlit as st
 
+from dashboard.components.data_status import render_data_status_banner
 from dashboard.components.navigation import render_sidebar_navigation
 from dashboard.components.persona_guard import apply_persona_guard
 from dashboard.components.theme import inject_theme
@@ -25,6 +26,7 @@ inject_theme()
 render_sidebar_navigation()
 
 st.title("📄 Rapport Conseil Municipal")
+render_data_status_banner()
 
 st.caption("Génération de rapports PDF pour présentation au conseil municipal.")
 

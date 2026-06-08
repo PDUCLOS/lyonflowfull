@@ -12,6 +12,7 @@ from __future__ import annotations
 
 import streamlit as st
 
+from dashboard.components.data_status import render_data_status_banner
 from dashboard.components.navigation import render_sidebar_navigation
 from dashboard.components.persona_guard import apply_persona_guard
 from dashboard.components.theme import inject_theme
@@ -43,6 +44,7 @@ render_sidebar_navigation()
 # Pour l'instant tous les widgets usager sont visibles — câblage préparé.
 
 st.title("🧭 Mon trajet")
+render_data_status_banner()
 
 # Bloc de recherche
 with st.container():
