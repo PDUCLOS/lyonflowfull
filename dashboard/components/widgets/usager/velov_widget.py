@@ -74,19 +74,12 @@ def render_velov_widget(stations: list | None = None, max_stations: int = 3) -> 
         if pred is not None:
             delta = pred - bikes
             if delta > 0:
-                pred_html = (
-                    f'<span style="color:{COLORS["status_ok"]};">↗ {pred} (+{delta})</span>'
-                )
+                pred_html = f'<span style="color:{COLORS["status_ok"]};">↗ {pred} (+{delta})</span>'
             elif delta < 0:
-                pred_html = (
-                    f'<span style="color:{COLORS["status_warning"]};">↘ {pred} ({delta})</span>'
-                )
+                pred_html = f'<span style="color:{COLORS["status_warning"]};">↘ {pred} ({delta})</span>'
             else:
                 pred_html = f'<span style="opacity:0.7;">→ {pred}</span>'
-            pred_line = (
-                f'<div style="font-size:0.7rem;opacity:0.8;margin-top:0.3rem;">'
-                f"H+30min : {pred_html}</div>"
-            )
+            pred_line = f'<div style="font-size:0.7rem;opacity:0.8;margin-top:0.3rem;">H+30min : {pred_html}</div>'
         else:
             pred_line = ""
 

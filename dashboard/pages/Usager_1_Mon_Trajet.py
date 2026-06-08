@@ -118,11 +118,11 @@ if st.session_state.get("results_loaded"):
                         gap:0.6rem;font-size:0.95rem;">
                 <span style="background:#4CAF50;color:white;padding:0.2rem 0.6rem;
                              border-radius:12px;font-size:0.75rem;font-weight:600;">🟢 DÉPART</span>
-                <span style="font-weight:600;">{search['origin']}</span>
+                <span style="font-weight:600;">{search["origin"]}</span>
                 <span style="opacity:0.4;margin:0 0.5rem;">→</span>
                 <span style="background:#F44336;color:white;padding:0.2rem 0.6rem;
                              border-radius:12px;font-size:0.75rem;font-weight:600;">🔴 ARRIVÉE</span>
-                <span style="font-weight:600;">{search['destination']}</span>
+                <span style="font-weight:600;">{search["destination"]}</span>
             </div>
             """,
             unsafe_allow_html=True,
@@ -165,10 +165,7 @@ if st.session_state.get("results_loaded"):
         "walk": "🚶 Marche",
     }
     authorized = set(search.get("modes") or [])
-    filtered_options = [
-        opt for opt in options
-        if MODE_TO_LABEL.get(opt.get("mode")) in authorized
-    ]
+    filtered_options = [opt for opt in options if MODE_TO_LABEL.get(opt.get("mode")) in authorized]
     if not filtered_options:
         filtered_options = options  # fallback si tous filtrés
         st.caption("⚠️ Aucun mode autorisé ne correspond aux options mock — toutes affichées.")
@@ -176,8 +173,7 @@ if st.session_state.get("results_loaded"):
     if filtered_options:
         # Sélecteur : l'utilisateur choisit la reco principale
         mode_choices = [
-            f"{opt.get('mode_icon', '🚦')} {opt.get('mode_label', 'Mode')}"
-            + f" — {opt.get('duration_text', '? min')}"
+            f"{opt.get('mode_icon', '🚦')} {opt.get('mode_label', 'Mode')}" + f" — {opt.get('duration_text', '? min')}"
             for opt in filtered_options
         ]
         selected_idx = st.selectbox(

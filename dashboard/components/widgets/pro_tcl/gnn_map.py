@@ -124,11 +124,7 @@ def _render_pydeck(merged: pd.DataFrame, height: int, zoom: float = 11.0) -> str
         initial_view_state=view_state,
         map_style="https://basemaps.cartocdn.com/gl/positron-gl-style/style.json",
         tooltip={
-            "html": (
-                "<b>Node {node_idx}</b><br/>"
-                "Speed: <b>{predicted_speed} km/h</b><br/>"
-                "Model: {model_name}"
-            ),
+            "html": ("<b>Node {node_idx}</b><br/>Speed: <b>{predicted_speed} km/h</b><br/>Model: {model_name}"),
             "style": {
                 "backgroundColor": COLORS["bg_card"],
                 "color": "white",
@@ -142,9 +138,7 @@ def _render_pydeck(merged: pd.DataFrame, height: int, zoom: float = 11.0) -> str
 
 
 def _legend_inline() -> None:
-    st.markdown(
-        "**Légende** : 🟢 Fluide (>35 km/h) · 🟡 Modéré (20-35) · 🟠 Dense (10-20) · 🔴 Bloqué (<10)"
-    )
+    st.markdown("**Légende** : 🟢 Fluide (>35 km/h) · 🟡 Modéré (20-35) · 🟠 Dense (10-20) · 🔴 Bloqué (<10)")
 
 
 # -----------------------------------------------------------------------------
@@ -170,10 +164,7 @@ def render_traffic_map(
         key_suffix: suffixe pour les keys Streamlit (évite collisions multi-instances).
     """
     if not is_gnn_map_visible():
-        st.info(
-            "Carte trafic désactivée. Set `LYONFLOW_DASHBOARD_GNN_MAP=true` "
-            "dans .env pour l'afficher."
-        )
+        st.info("Carte trafic désactivée. Set `LYONFLOW_DASHBOARD_GNN_MAP=true` dans .env pour l'afficher.")
         return
 
     horizon = horizon_default
@@ -236,9 +227,7 @@ def render_traffic_map_compact(
 
     merged = _load_merged(horizon_minutes, limit=400)
     if merged is None:
-        st.caption(
-            f"🟡 Carte trafic indisponible (pas de prédictions H+{horizon_minutes}min)"
-        )
+        st.caption(f"🟡 Carte trafic indisponible (pas de prédictions H+{horizon_minutes}min)")
         return
 
     _render_pydeck(merged, height=height, zoom=10.7)

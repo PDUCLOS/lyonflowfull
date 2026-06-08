@@ -19,9 +19,7 @@ def render_favorite_list(favorites: list) -> None:
         render_recurrent_trip_card(fav, expanded=False, key_prefix="")
 
 
-def render_recurrent_trip_card(
-    fav: dict, expanded: bool = True, key_prefix: str = ""
-) -> None:
+def render_recurrent_trip_card(fav: dict, expanded: bool = True, key_prefix: str = "") -> None:
     """Affiche une carte trajet récurrent avec prédiction.
 
     Args:

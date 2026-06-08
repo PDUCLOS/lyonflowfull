@@ -36,9 +36,7 @@ def render_itinerary_result(
 
     if not origin_coords:
         sample = ", ".join(get_address_names()[:5])
-        st.error(
-            f"❌ Adresse d'origine non reconnue : '{origin}'. Essayez : {sample}..."
-        )
+        st.error(f"❌ Adresse d'origine non reconnue : '{origin}'. Essayez : {sample}...")
         return
     if not dest_coords:
         st.error(f"❌ Adresse de destination non reconnue : '{destination}'.")

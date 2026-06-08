@@ -500,12 +500,8 @@ def render_velov_model_analysis() -> None:
         if not pred_30.empty and "prediction_timestamp" in pred_30.columns
         else None
     )
-    coverage_30 = (
-        pred_30["station_id"].nunique() if "station_id" in pred_30.columns else 0
-    )
-    coverage_pct = (
-        f"{coverage_30}/{n_stations_total}" if n_stations_total else f"{coverage_30}"
-    )
+    coverage_30 = pred_30["station_id"].nunique() if "station_id" in pred_30.columns else 0
+    coverage_pct = f"{coverage_30}/{n_stations_total}" if n_stations_total else f"{coverage_30}"
 
     cols[0].metric(
         "Dernière prédiction H+30",
@@ -524,8 +520,11 @@ def render_velov_model_analysis() -> None:
                 import plotly.express as px
 
                 fig = px.histogram(
-                    pred_30, x="predicted_bikes", nbins=20,
-                    template="plotly_dark", height=240,
+                    pred_30,
+                    x="predicted_bikes",
+                    nbins=20,
+                    template="plotly_dark",
+                    height=240,
                 )
                 fig.update_layout(margin={"l": 0, "r": 0, "t": 10, "b": 0})
                 st.plotly_chart(fig, use_container_width=True)
@@ -566,10 +565,7 @@ def render_velov_model_analysis() -> None:
             st.markdown("**Backtest MAE 7j (Elementary-style)**")
             st.dataframe(backtest, use_container_width=True, hide_index=True)
         else:
-            st.caption(
-                "Backtest vide — alimenter `gold.predictions_vs_actuals` "
-                "(DAG `evaluate_velov`)."
-            )
+            st.caption("Backtest vide — alimenter `gold.predictions_vs_actuals` (DAG `evaluate_velov`).")
     except Exception as e:
         st.caption(f"Backtest indisponible : {e}")
 
@@ -610,14 +606,16 @@ def render_data_quality_panel() -> None:
                 """
             )
             if df.empty:
-                rows.append({
-                    "Table": f"{schema}.{table}",
-                    "Rows": 0,
-                    "Last": "—",
-                    "Lag": "—",
-                    "Expected": expected,
-                    "Status": "🔴",
-                })
+                rows.append(
+                    {
+                        "Table": f"{schema}.{table}",
+                        "Rows": 0,
+                        "Last": "—",
+                        "Lag": "—",
+                        "Expected": expected,
+                        "Status": "🔴",
+                    }
+                )
                 continue
             r = df.iloc[0]
             n_rows = int(r.get("n_rows") or 0)
@@ -625,23 +623,27 @@ def render_data_quality_panel() -> None:
             lag = r.get("lag")
             lag_str = str(lag).split(".")[0] if lag is not None else "—"
             status = "🟢" if n_rows > 0 and last_ts is not None else "🔴"
-            rows.append({
-                "Table": f"{schema}.{table}",
-                "Rows": f"{n_rows:,}",
-                "Last": str(last_ts)[:16] if last_ts else "—",
-                "Lag": lag_str,
-                "Expected": expected,
-                "Status": status,
-            })
+            rows.append(
+                {
+                    "Table": f"{schema}.{table}",
+                    "Rows": f"{n_rows:,}",
+                    "Last": str(last_ts)[:16] if last_ts else "—",
+                    "Lag": lag_str,
+                    "Expected": expected,
+                    "Status": status,
+                }
+            )
         except Exception as e:
-            rows.append({
-                "Table": f"{schema}.{table}",
-                "Rows": "—",
-                "Last": "—",
-                "Lag": "—",
-                "Expected": expected,
-                "Status": f"⚠️ {str(e)[:40]}",
-            })
+            rows.append(
+                {
+                    "Table": f"{schema}.{table}",
+                    "Rows": "—",
+                    "Last": "—",
+                    "Lag": "—",
+                    "Expected": expected,
+                    "Status": f"⚠️ {str(e)[:40]}",
+                }
+            )
 
     st.dataframe(rows, use_container_width=True, hide_index=True)
     st.caption(

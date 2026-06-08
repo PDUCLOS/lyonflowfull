@@ -62,8 +62,7 @@ def _load_stations_with_predictions(horizon_minutes: int = 30) -> pd.DataFrame:
         pred_30_latest = (
             pred_30.sort_values("prediction_timestamp", ascending=False)
             .drop_duplicates(subset=["station_id"])
-            .rename(columns={"predicted_bikes": "predicted_bikes_30"})
-            [["station_id", "predicted_bikes_30"]]
+            .rename(columns={"predicted_bikes": "predicted_bikes_30"})[["station_id", "predicted_bikes_30"]]
         )
         stations = stations.merge(pred_30_latest, on="station_id", how="left")
     else:
@@ -73,8 +72,7 @@ def _load_stations_with_predictions(horizon_minutes: int = 30) -> pd.DataFrame:
         pred_60_latest = (
             pred_60.sort_values("prediction_timestamp", ascending=False)
             .drop_duplicates(subset=["station_id"])
-            .rename(columns={"predicted_bikes": "predicted_bikes_60"})
-            [["station_id", "predicted_bikes_60"]]
+            .rename(columns={"predicted_bikes": "predicted_bikes_60"})[["station_id", "predicted_bikes_60"]]
         )
         stations = stations.merge(pred_60_latest, on="station_id", how="left")
     else:
@@ -159,8 +157,9 @@ def render_velov_map(
     except ImportError:
         st.warning("Pydeck non installé — fallback table.")
         st.dataframe(
-            df[["station_name", "bikes_available", "docks_available",
-                "predicted_bikes_30", "predicted_bikes_60"]].head(50),
+            df[["station_name", "bikes_available", "docks_available", "predicted_bikes_30", "predicted_bikes_60"]].head(
+                50
+            ),
             use_container_width=True,
             hide_index=True,
         )
@@ -177,8 +176,7 @@ def render_velov_map(
     cols[3].metric("Stations < 5 vélos", low_stations)
 
     st.caption(
-        "Légende : 🔴 0 vélo · 🟠 <5 vélos · 🟡 <10 vélos · 🟢 ≥10 vélos · "
-        "Prédictions : XGBoost Vélo'v (retrain :50)"
+        "Légende : 🔴 0 vélo · 🟠 <5 vélos · 🟡 <10 vélos · 🟢 ≥10 vélos · Prédictions : XGBoost Vélo'v (retrain :50)"
     )
 
 
