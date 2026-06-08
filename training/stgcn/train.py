@@ -153,8 +153,17 @@ class STGCNTrainer:
         self.config = config or STGCNConfig(num_nodes=dataset.X.shape[2])
         self.horizons = horizons
         self.mlflow_experiment = mlflow_experiment
-        self.model_dir = Path(model_dir or os.getenv("LYONFLOW_MODELS_DIR", "/app/models"))
-        self.model_dir.mkdir(parents=True, exist_ok=True)
+        default_models_dir = os.getenv("LYONFLOW_MODELS_DIR", "/app/models")
+        self.model_dir = Path(model_dir or default_models_dir)
+        try:
+            self.model_dir.mkdir(parents=True, exist_ok=True)
+        except (PermissionError, OSError):
+            # Hors VPS/Docker (/app non writable) — fallback tempdir
+            import tempfile
+
+            self.model_dir = Path(tempfile.gettempdir()) / "lyonflow_models"
+            self.model_dir.mkdir(parents=True, exist_ok=True)
+            logger.warning("model_dir %s non writable, fallback %s", default_models_dir, self.model_dir)
         self.learning_rate = learning_rate
         self.batch_size = batch_size
         self.epochs = epochs

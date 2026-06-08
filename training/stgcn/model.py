@@ -277,16 +277,20 @@ def _expand_edge_index(edge_index, batch_size: int, num_nodes: int):
 
 
 class _ModuleWrapper:
-    """Stub conservé pour compat — utiliser ``build_module()`` à la place.
+    """Délègue parameters/eval/train/state_dict/load_state_dict au nn.Module interne.
 
-    On garde un wrapper no-op pour ne pas casser les imports existants.
-    Pour de l'entraînement ou save/load, utilisez directement
-    ``build_module(config)`` qui retourne un vrai ``nn.Module``.
+    SpatioTemporalGCN expose `self._model` qui doit se comporter comme un
+    nn.Module pour les tests + save/load. Cette classe encapsule un vrai
+    nn.Module (créé via `build_module`) et délègue les attributs courants.
     """
 
     def __init__(self, owner):
         self._owner = owner
-        self._model = build_module(owner.config)
+        self._inner = build_module(owner.config)
+
+    def __getattr__(self, name):
+        # Appelé uniquement si attribut introuvable sur l'instance.
+        return getattr(self._inner, name)
 
 
 # -----------------------------------------------------------------------------

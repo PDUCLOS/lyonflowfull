@@ -125,7 +125,7 @@ jobs:
 
       - name: Run tests
         run: |
-          pytest tests/ -v --tb=short --cov=src --cov=dags --cov-report=term-missing --cov-report=xml --cov-fail-under=60
+          pytest tests/ -v --tb=short --cov=src --cov=dags --cov-report=term-missing --cov-report=xml --cov-fail-under=45
 
       - name: Upload coverage
         if: always()

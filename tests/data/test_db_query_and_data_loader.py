@@ -28,9 +28,14 @@ from src.data.mock import elu, pro_tcl, usager
 
 
 @pytest.fixture(autouse=True)
-def reset_db_cache():
-    """Reset le cache DB avant chaque test."""
+def reset_db_cache(monkeypatch):
+    """Reset le cache DB + force _is_db_available=False pour exercer le fallback mock.
+
+    Ces tests valident le contrat des mocks. Pour les tests d'intégration avec
+    une vraie DB, voir tests/integration/test_infrastructure.py.
+    """
     db_query.reset_db_cache()
+    monkeypatch.setattr(db_query, "_is_db_available", lambda: False)
     yield
     db_query.reset_db_cache()
 
