@@ -87,6 +87,11 @@ ignore = [
     "N806",  # X_train, Y_train (math convention sklearn)
     "N803",  # X, Y en arg (math convention)
 ]
+"dags/legacy_github/*" = [
+    # Legacy DAG conservé pour compat ingestion historique. Pas refacto
+    # actif. Ignore les warnings de style non-bloquants.
+    "B905", "E712", "UP038", "F841",
+]
 "dashboard/components/widgets/*" = [
     "RUF001", "RUF002", "RUF003",  # emojis docstrings (intentional)
     "B905",  # zip without strict (Streamlit patterns)
