@@ -63,7 +63,13 @@ with col_btn[1]:
 
 st.markdown("---")
 
-# Résultats
+# Résultats — la recommandation multimodale live (src.routing.pathfinder)
+# necessite des coordonnees origine/destination geocodees. En attendant le
+# binding complet recherche -> coords -> pathfinder, on affiche la trame demo.
+st.caption(
+    "ℹ️ Recommandation demo — l'integration src.routing.pathfinder requiert "
+    "le geocoding origine/destination (Sprint suivant)."
+)
 trip = MOCK_TRIP_RESULTS["default"]
 options = trip.get("options", [])
 

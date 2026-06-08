@@ -14,6 +14,11 @@ from dashboard.components.widgets.usager import (
 )
 from src.data.mock.usager import MOCK_FAVORITES
 
+# Favoris persistes en session_state (demo) — futur: table user_favorites.
+if "user_favorites" not in st.session_state:
+    st.session_state["user_favorites"] = list(MOCK_FAVORITES)
+favorites = st.session_state["user_favorites"]
+
 st.set_page_config(
     page_title="Mes favoris — LyonFlowFull",
     page_icon="⭐",
@@ -26,10 +31,14 @@ render_sidebar_navigation()
 
 st.title("⭐ Mes favoris")
 render_data_status_banner()
+st.caption(
+    "ℹ️ Demo session — les favoris sont stockés dans la session Streamlit. "
+    "Backend persistant (table user_favorites) prévu apres release auth."
+)
 
 # Compteurs
-n_total = len(MOCK_FAVORITES)
-n_alerts_on = sum(1 for f in MOCK_FAVORITES if f.get("alert_subscribed"))
+n_total = len(favorites)
+n_alerts_on = sum(1 for f in favorites if f.get("alert_subscribed"))
 
 cols = st.columns(3)
 with cols[0]:
@@ -42,7 +51,7 @@ with cols[2]:
 st.markdown("---")
 
 # Liste des favoris
-render_favorite_list(MOCK_FAVORITES)
+render_favorite_list(favorites)
 
 st.markdown("---")
 
@@ -50,11 +59,11 @@ st.markdown("---")
 st.markdown("##### 🔍 Détails d'un trajet favori")
 selected = st.selectbox(
     "Choisir un trajet",
-    [f.get("name", "—") for f in MOCK_FAVORITES],
+    [f.get("name", "—") for f in favorites],
     key="fav_detail_select",
 )
 if selected:
-    fav = next((f for f in MOCK_FAVORITES if f.get("name") == selected), None)
+    fav = next((f for f in favorites if f.get("name") == selected), None)
     if fav:
         render_recurrent_trip_card(fav, expanded=True)
 
