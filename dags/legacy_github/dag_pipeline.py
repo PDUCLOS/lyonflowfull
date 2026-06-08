@@ -89,6 +89,7 @@ OUTPUT_DIR = "/opt/airflow/data"
 # HELPERS — identiques au repo GitHub
 # =============================================================================
 
+
 def transform_line_to_point(ligne_2154):
     """Échantillonne une LineString Shapely en points équidistants de 7 mètres (Lambert-93 → WGS84)."""
     if not ligne_2154 or ligne_2154.is_empty:
@@ -121,6 +122,7 @@ def create_merged_polygon_from_hexes(h3_id_list):
                 boundary = h3.cell_to_boundary(h)
                 polygons.append(Polygon([(lon, lat) for lat, lon in boundary]))
             from shapely.ops import unary_union
+
             return unary_union(polygons)
     except Exception as e:
         logger.error("Error merging H3 hexagons: %s", e)
@@ -142,6 +144,7 @@ def get_speed_category(speed):
 # =============================================================================
 # TASK 1 — Ingestion WFS Grand Lyon → bronze.trafic_vitesse_brute
 # =============================================================================
+
 
 def ingest_traffic_data(**context):
     """Ingestion temps réel depuis l'API WFS Grand Lyon (pvotrafic).
@@ -169,17 +172,21 @@ def ingest_traffic_data(**context):
         with engine.begin() as conn:
             # Schéma et table créés par init-db.sql — on s'assure juste qu'ils existent
             conn.execute(text("CREATE SCHEMA IF NOT EXISTS bronze;"))
-            conn.execute(text("""
+            conn.execute(
+                text("""
                 CREATE TABLE IF NOT EXISTS bronze.trafic_vitesse_brute (
                     id SERIAL PRIMARY KEY,
                     fetched_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
                     raw_data JSONB NOT NULL
                 );
-            """))
-            conn.execute(text("""
+            """)
+            )
+            conn.execute(
+                text("""
                 CREATE INDEX IF NOT EXISTS idx_bronze_fetched_at
                 ON bronze.trafic_vitesse_brute (fetched_at DESC);
-            """))
+            """)
+            )
             logger.info("Inserting raw payload to bronze.trafic_vitesse_brute...")
             conn.execute(
                 text("INSERT INTO bronze.trafic_vitesse_brute (fetched_at, raw_data) VALUES (:fetched_at, :raw_data);"),
@@ -193,6 +200,7 @@ def ingest_traffic_data(**context):
 # =============================================================================
 # TASK 2 — Bronze → Silver (H3 res 13, LineString sampling 7m)
 # =============================================================================
+
 
 def transform_traffic_data(**context):
     """Bronze → silver.trafic_vitesse_propre.
@@ -227,9 +235,15 @@ def transform_traffic_data(**context):
         trafic.columns = cols
 
         selected_columns = [
-            "geometry_coordinates", "properties_libelle", "properties_sens",
-            "properties_etat", "properties_vitesse", "properties_last_update",
-            "properties_est_a_jour", "properties_twgid", "properties_gid",
+            "geometry_coordinates",
+            "properties_libelle",
+            "properties_sens",
+            "properties_etat",
+            "properties_vitesse",
+            "properties_last_update",
+            "properties_est_a_jour",
+            "properties_twgid",
+            "properties_gid",
         ]
         for col in selected_columns:
             if col not in trafic.columns:
@@ -266,8 +280,7 @@ def transform_traffic_data(**context):
 
         gdf["speed_category"] = [get_speed_category(speed) for speed in gdf.properties_vitesse]
         gdf["speed_color_map"] = gdf["speed_category"].map(
-            {"Slow (0-20 km/h)": "red", "Medium (20-50 km/h)": "orange",
-             "Fast (>50 km/h)": "green", "Unknown": "gray"}
+            {"Slow (0-20 km/h)": "red", "Medium (20-50 km/h)": "orange", "Fast (>50 km/h)": "green", "Unknown": "gray"}
         )
 
         gdf_wgs84 = gdf.to_crs(epsg=4326)
@@ -300,11 +313,22 @@ def transform_traffic_data(**context):
         df_silver["transformed_at"] = transformed_at_value
 
         columns_to_write = [
-            "id_rue", "properties_twgid", "properties_gid", "properties_libelle",
-            "properties_sens", "properties_etat", "properties_vitesse",
-            "properties_last_update", "properties_est_a_jour",
-            "speed_category", "speed_color_map", "geometry_wgs84_wkt",
-            "points_json", "hexes_json", "merged_h3_geometry_json", "transformed_at",
+            "id_rue",
+            "properties_twgid",
+            "properties_gid",
+            "properties_libelle",
+            "properties_sens",
+            "properties_etat",
+            "properties_vitesse",
+            "properties_last_update",
+            "properties_est_a_jour",
+            "speed_category",
+            "speed_color_map",
+            "geometry_wgs84_wkt",
+            "points_json",
+            "hexes_json",
+            "merged_h3_geometry_json",
+            "transformed_at",
         ]
         columns_to_write = [c for c in columns_to_write if c in df_silver.columns]
         df_silver_clean = df_silver[columns_to_write].copy()
@@ -315,9 +339,9 @@ def transform_traffic_data(**context):
         # (ex. 2 sens), ce qui causait la collision "duplicate key value"
         # observée le 2026-06-05. On garde la première occurrence par tronçon.
         before = len(df_silver_clean)
-        df_silver_clean = df_silver_clean.drop_duplicates(
-            subset=["properties_twgid"], keep="first"
-        ).reset_index(drop=True)
+        df_silver_clean = df_silver_clean.drop_duplicates(subset=["properties_twgid"], keep="first").reset_index(
+            drop=True
+        )
         dropped = before - len(df_silver_clean)
         if dropped:
             logger.info("Deduplicated %d rows on properties_twgid (kept first)", dropped)
@@ -335,12 +359,17 @@ def transform_traffic_data(**context):
             ).rowcount
             logger.info(
                 "Cleaned %d existing rows for transformed_at=%s (idempotence)",
-                deleted, transformed_at_value.isoformat(),
+                deleted,
+                transformed_at_value.isoformat(),
             )
             logger.info("Appending clean records to silver.trafic_vitesse_propre table...")
             df_silver_clean.to_sql(
-                name="trafic_vitesse_propre", con=conn, schema="silver",
-                if_exists="append", index=False, chunksize=500,
+                name="trafic_vitesse_propre",
+                con=conn,
+                schema="silver",
+                if_exists="append",
+                index=False,
+                chunksize=500,
             )
         logger.info("Successfully pushed transformed data to silver.trafic_vitesse_propre!")
     except Exception as e:
@@ -353,6 +382,7 @@ def transform_traffic_data(**context):
 # =============================================================================
 # TASK 3 — Silver → Gold (H3 grid + adjacency + facts)
 # =============================================================================
+
 
 def materialize_gold_layer(**context):
     """Silver → gold.{dim_spatial_grid_mapping, dim_gnn_adjacency, fact_traffic_series}.
@@ -383,7 +413,8 @@ def materialize_gold_layer(**context):
             active_segments = df_stats[df_stats["nan_percentage"] < 90.0]["properties_twgid"].tolist()
             logger.info(
                 "Detected %d total segments, with %d active segments (<90%% NaNs).",
-                len(df_stats), len(active_segments),
+                len(df_stats),
+                len(active_segments),
             )
 
             if not active_segments:
@@ -415,8 +446,12 @@ def materialize_gold_layer(**context):
                 if pd.isna(raw_hexes) or not raw_hexes.strip():
                     continue
                 cleaned = (
-                    raw_hexes.replace("[", "").replace("]", "").replace("'", "")
-                    .replace('"', "").replace("\n", " ").replace(",", " ")
+                    raw_hexes.replace("[", "")
+                    .replace("]", "")
+                    .replace("'", "")
+                    .replace('"', "")
+                    .replace("\n", " ")
+                    .replace(",", " ")
                 )
                 cells = [c.strip() for c in cleaned.split() if c.strip()]
             else:
@@ -541,12 +576,14 @@ def materialize_gold_layer(**context):
                 val = history_avg_dict.get(twigid, default_speed)
                 if pd.isna(val):
                     val = default_speed
-            gold_facts.append({
-                "timestamp": latest_timestamp,
-                "node_idx": node_idx,
-                "properties_vitesse": float(val),
-                "imputed": imputed,
-            })
+            gold_facts.append(
+                {
+                    "timestamp": latest_timestamp,
+                    "node_idx": node_idx,
+                    "properties_vitesse": float(val),
+                    "imputed": imputed,
+                }
+            )
 
         df_facts = pd.DataFrame(gold_facts)
 
@@ -554,21 +591,31 @@ def materialize_gold_layer(**context):
         with engine.begin() as conn:
             conn.execute(text("TRUNCATE TABLE gold.dim_spatial_grid_mapping;"))
             df_mapping_to_write.to_sql(
-                name="dim_spatial_grid_mapping", con=conn, schema="gold",
-                if_exists="append", index=False,
+                name="dim_spatial_grid_mapping",
+                con=conn,
+                schema="gold",
+                if_exists="append",
+                index=False,
             )
             conn.execute(text("TRUNCATE TABLE gold.dim_gnn_adjacency;"))
             df_adjacency.to_sql(
-                name="dim_gnn_adjacency", con=conn, schema="gold",
-                if_exists="append", index=False,
+                name="dim_gnn_adjacency",
+                con=conn,
+                schema="gold",
+                if_exists="append",
+                index=False,
             )
             conn.execute(
                 text("DELETE FROM gold.fact_traffic_series WHERE timestamp = :latest_time;"),
                 {"latest_time": latest_timestamp},
             )
             df_facts.to_sql(
-                name="fact_traffic_series", con=conn, schema="gold",
-                if_exists="append", index=False, chunksize=500,
+                name="fact_traffic_series",
+                con=conn,
+                schema="gold",
+                if_exists="append",
+                index=False,
+                chunksize=500,
             )
 
         logger.info("Successfully materialized Gold Layer for timestamp %s", latest_timestamp)
@@ -598,6 +645,7 @@ def materialize_gold_layer(**context):
 # TASK 5 — STGCN predict on Ray (RÉSILIENT — graceful skip si pas de Ray)
 # =============================================================================
 
+
 def trigger_stgcn_prediction_on_ray(**context):
     """Soumet un job STGCN au cluster Ray, si disponible.
 
@@ -620,7 +668,9 @@ def trigger_stgcn_prediction_on_ray(**context):
             "Ray cluster not reachable at %s (%s: %s). "
             "Skipping STGCN prediction. Pour activer : déployer un cluster Ray "
             "et set RAY_DASHBOARD_URL. Le DAG continue sans cette étape.",
-            ray_dashboard_url, type(e).__name__, e,
+            ray_dashboard_url,
+            type(e).__name__,
+            e,
         )
         return  # Graceful degradation
 
