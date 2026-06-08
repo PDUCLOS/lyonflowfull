@@ -5,7 +5,7 @@ Affiche 2 champs (départ + destination) avec auto-complétion **cliquable** :
 - Bouton par adresse : au clic, remplit départ OU destination selon le toggle actif
 - Plus de tape à la main, l'utilisateur clique
 
-Sprint 8 — Adresses chargées via data_loader.cached_lyon_addresses() et
+Sprint 8 — Adresses chargées via
 data_loader.cached_lyon_addresses_with_coords().
 """
 
@@ -13,8 +13,7 @@ from __future__ import annotations
 
 import streamlit as st
 
-from dashboard.components.data_cache import cached_lyon_addresses, cached_lyon_addresses_with_coords
-from src.data.mock.lyon_addresses import get_address_names
+from dashboard.components.data_cache import cached_lyon_addresses_with_coords
 
 _TYPE_ICON = {
     "gare": "🚉",
