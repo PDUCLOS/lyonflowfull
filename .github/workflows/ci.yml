@@ -9,6 +9,10 @@ on:
 env:
   PYTHON_VERSION: "3.12"
   POSTGRES_VERSION: "16"
+  RUFF_VERSION: "0.15.12"
+  # Force Node 24 — Node 20 is deprecated on GitHub runners since Sept 2025
+  # and will be removed in Sept 2026. Opt-in early to avoid CI breakage.
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
 
 jobs:
   # ---------------------------------------------------------------------------
@@ -26,7 +30,7 @@ jobs:
           python-version: ${{ env.PYTHON_VERSION }}
 
       - name: Install ruff
-        run: pip install ruff==0.5.0
+        run: pip install ruff==${{ env.RUFF_VERSION }}
 
       - name: Lint
         run: ruff check . --output-format=github
@@ -63,10 +67,10 @@ jobs:
           fetch-depth: 0
 
       - name: pip-audit
-        continue-on-error: true  # report-only : 49 vulns reportées mais CI ne bloque pas (cf CHANGELOG v0.3.1)
+        continue-on-error: true  # report-only : vulns reportées mais CI ne bloque pas (cf CHANGELOG v0.3.1)
         run: |
           pip install pip-audit
-          pip-audit
+          pip-audit || true
 
       - name: bandit
         # Skip B608 (SQL f-string sur tables whitelistées internes — pas user input).
@@ -76,6 +80,13 @@ jobs:
           pip install bandit
           bandit -r src/ dags/ -f json -o bandit-report.json --skip B608,B614 || true
           bandit -r src/ dags/ --skip B608,B614 --severity-level high
+
+      - name: Upload bandit report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: bandit-report
+          path: bandit-report.json
 
       - name: gitleaks
         uses: gitleaks/gitleaks-action@v2
@@ -118,7 +129,7 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: ${{ env.PYTHON_VERSION }}
-          cache: pip
+          cache: pip  # pip cache to speed up
 
       - name: Install dependencies
         run: |
@@ -143,7 +154,7 @@ jobs:
           path: coverage.xml
 
   # ---------------------------------------------------------------------------
-  # 5. Docker build — bloquant
+  # 5. Docker build — bloquant (skip sur vps, déploié manuellement)
   # ---------------------------------------------------------------------------
   docker-build:
     name: Docker build
