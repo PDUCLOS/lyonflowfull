@@ -22,7 +22,7 @@ import logging
 import time
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
-from enum import Enum
+from enum import StrEnum
 from typing import Any
 
 import httpx
@@ -40,8 +40,7 @@ from src.db import execute_query
 logger = logging.getLogger(__name__)
 
 
-class HTTPMethod(str, Enum):
-    # Conserve str+Enum (compat retro). StrEnum dispo a partir de Python 3.11.
+class HTTPMethod(StrEnum):
     GET = "GET"
     POST = "POST"
 
