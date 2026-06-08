@@ -32,6 +32,11 @@ x-common-env: &common-env
   MINIO_BUCKET_GOLD: lyonflow-gold
   REDIS_URL: redis://redis:6379/0
   MLFLOW_TRACKING_URI: http://mlflow:5000
+  # Personas (auth) — lus par src/persona/auth.py
+  PERSONA_PRO_TCL_USERNAME: ${PERSONA_PRO_TCL_USERNAME}
+  PERSONA_PRO_TCL_PASSWORD: ${PERSONA_PRO_TCL_PASSWORD}
+  PERSONA_ELU_USERNAME: ${PERSONA_ELU_USERNAME}
+  PERSONA_ELU_PASSWORD: ${PERSONA_ELU_PASSWORD}
   LYONFLOW_API_KEY: ${LYONFLOW_API_KEY}
   PYTHONUNBUFFERED: "1"
   TZ: Europe/Paris
@@ -138,7 +143,10 @@ services:
   # MLflow (tracking + model registry)
   # ---------------------------------------------------------------------------
   mlflow:
-    image: ghcr.io/mlflow/mlflow:v2.12.1
+    build:
+      context: .
+      dockerfile: Dockerfile.mlflow
+    image: lyonflow-mlflow:custom
     container_name: lyonflow-mlflow
     restart: unless-stopped
     command: >
@@ -157,7 +165,8 @@ services:
       minio:
         condition: service_healthy
     healthcheck:
-      test: ["CMD", "curl", "-fsS", "http://localhost:5000/health"]
+      # mlflow image has no curl/wget, use python urllib
+      test: ["CMD", "python", "-c", "import urllib.request, sys; sys.exit(0 if urllib.request.urlopen('http://localhost:5000/health', timeout=5).status == 200 else 1)"]
       interval: 30s
       timeout: 10s
       retries: 5
@@ -356,9 +365,13 @@ services:
       <<: *common-env
       STREAMLIT_SERVER_PORT: 8501
       STREAMLIT_SERVER_ADDRESS: 0.0.0.0
+      # PYTHONPATH=/app ensures `import dashboard` resolves in Streamlit MPA
+      # (Streamlit-MPA adds dashboard/ to sys.path, not /app)
+      PYTHONPATH: /app
+    working_dir: /app
     command: streamlit run dashboard/Accueil.py --server.port 8501 --server.address 0.0.0.0 --server.headless true
     healthcheck:
-      test: ["CMD", "curl", "-fsS", "http://localhost:8501/_stcore/health"]
+      test: ["CMD", "python", "-c", "import urllib.request, sys; sys.exit(0 if urllib.request.urlopen('http://localhost:8501/_stcore/health', timeout=5).status == 200 else 1)"]
       interval: 30s
       timeout: 10s
       retries: 3

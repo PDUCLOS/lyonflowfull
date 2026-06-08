@@ -166,7 +166,7 @@ def _render_map(
         center_lat = sum(all_lats) / len(all_lats)
         center_lon = sum(all_lons) / len(all_lons)
 
-        m = folium.Map(location=[center_lat, center_lon], zoom=13, tiles="CartoDB positron")
+        m = folium.Map(location=[center_lat, center_lon], zoom_start=13, tiles="CartoDB positron")
 
         # Markers
         folium.Marker(
