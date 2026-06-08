@@ -53,6 +53,10 @@ backups/
 # Modèles ML (gros, montés via volume)
 models/
 
+# Data (gros, monté via volume)
+data/
+uploads/
+
 # Logs
 logs/
 *.log
