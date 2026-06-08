@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import streamlit as st
 
+from dashboard.components.colors import COLORS
 from src.data.data_loader import load_bottlenecks_top
 
 
@@ -54,7 +55,7 @@ def render_map_painter(height: int = 400) -> dict:
             folium.CircleMarker(
                 location=[lat, lon],
                 radius=8,
-                color="#3F51B5",
+                color=COLORS["persona_elu"],
                 fill=True,
                 fill_opacity=0.5,
                 tooltip=zone,

@@ -7,6 +7,8 @@ from __future__ import annotations
 
 import streamlit as st
 
+from dashboard.components.colors import COLORS
+
 
 def render_recommendation_card(option: dict) -> None:
     """Affiche la carte de recommandation top (mise en avant).
@@ -15,9 +17,9 @@ def render_recommendation_card(option: dict) -> None:
         option: dict avec clés mode_label, mode_icon, duration_text,
                 cost_eur, co2_g, confidence_pct, why (list), etc.
     """
-    bg_color = "#1A1D24"
-    accent = "#4CAF50"
-    border = "4px solid #4CAF50"
+    bg_color = COLORS["bg_card"]
+    accent = COLORS["status_ok"]
+    border = f"4px solid {accent}"
 
     st.markdown(
         f"""

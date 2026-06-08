@@ -4,6 +4,8 @@ from __future__ import annotations
 
 import streamlit as st
 
+from dashboard.components.colors import COLORS
+
 
 def render_delta_kpis(avant: dict, apres: dict) -> None:
     """Affiche les KPI cards delta (avant / après).
@@ -21,7 +23,7 @@ def render_delta_kpis(avant: dict, apres: dict) -> None:
         else:
             delta_pct = (val_apres - val_avant) / val_avant * 100
 
-        delta_color = "#4CAF50" if delta_pct > 0 else "#E74C3C" if delta_pct < 0 else "#FF9800"
+        delta_color = COLORS["status_ok"] if delta_pct > 0 else COLORS["status_critical"] if delta_pct < 0 else COLORS["status_warning"]
 
         # Format valeur
         if isinstance(val_apres, int) and val_apres > 1000:
@@ -37,7 +39,7 @@ def render_delta_kpis(avant: dict, apres: dict) -> None:
         with col:
             st.markdown(
                 f"""
-                <div style="background:#1A1D24;border:1px solid #2A2D34;
+                <div style="background:var(--bg-card);border:1px solid var(--border-card);
                             border-radius:8px;padding:0.8rem;text-align:center;">
                     <div style="font-size:0.7rem;opacity:0.6;text-transform:uppercase;">
                         {label}

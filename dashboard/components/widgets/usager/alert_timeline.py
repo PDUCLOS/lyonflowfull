@@ -6,6 +6,8 @@ from datetime import datetime
 
 import streamlit as st
 
+from dashboard.components.colors import COLORS
+
 
 def render_alert_timeline(alerts: list) -> None:
     """Affiche une frise temporelle verticale des alertes.
@@ -32,7 +34,7 @@ def render_alert_timeline(alerts: list) -> None:
             time_str = "—"
 
         sev = alert.get("severity", "info")
-        color = {"warning": "#FF9800", "info": "#2196F3", "critical": "#E74C3C"}.get(sev, "#666")
+        color = {"warning": COLORS["status_warning"], "info": COLORS["status_info"], "critical": COLORS["status_critical"]}.get(sev, COLORS["text_muted"])
         icon = alert.get("line_icon", "⚠️")
 
         st.markdown(

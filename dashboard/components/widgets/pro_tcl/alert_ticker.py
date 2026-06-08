@@ -7,6 +7,7 @@ from __future__ import annotations
 
 import streamlit as st
 
+from dashboard.components.colors import COLORS
 from src.data.data_loader import load_recent_alerts
 
 
@@ -28,7 +29,7 @@ def render_alert_ticker(alerts: list | None = None) -> None:
     items = []
     for a in alerts:
         sev = a.get("severity", "info")
-        color = {"warning": "#FF9800", "info": "#2196F3", "critical": "#E74C3C"}.get(sev, "#666")
+        color = {"warning": COLORS["status_warning"], "info": COLORS["status_info"], "critical": COLORS["status_critical"]}.get(sev, COLORS["text_muted"])
         icon = a.get("line_icon", "⚠️")
         items.append(
             f'<span style="background:{color};color:white;padding:2px 10px;'
@@ -38,7 +39,7 @@ def render_alert_ticker(alerts: list | None = None) -> None:
 
     # Ticker CSS simple
     html = f"""
-    <div style="overflow:hidden;background:#1A1D24;border:1px solid #2A2D34;
+    <div style="overflow:hidden;background:var(--bg-card);border:1px solid var(--border-card);
                 border-radius:8px;padding:8px 0;white-space:nowrap;">
         <div style="display:inline-block;animation:ticker_scroll 30s linear infinite;
                     padding-left:100%;">

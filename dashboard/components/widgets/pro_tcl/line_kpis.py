@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import streamlit as st
 
+from dashboard.components.colors import COLORS
 from src.data.data_loader import load_line_kpis
 
 
@@ -37,10 +38,10 @@ def render_line_kpis(
             continue
 
         otp = kpis.get("otp_pct", 0)
-        otp_color = "#4CAF50" if otp >= 88 else "#FF9800" if otp >= 80 else "#E74C3C"
+        otp_color = COLORS["status_ok"] if otp >= 88 else COLORS["status_warning"] if otp >= 80 else COLORS["status_critical"]
         delay = kpis.get("avg_delay_min", 0)
         load = kpis.get("load_pct", 0)
-        load_color = "#4CAF50" if load < 70 else "#FF9800" if load < 90 else "#E74C3C"
+        load_color = COLORS["status_ok"] if load < 70 else COLORS["status_warning"] if load < 90 else COLORS["status_critical"]
         trend = kpis.get("trend", "stable")
         trend_icon = {"up": "📈", "down": "📉", "stable": "➡️"}.get(trend, "➡️")
         trend_delta = kpis.get("trend_delta", 0)

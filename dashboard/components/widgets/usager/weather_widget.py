@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import streamlit as st
 
+from dashboard.components.colors import COLORS
 from src.data.data_loader import load_weather_hourly
 from src.data.mock.usager import MOCK_WEATHER
 
@@ -45,13 +46,13 @@ def render_weather_widget(weather: dict | None = None) -> None:
     cycling_score = weather.get("cycling_score", 1.0)
     if rain > 0.5 or wind > 35:
         cycling_advice = "❌ Vélov déconseillé"
-        cycling_color = "#E74C3C"
+        cycling_color = COLORS["status_critical"]
     elif rain > 0.1 or wind > 25:
         cycling_advice = "⚠️ Vélov possible mais humide"
-        cycling_color = "#FF9800"
+        cycling_color = COLORS["status_warning"]
     else:
         cycling_advice = "✅ Vélov recommandé"
-        cycling_color = "#4CAF50"
+        cycling_color = COLORS["status_ok"]
 
     st.markdown(
         f"""

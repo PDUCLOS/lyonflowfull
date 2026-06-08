@@ -16,6 +16,7 @@ from __future__ import annotations
 import pandas as pd
 import streamlit as st
 
+from dashboard.components.colors import COLORS
 from src.data.data_loader import load_correlation_matrix
 from src.data.mock.pro_tcl import (
     DIAGNOSIS_LABELS,
@@ -51,10 +52,10 @@ def render_correlation_matrix(line_id: str | None = None) -> None:
     st.markdown("##### 📊 Matrice bus × trafic")
 
     quadrants = [
-        ("ok", "🟢 Bus à l'heure + 🚗 Fluide", "Aucun problème", "#4CAF50"),
-        ("bus_lane_ok", "🔵 Bus à l'heure + 🚗 Bouché", "Voie bus fonctionne", "#2196F3"),
-        ("operations", "🟠 Bus retard + 🚗 Fluide", "Problème exploitation", "#FF9800"),
-        ("infra", "🔴 Bus retard + 🚗 Bouché", "Problème infrastructure", "#E74C3C"),
+        ("ok", "🟢 Bus à l'heure + 🚗 Fluide", "Aucun problème", COLORS["status_ok"]),
+        ("bus_lane_ok", "🔵 Bus à l'heure + 🚗 Bouché", "Voie bus fonctionne", COLORS["status_info"]),
+        ("operations", "🟠 Bus retard + 🚗 Fluide", "Problème exploitation", COLORS["status_warning"]),
+        ("infra", "🔴 Bus retard + 🚗 Bouché", "Problème infrastructure", COLORS["status_critical"]),
     ]
     # 2x2 grid
     for i in range(0, 4, 2):
@@ -64,7 +65,7 @@ def render_correlation_matrix(line_id: str | None = None) -> None:
                 n = counts.get(key, 0)
                 st.markdown(
                     f"""
-                    <div style="background:#1A1D24;border-left:4px solid {color};
+                    <div style="background:var(--bg-card);border-left:4px solid {color};
                                 border-radius:6px;padding:0.8rem;margin:0.4rem 0;">
                         <div style="font-size:0.85rem;opacity:0.8;">{title}</div>
                         <div style="font-size:1.8rem;font-weight:700;margin:0.2rem 0;">

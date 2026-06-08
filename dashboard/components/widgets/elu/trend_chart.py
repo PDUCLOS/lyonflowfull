@@ -7,6 +7,7 @@ from __future__ import annotations
 
 import streamlit as st
 
+from dashboard.components.colors import COLORS
 from src.data.data_loader import load_elu_kpis_dict
 
 
@@ -58,7 +59,7 @@ def render_trend_chart(kpi_key: str = "part_modale_tc") -> None:
                 y=history,
                 mode="lines+markers",
                 name=kpi.get("label", ""),
-                line={"color": "#5C6BC0", "width": 3},
+                line={"color": COLORS["persona_elu_accent"], "width": 3},
                 marker={"size": 8},
             )
         )
@@ -68,7 +69,7 @@ def render_trend_chart(kpi_key: str = "part_modale_tc") -> None:
             fig.add_hline(
                 y=target,
                 line_dash="dash",
-                line_color="#4CAF50",
+                line_color=COLORS["status_ok"],
                 annotation_text=f"Cible 2026: {target}{unit}",
             )
 

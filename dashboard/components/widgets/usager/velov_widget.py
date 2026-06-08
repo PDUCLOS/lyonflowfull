@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import streamlit as st
 
+from dashboard.components.colors import COLORS
 from src.data.data_loader import load_velov_stations
 
 
@@ -35,13 +36,13 @@ def render_velov_widget(stations: list | None = None, max_stations: int = 3) -> 
 
         # Couleur selon dispo
         if bikes == 0:
-            color = "#E74C3C"
+            color = COLORS["status_critical"]
             status = "❌ Vide"
         elif bikes < 5:
-            color = "#FF9800"
+            color = COLORS["status_warning"]
             status = "⚠️ Faible"
         else:
-            color = "#4CAF50"
+            color = COLORS["status_ok"]
             status = "✅ OK"
 
         with col:

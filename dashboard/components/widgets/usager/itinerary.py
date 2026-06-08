@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import streamlit as st
 
+from dashboard.components.colors import COLORS
 from src.routing import Itinerary, compute_itinerary
 
 # Mapping mock adresse → (lon, lat) — à remplacer par Nominatim Sprint 6+
@@ -212,7 +213,7 @@ def _render_segments(itinerary: Itinerary) -> None:
             st.markdown(
                 f"""
                 <div style="display:flex;align-items:center;gap:0.8rem;
-                            padding:0.5rem;background:#1A1D24;border-radius:4px;
+                            padding:0.5rem;background:var(--bg-card);border-radius:4px;
                             margin:0.3rem 0;border-left:4px solid {color};">
                     <div style="background:{color};color:white;width:24px;height:24px;
                                 border-radius:50%;display:flex;align-items:center;
@@ -235,11 +236,11 @@ def _render_segments(itinerary: Itinerary) -> None:
 def _speed_to_color(speed_kmh: float) -> str:
     """Convertit une vitesse en couleur (vert=fluide → rouge=bloqué)."""
     if speed_kmh >= 40:
-        return "#4CAF50"  # vert
+        return COLORS["status_ok"]  # vert
     if speed_kmh >= 25:
-        return "#8BC34A"  # vert clair
+        return COLORS["chart_green_light"]  # vert clair
     if speed_kmh >= 15:
-        return "#FF9800"  # orange
+        return COLORS["status_warning"]  # orange
     if speed_kmh >= 8:
-        return "#E74C3C"  # rouge
-    return "#8B0000"  # rouge foncé
+        return COLORS["status_critical"]  # rouge
+    return COLORS["chart_red_deep"]  # rouge foncé

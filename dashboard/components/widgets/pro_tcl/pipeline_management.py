@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import streamlit as st
 
+from dashboard.components.colors import COLORS
 from src.monitoring.health_checks import run_all_checks
 
 # Mock des DAGs (en prod : Airflow REST API /api/v1/dags + /dag_runs)
@@ -230,12 +231,12 @@ def render_health_panel() -> None:
     for i, r in enumerate(results):
         with cols[i % 3]:
             status = r.get("status", "unknown")
-            color = {"ok": "#4CAF50", "warning": "#FF9800", "critical": "#E74C3C"}.get(status, "#666")
+            color = {"ok": COLORS["status_ok"], "warning": COLORS["status_warning"], "critical": COLORS["status_critical"]}.get(status, COLORS["text_muted"])
             icon = {"ok": "✅", "warning": "⚠️", "critical": "🔴"}.get(status, "❓")
             name = r.get("name", "—")
             st.markdown(
                 f"""
-                <div style="background:#1A1D24;border:1px solid #2A2D34;border-left:4px solid {color};
+                <div style="background:var(--bg-card);border:1px solid var(--border-card);border-left:4px solid {color};
                             border-radius:6px;padding:0.6rem;margin:0.3rem 0;">
                     <div style="font-size:0.75rem;opacity:0.7;text-transform:uppercase;
                                 letter-spacing:0.5px;">{name}</div>

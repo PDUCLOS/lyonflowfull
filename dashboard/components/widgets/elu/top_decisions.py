@@ -32,7 +32,7 @@ def render_top_decisions(n: int = 5) -> None:
             f"""
             <div class="lyonflow-card" style="margin:0.5rem 0;">
                 <div style="display:flex;align-items:start;gap:1rem;">
-                    <div style="background:#3F51B5;color:white;width:32px;height:32px;
+                    <div style="background:var(--persona-elu);color:white;width:32px;height:32px;
                                 border-radius:50%;display:flex;align-items:center;
                                 justify-content:center;font-weight:700;flex-shrink:0;">
                         {i}
@@ -50,7 +50,7 @@ def render_top_decisions(n: int = 5) -> None:
                             <span>⏱ <b>{gain} min</b> gagnées</span>
                             <span>💰 <b>{cout} M€</b></span>
                             <span>📅 <b>{delai} mois</b> travaux</span>
-                            <span style="color:#4CAF50;">📈 ROI <b>{int(roi)} mois</b></span>
+                            <span style="color:var(--status-ok);">📈 ROI <b>{int(roi)} mois</b></span>
                         </div>
                     </div>
                 </div>

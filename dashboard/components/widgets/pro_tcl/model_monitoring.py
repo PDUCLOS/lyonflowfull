@@ -14,6 +14,8 @@ from __future__ import annotations
 
 import streamlit as st
 
+from dashboard.components.colors import COLORS
+
 # Mock des modèles (en prod : mlflow.search_registered_models + search_runs)
 MOCK_MODELS = [
     {
@@ -167,7 +169,7 @@ def _render_model_registry_table(models: list[dict]) -> None:
         with cols[1]:
             st.code(m.get("version", "—"))
         with cols[2]:
-            stage_color = {"Production": "#4CAF50", "Staging": "#FF9800"}.get(m.get("stage", ""), "#666")
+            stage_color = {"Production": COLORS["status_ok"], "Staging": COLORS["status_warning"]}.get(m.get("stage", ""), COLORS["text_muted"])
             st.markdown(
                 f'<span style="background:{stage_color};color:white;padding:2px 8px;'
                 f'border-radius:8px;font-size:0.75rem;">{m.get("stage", "—")}</span>',
@@ -209,16 +211,16 @@ def render_model_registry_status() -> None:
 
     active = get_active_models().value
     if active == "both":
-        badge_color = "#FF9800"
+        badge_color = COLORS["status_warning"]
         badge_text = "🟡 COEXISTENCE (XGBoost=Champion, GNN=Challenger)"
     elif active == "xgboost":
-        badge_color = "#4CAF50"
+        badge_color = COLORS["status_ok"]
         badge_text = "🟢 XGBOOST SEUL (prod)"
     elif active == "stgcn":
-        badge_color = "#9C27B0"
+        badge_color = COLORS["chart_purple"]
         badge_text = "🟣 STGCN SEUL (GNN a pris le relais)"
     else:
-        badge_color = "#666"
+        badge_color = COLORS["text_muted"]
         badge_text = f"⚪ {active}"
 
     st.markdown(
@@ -262,13 +264,13 @@ def render_model_registry_status() -> None:
         with col1:
             st.markdown(f"**H+{h}min**")
         with col2:
-            color = "#4CAF50" if s["xgboost_available"] else "#999"
+            color = COLORS["status_ok"] if s["xgboost_available"] else COLORS["text_disabled"]
             st.markdown(
                 f'<span style="color:{color};">●</span> XGBoost',
                 unsafe_allow_html=True,
             )
         with col3:
-            color = "#9C27B0" if s["stgcn_available"] else "#999"
+            color = COLORS["chart_purple"] if s["stgcn_available"] else COLORS["text_disabled"]
             st.markdown(
                 f'<span style="color:{color};">●</span> STGCN',
                 unsafe_allow_html=True,
@@ -371,7 +373,7 @@ def render_training_history() -> None:
                 y=mae_speed_h60,
                 mode="lines+markers",
                 name="XGBoost Speed H+60min",
-                line={"color": "#4CAF50", "width": 3},
+                line={"color": COLORS["status_ok"], "width": 3},
             )
         )
         fig.add_trace(
@@ -380,7 +382,7 @@ def render_training_history() -> None:
                 y=mae_velov_h30,
                 mode="lines+markers",
                 name="XGBoost Velov H+30min",
-                line={"color": "#FF9800", "width": 3},
+                line={"color": COLORS["status_warning"], "width": 3},
                 yaxis="y2",
             )
         )
@@ -425,12 +427,12 @@ def render_drift_panel() -> None:
 
     for d in drifts:
         status = d["status"]
-        color = {"ok": "#4CAF50", "warning": "#FF9800", "critical": "#E74C3C"}.get(status, "#666")
+        color = {"ok": COLORS["status_ok"], "warning": COLORS["status_warning"], "critical": COLORS["status_critical"]}.get(status, COLORS["text_muted"])
         icon = {"ok": "🟢", "warning": "🟡", "critical": "🔴"}.get(status, "⚪")
 
         st.markdown(
             f"""
-            <div style="background:#1A1D24;border:1px solid #2A2D34;border-left:4px solid {color};
+            <div style="background:var(--bg-card);border:1px solid var(--border-card);border-left:4px solid {color};
                         border-radius:6px;padding:0.7rem;margin:0.4rem 0;">
                 <div style="display:flex;align-items:center;gap:0.6rem;">
                     <div style="font-size:1.3rem;">{icon}</div>
@@ -439,7 +441,7 @@ def render_drift_panel() -> None:
                         <div style="font-size:0.8rem;opacity:0.7;">
                             Drift score: {d["drift_score"]:.2f} / seuil {d["threshold"]} · {d["detected_at"]}
                         </div>
-                        {('<div style="font-size:0.8rem;color:#FF9800;margin-top:0.2rem;">⚠️ ' + ", ".join(d.get("features_drifted", [])) + "</div>") if d.get("features_drifted") else ""}
+                        {('<div style="font-size:0.8rem;color:var(--status-warning);margin-top:0.2rem;">⚠️ ' + ", ".join(d.get("features_drifted", [])) + "</div>") if d.get("features_drifted") else ""}
                         {('<div style="font-size:0.8rem;margin-top:0.2rem;">→ ' + d.get("action", "") + "</div>") if d.get("action") else ""}
                     </div>
                 </div>

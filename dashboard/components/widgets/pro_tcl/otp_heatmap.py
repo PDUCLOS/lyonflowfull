@@ -9,6 +9,7 @@ from __future__ import annotations
 import pandas as pd
 import streamlit as st
 
+from dashboard.components.colors import COLORS
 from src.data.data_loader import load_otp_heatmap_data
 from src.data.mock.pro_tcl import LINE_BASE_OTP, OTP_GRID
 
@@ -71,10 +72,10 @@ def render_otp_heatmap(otp_data: dict | None = None, days: int = 1, height: int 
                 x=[f"{h}h" for h in range(24)],
                 y=lines,
                 colorscale=[
-                    [0.0, "#E74C3C"],  # rouge si <70
-                    [0.3, "#FF9800"],  # orange 70-80
-                    [0.6, "#FFCD00"],  # jaune 80-90
-                    [1.0, "#4CAF50"],  # vert >90
+                    [0.0, COLORS["status_critical"]],  # rouge si <70
+                    [0.3, COLORS["status_warning"]],  # orange 70-80
+                    [0.6, COLORS["chart_yellow"]],  # jaune 80-90
+                    [1.0, COLORS["status_ok"]],  # vert >90
                 ],
                 zmin=60,
                 zmax=98,

@@ -23,6 +23,7 @@ import logging
 import pandas as pd
 import streamlit as st
 
+from dashboard.components.colors import COLORS
 from src.data.data_loader import load_spatial_mapping
 from src.data.data_loader import load_traffic_predictions_for_map as load_traffic_predictions
 from src.ml.mlflow_integration import is_mlflow_available
@@ -44,8 +45,8 @@ def render_gnn_map_section() -> None:
     if not is_gnn_map_visible():
         st.markdown(
             """
-            <div style="background:linear-gradient(135deg, #2A2D34 0%, #3F51B5 100%);
-                        border:1px dashed #5C6BC0;border-radius:8px;padding:1rem;margin:0.5rem 0;">
+            <div style="background:linear-gradient(135deg, var(--border-card) 0%, var(--persona-elu) 100%);
+                        border:1px dashed var(--persona-elu-accent);border-radius:8px;padding:1rem;margin:0.5rem 0;">
                 <div style="font-size:0.8rem;opacity:0.8;text-transform:uppercase;
                             letter-spacing:1px;">🟡 Sprint 9 — Préparé, non activé</div>
                 <div style="font-size:0.95rem;margin:0.5rem 0;">
@@ -203,7 +204,7 @@ def _render_pydeck_map(merged: pd.DataFrame, horizon: int) -> None:
                 "Model: {model_name} v{model_version}"
             ),
             "style": {
-                "backgroundColor": "#1A1D24",
+                "backgroundColor": COLORS["bg_card"],
                 "color": "white",
                 "padding": "8px",
                 "borderRadius": "4px",

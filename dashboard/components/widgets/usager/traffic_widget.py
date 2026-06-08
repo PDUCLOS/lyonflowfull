@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import streamlit as st
 
+from dashboard.components.colors import COLORS
 from src.data.data_loader import load_traffic
 
 
@@ -25,7 +26,7 @@ def render_traffic_widget(traffic: dict | None = None) -> None:
 
     avg = traffic.get("average_speed_kmh", 0)
     level = traffic.get("congestion_level", "—")
-    level_color = traffic.get("congestion_color", "#666")
+    level_color = traffic.get("congestion_color", COLORS["text_muted"])
     n_bottlenecks = traffic.get("bottlenecks_count", 0)
     data_source = traffic.get("data_source", "unknown")
 
@@ -82,7 +83,7 @@ def render_traffic_widget(traffic: dict | None = None) -> None:
         with st.expander(f"🚧 Top {len(main_jams)} bouchons", expanded=False):
             for jam in main_jams:
                 sev = jam.get("severity", "low")
-                color = {"high": "#E74C3C", "medium": "#FF9800", "low": "#4CAF50"}.get(sev, "#666")
+                color = {"high": COLORS["status_critical"], "medium": COLORS["status_warning"], "low": COLORS["status_ok"]}.get(sev, COLORS["text_muted"])
                 st.markdown(
                     f"<div style='border-left:3px solid {color};padding-left:8px;margin:4px 0;'>"
                     f"<b>{jam.get('road', '—')}</b> · {jam.get('speed_kmh', 0)} km/h · "

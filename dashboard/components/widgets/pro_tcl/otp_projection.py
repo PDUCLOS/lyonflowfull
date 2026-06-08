@@ -4,6 +4,8 @@ from __future__ import annotations
 
 import streamlit as st
 
+from dashboard.components.colors import COLORS
+
 
 def render_otp_projection(simulation: dict, base_otp: float = 78.0) -> None:
     """Affiche la projection OTP avant/après une modification de fréquence.
@@ -29,7 +31,7 @@ def render_otp_projection(simulation: dict, base_otp: float = 78.0) -> None:
     ic_low = max(60.0, new_otp - 2)
     ic_high = min(98.0, new_otp + 2)
 
-    color = "#4CAF50" if actual_delta > 0 else "#E74C3C" if actual_delta < 0 else "#FF9800"
+    color = COLORS["status_ok"] if actual_delta > 0 else COLORS["status_critical"] if actual_delta < 0 else COLORS["status_warning"]
 
     c1, c2, c3 = st.columns(3)
     with c1:
@@ -41,7 +43,7 @@ def render_otp_projection(simulation: dict, base_otp: float = 78.0) -> None:
 
     st.markdown(
         f"""
-        <div style="background:#1A1D24;border-left:4px solid {color};
+        <div style="background:var(--bg-card);border-left:4px solid {color};
                     border-radius:6px;padding:0.8rem;margin-top:0.5rem;">
             <div style="font-size:0.85rem;opacity:0.7;">Impact estimé</div>
             <div style="font-size:1.3rem;font-weight:600;color:{color};">

@@ -4,6 +4,8 @@ from __future__ import annotations
 
 import streamlit as st
 
+from dashboard.components.colors import COLORS
+
 
 def render_alternative_card(option: dict) -> None:
     """Affiche une carte d'alternative (rank 2, 3, ...).
@@ -11,10 +13,10 @@ def render_alternative_card(option: dict) -> None:
     Args:
         option: dict avec mode_icon, mode_label, duration_text, cost_eur, co2_g, why
     """
-    bg = "#161A20"
+    bg = COLORS["bg_card_alt"]
     st.markdown(
         f"""
-        <div style="background:{bg};border:1px solid #2A2D34;border-radius:8px;
+        <div style="background:{bg};border:1px solid var(--border-card);border-radius:8px;
                     padding:0.8rem 1rem;margin:0.5rem 0;">
             <div style="display:flex;align-items:center;justify-content:space-between;">
                 <div style="display:flex;align-items:center;gap:0.8rem;">
