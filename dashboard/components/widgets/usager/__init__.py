@@ -19,6 +19,10 @@ from dashboard.components.widgets.usager.recommendation_card import (
 )
 from dashboard.components.widgets.usager.search_bar import render_search_bar
 from dashboard.components.widgets.usager.traffic_widget import render_traffic_widget
+from dashboard.components.widgets.usager.velov_map import (
+    render_velov_map,
+    render_velov_map_compact,
+)
 from dashboard.components.widgets.usager.velov_widget import render_velov_widget
 from dashboard.components.widgets.usager.weather_widget import render_weather_widget
 from dashboard.components.widgets.usager.why_explainer import (
@@ -38,6 +42,8 @@ __all__ = [
     "render_search_bar",
     "render_steps",
     "render_traffic_widget",
+    "render_velov_map",
+    "render_velov_map_compact",
     "render_velov_widget",
     "render_weather_widget",
     "render_why_explainer",

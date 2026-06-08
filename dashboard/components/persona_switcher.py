@@ -18,7 +18,37 @@ from src.persona.manager import (
     is_current_persona_authenticated,
     set_current_persona,
 )
-from src.persona.personas_loader import list_personas
+from src.persona.personas_loader import get_persona_config, list_personas
+
+
+def _route_after_switch(persona_id: str) -> None:
+    """Route vers la landing du persona, ou Accueil si auth requise non faite.
+
+    Évite le bazar où switcher depuis une page d'un autre persona reste sur
+    la même URL et déclenche le guard (warning + bouton).
+    """
+    set_current_persona(persona_id)
+    config = get_persona_config(persona_id)
+    auth_required = config.get("access", {}).get("auth_required", False)
+    landing = config.get("landing_page", "")
+
+    # Auth requise et pas encore faite → Accueil pour saisir le mot de passe
+    if auth_required and not is_current_persona_authenticated():
+        try:
+            st.switch_page("Accueil.py")
+            return
+        except Exception:
+            st.rerun()
+            return
+
+    # Route directe vers la landing
+    if landing:
+        try:
+            st.switch_page(f"pages/{landing}.py")
+            return
+        except Exception:
+            pass
+    st.rerun()
 
 
 def render_persona_switcher(layout: str = "cards") -> None:
@@ -78,8 +108,7 @@ def _render_cards(personas: list[dict], current: str) -> None:
                 disabled=is_active,
                 use_container_width=True,
             ):
-                set_current_persona(p["id"])
-                st.rerun()
+                _route_after_switch(p["id"])
             if is_locked:
                 st.caption("⚠️ Mot de passe requis après adoption")
 
@@ -97,8 +126,7 @@ def _render_pills(personas: list[dict], current: str) -> None:
                 disabled=is_active,
                 use_container_width=True,
             ):
-                set_current_persona(p["id"])
-                st.rerun()
+                _route_after_switch(p["id"])
 
 
 def is_authenticated_for(persona_id: str) -> bool:

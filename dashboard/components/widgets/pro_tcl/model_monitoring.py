@@ -464,6 +464,193 @@ def render_drift_panel() -> None:
         )
 
 
+def render_velov_model_analysis() -> None:
+    """Sprint 10 — Analyse modèle Vélo'v (freshness + distribution + backtest).
+
+    Lit ``gold.velov_predictions`` directement et calcule :
+    * Freshness (timestamp dernière prédiction)
+    * Coverage (nb stations couvertes / total)
+    * Distribution predicted_bikes par horizon
+    * Confidence interval moyen (largeur)
+    * Backtest MAE si ``gold.predictions_vs_actuals`` contient des vélov rows.
+    """
+    st.markdown("##### 🚲 Analyse modèle Vélo'v (XGBoost)")
+    try:
+        from dashboard.components.data_cache import cached_velov_predictions
+        from src.data.db_query import get_velov_stations_geo
+    except Exception as e:
+        st.warning(f"Imports indisponibles : {e}")
+        return
+
+    pred_30 = cached_velov_predictions(horizon_minutes=30, force_mock=False)
+    pred_60 = cached_velov_predictions(horizon_minutes=60, force_mock=False)
+    stations = get_velov_stations_geo()
+    n_stations_total = len(stations) if not stations.empty else 0
+
+    if pred_30.empty and pred_60.empty:
+        st.info(
+            "Aucune prédiction Vélo'v dans `gold.velov_predictions`. "
+            "Lancer le DAG `retrain_velov` puis `predict_velov`."
+        )
+        return
+
+    cols = st.columns(4)
+    last_30 = (
+        pred_30["prediction_timestamp"].max()
+        if not pred_30.empty and "prediction_timestamp" in pred_30.columns
+        else None
+    )
+    coverage_30 = (
+        pred_30["station_id"].nunique() if "station_id" in pred_30.columns else 0
+    )
+    coverage_pct = (
+        f"{coverage_30}/{n_stations_total}" if n_stations_total else f"{coverage_30}"
+    )
+
+    cols[0].metric(
+        "Dernière prédiction H+30",
+        str(last_30)[:16] if last_30 is not None else "—",
+    )
+    cols[1].metric("Stations couvertes", coverage_pct)
+    cols[2].metric("Lignes H+30", f"{len(pred_30):,}")
+    cols[3].metric("Lignes H+1h", f"{len(pred_60):,}")
+
+    # Distribution + confidence
+    if not pred_30.empty and "predicted_bikes" in pred_30.columns:
+        col_a, col_b = st.columns(2)
+        with col_a:
+            st.markdown("**Distribution predicted_bikes (H+30)**")
+            try:
+                import plotly.express as px
+
+                fig = px.histogram(
+                    pred_30, x="predicted_bikes", nbins=20,
+                    template="plotly_dark", height=240,
+                )
+                fig.update_layout(margin={"l": 0, "r": 0, "t": 10, "b": 0})
+                st.plotly_chart(fig, use_container_width=True)
+            except ImportError:
+                st.bar_chart(pred_30["predicted_bikes"].value_counts().sort_index())
+
+        with col_b:
+            if {"confidence_low", "confidence_high"}.issubset(pred_30.columns):
+                width = (pred_30["confidence_high"] - pred_30["confidence_low"]).dropna()
+                st.markdown("**Confidence interval width (H+30)**")
+                if not width.empty:
+                    st.metric("Moy", f"{width.mean():.2f} vélos")
+                    st.metric("Médiane", f"{width.median():.2f} vélos")
+                    st.metric("p95", f"{width.quantile(0.95):.2f} vélos")
+                else:
+                    st.caption("Pas d'intervalles de confiance disponibles.")
+            else:
+                st.caption("Colonnes confidence_* absentes — modèle sans CI.")
+
+    # Backtest MAE si gold.predictions_vs_actuals existe avec vélov
+    try:
+        from src.data.db_query import _df_from_query  # type: ignore
+
+        backtest = _df_from_query(
+            """
+            SELECT model_name, horizon_minutes,
+                   AVG(ABS(predicted - actual)) AS mae,
+                   COUNT(*) AS n_obs,
+                   MAX(target_timestamp) AS last_obs
+            FROM gold.predictions_vs_actuals
+            WHERE model_name LIKE 'xgboost_velov%%'
+              AND target_timestamp >= NOW() - INTERVAL '7 days'
+            GROUP BY model_name, horizon_minutes
+            ORDER BY model_name, horizon_minutes
+            """
+        )
+        if not backtest.empty:
+            st.markdown("**Backtest MAE 7j (Elementary-style)**")
+            st.dataframe(backtest, use_container_width=True, hide_index=True)
+        else:
+            st.caption(
+                "Backtest vide — alimenter `gold.predictions_vs_actuals` "
+                "(DAG `evaluate_velov`)."
+            )
+    except Exception as e:
+        st.caption(f"Backtest indisponible : {e}")
+
+
+def render_data_quality_panel() -> None:
+    """Sprint 10 — Panel data quality style Elementary.
+
+    Lit health checks + freshness pour chaque table Gold/Silver clé.
+    """
+    st.markdown("##### 🩺 Data Quality — freshness + volume (Elementary-style)")
+    try:
+        from src.data.db_query import _df_from_query  # type: ignore
+    except Exception as e:
+        st.caption(f"Imports indisponibles : {e}")
+        return
+
+    tables = [
+        ("silver", "trafic_boucles_clean", "measurement_time", "5 min"),
+        ("silver", "velov_clean", "measurement_time", "5 min"),
+        ("silver", "tcl_vehicles_clean", "recorded_at", "5 min"),
+        ("silver", "meteo_hourly", "measurement_time", "1h"),
+        ("gold", "traffic_features_live", "measurement_time", "5 min"),
+        ("gold", "trafic_predictions", "prediction_timestamp", "1h"),
+        ("gold", "velov_features", "measurement_time", "5 min"),
+        ("gold", "velov_predictions", "prediction_timestamp", "1h"),
+        ("gold", "bus_delay_segments", "computed_at", "1h"),
+    ]
+
+    rows = []
+    for schema, table, ts_col, expected in tables:
+        try:
+            df = _df_from_query(
+                f"""
+                SELECT COUNT(*) AS n_rows,
+                       MAX({ts_col}) AS last_ts,
+                       NOW() - MAX({ts_col}) AS lag
+                FROM {schema}.{table}
+                """
+            )
+            if df.empty:
+                rows.append({
+                    "Table": f"{schema}.{table}",
+                    "Rows": 0,
+                    "Last": "—",
+                    "Lag": "—",
+                    "Expected": expected,
+                    "Status": "🔴",
+                })
+                continue
+            r = df.iloc[0]
+            n_rows = int(r.get("n_rows") or 0)
+            last_ts = r.get("last_ts")
+            lag = r.get("lag")
+            lag_str = str(lag).split(".")[0] if lag is not None else "—"
+            status = "🟢" if n_rows > 0 and last_ts is not None else "🔴"
+            rows.append({
+                "Table": f"{schema}.{table}",
+                "Rows": f"{n_rows:,}",
+                "Last": str(last_ts)[:16] if last_ts else "—",
+                "Lag": lag_str,
+                "Expected": expected,
+                "Status": status,
+            })
+        except Exception as e:
+            rows.append({
+                "Table": f"{schema}.{table}",
+                "Rows": "—",
+                "Last": "—",
+                "Lag": "—",
+                "Expected": expected,
+                "Status": f"⚠️ {str(e)[:40]}",
+            })
+
+    st.dataframe(rows, use_container_width=True, hide_index=True)
+    st.caption(
+        "🟢 = données présentes · 🔴 = table vide · ⚠️ = erreur SQL. "
+        "Lag = ⌚ écart entre NOW() et dernière insertion. "
+        "Source : queries directes sur PostgreSQL Gold/Silver."
+    )
+
+
 def render_model_monitoring_page() -> None:
     """Page complète Model Monitoring (point d'entrée)."""
     # Sprint 8 — Status live du toggle XGBoost vs GNN (en haut)
@@ -476,3 +663,8 @@ def render_model_monitoring_page() -> None:
     render_training_history()
     st.markdown("---")
     render_drift_panel()
+    # Sprint 10 — Sections complémentaires
+    st.markdown("---")
+    render_velov_model_analysis()
+    st.markdown("---")
+    render_data_quality_panel()

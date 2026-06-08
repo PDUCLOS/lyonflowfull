@@ -13,6 +13,7 @@ from dashboard.components.widgets.pro_tcl import (
     render_line_kpis,
     render_network_map,
     render_otp_heatmap_mini,
+    render_traffic_map,
 )
 
 st.set_page_config(
@@ -39,8 +40,19 @@ st.markdown("---")
 # 4 quadrants
 q1, q2 = st.columns(2)
 with q1:
-    st.markdown("##### 🗺️ NW — Carte réseau live")
-    render_network_map(height=350)
+    st.markdown("##### 🗺️ NW — Carte live")
+    tab_bus, tab_traffic = st.tabs(["🚌 Bus GPS", "🚗 Charge trafic"])
+    with tab_bus:
+        render_network_map(height=320)
+    with tab_traffic:
+        render_traffic_map(
+            height=320,
+            horizon_default=30,
+            show_horizon_selector=True,
+            show_legend=True,
+            show_caption=False,
+            key_suffix="pro1",
+        )
 with q2:
     st.markdown("##### ⚠️ NE — Alertes live (détail)")
     from dashboard.components.colors import STATUS_COLORS

@@ -17,7 +17,25 @@ from src.persona.personas_loader import (
 )
 
 _SESSION_KEY = "lyonflow_persona"
-_SESSION_AUTH_KEY = "lyonflow_auth"
+_SESSION_AUTH_KEY = "lyonflow_auth"  # dict[persona_id, bool] depuis le fix UX persona
+
+
+def _auth_state() -> dict[str, bool]:
+    """Retourne le dict d'auth par persona. Migre l'ancien format (bool global).
+
+    Avant : st.session_state["lyonflow_auth"] = bool partagé (perdu au switch).
+    Maintenant : dict {persona_id: bool}, persisté par persona pendant la session.
+    """
+    raw = st.session_state.get(_SESSION_AUTH_KEY)
+    if isinstance(raw, dict):
+        return raw
+    migrated: dict[str, bool] = {}
+    if raw is True:
+        current = st.session_state.get(_SESSION_KEY)
+        if current:
+            migrated[current] = True
+    st.session_state[_SESSION_AUTH_KEY] = migrated
+    return migrated
 
 
 def get_current_persona() -> str:
@@ -31,7 +49,7 @@ def get_current_persona() -> str:
 
 
 def set_current_persona(persona_id: str) -> None:
-    """Change le persona actif.
+    """Change le persona actif sans toucher à l'auth des autres personas.
 
     Args:
         persona_id: 'usager' | 'pro_tcl' | 'elu'
@@ -43,8 +61,7 @@ def set_current_persona(persona_id: str) -> None:
     if persona_id not in available:
         raise ValueError(f"Persona '{persona_id}' inconnu. Disponibles : {available}")
     st.session_state[_SESSION_KEY] = persona_id
-    # Reset auth quand on change de persona
-    st.session_state[_SESSION_AUTH_KEY] = False
+    _auth_state()  # garantit l'init du dict (migration si besoin)
 
 
 def get_current_persona_config() -> dict[str, Any]:
@@ -54,12 +71,17 @@ def get_current_persona_config() -> dict[str, Any]:
 
 def is_current_persona_authenticated() -> bool:
     """Vérifie si l'auth du persona courant a été validée."""
-    return bool(st.session_state.get(_SESSION_AUTH_KEY, False))
+    return bool(_auth_state().get(get_current_persona(), False))
 
 
 def mark_current_persona_authenticated() -> None:
     """Marque le persona courant comme authentifié (utilisé par auth.py)."""
-    st.session_state[_SESSION_AUTH_KEY] = True
+    _auth_state()[get_current_persona()] = True
+
+
+def clear_current_persona_auth() -> None:
+    """Logout du persona courant (laisse les autres personas intacts)."""
+    _auth_state().pop(get_current_persona(), None)
 
 
 class PersonaManager:

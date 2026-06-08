@@ -52,19 +52,25 @@ def apply_persona_guard(expected_persona: PersonaId | None = None) -> PersonaMan
         except Exception:
             pass
 
-    # Vérification que le persona de la page correspond au persona actif
+    # Mismatch persona/page : auto-switch silencieux (UX > friction)
+    # Si auth requise pour le nouveau persona et pas encore faite → renvoi à l'accueil
     if expected_persona and pm.persona_id != expected_persona:
-        st.warning(
-            f"⚠️ Cette page est destinée au persona "
-            f"**{_persona_label(expected_persona)}** mais tu as sélectionné "
-            f"**{pm.config.get('label', pm.persona_id)}**."
+        from src.persona.manager import (
+            is_current_persona_authenticated,
+            set_current_persona,
         )
-        if st.button(f"Basculer vers {_persona_label(expected_persona)}"):
-            from src.persona.manager import set_current_persona
+        from src.persona.personas_loader import get_persona_config
 
-            set_current_persona(expected_persona)
-            st.rerun()
-        st.stop()
+        set_current_persona(expected_persona)
+        expected_config = get_persona_config(expected_persona)
+        auth_required = expected_config.get("access", {}).get("auth_required", False)
+        if auth_required and not is_current_persona_authenticated():
+            try:
+                st.switch_page("Accueil.py")
+            except Exception:
+                st.rerun()
+            st.stop()
+        st.rerun()
 
     # Vérification de l'auth
     pm.guard()

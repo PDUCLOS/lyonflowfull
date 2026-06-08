@@ -17,6 +17,7 @@ from dashboard.components.widgets.elu import (
     render_top_decisions,
     render_trend_chart,
 )
+from dashboard.components.widgets.pro_tcl import render_traffic_map_compact
 
 st.set_page_config(
     page_title="Synthèse exécutive — Élu · LyonFlowFull",
@@ -40,6 +41,12 @@ st.markdown("---")
 
 # 5 KPI cards
 render_kpi_cards()
+
+st.markdown("---")
+
+# Carte charge trafic — synthèse exécutive (Sprint 10)
+st.markdown("##### 🗺️ Charge du trafic — projection H+1h")
+render_traffic_map_compact(height=340, horizon_minutes=60, key_suffix="elu")
 
 st.markdown("---")
 

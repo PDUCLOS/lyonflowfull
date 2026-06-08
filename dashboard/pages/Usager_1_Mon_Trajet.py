@@ -16,6 +16,7 @@ from dashboard.components.data_status import render_data_status_banner
 from dashboard.components.navigation import render_sidebar_navigation
 from dashboard.components.persona_guard import apply_persona_guard
 from dashboard.components.theme import inject_theme
+from dashboard.components.widgets.pro_tcl import render_traffic_map_compact
 from dashboard.components.widgets.usager import (
     render_alternative_card,
     render_itinerary_result,
@@ -23,6 +24,7 @@ from dashboard.components.widgets.usager import (
     render_search_bar,
     render_steps,
     render_traffic_widget,
+    render_velov_map_compact,
     render_velov_widget,
     render_weather_widget,
     render_why_explainer,
@@ -87,6 +89,14 @@ if st.session_state.get("results_loaded"):
 
     st.markdown("##### 🚦 État du trafic routier")
     render_traffic_widget()
+
+    # Carte trafic compacte — vitesses prédites par tronçon (Sprint 10)
+    st.markdown("##### 🗺️ Carte du trafic — H+30min")
+    render_traffic_map_compact(height=320, horizon_minutes=30, key_suffix="usager")
+
+    # Carte Vélo'v — dispo actuelle + tooltip prédictions H+30/H+1h (Sprint 10)
+    st.markdown("##### 🚲 Stations Vélo'v — dispo + prédictions")
+    render_velov_map_compact(height=320, key_suffix="usager")
 
     st.markdown("---")
 

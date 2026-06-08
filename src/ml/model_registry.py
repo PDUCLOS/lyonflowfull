@@ -119,24 +119,25 @@ def is_stgcn_training_enabled() -> bool:
 
 
 def is_gnn_map_visible() -> bool:
-    """True si la carte GNN géographique est visible dans Pro_7.
+    """True si la carte trafic GNN est visible dans le dashboard.
 
     Lit l'env var directement (pas le cache pydantic) pour permettre
-    le toggle runtime. Par défaut False (préparation).
+    le toggle runtime. Par défaut True (carte intégrée Pro/Usager/Elu).
+    Set ``LYONFLOW_DASHBOARD_GNN_MAP=false`` pour masquer.
     """
-    return os.getenv("LYONFLOW_DASHBOARD_GNN_MAP", "false").lower() not in ("false", "0", "no", "")
+    return os.getenv("LYONFLOW_DASHBOARD_GNN_MAP", "true").lower() not in ("false", "0", "no")
 
 
 def is_model_monitoring_visible() -> bool:
     """True si le dashboard Model Monitoring MLflow est visible.
 
-    Lit l'env var directement. Par défaut False (préparation).
+    Lit l'env var directement. Par défaut True (intégré Sprint 10).
+    Set ``LYONFLOW_DASHBOARD_MODEL_MONITORING=false`` pour masquer.
     """
-    return os.getenv("LYONFLOW_DASHBOARD_MODEL_MONITORING", "false").lower() not in (
+    return os.getenv("LYONFLOW_DASHBOARD_MODEL_MONITORING", "true").lower() not in (
         "false",
         "0",
         "no",
-        "",
     )
 
 

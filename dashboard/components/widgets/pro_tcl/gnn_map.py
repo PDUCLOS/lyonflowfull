@@ -1,19 +1,15 @@
-"""Widget — Carte GNN (visualisation géographique des prédictions).
+"""Widget — Carte trafic (prédictions GNN/XGBoost sur la grille H3).
 
-Sprint 9 — Widget PRÉPARÉ mais DÉSACTIVÉ par défaut.
+Sprint 10 — réintégration multi-personas.
 
-Affiche les prédictions du modèle SpatioTemporalGCN sur la carte
-de Lyon (nœuds H3 res.13 → couleur par vitesse prédite). Permet
-de voir la propagation de congestion entre segments adjacents.
+Trois entrées publiques :
+* ``render_traffic_map(...)``       — carte plein-format (Pro_1, Pro_7).
+* ``render_traffic_map_compact(...)`` — version réduite (Usager_1, Elu_1).
+* ``render_gnn_map_section()``      — section dédiée Pro_7 avec bandeau status.
 
-**État** : préparé dans le code, masqué par ``is_gnn_map_visible()``.
-Pour activer :
-1. Set ``LYONFLOW_DASHBOARD_GNN_MAP=true`` dans .env
-2. Le widget apparaît dans le dashboard Model Monitoring (Pro_7)
-3. Un modèle .pt doit être présent dans ``LYONFLOW_MODELS_DIR``
-4. Le serveur MLflow doit être joignable
-
-Voir ``docs/SPRINT_9_GNN_DASHBOARD.md`` pour le détail.
+Toutes utilisent le même backend : jointure
+``gold.dim_spatial_grid_mapping`` × ``gold.trafic_predictions`` rendue via
+pydeck (fallback dataframe si pydeck absent).
 """
 
 from __future__ import annotations
@@ -32,95 +28,26 @@ from src.models.stgcn_wrapper import STGCNWrapper
 
 logger = logging.getLogger(__name__)
 
+_DEFAULT_HORIZONS = (5, 15, 30, 60, 180, 360)
 
-def render_gnn_map_section() -> None:
-    """Sprint 9 — Carte GNN géographique (préparée, désactivée par défaut).
 
-    Affiche un bandeau "préparation" si le widget est désactivé, ou
-    la carte des prédictions si activé.
-    """
-    st.markdown("##### 🗺️ Carte GNN (prédictions spatiales)")
-
-    # Bandeau de transparence
-    if not is_gnn_map_visible():
-        st.markdown(
-            """
-            <div style="background:linear-gradient(135deg, var(--border-card) 0%, var(--persona-elu) 100%);
-                        border:1px dashed var(--persona-elu-accent);border-radius:8px;padding:1rem;margin:0.5rem 0;">
-                <div style="font-size:0.8rem;opacity:0.8;text-transform:uppercase;
-                            letter-spacing:1px;">🟡 Sprint 9 — Préparé, non activé</div>
-                <div style="font-size:0.95rem;margin:0.5rem 0;">
-                    La carte GNN est <b>préparée mais désactivée</b> par défaut.
-                </div>
-                <div style="font-size:0.85rem;opacity:0.7;">
-                    Pour l'activer : set <code>LYONFLOW_DASHBOARD_GNN_MAP=true</code> dans .env,
-                    puis redémarrer Streamlit. Nécessite aussi un modèle .pt
-                    entraîné (DAG <code>retrain_gnn</code>) et le serveur MLflow joignable.
-                </div>
-            </div>
-            """,
-            unsafe_allow_html=True,
-        )
-        return
-
-    # Section activée
-    if not is_stgcn_enabled():
-        st.warning("STGCN désactivé dans LYONFLOW_MODELS_ACTIVE — carte non disponible.")
-        return
-
-    if not is_mlflow_available():
-        st.warning("MLflow non disponible — les prédictions ne peuvent pas être récupérées.")
-        return
-
-    # 1. Charger le mapping spatial (nœuds H3)
-    mapping_df = cached_spatial_mapping(force_mock=False)
-    if mapping_df.empty:
-        st.info("Mapping spatial non disponible. Lance le DAG `build_spatial_mapping` d'abord.")
-        return
-
-    # 2. Charger les prédictions
-    horizon = st.selectbox(
-        "Horizon de prédiction",
-        [5, 15, 30, 60, 180, 360],
-        index=3,
-        key="gnn_map_horizon",
-    )
-    preds_df = load_traffic_predictions(horizon_minutes=horizon, limit=500)
-    if preds_df.empty:
-        st.info(f"Pas de prédictions pour H+{horizon}min. Lance le training d'abord.")
-        return
-
-    # 3. Tenter de charger le modèle GNN
-    model_status = _check_gnn_model(horizon)
-    if not model_status["loaded"]:
-        st.warning(
-            f"Modèle STGCN H+{horizon}min non chargé : {model_status['reason']}. "
-            "La carte affichera les prédictions XGBoost à la place."
-        )
-        # Fallback sur les prédictions sans info modèle
-        model_source = model_status.get("fallback", "XGBoost (XGBoostSpeed)")
-
-    # 4. Jointure mapping + predictions
-    if "node_idx" in preds_df.columns:
-        merged = mapping_df.merge(preds_df, on="node_idx", how="inner")
-    else:
-        st.warning("Colonne node_idx absente des prédictions.")
-        return
-
-    if merged.empty:
-        st.info("Aucune correspondance entre mapping et prédictions.")
-        return
-
-    # 5. Rendu carte pydeck
-    _render_pydeck_map(merged, horizon)
+# -----------------------------------------------------------------------------
+# Helpers
+# -----------------------------------------------------------------------------
+def _speed_to_color(speed: float) -> list:
+    if speed is None:
+        return [128, 128, 128, 180]
+    if speed < 10:
+        return [231, 76, 60, 220]
+    if speed < 20:
+        return [255, 152, 0, 220]
+    if speed < 35:
+        return [255, 193, 7, 220]
+    return [76, 175, 80, 220]
 
 
 def _check_gnn_model(horizon: int) -> dict:
-    """Vérifie la disponibilité du modèle GNN pour un horizon donné.
-
-    Returns:
-        Dict avec ``loaded`` (bool), ``reason`` (str), ``fallback`` (str).
-    """
+    """Vérifie disponibilité modèle GNN pour horizon donné."""
     try:
         wrapper = STGCNWrapper.get(horizon)
         if wrapper.load():
@@ -138,38 +65,40 @@ def _check_gnn_model(horizon: int) -> dict:
         }
 
 
-def _render_pydeck_map(merged: pd.DataFrame, horizon: int) -> None:
-    """Rendu Pydeck de la carte GNN (scatterplot coloré par prédiction).
+def _load_merged(horizon: int, limit: int = 500) -> pd.DataFrame | None:
+    """Charge mapping H3 + prédictions et joint sur ``node_idx``.
 
-    Args:
-        merged: DataFrame avec colonnes lat, lng, predicted_speed, model_name, model_version.
-        horizon: horizon sélectionné (pour le titre).
+    Returns:
+        DataFrame mergée ou None si données absentes/erreur.
     """
+    mapping_df = cached_spatial_mapping(force_mock=False)
+    if mapping_df.empty:
+        return None
+
+    preds_df = load_traffic_predictions(horizon_minutes=horizon, limit=limit)
+    if preds_df.empty or "node_idx" not in preds_df.columns:
+        return None
+
+    merged = mapping_df.merge(preds_df, on="node_idx", how="inner")
+    return merged if not merged.empty else None
+
+
+def _render_pydeck(merged: pd.DataFrame, height: int, zoom: float = 11.0) -> str:
+    """Rendu pydeck. Retourne nom du modèle dominant pour affichage caller."""
     try:
         import pydeck as pdk
     except ImportError:
         st.warning("Pydeck non installé — fallback liste tabulaire.")
         st.dataframe(
-            merged[["node_idx", "channel_id", "lat", "lng", "predicted_speed", "model_name"]].head(50),
+            merged[["node_idx", "lat", "lng", "predicted_speed", "model_name"]].head(50),
             use_container_width=True,
             hide_index=True,
         )
-        return
-
-    # Couleur selon predicted_speed (0-130 km/h)
-    def _speed_to_color(speed: float) -> list:
-        if speed < 10:
-            return [231, 76, 60, 220]  # rouge (bouché)
-        if speed < 20:
-            return [255, 152, 0, 220]  # orange
-        if speed < 35:
-            return [255, 193, 7, 220]  # jaune
-        return [76, 175, 80, 220]  # vert (fluide)
+        return "?"
 
     merged = merged.copy()
     merged["color"] = merged["predicted_speed"].apply(_speed_to_color)
 
-    # Modèle dominant dans le dataset
     dominant_model = (
         merged["model_name"].mode().iloc[0]
         if "model_name" in merged.columns and not merged["model_name"].mode().empty
@@ -184,14 +113,12 @@ def _render_pydeck_map(merged: pd.DataFrame, horizon: int) -> None:
         get_radius=100,
         pickable=True,
     )
-
     view_state = pdk.ViewState(
         latitude=45.76,
         longitude=4.84,
-        zoom=11.0,
+        zoom=zoom,
         pitch=0,
     )
-
     deck = pdk.Deck(
         layers=[layer],
         initial_view_state=view_state,
@@ -199,9 +126,8 @@ def _render_pydeck_map(merged: pd.DataFrame, horizon: int) -> None:
         tooltip={
             "html": (
                 "<b>Node {node_idx}</b><br/>"
-                "Channel: {channel_id}<br/>"
                 "Speed: <b>{predicted_speed} km/h</b><br/>"
-                "Model: {model_name} v{model_version}"
+                "Model: {model_name}"
             ),
             "style": {
                 "backgroundColor": COLORS["bg_card"],
@@ -211,29 +137,151 @@ def _render_pydeck_map(merged: pd.DataFrame, horizon: int) -> None:
             },
         },
     )
+    st.pydeck_chart(deck, use_container_width=True, height=height)
+    return dominant_model
 
-    st.pydeck_chart(deck, use_container_width=True, height=450)
 
-    # Légende
+def _legend_inline() -> None:
     st.markdown(
-        """
-        **Légende** : 🟢 Fluide (>35 km/h) · 🟡 Modéré (20-35) · 🟠 Dense (10-20) · 🔴 Bloqué (<10)
-        """
-    )
-    st.caption(
-        f"Carte alimentée par {dominant_model} (H+{horizon}min). "
-        f"{len(merged)} nœuds affichés. "
-        f"Données MLflow : voir Pro_7 → Model Registry."
+        "**Légende** : 🟢 Fluide (>35 km/h) · 🟡 Modéré (20-35) · 🟠 Dense (10-20) · 🔴 Bloqué (<10)"
     )
 
-    # Toggle GNN vs XGBoost (debug)
-    with st.expander("🔬 Détails techniques"):
-        st.markdown(
-            f"""
-            - **Modèle** : `{dominant_model}`
-            - **Horizon** : H+{horizon}min
-            - **Nœuds affichés** : {len(merged)}
-            - **Source** : `gold.trafic_predictions` (jointure `gold.dim_spatial_grid_mapping`)
-            - **Backend carte** : pydeck + Carto Positron (gratuit, sans token)
-            """
+
+# -----------------------------------------------------------------------------
+# API publique : carte plein-format avec sélecteur horizon
+# -----------------------------------------------------------------------------
+def render_traffic_map(
+    *,
+    height: int = 450,
+    horizon_default: int = 60,
+    show_horizon_selector: bool = True,
+    show_legend: bool = True,
+    show_caption: bool = True,
+    key_suffix: str = "",
+) -> None:
+    """Carte trafic plein format. Pré-requis : flag activé + données disponibles.
+
+    Args:
+        height: hauteur de la carte en pixels.
+        horizon_default: horizon initial sélectionné (min).
+        show_horizon_selector: affiche le selectbox horizon.
+        show_legend: affiche la légende sous la carte.
+        show_caption: affiche la caption modèle/source.
+        key_suffix: suffixe pour les keys Streamlit (évite collisions multi-instances).
+    """
+    if not is_gnn_map_visible():
+        st.info(
+            "Carte trafic désactivée. Set `LYONFLOW_DASHBOARD_GNN_MAP=true` "
+            "dans .env pour l'afficher."
         )
+        return
+
+    horizon = horizon_default
+    if show_horizon_selector:
+        try:
+            default_idx = _DEFAULT_HORIZONS.index(horizon_default)
+        except ValueError:
+            default_idx = 3
+        horizon = st.selectbox(
+            "Horizon de prédiction",
+            _DEFAULT_HORIZONS,
+            index=default_idx,
+            key=f"traffic_map_horizon_{key_suffix}",
+            format_func=lambda x: f"H+{x}min",
+        )
+
+    merged = _load_merged(horizon, limit=500)
+    if merged is None:
+        st.info(
+            f"Pas de prédictions disponibles pour H+{horizon}min. "
+            "Vérifie que `gold.trafic_predictions` est peuplée "
+            "(DAG retrain XGBoost :25 / GNN 03h)."
+        )
+        return
+
+    # Bandeau modèle (best effort)
+    if is_stgcn_enabled() and is_mlflow_available():
+        status = _check_gnn_model(horizon)
+        if not status["loaded"]:
+            st.caption(f"⚠️ GNN indisponible ({status['reason']}) — fallback XGBoost.")
+
+    dominant = _render_pydeck(merged, height=height)
+    if show_legend:
+        _legend_inline()
+    if show_caption:
+        st.caption(
+            f"Source : `gold.trafic_predictions` × `gold.dim_spatial_grid_mapping` · "
+            f"Modèle : {dominant} · {len(merged)} nœuds · H+{horizon}min"
+        )
+
+
+# -----------------------------------------------------------------------------
+# API publique : carte compacte (Usager / Elu)
+# -----------------------------------------------------------------------------
+def render_traffic_map_compact(
+    *,
+    height: int = 280,
+    horizon_minutes: int = 30,
+    key_suffix: str = "",
+) -> None:
+    """Carte trafic compacte sans sélecteur (Usager / Elu).
+
+    Args:
+        height: hauteur réduite.
+        horizon_minutes: horizon fixe (pas de sélecteur).
+        key_suffix: suffixe key Streamlit.
+    """
+    if not is_gnn_map_visible():
+        return  # silence côté Usager/Elu, pas d'info bandeau intrusif
+
+    merged = _load_merged(horizon_minutes, limit=400)
+    if merged is None:
+        st.caption(
+            f"🟡 Carte trafic indisponible (pas de prédictions H+{horizon_minutes}min)"
+        )
+        return
+
+    _render_pydeck(merged, height=height, zoom=10.7)
+    _legend_inline()
+
+
+# -----------------------------------------------------------------------------
+# API publique : section Pro_7 (bandeau status + carte)
+# -----------------------------------------------------------------------------
+def render_gnn_map_section() -> None:
+    """Section dédiée Pro_7 Model Monitoring — bandeau status + carte.
+
+    Wrapper rétro-compatible utilisé par Pro_7. Affiche un bandeau si le flag
+    est désactivé. Sinon délègue à ``render_traffic_map()``.
+    """
+    st.markdown("##### 🗺️ Carte trafic — prédictions spatiales")
+
+    if not is_gnn_map_visible():
+        st.markdown(
+            """
+            <div style="background:linear-gradient(135deg, var(--border-card) 0%, var(--persona-elu) 100%);
+                        border:1px dashed var(--persona-elu-accent);border-radius:8px;padding:1rem;margin:0.5rem 0;">
+                <div style="font-size:0.8rem;opacity:0.8;text-transform:uppercase;
+                            letter-spacing:1px;">🟡 Carte désactivée</div>
+                <div style="font-size:0.95rem;margin:0.5rem 0;">
+                    Set <code>LYONFLOW_DASHBOARD_GNN_MAP=true</code> dans .env pour activer.
+                </div>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
+        return
+
+    if not is_stgcn_enabled():
+        st.warning("STGCN désactivé dans LYONFLOW_MODELS_ACTIVE — carte non disponible.")
+        return
+    if not is_mlflow_available():
+        st.warning("MLflow non disponible — prédictions non récupérables.")
+        return
+
+    render_traffic_map(
+        height=450,
+        horizon_default=60,
+        show_horizon_selector=True,
+        key_suffix="pro7",
+    )
