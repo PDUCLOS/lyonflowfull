@@ -65,7 +65,9 @@ selected = st.selectbox(
 if selected:
     fav = next((f for f in favorites if f.get("name") == selected), None)
     if fav:
-        render_recurrent_trip_card(fav, expanded=True)
+        # Préfixe "detail_" pour éviter le duplicate Streamlit key avec la liste
+        # (render_favorite_list utilise déjà fav_view_{id} pour chaque favori).
+        render_recurrent_trip_card(fav, expanded=True, key_prefix="detail_")
 
 st.markdown("---")
 

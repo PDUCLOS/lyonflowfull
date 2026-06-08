@@ -486,9 +486,24 @@ def load_tcl_lines(force_mock: bool = False) -> list[dict]:
 
 
 def load_lyon_addresses(force_mock: bool = False) -> list[str]:
-    """Adresses mock Lyon (pour autocomplete search_bar)."""
-    # Pas de DB — données statiques
-    return usager_mock.LYON_ADDRESSES_MOCK
+    """Adresses mock Lyon (pour autocomplete search_bar).
+
+    Source unifiée : src.data.mock.lyon_addresses.LYON_ADDRESSES.
+    Format dict {name, lon, lat, type} — on extrait juste les noms ici.
+    """
+    from src.data.mock.lyon_addresses import get_address_names
+
+    return get_address_names()
+
+
+def load_lyon_addresses_with_coords(force_mock: bool = False) -> list[dict]:
+    """Adresses mock Lyon avec coordonnées GPS complètes.
+
+    Pour composants qui ont besoin de lat/lon (carte, marker).
+    """
+    from src.data.mock.lyon_addresses import LYON_ADDRESSES
+
+    return LYON_ADDRESSES
 
 
 # =============================================================================

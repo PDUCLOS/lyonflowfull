@@ -5,6 +5,9 @@ Affiche :
 - Liste des segments avec longueur / vitesse / durée
 - Comparaison temps actuel vs temps prédit (H+30min par défaut)
 - Bouton "recommencer"
+
+Sprint 8 — utilise la liste d'adresses centralisée
+src.data.mock.lyon_addresses.LYON_ADDRESSES (20 lieux avec coords GPS).
 """
 
 from __future__ import annotations
@@ -12,38 +15,8 @@ from __future__ import annotations
 import streamlit as st
 
 from dashboard.components.colors import COLORS
+from src.data.mock.lyon_addresses import get_address_names, resolve_address
 from src.routing import Itinerary, compute_itinerary
-
-# Mapping mock adresse → (lon, lat) — à remplacer par Nominatim Sprint 6+
-ADDRESS_COORDS = {
-    "part-dieu": (4.8589, 45.7607),
-    "bellecour": (4.8324, 45.7575),
-    "confluence": (4.8165, 45.7405),
-    "vaise": (4.8058, 45.7798),
-    "mermoz": (4.8700, 45.7310),
-    "hôtel de ville": (4.8342, 45.7672),
-    "perrache": (4.8340, 45.7480),
-    "jean macé": (4.8417, 45.7456),
-    "saxe": (4.8461, 45.7496),
-    "guillotière": (4.8408, 45.7431),
-    "villeurbanne": (4.8810, 45.7715),
-    "bron": (4.9100, 45.7370),
-}
-
-
-def _resolve_address(text: str) -> tuple[float, float] | None:
-    """Résout une adresse textuelle en (lon, lat).
-
-    Mock simple : matching par mot-clé dans ADDRESS_COORDS.
-    Sprint 6+ : Nominatim (OpenStreetMap geocoder).
-    """
-    if not text:
-        return None
-    text_lower = text.lower().strip()
-    for key, coords in ADDRESS_COORDS.items():
-        if key in text_lower or text_lower in key:
-            return coords
-    return None
 
 
 def render_itinerary_result(
@@ -58,12 +31,13 @@ def render_itinerary_result(
         destination: adresse de destination (texte)
         horizon_minutes: 0 = maintenant, sinon H+ (utilise vitesse prédite)
     """
-    origin_coords = _resolve_address(origin)
-    dest_coords = _resolve_address(destination)
+    origin_coords = resolve_address(origin)
+    dest_coords = resolve_address(destination)
 
     if not origin_coords:
+        sample = ", ".join(get_address_names()[:5])
         st.error(
-            f"❌ Adresse d'origine non reconnue : '{origin}'. Essayez : {', '.join(list(ADDRESS_COORDS.keys())[:5])}..."
+            f"❌ Adresse d'origine non reconnue : '{origin}'. Essayez : {sample}..."
         )
         return
     if not dest_coords:

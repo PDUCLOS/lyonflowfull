@@ -177,6 +177,12 @@ def cached_lyon_addresses(force_mock: bool = False) -> list[str]:
 
 
 @st.cache_data(ttl=TTL_STATIC, show_spinner=False)
+def cached_lyon_addresses_with_coords(force_mock: bool = False) -> list[dict]:
+    """Adresses Lyon avec coords GPS (pour cartes, markers)."""
+    return dl.load_lyon_addresses_with_coords(force_mock=force_mock)
+
+
+@st.cache_data(ttl=TTL_STATIC, show_spinner=False)
 def cached_spatial_mapping(force_mock: bool = False) -> pd.DataFrame:
     return dl.load_spatial_mapping(force_mock=force_mock)
 

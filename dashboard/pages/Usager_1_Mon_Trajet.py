@@ -101,30 +101,33 @@ if st.session_state.get("results_loaded"):
     st.markdown("---")
 
     # === ITINÉRAIRE TRAFFIC-AWARE (Sprint 6+) ===
+    # Réutilise les valeurs du search_bar (cliquable) — pas de duplication d'inputs.
     st.markdown("### 🛣️ Itinéraire avec trafic")
     st.caption(
         "Calcul du chemin le plus rapide basé sur les vitesses **actuelles** "
-        "par tronçon. Compare avec H+30min pour anticiper."
+        "par tronçon. Compare avec H+30min pour anticiper. "
+        "Départ/destination repris de la barre de recherche ci-dessus."
     )
 
-    itin_col1, itin_col2, itin_col3 = st.columns([2, 2, 1])
+    itin_col1, itin_col2 = st.columns([3, 1])
     with itin_col1:
-        st.session_state.setdefault("itin_origin", "Part-Dieu")
-        origin_input = st.text_input(
-            "🟢 Départ",
-            value=st.session_state["itin_origin"],
-            key="itin_origin_input",
+        st.markdown(
+            f"""
+            <div style="background:var(--bg-card);padding:0.8rem 1rem;border-radius:6px;
+                        border-left:4px solid #4CAF50;display:flex;align-items:center;
+                        gap:0.6rem;font-size:0.95rem;">
+                <span style="background:#4CAF50;color:white;padding:0.2rem 0.6rem;
+                             border-radius:12px;font-size:0.75rem;font-weight:600;">🟢 DÉPART</span>
+                <span style="font-weight:600;">{search['origin']}</span>
+                <span style="opacity:0.4;margin:0 0.5rem;">→</span>
+                <span style="background:#F44336;color:white;padding:0.2rem 0.6rem;
+                             border-radius:12px;font-size:0.75rem;font-weight:600;">🔴 ARRIVÉE</span>
+                <span style="font-weight:600;">{search['destination']}</span>
+            </div>
+            """,
+            unsafe_allow_html=True,
         )
-        st.session_state["itin_origin"] = origin_input
     with itin_col2:
-        st.session_state.setdefault("itin_destination", "Bellecour")
-        dest_input = st.text_input(
-            "🔴 Arrivée",
-            value=st.session_state["itin_destination"],
-            key="itin_dest_input",
-        )
-        st.session_state["itin_destination"] = dest_input
-    with itin_col3:
         horizon = st.selectbox(
             "🕐 Trafic",
             [0, 30, 60, 180, 360],
@@ -133,10 +136,15 @@ if st.session_state.get("results_loaded"):
             key="itin_horizon",
         )
 
-    if st.button("🚗 Calculer l'itinéraire", type="primary", use_container_width=True, key="itin_calc_btn"):
+    if st.button(
+        "🚗 Calculer l'itinéraire",
+        type="primary",
+        use_container_width=True,
+        key="itin_calc_btn",
+    ):
         render_itinerary_result(
-            origin=st.session_state["itin_origin"],
-            destination=st.session_state["itin_destination"],
+            origin=search["origin"],
+            destination=search["destination"],
             horizon_minutes=horizon,
         )
 
@@ -146,18 +154,56 @@ if st.session_state.get("results_loaded"):
     st.markdown("### ⭐ Recommandations multimodales")
     st.caption("Compare différents modes de transport (mock — Sprint 6+ : ranking traffic-aware)")
 
-    if options:
-        top = options[0]
+    # Filtre : ne garder que les options dont le mode est autorisé
+    # (mapping option.mode → label user-facing)
+    MODE_TO_LABEL = {
+        "transit": "🚇 Métro",
+        "tram": "🚊 Tram",
+        "bus": "🚌 Bus",
+        "bike": "🚲 Vélov",
+        "car": "🚗 Voiture",
+        "walk": "🚶 Marche",
+    }
+    authorized = set(search.get("modes") or [])
+    filtered_options = [
+        opt for opt in options
+        if MODE_TO_LABEL.get(opt.get("mode")) in authorized
+    ]
+    if not filtered_options:
+        filtered_options = options  # fallback si tous filtrés
+        st.caption("⚠️ Aucun mode autorisé ne correspond aux options mock — toutes affichées.")
+
+    if filtered_options:
+        # Sélecteur : l'utilisateur choisit la reco principale
+        mode_choices = [
+            f"{opt.get('mode_icon', '🚦')} {opt.get('mode_label', 'Mode')}"
+            + f" — {opt.get('duration_text', '? min')}"
+            for opt in filtered_options
+        ]
+        selected_idx = st.selectbox(
+            "Mode de transport mis en avant",
+            range(len(filtered_options)),
+            format_func=lambda i: mode_choices[i],
+            index=0,
+            key="usager_reco_selector",
+        )
+        top = filtered_options[selected_idx]
         render_recommendation_card(top)
-        render_why_explainer(top.get("why", []))
+        why = top.get("why", [])
+        if isinstance(why, str):
+            why = [why]
+        if why:
+            render_why_explainer(why)
         if top.get("steps"):
             with st.expander("🧭 Voir les étapes détaillées", expanded=False):
                 render_steps(top["steps"])
 
-    # Alternatives
-    if len(options) > 1:
+    # Alternatives (les autres options)
+    if len(filtered_options) > 1:
         st.markdown("### 🔄 Autres options")
-        for opt in options[1:]:
+        for opt in filtered_options:
+            if opt is filtered_options[selected_idx]:
+                continue
             render_alternative_card(opt)
 
     st.markdown("---")
