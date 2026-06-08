@@ -1,6 +1,6 @@
 """Widget — Ticker horizontal d'alertes (style 'Tape' en CSS).
 
-Sprint 8 — Charge les alertes via data_loader.load_recent_alerts().
+Sprint 8 — Charge les alertes via data_loader.cached_recent_alerts().
 """
 
 from __future__ import annotations
@@ -8,7 +8,7 @@ from __future__ import annotations
 import streamlit as st
 
 from dashboard.components.colors import COLORS
-from src.data.data_loader import load_recent_alerts
+from dashboard.components.data_cache import cached_recent_alerts
 
 
 def render_alert_ticker(alerts: list | None = None) -> None:
@@ -18,7 +18,7 @@ def render_alert_ticker(alerts: list | None = None) -> None:
         alerts: liste d'alertes. Si None, charge via data_loader.
     """
     if alerts is None:
-        df = load_recent_alerts(force_mock=False)
+        df = cached_recent_alerts(force_mock=False)
         alerts = df.to_dict("records") if not df.empty else []
 
     if not alerts:

@@ -1,13 +1,13 @@
 """Widget — Top décisions à arbitrer ce trimestre.
 
-Sprint 8 — Bottlenecks via data_loader.load_bottlenecks_top().
+Sprint 8 — Bottlenecks via data_loader.cached_bottlenecks_top().
 """
 
 from __future__ import annotations
 
 import streamlit as st
 
-from src.data.data_loader import load_bottlenecks_top
+from dashboard.components.data_cache import cached_bottlenecks_top
 
 
 def render_top_decisions(n: int = 5) -> None:
@@ -18,7 +18,7 @@ def render_top_decisions(n: int = 5) -> None:
     """
     st.markdown(f"##### 🎯 Top {n} décisions à arbitrer")
 
-    bottlenecks = load_bottlenecks_top(force_mock=False)
+    bottlenecks = cached_bottlenecks_top(force_mock=False)
     for i, b in enumerate(bottlenecks[:n], 1):
         zone = b.get("zone", "—")
         lignes = ", ".join(b.get("lines_impacted", []))

@@ -1,6 +1,6 @@
 """Widget — Heatmap OTP Plotly (lignes × heures).
 
-Sprint 8 — Charge via data_loader.load_otp_heatmap_data() (vue Gold.
+Sprint 8 — Charge via data_loader.cached_otp_heatmap_data() (vue Gold.
 mv_otp_grid_7d ou équivalent). Fallback mock si DB down.
 """
 
@@ -10,7 +10,7 @@ import pandas as pd
 import streamlit as st
 
 from dashboard.components.colors import COLORS
-from src.data.data_loader import load_otp_heatmap_data
+from dashboard.components.data_cache import cached_otp_heatmap_data
 from src.data.mock.pro_tcl import LINE_BASE_OTP, OTP_GRID
 
 
@@ -24,7 +24,7 @@ def render_otp_heatmap(otp_data: dict | None = None, days: int = 1, height: int 
     """
     if otp_data is None:
         # Tente DB d'abord (Gold mv_otp_grid), fallback mock
-        df = load_otp_heatmap_data(force_mock=False)
+        df = cached_otp_heatmap_data(force_mock=False)
         if not df.empty:
             # Reconstruit le format {line_id: {date: [otp_per_hour]}}
             otp_data = {}

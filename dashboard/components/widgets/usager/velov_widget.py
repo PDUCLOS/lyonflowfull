@@ -1,7 +1,7 @@
 """Widget — Disponibilité Vélov des stations proches.
 
 Sprint 6 — binding DB Silver via data_loader :
-* ``stations=None`` → ``data_loader.load_velov_stations()`` (DB Silver ou mock)
+* ``stations=None`` → ``data_loader.cached_velov_stations()`` (DB Silver ou mock)
 * Le widget reste rétro-compatible (accepte toujours une liste en arg).
 """
 
@@ -10,7 +10,7 @@ from __future__ import annotations
 import streamlit as st
 
 from dashboard.components.colors import COLORS
-from src.data.data_loader import load_velov_stations
+from dashboard.components.data_cache import cached_velov_stations
 
 
 def render_velov_widget(stations: list | None = None, max_stations: int = 3) -> None:
@@ -21,7 +21,7 @@ def render_velov_widget(stations: list | None = None, max_stations: int = 3) -> 
         max_stations: nombre max de stations à afficher.
     """
     if stations is None:
-        stations = load_velov_stations(force_mock=False)
+        stations = cached_velov_stations(force_mock=False)
 
     stations = stations[:max_stations]
 

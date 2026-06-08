@@ -1,7 +1,7 @@
 """Widget — KPI cards denses par ligne (OTP, retard, fréquence, charge).
 
 Sprint 6 — binding DB :
-* ``line_ids=None`` → ``data_loader.load_line_kpis()`` (DB Gold vue matérialisée
+* ``line_ids=None`` → ``data_loader.cached_line_kpis()`` (DB Gold vue matérialisée
   ``gold.mv_line_kpis_live`` ou mock fallback).
 * Le widget reste rétro-compatible (accepte un dict en arg).
 """
@@ -11,7 +11,7 @@ from __future__ import annotations
 import streamlit as st
 
 from dashboard.components.colors import COLORS
-from src.data.data_loader import load_line_kpis
+from dashboard.components.data_cache import cached_line_kpis
 
 
 def render_line_kpis(
@@ -27,7 +27,7 @@ def render_line_kpis(
         kpis_dict: dict pré-calculé. Si None, tente DB → fallback mock.
     """
     if kpis_dict is None:
-        kpis_dict = load_line_kpis(force_mock=False)
+        kpis_dict = cached_line_kpis(force_mock=False)
 
     if line_ids is None:
         line_ids = list(kpis_dict.keys())

@@ -3,14 +3,14 @@
 Affiche 2 champs (départ + destination) avec auto-complétion simple
 basée sur des adresses Lyon (mock statique — pas de DB query).
 
-Sprint 8 — Adresses chargées via data_loader.load_lyon_addresses().
+Sprint 8 — Adresses chargées via data_loader.cached_lyon_addresses().
 """
 
 from __future__ import annotations
 
 import streamlit as st
 
-from src.data.data_loader import load_lyon_addresses
+from dashboard.components.data_cache import cached_lyon_addresses
 
 
 def render_search_bar() -> dict:
@@ -41,7 +41,7 @@ def render_search_bar() -> dict:
         )
 
     # Auto-complétion simple (adresses Lyon, statiques)
-    addresses = load_lyon_addresses(force_mock=False)
+    addresses = cached_lyon_addresses(force_mock=False)
     with st.expander("📍 Adresses suggérées", expanded=False):
         for addr in addresses[:5]:
             st.caption(f"• {addr}")

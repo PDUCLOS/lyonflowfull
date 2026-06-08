@@ -1,13 +1,13 @@
 """Widget — Calculateur ROI (valeur du temps × voyageurs × gain).
 
-Sprint 8 — Bottlenecks via data_loader.load_bottlenecks_top().
+Sprint 8 — Bottlenecks via data_loader.cached_bottlenecks_top().
 """
 
 from __future__ import annotations
 
 import streamlit as st
 
-from src.data.data_loader import load_bottlenecks_top
+from dashboard.components.data_cache import cached_bottlenecks_top
 
 
 def render_roi_calculator(line_id: str | None = None) -> None:
@@ -18,7 +18,7 @@ def render_roi_calculator(line_id: str | None = None) -> None:
     """
     st.markdown("##### 🧮 Calculateur ROI")
 
-    bottlenecks = load_bottlenecks_top(force_mock=False)
+    bottlenecks = cached_bottlenecks_top(force_mock=False)
     if not bottlenecks:
         st.info("Aucun bottleneck disponible.")
         return

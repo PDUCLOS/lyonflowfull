@@ -1,6 +1,6 @@
 """Widget — Comparaison multi-lignes.
 
-Sprint 8 — KPIs chargés via data_loader.load_line_kpis().
+Sprint 8 — KPIs chargés via data_loader.cached_line_kpis().
 """
 
 from __future__ import annotations
@@ -8,7 +8,7 @@ from __future__ import annotations
 import pandas as pd
 import streamlit as st
 
-from src.data.data_loader import load_line_kpis
+from dashboard.components.data_cache import cached_line_kpis
 
 
 def render_line_comparison(line_ids: list | None = None) -> None:
@@ -17,7 +17,7 @@ def render_line_comparison(line_ids: list | None = None) -> None:
     Args:
         line_ids: lignes à comparer. Si None, toutes.
     """
-    kpis_dict = load_line_kpis(force_mock=False)
+    kpis_dict = cached_line_kpis(force_mock=False)
     if line_ids is None:
         line_ids = list(kpis_dict.keys())
 

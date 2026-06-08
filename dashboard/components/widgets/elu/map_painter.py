@@ -4,7 +4,7 @@ En Sprint 4 : sélection manuelle d'une zone sur la carte.
 En Sprint 5 : component React custom (deck.gl + MapboxDraw) pour dessiner
 librement le tracé d'un aménagement.
 
-Sprint 8 — Bottlenecks via data_loader.load_bottlenecks_top() (fallback).
+Sprint 8 — Bottlenecks via data_loader.cached_bottlenecks_top() (fallback).
 """
 
 from __future__ import annotations
@@ -12,7 +12,7 @@ from __future__ import annotations
 import streamlit as st
 
 from dashboard.components.colors import COLORS
-from src.data.data_loader import load_bottlenecks_top
+from dashboard.components.data_cache import cached_bottlenecks_top
 
 
 def render_map_painter(height: int = 400) -> dict:
@@ -84,7 +84,7 @@ def render_map_painter(height: int = 400) -> dict:
 
     except ImportError:
         st.warning("⚠️ Folium non disponible — fallback selectbox")
-        bottlenecks = load_bottlenecks_top(force_mock=False)
+        bottlenecks = cached_bottlenecks_top(force_mock=False)
         zones = [b.get("zone", "—") for b in bottlenecks]
         if not zones:
             return {"selected_zone": None}

@@ -1,6 +1,6 @@
 """Widget — Courbe d'évolution sur 12 mois (Plotly).
 
-Sprint 8 — KPIs via data_loader.load_elu_kpis_dict().
+Sprint 8 — KPIs via data_loader.cached_elu_kpis_dict().
 """
 
 from __future__ import annotations
@@ -8,7 +8,7 @@ from __future__ import annotations
 import streamlit as st
 
 from dashboard.components.colors import COLORS
-from src.data.data_loader import load_elu_kpis_dict
+from dashboard.components.data_cache import cached_elu_kpis_dict
 
 
 def render_trend_chart(kpi_key: str = "part_modale_tc") -> None:
@@ -17,7 +17,7 @@ def render_trend_chart(kpi_key: str = "part_modale_tc") -> None:
     Args:
         kpi_key: clé du KPI dans KPI_12_MONTHS.
     """
-    kpis = load_elu_kpis_dict(force_mock=False)
+    kpis = cached_elu_kpis_dict(force_mock=False)
     kpi = kpis.get(kpi_key)
     if not kpi:
         st.warning(f"KPI '{kpi_key}' inconnu.")

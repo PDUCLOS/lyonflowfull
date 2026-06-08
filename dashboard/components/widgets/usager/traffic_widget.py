@@ -1,7 +1,7 @@
 """Widget — Trafic routier résumé (vitesse moyenne, bouchons).
 
 Sprint 6 — binding DB Gold via data_loader :
-* Si ``traffic=None`` → ``data_loader.load_traffic()`` tente la DB
+* Si ``traffic=None`` → ``data_loader.cached_traffic()`` tente la DB
   Gold, fallback mock si DB down.
 * Le widget reste 100% compatible avec l'ancien contrat (accepte toujours
   un dict ``traffic`` en arg, utilisé en tests / mode démo forcé).
@@ -12,7 +12,7 @@ from __future__ import annotations
 import streamlit as st
 
 from dashboard.components.colors import COLORS
-from src.data.data_loader import load_traffic
+from dashboard.components.data_cache import cached_traffic
 
 
 def render_traffic_widget(traffic: dict | None = None) -> None:
@@ -22,7 +22,7 @@ def render_traffic_widget(traffic: dict | None = None) -> None:
         traffic: dict de données. Si None, tente DB → fallback mock.
     """
     if traffic is None:
-        traffic = load_traffic(force_mock=False)
+        traffic = cached_traffic(force_mock=False)
 
     avg = traffic.get("average_speed_kmh", 0)
     level = traffic.get("congestion_level", "—")

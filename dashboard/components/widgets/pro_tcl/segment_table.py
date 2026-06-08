@@ -1,6 +1,6 @@
 """Widget — Table des segments interactive.
 
-Sprint 8 — Segments chargés via data_loader.load_segments() (silver.
+Sprint 8 — Segments chargés via data_loader.cached_segments() (silver.
 trafic_segments_clean). Fallback mock si DB down.
 """
 
@@ -9,7 +9,7 @@ from __future__ import annotations
 import pandas as pd
 import streamlit as st
 
-from src.data.data_loader import load_segments
+from dashboard.components.data_cache import cached_segments
 from src.data.mock.pro_tcl import DIAGNOSIS_LABELS, SEGMENTS
 
 
@@ -21,7 +21,7 @@ def render_segment_table(line_id: str | None = None, height: int = 400) -> None:
         height: hauteur de la table.
     """
     # Tente DB d'abord
-    df_seg = load_segments(force_mock=False)
+    df_seg = cached_segments(force_mock=False)
     if not df_seg.empty:
         # Adapte au format attendu (mock)
         segments = [

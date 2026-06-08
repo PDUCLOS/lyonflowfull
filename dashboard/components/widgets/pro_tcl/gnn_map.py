@@ -24,7 +24,7 @@ import pandas as pd
 import streamlit as st
 
 from dashboard.components.colors import COLORS
-from src.data.data_loader import load_spatial_mapping
+from dashboard.components.data_cache import cached_spatial_mapping
 from src.data.data_loader import load_traffic_predictions_for_map as load_traffic_predictions
 from src.ml.mlflow_integration import is_mlflow_available
 from src.ml.model_registry import is_gnn_map_visible, is_stgcn_enabled
@@ -73,7 +73,7 @@ def render_gnn_map_section() -> None:
         return
 
     # 1. Charger le mapping spatial (nœuds H3)
-    mapping_df = load_spatial_mapping(force_mock=False)
+    mapping_df = cached_spatial_mapping(force_mock=False)
     if mapping_df.empty:
         st.info("Mapping spatial non disponible. Lance le DAG `build_spatial_mapping` d'abord.")
         return

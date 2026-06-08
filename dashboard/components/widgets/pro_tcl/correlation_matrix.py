@@ -7,7 +7,7 @@ classification en 4 diagnostics :
 - operations (orange) : bus retard + trafic fluide
 - bus_lane_ok (bleu) : bus à l'heure + trafic bouché
 
-Sprint 8 — Charge via data_loader.load_correlation_matrix() pour les paires
+Sprint 8 — Charge via data_loader.cached_correlation_matrix() pour les paires
 bus×trafic. Fallback mock si DB down.
 """
 
@@ -17,7 +17,7 @@ import pandas as pd
 import streamlit as st
 
 from dashboard.components.colors import COLORS
-from src.data.data_loader import load_correlation_matrix
+from dashboard.components.data_cache import cached_correlation_matrix
 from src.data.mock.pro_tcl import (
     DIAGNOSIS_LABELS,
     SEGMENTS,
@@ -31,7 +31,7 @@ def render_correlation_matrix(line_id: str | None = None) -> None:
         line_id: si fourni, filtre sur cette ligne. Sinon, toutes.
     """
     # Charge la matrice de corrélation (DB ou mock)
-    corr_df = load_correlation_matrix(force_mock=False)
+    corr_df = cached_correlation_matrix(force_mock=False)
 
     # Charge les segments (pour le détail)
     segments = SEGMENTS

@@ -1,6 +1,6 @@
 """Widget — Carte réseau Pydeck (bus GPS colorés par retard).
 
-Sprint 8 — Positions bus chargées via data_loader.load_buses_positions()
+Sprint 8 — Positions bus chargées via data_loader.cached_buses_positions()
 (qui lit silver.tcl_vehicles_clean). Fallback mock si DB down.
 """
 
@@ -10,7 +10,7 @@ import pandas as pd
 import streamlit as st
 
 from dashboard.components.colors import COLORS
-from src.data.data_loader import load_buses_positions
+from dashboard.components.data_cache import cached_buses_positions
 from src.data.mock.pro_tcl import ALL_BUSES
 
 
@@ -33,7 +33,7 @@ def render_network_map(buses: list | None = None, height: int = 400) -> None:
         height: hauteur de la carte en pixels.
     """
     if buses is None:
-        df = load_buses_positions(force_mock=False)
+        df = cached_buses_positions(force_mock=False)
         if not df.empty:
             # Adapter le format DB → format attendu par le widget
             buses = [

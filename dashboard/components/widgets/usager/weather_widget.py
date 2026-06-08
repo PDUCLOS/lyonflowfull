@@ -9,7 +9,7 @@ from __future__ import annotations
 import streamlit as st
 
 from dashboard.components.colors import COLORS
-from src.data.data_loader import load_weather_hourly
+from dashboard.components.data_cache import cached_weather_hourly
 from src.data.mock.usager import MOCK_WEATHER
 
 
@@ -21,7 +21,7 @@ def render_weather_widget(weather: dict | None = None) -> None:
     """
     if weather is None:
         # Tente DB, fallback mock
-        df = load_weather_hourly(force_mock=False)
+        df = cached_weather_hourly(force_mock=False)
         if not df.empty:
             current = df.iloc[0].to_dict()
             # Adapter le format dict → attendu par le widget

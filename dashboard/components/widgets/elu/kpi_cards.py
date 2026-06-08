@@ -1,6 +1,6 @@
 """Widget — 5 KPI cards ronds (part modale, ponctualité, CO2, bottlenecks, satisfaction).
 
-Sprint 8 — KPIs chargés via data_loader.load_elu_kpis_dict().
+Sprint 8 — KPIs chargés via data_loader.cached_elu_kpis_dict().
 """
 
 from __future__ import annotations
@@ -8,12 +8,12 @@ from __future__ import annotations
 import streamlit as st
 
 from dashboard.components.colors import delta_color
-from src.data.data_loader import load_elu_kpis_dict
+from dashboard.components.data_cache import cached_elu_kpis_dict
 
 
 def render_kpi_cards() -> None:
     """Affiche les 5 KPI cards ronds avec deltas colorés."""
-    kpis = load_elu_kpis_dict(force_mock=False)
+    kpis = cached_elu_kpis_dict(force_mock=False)
     cols = st.columns(5)
     kpi_keys = list(kpis.keys())
 

@@ -1,13 +1,13 @@
 """Widget — Sélecteur d'un aménagement passé.
 
-Sprint 8 — Aménagements via data_loader.load_amenagements_passes().
+Sprint 8 — Aménagements via data_loader.cached_amenagements_passes().
 """
 
 from __future__ import annotations
 
 import streamlit as st
 
-from src.data.data_loader import load_amenagements_passes
+from dashboard.components.data_cache import cached_amenagements_passes
 
 
 def render_project_selector(key_suffix: str = "default") -> dict | None:
@@ -19,7 +19,7 @@ def render_project_selector(key_suffix: str = "default") -> dict | None:
     Returns:
         Dict aménagement sélectionné ou None.
     """
-    df = load_amenagements_passes(force_mock=False)
+    df = cached_amenagements_passes(force_mock=False)
     amenagements = df.to_dict("records") if not df.empty else []
     if not amenagements:
         st.info("Aucun aménagement passé disponible.")

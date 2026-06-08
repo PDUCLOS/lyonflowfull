@@ -1,6 +1,6 @@
 """Widget — Tableau ranké des 10 bottlenecks avec ROI.
 
-Sprint 8 — Bottlenecks via data_loader.load_bottlenecks_top().
+Sprint 8 — Bottlenecks via data_loader.cached_bottlenecks_top().
 """
 
 from __future__ import annotations
@@ -8,7 +8,7 @@ from __future__ import annotations
 import streamlit as st
 
 from dashboard.components.colors import COLORS
-from src.data.data_loader import load_bottlenecks_top
+from dashboard.components.data_cache import cached_bottlenecks_top
 
 
 def render_bottleneck_ranking(top_n: int | None = None) -> None:
@@ -17,7 +17,7 @@ def render_bottleneck_ranking(top_n: int | None = None) -> None:
     Args:
         top_n: nombre de bottlenecks à afficher. None = tous.
     """
-    bottlenecks = load_bottlenecks_top(force_mock=False)
+    bottlenecks = cached_bottlenecks_top(force_mock=False)
     if top_n:
         bottlenecks = bottlenecks[:top_n]
 

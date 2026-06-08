@@ -98,10 +98,10 @@ def render_model_registry() -> None:
 
     # Sprint 9 — charge les modèles depuis MLflow live (fallback mock si down)
     try:
-        from src.data.data_loader import load_mlflow_experiment_summary, load_mlflow_models
+        from dashboard.components.data_cache import cached_mlflow_experiment_summary, cached_mlflow_models
 
-        summary = load_mlflow_experiment_summary(force_mock=False)
-        models = load_mlflow_models(force_mock=False)
+        summary = cached_mlflow_experiment_summary(force_mock=False)
+        models = cached_mlflow_models(force_mock=False)
     except Exception:
         models = MOCK_MODELS
         summary = {"available": False, "run_count": 0, "model_names": []}
@@ -319,9 +319,9 @@ def render_metrics_comparison() -> None:
 
     # Sources live MLflow (fallback mock auto via data_loader)
     try:
-        from src.data.data_loader import load_mlflow_models
+        from dashboard.components.data_cache import cached_mlflow_models
 
-        models = load_mlflow_models(force_mock=False) or MOCK_MODELS
+        models = cached_mlflow_models(force_mock=False) or MOCK_MODELS
     except Exception:
         models = MOCK_MODELS
 
