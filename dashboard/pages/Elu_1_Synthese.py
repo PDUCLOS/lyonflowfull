@@ -4,6 +4,8 @@ from __future__ import annotations
 
 import streamlit as st
 
+from dashboard.components.data_cache import cached_bottlenecks_top, cached_elu_kpis_dict
+from dashboard.components.data_status import render_data_status_banner
 from dashboard.components.navigation import render_sidebar_navigation
 from dashboard.components.persona_guard import apply_persona_guard
 from dashboard.components.theme import inject_theme
@@ -15,7 +17,6 @@ from dashboard.components.widgets.elu import (
     render_top_decisions,
     render_trend_chart,
 )
-from src.data.mock.elu import BOTTLENECKS_TOP_10, KPI_12_MONTHS
 
 st.set_page_config(
     page_title="Synthèse exécutive — Élu · LyonFlowFull",
@@ -30,6 +31,7 @@ render_sidebar_navigation()
 # Pattern défensif : pm.is_widget_visible() pour chaque widget utilisé dans la page.
 
 st.title("📈 Synthèse exécutive — Métropole de Lyon")
+render_data_status_banner()
 
 # Bloc narratif
 render_executive_summary()
@@ -56,34 +58,37 @@ render_news_section()
 
 st.markdown("---")
 
-# Bouton PDF synthèse
+# Bouton PDF synthèse — données live (fallback mock auto via data_loader)
 st.markdown("##### 📄 Génération rapport PDF")
+kpis_dict = cached_elu_kpis_dict()
+bottlenecks_top = cached_bottlenecks_top()
 sections = {
     "title": "Synthèse exécutive — Métropole de Lyon",
     "kpis": [
         {
-            "label": k["label"],
-            "value": k["current"],
+            "label": k.get("label", "—"),
+            "value": k.get("current", 0),
             "unit": k.get("unit", ""),
-            "delta_ytd": k["delta_ytd"],
+            "delta_ytd": k.get("delta_ytd", 0),
         }
-        for k in KPI_12_MONTHS.values()
+        for k in kpis_dict.values()
     ],
     "bottlenecks": [
         {
-            "rank": b["rank"],
-            "zone": b["zone"],
-            "lines_impacted": b["lines_impacted"],
-            "voyageurs_jour": b["voyageurs_jour"],
-            "gain_min": b["gain_min"],
-            "cout_M_euros": b["cout_M_euros"],
-            "roi_mois": b["roi_mois"],
+            "rank": b.get("rank", i + 1),
+            "zone": b.get("zone", "—"),
+            "lines_impacted": b.get("lines_impacted", []),
+            "voyageurs_jour": b.get("voyageurs_jour", 0),
+            "gain_min": b.get("gain_min", 0),
+            "cout_M_euros": b.get("cout_M_euros", 0),
+            "roi_mois": b.get("roi_mois", 0),
         }
-        for b in BOTTLENECKS_TOP_10[:5]
+        for i, b in enumerate(bottlenecks_top[:5])
     ],
     "decisions": [
-        f"{b['zone']} — {b['gain_min']} min gagnées, {b['cout_M_euros']} M€, ROI {int(b['roi_mois'])} mois"
-        for b in BOTTLENECKS_TOP_10[:5]
+        f"{b.get('zone', '—')} — {b.get('gain_min', 0)} min gagnées, "
+        f"{b.get('cout_M_euros', 0)} M€, ROI {int(b.get('roi_mois', 0))} mois"
+        for b in bottlenecks_top[:5]
     ],
 }
 render_pdf_generator(sections)

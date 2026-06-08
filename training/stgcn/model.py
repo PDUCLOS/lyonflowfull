@@ -246,6 +246,28 @@ class SpatioTemporalGCN:
         """Nombre total de paramètres entraînables."""
         return sum(p.numel() for p in self._model.parameters() if p.requires_grad)
 
+    def eval(self):
+        """Bascule le nn.Module interne en mode evaluation (delegate)."""
+        self._model.eval()
+        return self
+
+    def train(self, mode: bool = True):
+        """Bascule le nn.Module interne en mode train/eval (delegate)."""
+        self._model.train(mode)
+        return self
+
+    def parameters(self):
+        """Iterateur sur les parametres du nn.Module interne (delegate)."""
+        return self._model.parameters()
+
+    def state_dict(self):
+        """state_dict du nn.Module interne (delegate)."""
+        return self._model.state_dict()
+
+    def load_state_dict(self, state_dict, strict: bool = True):
+        """Charge un state_dict dans le nn.Module interne (delegate)."""
+        return self._model.load_state_dict(state_dict, strict=strict)
+
 
 # -----------------------------------------------------------------------------
 # Wrappers internes (encapsulent les sub-modules dans un seul nn.Module)

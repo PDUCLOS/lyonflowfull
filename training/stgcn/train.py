@@ -175,6 +175,21 @@ class STGCNTrainer:
         self._train_idx = slice(0, split)
         self._val_idx = slice(split, n)
 
+    def _load_prev_mae(self, horizon_min: int) -> float | None:
+        """Charge le MAE du modele precedent depuis le checkpoint (None si absent)."""
+        import torch
+
+        model_path = self.model_dir / f"stgcn_h{horizon_min}.pt"
+        if not model_path.exists():
+            return None
+        try:
+            ckpt = torch.load(str(model_path), map_location="cpu", weights_only=False)
+            metrics = ckpt.get("metrics", {})
+            return float(metrics.get("mae")) if metrics.get("mae") is not None else None
+        except Exception as exc:
+            logger.warning("Impossible de charger prev_mae depuis %s: %s", model_path, exc)
+            return None
+
     def train_one(self, horizon_min: int) -> dict:
         """Entraîne un seul horizon.
 
