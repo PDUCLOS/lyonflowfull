@@ -22,9 +22,16 @@ from dashboard.components.navigation import render_sidebar_navigation
 from dashboard.components.persona_guard import apply_persona_guard
 from dashboard.components.theme import inject_theme
 
-# Config
-UPLOAD_DIR = Path(os.getenv("LYONFLOW_UPLOAD_DIR", "/app/uploads"))
-UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
+# Config — fallback tempdir si /app non writable (CI, dev local)
+_default_upload = os.getenv("LYONFLOW_UPLOAD_DIR", "/app/uploads")
+UPLOAD_DIR = Path(_default_upload)
+try:
+    UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
+except (OSError, PermissionError):
+    import tempfile
+
+    UPLOAD_DIR = Path(tempfile.gettempdir()) / "lyonflow_uploads"
+    UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
 MAX_FILE_SIZE = 100 * 1024 * 1024  # 100 MB
 
 st.set_page_config(

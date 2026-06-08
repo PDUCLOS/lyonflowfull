@@ -43,29 +43,33 @@ with q1:
     render_network_map(height=350)
 with q2:
     st.markdown("##### ⚠️ NE — Alertes live (détail)")
-    from src.data.mock.pro_tcl import PREDICTED_ALERTS
+    from dashboard.components.colors import STATUS_COLORS
+    from dashboard.components.data_cache import cached_recent_alerts
 
-    severity_colors = {"critical": "#E74C3C", "warning": "#FF9800", "info": "#2196F3"}
-    for alert in PREDICTED_ALERTS:
-        severity = alert.get("severity", "info")
-        color = severity_colors.get(severity, "#666")
-        st.markdown(
-            f"""
-            <div style="background:#1A1D24;border-left:4px solid {color};
-                        border-radius:6px;padding:0.6rem;margin:0.4rem 0;">
-                <div style="font-weight:600;font-size:0.9rem;">
-                    {alert.get("line_icon")} {alert.get("title")}
+    alerts_df = cached_recent_alerts(hours=2, limit=10)
+    if alerts_df.empty:
+        st.info("Aucune alerte active sur les 2 dernières heures.")
+    else:
+        for _, alert in alerts_df.iterrows():
+            severity = alert.get("severity", "info")
+            color = STATUS_COLORS.get(severity, STATUS_COLORS["info"])
+            line_ref = alert.get("line_ref", "—")
+            st.markdown(
+                f"""
+                <div class="lyonflow-card" style="border-left-color:{color};padding:0.6rem;">
+                    <div style="font-weight:600;font-size:0.9rem;">
+                        🚦 [{line_ref}] {alert.get("title", "Alerte")}
+                    </div>
+                    <div style="font-size:0.75rem;opacity:0.7;margin-top:0.2rem;">
+                        {alert.get("description", "")}
+                    </div>
+                    <div style="font-size:0.75rem;color:var(--status-ok);margin-top:0.3rem;">
+                        💡 {alert.get("action", "—")}
+                    </div>
                 </div>
-                <div style="font-size:0.75rem;opacity:0.7;margin-top:0.2rem;">
-                    {alert.get("description")}
-                </div>
-                <div style="font-size:0.75rem;color:#4CAF50;margin-top:0.3rem;">
-                    💡 {alert.get("recommendation")}
-                </div>
-            </div>
-            """,
-            unsafe_allow_html=True,
-        )
+                """,
+                unsafe_allow_html=True,
+            )
 
 q3, q4 = st.columns(2)
 with q3:
@@ -73,21 +77,29 @@ with q3:
     render_otp_heatmap_mini(height=280)
 with q4:
     st.markdown("##### 🎯 SE — Top bottlenecks")
-    from src.data.mock.pro_tcl import TOP_BOTTLENECKS
+    from dashboard.components.data_cache import cached_bottlenecks_top
 
-    for b in TOP_BOTTLENECKS[:5]:
-        st.markdown(
-            f"""
-            <div style="background:#1A1D24;border-radius:6px;padding:0.5rem 0.7rem;
-                        margin:0.3rem 0;font-size:0.85rem;">
-                <div style="font-weight:600;">#{b["rank"]} {b["zone"]}</div>
-                <div style="opacity:0.7;font-size:0.75rem;">
-                    {len(b["lines"])} lignes · {b["voyageurs_jour"]:,} voy/j · ROI {b["roi_mois"]} mois
+    top_bottlenecks = cached_bottlenecks_top()
+    if not top_bottlenecks:
+        st.info("Aucun bottleneck détecté actuellement.")
+    else:
+        for i, b in enumerate(top_bottlenecks[:5]):
+            rank = b.get("rank", i + 1)
+            zone = b.get("zone", "—")
+            lines = b.get("lines") or b.get("lines_impacted") or []
+            voy = b.get("voyageurs_jour", 0)
+            roi = b.get("roi_mois", 0)
+            st.markdown(
+                f"""
+                <div class="lyonflow-card-flat" style="padding:0.5rem 0.7rem;font-size:0.85rem;">
+                    <div style="font-weight:600;">#{rank} {zone}</div>
+                    <div style="opacity:0.7;font-size:0.75rem;">
+                        {len(lines)} lignes · {voy:,} voy/j · ROI {roi} mois
+                    </div>
                 </div>
-            </div>
-            """,
-            unsafe_allow_html=True,
-        )
+                """,
+                unsafe_allow_html=True,
+            )
 
 st.markdown("---")
 

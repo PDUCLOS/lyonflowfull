@@ -317,9 +317,16 @@ def render_metrics_comparison() -> None:
     """Affiche la comparaison des métriques entre modèles."""
     st.markdown("##### 📊 Comparaison métriques (XGBoost vs GNN)")
 
-    # Filtrer modèles avec MAE comparable
-    xgb_h60 = next((m for m in MOCK_MODELS if m["name"] == "xgboost_speed_h60"), None)
-    gnn_h60 = next((m for m in MOCK_MODELS if m["name"] == "stgcn_gnn_h60"), None)
+    # Sources live MLflow (fallback mock auto via data_loader)
+    try:
+        from src.data.data_loader import load_mlflow_models
+
+        models = load_mlflow_models(force_mock=False) or MOCK_MODELS
+    except Exception:
+        models = MOCK_MODELS
+
+    xgb_h60 = next((m for m in models if m["name"] == "xgboost_speed_h60"), None)
+    gnn_h60 = next((m for m in models if m["name"] == "stgcn_gnn_h60"), None)
 
     if not xgb_h60 or not gnn_h60:
         return

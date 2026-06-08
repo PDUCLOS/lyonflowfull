@@ -48,7 +48,7 @@ def test_bottlenecks_count():
         ):
             assert field in b, f"Bottleneck {b.get('rank')} manque {field}"
         # ROI doit être calculé (entier)
-        assert isinstance(b["roi_mois"], (int, float))
+        assert isinstance(b["roi_mois"], int | float)
         assert b["roi_mois"] > 0
 
 

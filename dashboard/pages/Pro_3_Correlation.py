@@ -50,15 +50,17 @@ with col1:
     render_segment_table(line_id=target_line, height=350)
 with col2:
     st.markdown("##### 🧠 Analyse causale (1er segment problématique)")
-    # Trouver le 1er segment infra
-    from src.data.mock.pro_tcl import SEGMENTS
+    from dashboard.components.data_cache import cached_segments
 
-    segments = SEGMENTS
-    if target_line:
-        segments = [s for s in segments if s["line_id"] == target_line]
-    infra_seg = next((s for s in segments if s.get("diagnosis") == "infra"), None)
-    if infra_seg:
-        render_cause_analysis(infra_seg)
+    segments_df = cached_segments(limit=500)
+    if target_line and not segments_df.empty and "line_id" in segments_df.columns:
+        segments_df = segments_df[segments_df["line_id"] == target_line]
+    if not segments_df.empty and "diagnosis" in segments_df.columns:
+        infra_rows = segments_df[segments_df["diagnosis"] == "infra"]
+        if not infra_rows.empty:
+            render_cause_analysis(infra_rows.iloc[0].to_dict())
+        else:
+            render_cause_analysis(None)
     else:
         render_cause_analysis(None)
 

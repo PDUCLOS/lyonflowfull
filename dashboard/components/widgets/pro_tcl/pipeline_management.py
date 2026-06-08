@@ -12,9 +12,45 @@ from __future__ import annotations
 import streamlit as st
 
 from dashboard.components.colors import COLORS
+from src.data.airflow_client import get_dags_status, is_airflow_available, trigger_dag
 from src.monitoring.health_checks import run_all_checks
 
-# Mock des DAGs (en prod : Airflow REST API /api/v1/dags + /dag_runs)
+
+@st.cache_data(ttl=30, show_spinner=False)
+def _cached_dags() -> list[dict]:
+    return get_dags_status()
+
+
+@st.cache_data(ttl=60, show_spinner=False)
+def _cached_freshness() -> list[dict]:
+    """Fraicheur live via gold.bronze_source_counts ou fallback mock."""
+    try:
+        from src.data.db_query import _is_db_available, get_bronze_source_counts
+
+        if _is_db_available():
+            df = get_bronze_source_counts(hours=24)
+            if not df.empty:
+                rows: list[dict] = []
+                for _, r in df.iterrows():
+                    n_rows = int(r.get("n_rows", 0) or 0)
+                    last_fetch = r.get("last_fetch")
+                    rows.append(
+                        {
+                            "source": str(r.get("source", "—")),
+                            "last_ingestion": str(last_fetch) if last_fetch else "—",
+                            "n_records_24h": n_rows,
+                            "status": "ok" if n_rows > 0 else "stale",
+                        }
+                    )
+                return rows
+    except Exception:
+        pass
+    from src.data.mock.pro_tcl_pipeline import MOCK_FRESHNESS
+
+    return list(MOCK_FRESHNESS)
+
+
+# Fallback mock — utilise par get_dags_status() quand Airflow indispo.
 MOCK_DAGS = [
     {
         "dag_id": "collect_bronze",
@@ -116,14 +152,21 @@ def render_pipeline_status() -> None:
     """Affiche le statut complet des pipelines."""
     st.markdown("##### 📊 Statut global")
 
+    if not is_airflow_available():
+        st.warning(
+            "🟡 Airflow REST API non joignable — les statuts DAGs sont en mode demo. "
+            "Configurez AIRFLOW_HOST/AIRFLOW_ADMIN_PASSWORD pour activer le live."
+        )
+
+    dags = _cached_dags()
     cols = st.columns(4)
-    n_success = sum(1 for d in MOCK_DAGS if d["last_status"] == "success")
-    n_running = sum(1 for d in MOCK_DAGS if d["last_status"] == "running")
-    n_failed = sum(1 for d in MOCK_DAGS if d["last_status"] == "failed")
+    n_success = sum(1 for d in dags if d.get("last_status") == "success")
+    n_running = sum(1 for d in dags if d.get("last_status") == "running")
+    n_failed = sum(1 for d in dags if d.get("last_status") == "failed")
     n_alerts = 0  # Sera calculé depuis rgpd.audit_log en prod
 
     with cols[0]:
-        st.metric("✅ DAGs OK", n_success, delta=f"{n_success}/{len(MOCK_DAGS)}")
+        st.metric("✅ DAGs OK", n_success, delta=f"{n_success}/{len(dags) or 1}")
     with cols[1]:
         st.metric("🔄 DAGs running", n_running)
     with cols[2]:
@@ -153,19 +196,19 @@ def render_dag_list() -> None:
 
     st.markdown("---")
 
-    for dag in MOCK_DAGS:
+    for dag in _cached_dags():
         cols = st.columns([3, 2, 1.5, 1, 1, 1.5])
         with cols[0]:
-            st.markdown(f"**{dag['dag_id']}**")
-            st.caption(dag["description"])
+            st.markdown(f"**{dag.get('dag_id', '—')}**")
+            st.caption(dag.get("description", ""))
         with cols[1]:
-            st.code(dag["schedule"], language="text")
+            st.code(dag.get("schedule", "—"), language="text")
         with cols[2]:
-            st.caption(dag["last_run"])
+            st.caption(dag.get("last_run", "—"))
         with cols[3]:
-            st.caption(f"{dag['last_duration_s']}s")
+            st.caption(f"{dag.get('last_duration_s', 0)}s")
         with cols[4]:
-            status = dag["last_status"]
+            status = dag.get("last_status", "unknown")
             color = {"success": "🟢", "running": "🔄", "failed": "🔴"}.get(status, "⚪")
             st.markdown(f"{color} {status}")
         with cols[5]:
@@ -227,8 +270,17 @@ def render_health_panel() -> None:
             },
         ]
 
+    # Normaliser: CheckResult dataclass OU dict mock
+    def _as_dict(r):
+        if hasattr(r, "__dataclass_fields__"):
+            from dataclasses import asdict
+
+            return asdict(r)
+        return r
+
     cols = st.columns(3)
     for i, r in enumerate(results):
+        r = _as_dict(r)
         with cols[i % 3]:
             status = r.get("status", "unknown")
             color = {"ok": COLORS["status_ok"], "warning": COLORS["status_warning"], "critical": COLORS["status_critical"]}.get(status, COLORS["text_muted"])
@@ -256,16 +308,17 @@ def render_data_freshness() -> None:
     """Affiche la fraîcheur des données par source Bronze."""
     st.markdown("##### 📡 Fraîcheur des données (Bronze)")
 
+    freshness = _cached_freshness()
     # KPI
-    n_ok = sum(1 for s in MOCK_FRESHNESS if s["status"] == "ok")
-    n_stale = sum(1 for s in MOCK_FRESHNESS if s["status"] == "stale")
+    n_ok = sum(1 for s in freshness if s.get("status") == "ok")
+    n_stale = sum(1 for s in freshness if s.get("status") == "stale")
     cols = st.columns(3)
     with cols[0]:
-        st.metric("Sources à jour", n_ok, delta=f"{n_ok}/{len(MOCK_FRESHNESS)}")
+        st.metric("Sources à jour", n_ok, delta=f"{n_ok}/{len(freshness) or 1}")
     with cols[1]:
         st.metric("Sources stale", n_stale, delta_color="inverse")
     with cols[2]:
-        st.metric("Volume 24h", f"{sum(s['n_records_24h'] for s in MOCK_FRESHNESS):,}")
+        st.metric("Volume 24h", f"{sum(s.get('n_records_24h', 0) for s in freshness):,}")
 
     # Tableau
     st.markdown("---")
@@ -279,7 +332,7 @@ def render_data_freshness() -> None:
     with header_cols[3]:
         st.markdown("**Statut**")
 
-    for s in MOCK_FRESHNESS:
+    for s in freshness:
         cols = st.columns([2, 2, 1.5, 0.8])
         with cols[0]:
             st.markdown(f"`{s['source']}`")
@@ -308,13 +361,16 @@ def render_alerts_feed() -> None:
 
 
 def _trigger_dag(dag_id: str) -> None:
-    """Trigger manuel d'un DAG (mock — appel Airflow API en prod)."""
+    """Trigger manuel d'un DAG via Airflow REST API (fallback message si offline)."""
     with st.spinner(f"Trigger {dag_id}..."):
-        import time
-
-        time.sleep(0.5)
-        # En prod : POST /api/v1/dags/{dag_id}/dagRuns
-        st.success(f"✅ {dag_id} déclenché — voir Airflow UI pour progression")
+        ok = trigger_dag(dag_id)
+        if ok:
+            st.success(f"✅ {dag_id} déclenché — voir Airflow UI pour progression")
+            st.cache_data.clear()
+        else:
+            st.warning(
+                f"Impossible de déclencher {dag_id} (Airflow non joignable ou identifiants invalides)."
+            )
 
 
 def render_pipeline_management_page() -> None:

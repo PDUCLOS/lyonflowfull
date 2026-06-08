@@ -146,34 +146,18 @@ class SpatioTemporalGCN:
         self._model: torch.nn.Module = self._build()
 
     def _build(self):
-        """Construit le nn.Module interne (caché derrière l'API)."""
-        import torch.nn as nn
+        """Construit le nn.Module interne (caché derrière l'API).
 
-        cfg = self.config
-        # GRU temporel : input (batch*nodes, seq_len, in_channels) → output hidden
-        self._gru = nn.GRU(
-            input_size=cfg.in_channels,
-            hidden_size=cfg.hidden_channels,
-            num_layers=1,
-            batch_first=True,
-        )
-
-        # Couches GCN empilées
-        self._gcn_layers = nn.ModuleList()
-        self._gcn_norms = nn.ModuleList()
-        for _ in range(cfg.gcn_layers):
-            self._gcn_layers.append(_safe_gcn_conv(cfg.hidden_channels, cfg.hidden_channels))
-            self._gcn_norms.append(nn.LayerNorm(cfg.hidden_channels))
-
-        # Tête de prédiction
-        self._head = nn.Linear(cfg.hidden_channels, cfg.out_channels)
-        self._dropout = nn.Dropout(cfg.dropout)
-        self._leaky_relu = nn.LeakyReLU(cfg.leaky_relu_slope)
-
-        return _ModuleWrapper(self)
+        Retourne directement un nn.Module (build_module) qui porte les
+        parametres entrainables. SpatioTemporalGCN.forward delegue a ce
+        module — garantit que save/load preservent strictement les poids.
+        """
+        return build_module(self.config)
 
     def forward(self, x, edge_index):
         """Forward pass GNN.
+
+        Delegue au nn.Module interne pour garantir l'integrite save/load.
 
         Args:
             x: Tensor ``(batch, seq_len, num_nodes, in_channels)`` ou
@@ -184,36 +168,12 @@ class SpatioTemporalGCN:
             Tensor ``(batch, num_nodes, out_channels)`` — prédictions.
         """
         cfg = self.config
-
         if x.dim() == 3:
-            # (batch, num_nodes, in_channels) → ajouter seq_len=1
             x = x.unsqueeze(1)
-
-        b, t, n, c = x.shape
+        _, _, n, c = x.shape
         assert n == cfg.num_nodes, f"num_nodes mismatch: {n} vs {cfg.num_nodes}"
         assert c == cfg.in_channels, f"in_channels mismatch: {c} vs {cfg.in_channels}"
-
-        # 1) Temporal GRU : on traite chaque nœud indépendamment
-        # Reshape : (b*n, t, c) → GRU → (b*n, t, hidden) → take last
-        x_reshaped = x.reshape(b * n, t, c)
-        gru_out, _ = self._gru(x_reshaped)
-        h = gru_out[:, -1, :]  # (b*n, hidden)
-        h = h.reshape(b, n, cfg.hidden_channels)
-
-        # 2) Spatial GCN : on traite chaque batch comme un graphe indépendant
-        # Reshape : (b, n, hidden) → (b*n, hidden) ; edge_index broadcast
-        h_flat = h.reshape(b * n, cfg.hidden_channels)
-        for gcn, norm in zip(self._gcn_layers, self._gcn_norms):
-            h_new = gcn(h_flat, _expand_edge_index(edge_index, b, n))
-            h_new = self._leaky_relu(h_new)
-            h_new = self._dropout(h_new)
-            h_new = norm(h_new)
-            h_flat = h_flat + h_new  # skip connection
-
-        # 3) Head : (b*n, hidden) → (b*n, out_channels) → (b, n, out_channels)
-        out = self._head(h_flat)
-        out = out.reshape(b, n, cfg.out_channels)
-        return out
+        return self._model(x, edge_index)
 
     # ------------------------------------------------------------------
     # Persistance (compatible MLflow / joblib)

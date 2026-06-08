@@ -40,7 +40,7 @@ from src.db import execute_query
 logger = logging.getLogger(__name__)
 
 
-class HTTPMethod(str, Enum):  # noqa: UP042
+class HTTPMethod(str, Enum):  # noqa: UP042 — keep str+Enum for backward-compat (StrEnum=Python 3.11+)
     GET = "GET"
     POST = "POST"
 

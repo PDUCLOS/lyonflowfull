@@ -47,13 +47,13 @@ if export_format == "saeiv":
 elif export_format == "excel":
     st.markdown("##### 📊 Export Excel")
     if st.button("📤 Générer Excel", key="excel_export_btn"):
-        # Simuler
         import io
 
         import pandas as pd
 
-        from src.data.mock.pro_tcl import LINE_KPIS
+        from dashboard.components.data_cache import cached_line_kpis
 
+        line_kpis_dict = cached_line_kpis()
         df = pd.DataFrame(
             [
                 {
@@ -63,7 +63,7 @@ elif export_format == "excel":
                     "Fréquence (min)": k.get("frequency_min"),
                     "Charge %": k.get("load_pct"),
                 }
-                for lid, k in LINE_KPIS.items()
+                for lid, k in line_kpis_dict.items()
             ]
         )
         buffer = io.BytesIO()

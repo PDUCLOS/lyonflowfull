@@ -56,7 +56,7 @@ if amgt:
         for col, k in zip([c1, c2, c3, c4], keys):
             with col:
                 v = avant.get(k, "—")
-                if isinstance(v, (int, float)):
+                if isinstance(v, int | float):
                     v_str = f"{v:,}" if isinstance(v, int) and v > 1000 else f"{v}"
                 else:
                     v_str = str(v)
@@ -83,7 +83,7 @@ if amgt:
         for col, k in zip([c1, c2, c3, c4], keys):
             with col:
                 v = apres.get(k, "—")
-                if isinstance(v, (int, float)):
+                if isinstance(v, int | float):
                     v_str = f"{v:,}" if isinstance(v, int) and v > 1000 else f"{v}"
                 else:
                     v_str = str(v)
