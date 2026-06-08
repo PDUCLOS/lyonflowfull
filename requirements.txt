@@ -85,6 +85,10 @@ grpcio>=1.60.0
 
 # Monitoring
 evidently>=0.4.0
+# litestar pinné : evidently 0.4 demande litestar>=2.19 qui déclenche
+# un backtracking pip sur multipart (5+ min). 2.13 est la dernière
+# compatible sans cette chaîne transitive.
+litestar>=2.13.0,<2.19.0
 
 # Tests
 pytest>=8.0.0
