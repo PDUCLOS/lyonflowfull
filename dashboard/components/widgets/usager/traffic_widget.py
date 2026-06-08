@@ -83,7 +83,11 @@ def render_traffic_widget(traffic: dict | None = None) -> None:
         with st.expander(f"🚧 Top {len(main_jams)} bouchons", expanded=False):
             for jam in main_jams:
                 sev = jam.get("severity", "low")
-                color = {"high": COLORS["status_critical"], "medium": COLORS["status_warning"], "low": COLORS["status_ok"]}.get(sev, COLORS["text_muted"])
+                color = {
+                    "high": COLORS["status_critical"],
+                    "medium": COLORS["status_warning"],
+                    "low": COLORS["status_ok"],
+                }.get(sev, COLORS["text_muted"])
                 st.markdown(
                     f"<div style='border-left:3px solid {color};padding-left:8px;margin:4px 0;'>"
                     f"<b>{jam.get('road', '—')}</b> · {jam.get('speed_kmh', 0)} km/h · "

@@ -31,16 +31,10 @@ def render_executive_summary() -> None:
         )
     elif pm_delta < 0 or ponc_delta < -1:
         tendance = "🔴 <b>DÉGRADATION</b>"
-        tendance_text = (
-            "La situation se dégrade sur plusieurs axes. "
-            "Action corrective prioritaire recommandée."
-        )
+        tendance_text = "La situation se dégrade sur plusieurs axes. Action corrective prioritaire recommandée."
     else:
         tendance = "🟡 <b>STABLE</b>"
-        tendance_text = (
-            "La situation est globalement stable, mais les marges de progression "
-            "demeurent importantes."
-        )
+        tendance_text = "La situation est globalement stable, mais les marges de progression demeurent importantes."
 
     st.markdown(
         f"""

@@ -83,7 +83,12 @@ def render_network_map(buses: list | None = None, height: int = 400) -> None:
             map_style="https://basemaps.cartocdn.com/gl/positron-gl-style/style.json",
             tooltip={
                 "html": "<b>{bus_id}</b><br/>Ligne: {line_id}<br/>Segment: {segment}<br/>Retard: {delay_min} min",
-                "style": {"backgroundColor": COLORS["bg_card"], "color": "white", "padding": "8px", "borderRadius": "4px"},
+                "style": {
+                    "backgroundColor": COLORS["bg_card"],
+                    "color": "white",
+                    "padding": "8px",
+                    "borderRadius": "4px",
+                },
             },
         )
 

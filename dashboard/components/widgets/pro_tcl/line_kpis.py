@@ -38,10 +38,14 @@ def render_line_kpis(
             continue
 
         otp = kpis.get("otp_pct", 0)
-        otp_color = COLORS["status_ok"] if otp >= 88 else COLORS["status_warning"] if otp >= 80 else COLORS["status_critical"]
+        otp_color = (
+            COLORS["status_ok"] if otp >= 88 else COLORS["status_warning"] if otp >= 80 else COLORS["status_critical"]
+        )
         delay = kpis.get("avg_delay_min", 0)
         load = kpis.get("load_pct", 0)
-        load_color = COLORS["status_ok"] if load < 70 else COLORS["status_warning"] if load < 90 else COLORS["status_critical"]
+        load_color = (
+            COLORS["status_ok"] if load < 70 else COLORS["status_warning"] if load < 90 else COLORS["status_critical"]
+        )
         trend = kpis.get("trend", "stable")
         trend_icon = {"up": "📈", "down": "📉", "stable": "➡️"}.get(trend, "➡️")
         trend_delta = kpis.get("trend_delta", 0)

@@ -23,7 +23,13 @@ def render_delta_kpis(avant: dict, apres: dict) -> None:
         else:
             delta_pct = (val_apres - val_avant) / val_avant * 100
 
-        delta_color = COLORS["status_ok"] if delta_pct > 0 else COLORS["status_critical"] if delta_pct < 0 else COLORS["status_warning"]
+        delta_color = (
+            COLORS["status_ok"]
+            if delta_pct > 0
+            else COLORS["status_critical"]
+            if delta_pct < 0
+            else COLORS["status_warning"]
+        )
 
         # Format valeur
         if isinstance(val_apres, int) and val_apres > 1000:

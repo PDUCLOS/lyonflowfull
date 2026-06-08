@@ -29,7 +29,11 @@ def render_alert_ticker(alerts: list | None = None) -> None:
     items = []
     for a in alerts:
         sev = a.get("severity", "info")
-        color = {"warning": COLORS["status_warning"], "info": COLORS["status_info"], "critical": COLORS["status_critical"]}.get(sev, COLORS["text_muted"])
+        color = {
+            "warning": COLORS["status_warning"],
+            "info": COLORS["status_info"],
+            "critical": COLORS["status_critical"],
+        }.get(sev, COLORS["text_muted"])
         icon = a.get("line_icon", "⚠️")
         items.append(
             f'<span style="background:{color};color:white;padding:2px 10px;'

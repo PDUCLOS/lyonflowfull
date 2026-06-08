@@ -169,7 +169,9 @@ def _render_model_registry_table(models: list[dict]) -> None:
         with cols[1]:
             st.code(m.get("version", "—"))
         with cols[2]:
-            stage_color = {"Production": COLORS["status_ok"], "Staging": COLORS["status_warning"]}.get(m.get("stage", ""), COLORS["text_muted"])
+            stage_color = {"Production": COLORS["status_ok"], "Staging": COLORS["status_warning"]}.get(
+                m.get("stage", ""), COLORS["text_muted"]
+            )
             st.markdown(
                 f'<span style="background:{stage_color};color:white;padding:2px 8px;'
                 f'border-radius:8px;font-size:0.75rem;">{m.get("stage", "—")}</span>',
@@ -434,7 +436,11 @@ def render_drift_panel() -> None:
 
     for d in drifts:
         status = d["status"]
-        color = {"ok": COLORS["status_ok"], "warning": COLORS["status_warning"], "critical": COLORS["status_critical"]}.get(status, COLORS["text_muted"])
+        color = {
+            "ok": COLORS["status_ok"],
+            "warning": COLORS["status_warning"],
+            "critical": COLORS["status_critical"],
+        }.get(status, COLORS["text_muted"])
         icon = {"ok": "🟢", "warning": "🟡", "critical": "🔴"}.get(status, "⚪")
 
         st.markdown(

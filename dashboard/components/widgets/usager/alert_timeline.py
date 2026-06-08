@@ -34,7 +34,11 @@ def render_alert_timeline(alerts: list) -> None:
             time_str = "—"
 
         sev = alert.get("severity", "info")
-        color = {"warning": COLORS["status_warning"], "info": COLORS["status_info"], "critical": COLORS["status_critical"]}.get(sev, COLORS["text_muted"])
+        color = {
+            "warning": COLORS["status_warning"],
+            "info": COLORS["status_info"],
+            "critical": COLORS["status_critical"],
+        }.get(sev, COLORS["text_muted"])
         icon = alert.get("line_icon", "⚠️")
 
         st.markdown(

@@ -137,8 +137,8 @@ shell-streamlit:  ## Ouvre un shell dans le container Streamlit
 # -----------------------------------------------------------------------------
 # Maintenance
 # -----------------------------------------------------------------------------
-backup:  ## Backup PostgreSQL + MinIO
-	./scripts/backup.sh
+backup:  ## Backup PostgreSQL OFFSITE (gdrive ou ssh) — JAMAIS local
+	./scripts/backup-offsite.sh
 
 restore:  ## Restore depuis backup (BACKUP_FILE=path requis)
 	./scripts/restore.sh $${BACKUP_FILE}

@@ -283,7 +283,11 @@ def render_health_panel() -> None:
         r = _as_dict(r)
         with cols[i % 3]:
             status = r.get("status", "unknown")
-            color = {"ok": COLORS["status_ok"], "warning": COLORS["status_warning"], "critical": COLORS["status_critical"]}.get(status, COLORS["text_muted"])
+            color = {
+                "ok": COLORS["status_ok"],
+                "warning": COLORS["status_warning"],
+                "critical": COLORS["status_critical"],
+            }.get(status, COLORS["text_muted"])
             icon = {"ok": "✅", "warning": "⚠️", "critical": "🔴"}.get(status, "❓")
             name = r.get("name", "—")
             st.markdown(
@@ -368,9 +372,7 @@ def _trigger_dag(dag_id: str) -> None:
             st.success(f"✅ {dag_id} déclenché — voir Airflow UI pour progression")
             st.cache_data.clear()
         else:
-            st.warning(
-                f"Impossible de déclencher {dag_id} (Airflow non joignable ou identifiants invalides)."
-            )
+            st.warning(f"Impossible de déclencher {dag_id} (Airflow non joignable ou identifiants invalides).")
 
 
 def render_pipeline_management_page() -> None:

@@ -31,7 +31,13 @@ def render_otp_projection(simulation: dict, base_otp: float = 78.0) -> None:
     ic_low = max(60.0, new_otp - 2)
     ic_high = min(98.0, new_otp + 2)
 
-    color = COLORS["status_ok"] if actual_delta > 0 else COLORS["status_critical"] if actual_delta < 0 else COLORS["status_warning"]
+    color = (
+        COLORS["status_ok"]
+        if actual_delta > 0
+        else COLORS["status_critical"]
+        if actual_delta < 0
+        else COLORS["status_warning"]
+    )
 
     c1, c2, c3 = st.columns(3)
     with c1:
