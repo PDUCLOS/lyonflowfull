@@ -48,27 +48,41 @@ def transform_silver_to_gold(target: str = "all", dry_run: bool = False) -> dict
 # Helpers PL/pgSQL — calendaire (CREATE OR REPLACE idempotent)
 # -----------------------------------------------------------------------------
 _HELPER_FN_SQL = """
--- Jour férié : true si la date apparaît comme clé dans une des années de raw_data.
--- raw_data = {"2026": {"2026-01-01": "Jour de l'an", ...}, "2027": {...}}
+-- Jour férié : true si la date (raw_data.date ou colonne date_ferie) matche.
+-- raw_data format par ligne : {"date": "2024-01-01", "nom": "1er janvier"}
 CREATE OR REPLACE FUNCTION _is_ferie(d date) RETURNS boolean
 LANGUAGE sql STABLE AS $$
     SELECT EXISTS (
         SELECT 1
-        FROM bronze.jours_feries jf,
-             LATERAL jsonb_each(jf.raw_data) AS y(year_key, year_days)
-        WHERE year_days ? d::text
+        FROM bronze.jours_feries jf
+        WHERE jf.date_ferie = d
+           OR (jf.raw_data IS NOT NULL
+               AND (jf.raw_data->>'date')::date = d)
     );
 $$;
 
--- Vacances scolaires : true si la date est dans une période start_date..end_date
--- pour Zone A. raw_data = {"records": [{"fields": {"start_date": "...", "end_date": "...", "zones": "Zone A"}}]}
+-- Vacances scolaires : true si la date est dans une période [start_date, end_date]
+-- pour la Zone A. Schéma direct (colonnes) : start_date, end_date, zone.
+-- raw_data fallback (si schéma partiel) : {"records": [{"fields": {...}}]}
 CREATE OR REPLACE FUNCTION _is_vacances(d date) RETURNS boolean
 LANGUAGE sql STABLE AS $$
     SELECT EXISTS (
         SELECT 1
+        FROM bronze.calendrier_scolaire cs
+        WHERE cs.start_date <= d
+          AND cs.end_date   >= d
+          AND cs.zone ILIKE 'A'
+    )
+    OR EXISTS (
+        SELECT 1
         FROM bronze.calendrier_scolaire cs,
-             LATERAL jsonb_array_elements(cs.raw_data->'records') AS rec
-        WHERE (rec->'fields'->>'start_date')::date <= d
+             LATERAL jsonb_array_elements(
+                 CASE WHEN jsonb_typeof(cs.raw_data->'records') = 'array'
+                      THEN cs.raw_data->'records'
+                      ELSE '[]'::jsonb END
+             ) AS rec
+        WHERE cs.start_date IS NULL
+          AND (rec->'fields'->>'start_date')::date <= d
           AND (rec->'fields'->>'end_date')::date   >= d
           AND COALESCE(rec->'fields'->>'zones', '') ILIKE '%zone a%'
     );
