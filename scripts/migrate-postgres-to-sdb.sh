@@ -81,6 +81,8 @@ step_2_mount() {
 
 step_3_backup_pgdump() {
     blue "==[ 3/7 Backup pg_dump prealable (filet secours) ]=="
+    # Chown mount pour ecriture sans sudo (idempotent)
+    sudo chown "$(id -u):$(id -g)" "${MOUNT_POINT}"
     BACKUP_FILE="${MOUNT_POINT}/pre-migration-$(date +%Y%m%d-%H%M%S).dump"
     docker exec lyonflow-postgres pg_dump -U lyonflow -Fc -d lyonflow > "${BACKUP_FILE}"
     BACKUP_SIZE=$(du -h "${BACKUP_FILE}" | cut -f1)
