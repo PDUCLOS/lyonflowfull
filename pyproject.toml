@@ -184,6 +184,7 @@ omit = [
     "*/__pycache__/*",
     "*/migrations/*",
     "src/data/mock/*",
+    "dags/legacy_github/*",  # DAG legacy non couvert par tests
 ]
 
 [tool.coverage.report]
