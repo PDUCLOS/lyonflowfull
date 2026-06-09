@@ -235,7 +235,6 @@ services:
       AIRFLOW__CELERY__BROKER_URL: redis://redis:6379/0
       AIRFLOW__CELERY__RESULT_BACKEND: db+postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/airflow
       AIRFLOW__WEBSERVER__SECRET_KEY: ${AIRFLOW_SECRET_KEY}
-      AIRFLOW__WEBSERVER__BASE_URL: "https://51.83.159.224/airflow"
     command: webserver
     healthcheck:
       test: ["CMD", "curl", "-fsS", "http://localhost:8080/health"]
