@@ -241,6 +241,45 @@ class MLflowTracker:
         except Exception as e:  # pragma: no cover
             logger.warning("MLflow log_dict failed: %s", e)
 
+    def register_model(self, model_name: str) -> None:
+        """Enregistre le run courant dans le Model Registry."""
+        if not self._run:
+            return
+        try:
+            run_id = self._run.info.run_id
+            uri = f"runs:/{run_id}/{model_name}.pkl"
+            # create_model_version requires tracking client
+            from mlflow.tracking import MlflowClient
+            client = MlflowClient()
+            try:
+                client.create_registered_model(model_name)
+            except Exception:
+                pass # Model already exists
+            client.create_model_version(name=model_name, source=uri, run_id=run_id)
+            logger.info("Registered model %s from run %s", model_name, run_id)
+        except Exception as e:
+            logger.warning("Failed to register model: %s", e)
+
+    def transition_to_production(self, model_name: str) -> None:
+        """Promeut la dernière version de ce modèle en Production."""
+        try:
+            from mlflow.tracking import MlflowClient
+            client = MlflowClient()
+            versions = client.get_latest_versions(name=model_name)
+            if not versions:
+                return
+            latest = versions[0]
+            # Transition to Production
+            client.transition_model_version_stage(
+                name=model_name,
+                version=latest.version,
+                stage="Production",
+                archive_existing_versions=True
+            )
+            logger.info("Transitioned %s version %s to Production", model_name, latest.version)
+        except Exception as e:
+            logger.warning("Failed to transition model to Production: %s", e)
+
     @property
     def run_id(self) -> str | None:
         """ID du run courant, ou None si no-op ou pas de run."""
@@ -278,38 +317,43 @@ def list_registered_models(experiment: str | None = None, max_results: int = 50)
         from mlflow.tracking import MlflowClient  # type: ignore[import-untyped]
 
         client = MlflowClient()
-        # mlflow>=2.0 utilise experiment_ids (int), pas experiment_names (str)
-        experiment_ids = None
-        if experiment:
-            exp = client.get_experiment_by_name(experiment)
-            if exp is not None:
-                experiment_ids = [exp.experiment_id]
-            else:
-                return []
-        runs = client.search_runs(
-            experiment_ids=experiment_ids,
-            max_results=max_results,
-            order_by=["start_time DESC"],
-        )
+        models = client.search_registered_models(max_results=max_results)
         out = []
-        for r in runs:
-            data = r.data
-            run_name = data.tags.get("mlflow.runName", r.info.run_id[:8])
-            model_name = data.tags.get("model", run_name.split("_h")[0])
-            horizon_tag = data.tags.get("horizon_min", "")
-            model_version = data.params.get("model_version", "1.0.0")
+        for rm in models:
+            # Filter by experiment name if requested (assumes model name starts with experiment name)
+            if experiment and not rm.name.startswith(experiment):
+                continue
+                
+            latest_versions = rm.latest_versions
+            if not latest_versions:
+                continue
+                
+            # Prefer Production version, else fallback to latest
+            prod_version = next((v for v in latest_versions if v.current_stage == "Production"), latest_versions[0])
+            run_id = prod_version.run_id
+            
+            try:
+                run = client.get_run(run_id)
+                data = run.data
+                metrics = dict(data.metrics)
+                params = dict(data.params)
+                tags = dict(data.tags)
+                trained_at = run.info.start_time
+            except Exception:
+                metrics, params, tags, trained_at = {}, {}, {}, None
+
             out.append(
                 {
-                    "name": run_name,
-                    "model_name": model_name,
-                    "horizon_min": int(horizon_tag) if horizon_tag.isdigit() else None,
-                    "version": model_version,
-                    "stage": "Production",  # on simplifier pour le moment
-                    "metrics": dict(data.metrics),
-                    "params": dict(data.params),
-                    "tags": dict(data.tags),
-                    "trained_at": r.info.start_time,
-                    "run_id": r.info.run_id,
+                    "name": rm.name,
+                    "model_name": rm.name,
+                    "horizon_min": int(tags.get("horizon_min", 0)) if tags.get("horizon_min", "").isdigit() else None,
+                    "version": prod_version.version,
+                    "stage": prod_version.current_stage,
+                    "metrics": metrics,
+                    "params": params,
+                    "tags": tags,
+                    "trained_at": trained_at,
+                    "run_id": run_id,
                 }
             )
         return out

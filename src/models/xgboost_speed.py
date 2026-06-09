@@ -60,15 +60,35 @@ class XGBoostSpeedModel:
         self.models: dict[int, xgb.XGBRegressor] = {}  # horizon_minutes → model
 
     def load(self, horizons: list[int] | None = None) -> None:
-        """Charge les modèles depuis le disque."""
+        """Charge les modèles depuis MLflow (si dispo) ou depuis le disque local."""
+        from src.ml.mlflow_integration import get_latest_run, is_mlflow_available
+        import mlflow
+        
         horizons = horizons or [5, 60, 180, 360]
         for h in horizons:
-            model_path = self.model_dir / f"xgb_speed_h{h}.pkl"
-            if model_path.exists():
-                self.models[h] = joblib.load(model_path)
-                logger.info(f"Loaded XGBoost model horizon {h}min")
-            else:
-                logger.warning(f"Model not found: {model_path}")
+            model_name = f"xgb_speed_h{h}"
+            model_path = self.model_dir / f"{model_name}.pkl"
+            
+            # Essayer MLflow en premier (Model Registry)
+            mlflow_success = False
+            if is_mlflow_available():
+                try:
+                    # Télécharge l'artifact depuis le registre (Production)
+                    artifact_uri = f"models:/{model_name}/Production"
+                    local_path = mlflow.artifacts.download_artifacts(artifact_uri, dst_path=str(self.model_dir))
+                    self.models[h] = joblib.load(local_path)
+                    logger.info(f"Loaded XGBoost model horizon {h}min from MLflow Registry (Production)")
+                    mlflow_success = True
+                except Exception as e:
+                    logger.warning(f"Failed to load {model_name} from MLflow Registry: {e}")
+            
+            # Fallback disque local
+            if not mlflow_success:
+                if model_path.exists():
+                    self.models[h] = joblib.load(model_path)
+                    logger.info(f"Loaded XGBoost model horizon {h}min from local disk")
+                else:
+                    logger.warning(f"Model not found: {model_path} (neither in MLflow nor local)")
 
     def train_one(
         self,
@@ -151,6 +171,10 @@ class XGBoostSpeedModel:
                     )
                     tracker.log_metrics(metrics)
                     tracker.log_artifact(str(model_path))
+                    # Register & transition to Production natively
+                    reg_model_name = f"xgboost_speed_h{horizon_minutes}"
+                    tracker.register_model(reg_model_name)
+                    tracker.transition_to_production(reg_model_name)
             except Exception as e:  # pragma: no cover
                 logger.warning("MLflow tracking failed (non-bloquant): %s", e)
 
