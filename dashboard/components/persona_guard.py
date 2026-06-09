@@ -39,6 +39,7 @@ def apply_persona_guard(expected_persona: PersonaId | None = None) -> PersonaMan
     pm = PersonaManager()
 
     # Inférence depuis le nom de fichier si pas fourni
+    caller_file = ""
     if expected_persona is None:
         try:
             import inspect
@@ -51,6 +52,10 @@ def apply_persona_guard(expected_persona: PersonaId | None = None) -> PersonaMan
                     break
         except Exception:
             pass
+
+    # Tracker la page courante pour la mise en évidence dans la nav
+    if caller_file:
+        st.session_state["_nav_current_page"] = caller_file.rsplit("/", 1)[-1].removesuffix(".py")
 
     # Mismatch persona/page : auto-switch silencieux (UX > friction)
     # Si auth requise pour le nouveau persona et pas encore faite → renvoi à l'accueil
