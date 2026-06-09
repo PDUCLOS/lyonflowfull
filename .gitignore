@@ -99,3 +99,6 @@ site/
 # Local orchestration plans
 .mavis/
 .claude/
+
+# TLS certs (generated, never committed)
+nginx/certs/*.pem
