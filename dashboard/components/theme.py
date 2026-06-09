@@ -133,6 +133,28 @@ def inject_theme() -> None:
         background: linear-gradient(180deg, #0E1117 0%, #14171D 100%);
         border-right: 1px solid var(--border-card);
     }}
+    
+    /* Beautiful Sidebar Menu Links */
+    [data-testid="stPageLink-NavLink"] {{
+        padding: 0.6rem 0.8rem;
+        border-radius: var(--radius-sm);
+        transition: all var(--transition);
+        color: var(--text-secondary);
+        font-weight: 500;
+        margin-bottom: 0.2rem;
+        border-left: 3px solid transparent;
+    }}
+    [data-testid="stPageLink-NavLink"]:hover {{
+        background: rgba(255, 255, 255, 0.05);
+        color: var(--text-primary);
+        transform: translateX(4px);
+    }}
+    [data-testid="stPageLink-NavLink"][data-active="true"] {{
+        background: linear-gradient(90deg, rgba(255, 255, 255, 0.1) 0%, transparent 100%);
+        color: var(--primary);
+        border-left: 3px solid var(--primary);
+        font-weight: 600;
+    }}
 
     /* Metrics */
     [data-testid="stMetric"] {{
