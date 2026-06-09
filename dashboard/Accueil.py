@@ -37,11 +37,35 @@ render_sidebar_navigation()
 # -----------------------------------------------------------------------------
 st.markdown(
     """
-    <div style="text-align:center;padding:2rem 0 1rem 0;">
-        <div style="font-size:3rem;font-weight:700;color:#4CAF50;">
+    <style>
+    @keyframes gradientFlow {
+        0% { background-position: 0% 50%; }
+        50% { background-position: 100% 50%; }
+        100% { background-position: 0% 50%; }
+    }
+    .animated-title {
+        font-size: 3.5rem;
+        font-weight: 800;
+        background: linear-gradient(to right, var(--primary), var(--accent), var(--primary));
+        background-size: 200% auto;
+        color: transparent;
+        -webkit-background-clip: text;
+        background-clip: text;
+        animation: gradientFlow 4s ease infinite;
+        letter-spacing: -1px;
+    }
+    .subtitle {
+        font-size: 1.15rem;
+        opacity: 0.85;
+        margin-top: 0.5rem;
+        font-weight: 500;
+    }
+    </style>
+    <div style="text-align:center;padding:3rem 0 2rem 0;">
+        <div class="animated-title">
             🚦 LyonFlowFull
         </div>
-        <div style="font-size:1.1rem;opacity:0.8;margin-top:0.5rem;">
+        <div class="subtitle">
             La plateforme MLOps qui prédit le trafic et les retards bus sur la Métropole de Lyon
         </div>
     </div>

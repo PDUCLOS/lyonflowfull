@@ -33,6 +33,13 @@ def inject_theme() -> None:
 
     css = f"""
     <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+    
+    @keyframes fadeInUp {{
+        from {{ opacity: 0; transform: translateY(15px); }}
+        to {{ opacity: 1; transform: translateY(0); }}
+    }}
+    
     :root {{
         --primary: {color_primary};
         --accent: {color_accent};
@@ -69,6 +76,7 @@ def inject_theme() -> None:
 
     /* Global font polish */
     html, body, [data-testid="stAppViewContainer"] {{
+        font-family: 'Inter', sans-serif !important;
         font-feature-settings: "cv11", "ss01", "ss03";
         -webkit-font-smoothing: antialiased;
         -moz-osx-font-smoothing: grayscale;
@@ -129,13 +137,17 @@ def inject_theme() -> None:
     /* Metrics */
     [data-testid="stMetric"] {{
         background: var(--bg-card);
+        backdrop-filter: blur(12px);
+        -webkit-backdrop-filter: blur(12px);
         border: 1px solid var(--border-card);
         border-radius: var(--radius-md);
         padding: 0.9rem 1rem;
         box-shadow: var(--shadow-sm);
-        transition: border-color var(--transition), box-shadow var(--transition);
+        transition: transform var(--transition), border-color var(--transition), box-shadow var(--transition);
+        animation: fadeInUp 0.4s ease-out forwards;
     }}
     [data-testid="stMetric"]:hover {{
+        transform: translateY(-2px);
         border-color: var(--primary);
         box-shadow: var(--shadow-md);
     }}
@@ -155,6 +167,8 @@ def inject_theme() -> None:
     /* Cards */
     .lyonflow-card {{
         background: linear-gradient(135deg, var(--bg-card) 0%, var(--bg-card-alt) 100%);
+        backdrop-filter: blur(12px);
+        -webkit-backdrop-filter: blur(12px);
         border: 1px solid var(--border-card);
         border-left: 4px solid var(--primary);
         border-radius: var(--radius-md);
@@ -162,6 +176,7 @@ def inject_theme() -> None:
         margin: 0.5rem 0;
         box-shadow: var(--shadow-sm);
         transition: transform var(--transition), box-shadow var(--transition);
+        animation: fadeInUp 0.5s ease-out forwards;
     }}
     .lyonflow-card:hover {{
         transform: translateY(-1px);
@@ -178,6 +193,8 @@ def inject_theme() -> None:
     /* KPI tiles (ronds chiffres saillants) */
     .lyonflow-kpi {{
         background: linear-gradient(135deg, var(--bg-card) 0%, var(--bg-card-alt) 100%);
+        backdrop-filter: blur(12px);
+        -webkit-backdrop-filter: blur(12px);
         border: 1px solid var(--border-card);
         border-radius: var(--radius-lg);
         padding: 1.1rem;
@@ -190,6 +207,7 @@ def inject_theme() -> None:
         position: relative;
         overflow: hidden;
         transition: transform var(--transition), box-shadow var(--transition);
+        animation: fadeInUp 0.6s ease-out forwards;
     }}
     .lyonflow-kpi::before {{
         content: "";
