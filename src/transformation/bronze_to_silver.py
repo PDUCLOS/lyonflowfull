@@ -158,23 +158,27 @@ def _transform_velov() -> int:
                     cur.execute(
                         """
                             INSERT INTO silver.velov_clean
-                                (fetched_at, station_id, station_name, bikes_available,
-                                 stands_available, is_installed, is_renting, is_returning,
+                                (fetched_at, measurement_time, station_id, station_name,
+                                 num_bikes_available, num_docks_available, is_active,
                                  lat, lon)
-                            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
-                            ON CONFLICT (station_id, fetched_at) DO UPDATE
-                            SET bikes_available = EXCLUDED.bikes_available,
-                                stands_available = EXCLUDED.stands_available
+                            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
+                            ON CONFLICT (station_id, measurement_time) DO UPDATE
+                            SET num_bikes_available = EXCLUDED.num_bikes_available,
+                                num_docks_available = EXCLUDED.num_docks_available,
+                                is_active = EXCLUDED.is_active
                         """,
                         (
                             fetched_at,
+                            fetched_at,  # measurement_time = fetched_at (GBFS pas de timestamp station-level)
                             sid,
                             st.get("name", ""),
                             st.get("num_bikes_available", 0),
                             st.get("num_docks_available", 0),
-                            st.get("is_installed", 1) == 1,
-                            st.get("is_renting", 1) == 1,
-                            st.get("is_returning", 1) == 1,
+                            bool(
+                                st.get("is_installed", 1) == 1
+                                and st.get("is_renting", 1) == 1
+                                and st.get("is_returning", 1) == 1
+                            ),
                             st.get("lat"),
                             st.get("lon"),
                         ),
