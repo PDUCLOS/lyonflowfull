@@ -81,7 +81,8 @@ st.markdown("---")
 # -----------------------------------------------------------------------------
 # Si l'utilisateur a explicitement un persona actif en session, on le redirige.
 # L'Accueil devient uniquement une page d'Onboarding / Splash Screen.
-from src.persona.manager import _SESSION_KEY
+from src.persona.manager import _SESSION_KEY  # noqa: E402
+
 has_explicit_persona = _SESSION_KEY in st.session_state
 
 if has_explicit_persona:
@@ -89,7 +90,7 @@ if has_explicit_persona:
     persona_config = get_current_persona_config()
     landing_page = persona_config.get("landing_page", "")
     auth_required = persona_config.get("access", {}).get("auth_required", False)
-    
+
     # Check auth before redirecting
     if auth_required and not is_authenticated():
         st.markdown("### 🔐 Authentification requise")
@@ -99,7 +100,7 @@ if has_explicit_persona:
         )
         require_password()
         st.stop()
-    
+
     # Si auth OK ou non requise, on redirige
     st.info(f"Redirection vers l'espace {persona_config.get('label', persona_id)}...")
     if landing_page:

@@ -36,11 +36,11 @@ def render_weather_widget(weather: dict | None = None) -> None:
         else:
             weather = MOCK_WEATHER
 
-    icon = weather.get("condition_icon", "☀️")
-    cond = weather.get("condition", "")
-    temp = weather.get("temp_c", 0)
-    rain = weather.get("rain_mm_h", 0)
-    wind = weather.get("wind_kmh", 0)
+    icon = str(weather.get("condition_icon", "☀️"))
+    cond = str(weather.get("condition", ""))
+    temp = float(weather.get("temp_c", 0))
+    rain = float(weather.get("rain_mm_h", 0))
+    wind = float(weather.get("wind_kmh", 0))
 
     # Score vélo basé sur pluie et vent
     cycling_score = weather.get("cycling_score", 1.0)
@@ -73,7 +73,7 @@ def render_weather_widget(weather: dict | None = None) -> None:
     )
 
     # Prévisions 3 prochaines heures
-    next_3h = weather.get("next_3h", [])
+    next_3h = list(weather.get("next_3h", []))
     if next_3h:
         cols = st.columns(len(next_3h))
         for col, h in zip(cols, next_3h):

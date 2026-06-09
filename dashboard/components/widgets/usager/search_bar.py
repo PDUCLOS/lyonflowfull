@@ -11,6 +11,8 @@ data_loader.cached_lyon_addresses_with_coords().
 
 from __future__ import annotations
 
+import typing
+
 import streamlit as st
 
 from dashboard.components.data_cache import cached_lyon_addresses_with_coords
@@ -35,8 +37,6 @@ _TYPE_LABEL = {
     "banlieue": "Banlieue",
 }
 
-
-import typing
 
 def render_search_bar() -> dict[str, typing.Any]:
     """Affiche la barre de recherche trajet cliquable.

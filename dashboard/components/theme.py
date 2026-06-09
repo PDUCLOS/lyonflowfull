@@ -34,12 +34,12 @@ def inject_theme() -> None:
     css = f"""
     <style>
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
-    
+
     @keyframes fadeInUp {{
         from {{ opacity: 0; transform: translateY(15px); }}
         to {{ opacity: 1; transform: translateY(0); }}
     }}
-    
+
     :root {{
         --primary: {color_primary};
         --accent: {color_accent};

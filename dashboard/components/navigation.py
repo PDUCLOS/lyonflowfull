@@ -76,8 +76,8 @@ def _render_nav_entry(entry: dict[str, Any]) -> None:
 
 def _render_persona_switcher(pm: PersonaManager) -> None:
     """Workspace switcher (dropdown) en haut de la sidebar."""
-    from src.persona.personas_loader import list_personas
     from dashboard.components.persona_switcher import _route_after_switch
+    from src.persona.personas_loader import list_personas
 
     personas = list_personas()
     current = pm.persona_id
@@ -94,7 +94,7 @@ def _render_persona_switcher(pm: PersonaManager) -> None:
         index=options.index(current) if current in options else 0,
         format_func=format_func,
         label_visibility="collapsed",
-        key="nav_persona_switcher"
+        key="nav_persona_switcher",
     )
 
     if selected != current:

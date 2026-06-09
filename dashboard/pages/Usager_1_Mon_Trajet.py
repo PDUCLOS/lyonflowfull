@@ -164,8 +164,12 @@ if st.session_state.get("results_loaded"):
         "car": "🚗 Voiture",
         "walk": "🚶 Marche",
     }
+    from typing import Any, cast
+
     authorized = set(search.get("modes") or [])
-    filtered_options = [opt for opt in options if MODE_TO_LABEL.get(opt.get("mode")) in authorized]
+    # Cast options explicitly since mock dict inference returns Collection[str]
+    typed_options = cast(list[dict[str, Any]], options)
+    filtered_options = [opt for opt in typed_options if MODE_TO_LABEL.get(str(opt.get("mode"))) in authorized]
     if not filtered_options:
         filtered_options = options  # fallback si tous filtrés
         st.caption("⚠️ Aucun mode autorisé ne correspond aux options mock — toutes affichées.")
