@@ -185,7 +185,7 @@ services:
   airflow-init:
     build:
       context: .
-      dockerfile: Dockerfile
+      dockerfile: Dockerfile.airflow
     container_name: lyonflow-airflow-init
     depends_on:
       postgres:
@@ -216,7 +216,7 @@ services:
   airflow-webserver:
     build:
       context: .
-      dockerfile: Dockerfile
+      dockerfile: Dockerfile.airflow
     container_name: lyonflow-airflow
     restart: unless-stopped
     depends_on:
@@ -262,7 +262,7 @@ services:
   airflow-scheduler:
     build:
       context: .
-      dockerfile: Dockerfile
+      dockerfile: Dockerfile.airflow
     container_name: lyonflow-airflow-scheduler
     restart: unless-stopped
     depends_on:
@@ -291,7 +291,7 @@ services:
   airflow-worker:
     build:
       context: .
-      dockerfile: Dockerfile
+      dockerfile: Dockerfile.airflow
     container_name: lyonflow-airflow-worker
     restart: unless-stopped
     depends_on:
