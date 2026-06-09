@@ -60,6 +60,27 @@ préparées pour un futur déploiement AWS/GCP, **non mergées dans `vps` ou `ma
   - Isolation logique VPS ↔ K8s (namespace + NetworkPolicy)
   - Garde-fous PostgreSQL prod (volume `/opt/lyonflow/postgres_data`)
 
+### Dashboard UX — sidebar persona
+
+- **dashboard/components/navigation.py** : refonte complète de la nav sidebar
+  - Card persona en haut (icône + label + couleur primaire + courte description)
+  - Bouton "← Accueil" en évidence (point d'entrée unique pour changer de
+    persona, plus d'expander "Changer de persona" caché dans la sidebar)
+  - Filtrage strict par `get_navigation(persona_id)` — seule source de vérité
+  - Groupes expandables (premier ouvert), page active en `type="primary"`
+  - Pages communes (RGPD, À propos) dans un expander "Commun" en bas
+  - Retrait du filtre foireux `pm.is_widget_visible(label)` qui comparait
+    des labels de pages avec des noms de widgets du catalogue
+- **dashboard/components/persona_guard.py** : track la page courante en
+  `st.session_state["_nav_current_page"]` (calculé depuis le caller_file)
+  pour alimenter l'active-state de la nav
+
+Comportement validé (dry-run sur 3 personas) :
+- `usager`  → 4 pages (Mobilité × 3 + Mes données × 1)
+- `pro_tcl` → 7 pages (Ops live × 2 + Analyse × 2 + Reporting × 1 + MLOps × 2)
+- `elu`     → 5 pages (Vue d'ensemble × 2 + Décision × 3)
+- commun    → 2 pages (RGPD, À propos)
+
 ## [0.5.0-rc1] - 2026-06-07 — Phase 3 Cloud demo Jedha (branche `cloud-demo`, DORMANTE)
 
 ### Ajouté
