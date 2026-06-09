@@ -55,6 +55,30 @@ class TestDbQueryFallback:
         assert "node_idx" in df.columns
         assert "speed_kmh" in df.columns
 
+    def test_operational_error_triggers_fallback_in_data_loader(self, monkeypatch):
+        """Vérifie que si psycopg2 lève une exception, data_loader retourne le mock."""
+        import psycopg2
+        
+        # Simuler un crash DB au moment de la connexion
+        def mock_execute_query(*args, **kwargs):
+            raise psycopg2.OperationalError("Simulated DB crash mid-flight")
+            
+        monkeypatch.setattr(db_query, "execute_query", mock_execute_query)
+        # On force _is_db_available à True pour piéger data_loader
+        monkeypatch.setattr(data_loader, "_is_db_available", lambda: True)
+        # Et on le force aussi dans db_query pour éviter que db_query ne renvoie le dataframe mocké
+        monkeypatch.setattr(db_query, "_is_db_available", lambda: True)
+        
+        # data_loader appelle db_query.get_latest_traffic
+        # db_query.get_latest_traffic appelle _df_from_query
+        # _df_from_query appelle execute_query qui CRASH.
+        # _df_from_query catche l'exception et retourne df.empty
+        # Ensuite data_loader.load_traffic fait `if df.empty: return usager_mock.MOCK_TRAFFIC`
+        
+        traffic = data_loader.load_traffic(force_mock=False)
+        assert isinstance(traffic, dict)
+        assert traffic["data_source"] == "mock", "Doit basculer sur le mock car df est empty suite à l'erreur"
+
     def test_get_latest_traffic_respects_limit(self):
         df = db_query.get_latest_traffic(limit=5)
         assert len(df) == 5
