@@ -38,7 +38,16 @@ x-common-env: &common-env
   PERSONA_ELU_USERNAME: ${PERSONA_ELU_USERNAME}
   PERSONA_ELU_PASSWORD: ${PERSONA_ELU_PASSWORD}
   LYONFLOW_API_KEY: ${LYONFLOW_API_KEY}
+  # Grand Lyon Open Data auth (HTTP Basic — collecteurs ingestion)
+  GRANDLYON_USERNAME: ${GRANDLYON_USERNAME:-}
+  GRANDLYON_PASSWORD: ${GRANDLYON_PASSWORD:-}
+  API_LOGIN: ${API_LOGIN:-}
+  API_PASSWORD: ${API_PASSWORD:-}
+  AIRFLOW_ADMIN_USERNAME: ${AIRFLOW_ADMIN_USERNAME:-admin}
+  AIRFLOW_ADMIN_PASSWORD: ${AIRFLOW_ADMIN_PASSWORD:-}
+  AIRFLOW__WEBSERVER__SECRET_KEY: ${AIRFLOW_SECRET_KEY:-}
   PYTHONUNBUFFERED: "1"
+  PYTHONPATH: /opt/airflow
   TZ: Europe/Paris
 
 services:
@@ -54,7 +63,9 @@ services:
       POSTGRES_USER: ${POSTGRES_USER}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
     volumes:
-      - postgres_data:/var/lib/postgresql/data
+      # POSTGRES_DATA_DIR pointe vers le bind mount disque dédié (VPS = /mnt/postgres-data/pgdata).
+      # Default = volume Docker pour dev local (cf. .env.example).
+      - ${POSTGRES_DATA_DIR:-postgres_data}:/var/lib/postgresql/data
       - ./deploy/init-db.sql:/docker-entrypoint-initdb.d/01-init.sql:ro
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d lyonflow"]
