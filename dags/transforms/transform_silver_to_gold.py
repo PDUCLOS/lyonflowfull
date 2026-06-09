@@ -68,7 +68,7 @@ with DAG(
     start_date=datetime(2026, 1, 1),
     catchup=False,
     max_active_runs=1,
-    is_paused=True,  # désactivé par défaut — ne pas réactiver sans refonte
+    is_paused_upon_creation=True,  # désactivé par défaut — Airflow 2.9 (is_paused removed)
     tags=["transform", "gold", "deprecated"],
 ) as dag:
     PythonOperator(

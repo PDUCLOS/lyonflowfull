@@ -48,6 +48,13 @@ x-common-env: &common-env
   AIRFLOW__WEBSERVER__SECRET_KEY: ${AIRFLOW_SECRET_KEY:-lyonflow_default_secret_key_12345}
   # Prefixe /airflow nécessaire pour nginx reverse-proxy (cf. Lyontraffic config)
   AIRFLOW__WEBSERVER__BASE_URL: ${AIRFLOW_BASE_URL:-http://51.83.159.224/airflow}
+  # Honore X-Forwarded-* headers (sinon redirects perdent le préfixe /airflow)
+  AIRFLOW__WEBSERVER__ENABLE_PROXY_FIX: "true"
+  AIRFLOW__WEBSERVER__PROXY_FIX_X_FOR: "1"
+  AIRFLOW__WEBSERVER__PROXY_FIX_X_PROTO: "1"
+  AIRFLOW__WEBSERVER__PROXY_FIX_X_HOST: "1"
+  AIRFLOW__WEBSERVER__PROXY_FIX_X_PORT: "1"
+  AIRFLOW__WEBSERVER__PROXY_FIX_X_PREFIX: "1"
   PYTHONUNBUFFERED: "1"
   TZ: Europe/Paris
 
