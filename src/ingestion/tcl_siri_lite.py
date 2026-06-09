@@ -27,10 +27,14 @@ class TclSiriLite(DataCollector):
             "TCL_SIRI_LITE_URL",
             "https://download.data.grandlyon.com/siri-lite/1.8/vehicle-monitoring.json",
         )
+        # HTTP Basic Auth Grand Lyon Portal (depuis 2025 SIRI requiert auth)
+        _user = os.getenv("GRANDLYON_USERNAME") or os.getenv("API_LOGIN", "")
+        _pwd = os.getenv("GRANDLYON_PASSWORD") or os.getenv("API_PASSWORD", "")
+        self._auth = (_user, _pwd) if _user and _pwd else None
 
     def fetch_raw(self) -> FetchResult:
         try:
-            r = self._http_get(self.url)
+            r = self._http_get(self.url, auth=self._auth)
             data = r.json()
         except Exception as e:
             raise CollectorError(f"Erreur fetch SIRI Lite: {e}") from e

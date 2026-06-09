@@ -298,9 +298,15 @@ class DataCollector(abc.ABC):
         retry=retry_if_exception_type((httpx.HTTPError, ConnectionError, TimeoutError)),
         before_sleep=before_sleep_log(logger, logging.WARNING),
     )
-    def _http_get(self, url: str, params: dict | None = None, headers: dict | None = None) -> httpx.Response:
-        """GET request avec retry."""
-        with httpx.Client(timeout=self.timeout) as client:
+    def _http_get(
+        self,
+        url: str,
+        params: dict | None = None,
+        headers: dict | None = None,
+        auth: tuple[str, str] | None = None,
+    ) -> httpx.Response:
+        """GET request avec retry. `auth` = tuple (user, password) pour HTTP Basic."""
+        with httpx.Client(timeout=self.timeout, auth=auth) as client:
             r = client.get(url, params=params, headers=headers or {})
             r.raise_for_status()
             return r

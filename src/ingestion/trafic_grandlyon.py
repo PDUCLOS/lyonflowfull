@@ -27,6 +27,10 @@ class TraficGrandLyon(DataCollector):
             "https://download.data.grandlyon.com/wfs/grandlyon",
         )
         self.typename = os.getenv("GRANDLYON_TRAFFIC_TYPENAME", "pvo_patrimoine_voirie.pvochausstraf")
+        # HTTP Basic Auth Grand Lyon Portal (data.grandlyon.com)
+        _user = os.getenv("GRANDLYON_USERNAME") or os.getenv("API_LOGIN", "")
+        _pwd = os.getenv("GRANDLYON_PASSWORD") or os.getenv("API_PASSWORD", "")
+        self._auth = (_user, _pwd) if _user and _pwd else None
 
     def fetch_raw(self) -> FetchResult:
         params = {
@@ -39,7 +43,7 @@ class TraficGrandLyon(DataCollector):
             "maxFeatures": 5000,
         }
         try:
-            r = self._http_get(self.wfs_url, params=params)
+            r = self._http_get(self.wfs_url, params=params, auth=self._auth)
             data = r.json()
         except Exception as e:
             raise CollectorError(f"Erreur fetch Grand Lyon trafic: {e}") from e

@@ -30,6 +30,10 @@ class ChantiersGrandLyon(DataCollector):
             "GRANDLYON_CHANTIERS_TYPENAME",
             "adr_voie_liee.adrchantier",
         )
+        # HTTP Basic Auth Grand Lyon Portal
+        _user = os.getenv("GRANDLYON_USERNAME") or os.getenv("API_LOGIN", "")
+        _pwd = os.getenv("GRANDLYON_PASSWORD") or os.getenv("API_PASSWORD", "")
+        self._auth = (_user, _pwd) if _user and _pwd else None
 
     def fetch_raw(self) -> FetchResult:
         params = {
@@ -42,7 +46,7 @@ class ChantiersGrandLyon(DataCollector):
             "maxFeatures": 2000,
         }
         try:
-            r = self._http_get(self.wfs_url, params=params)
+            r = self._http_get(self.wfs_url, params=params, auth=self._auth)
             data = r.json()
         except Exception as e:
             raise CollectorError(f"Erreur fetch chantiers: {e}") from e
