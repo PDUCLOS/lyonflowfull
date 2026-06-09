@@ -78,13 +78,14 @@
 
 # Dette technique connue
 # -----------------------
-# - data binding : 41 widgets Streamlit utilisent encore du mock data
-#   (cf SPRINT_6_WIDGET_MIGRATION_CHECKLIST.md)
-# - GNN training : code livré, retrain Airflow planifié
+# - GNN training : code livré (stgcn_wrapper), retrain Airflow à finaliser
 # - Composant React deck.gl : pas encore intégré
-# - Tests E2E Playwright : pas en place
+# - Intégration dynamique FastAPI ↔ MLflow : en cours
 #
 # Résolu en Phase 2 (vps) :
+# - Tests E2E Playwright : OK (Tests profil Élu et résilience implémentés)
+# - Data binding (Sprint 6) : OK (100% des widgets branchés avec fallback auto)
+# - Résilience : OK (Gestion OperationalError psycopg2 avec fallback mock)
 # - Métriques Prometheus : OK (Sprint VPS-3 + VPS-4)
 # - Backup auto : OK (Sprint VPS-2, timer systemd)
 # - TLS production : OK (Sprint VPS-1, Let's Encrypt)

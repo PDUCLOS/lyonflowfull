@@ -250,11 +250,12 @@ class MLflowTracker:
             uri = f"runs:/{run_id}/{model_name}.pkl"
             # create_model_version requires tracking client
             from mlflow.tracking import MlflowClient
+
             client = MlflowClient()
-            try:
-                client.create_registered_model(model_name)
-            except Exception:
-                pass # Model already exists
+            import contextlib
+
+            with contextlib.suppress(Exception):
+                client.create_registered_model(model_name)  # Already exists → ignore
             client.create_model_version(name=model_name, source=uri, run_id=run_id)
             logger.info("Registered model %s from run %s", model_name, run_id)
         except Exception as e:
@@ -264,6 +265,7 @@ class MLflowTracker:
         """Promeut la dernière version de ce modèle en Production."""
         try:
             from mlflow.tracking import MlflowClient
+
             client = MlflowClient()
             versions = client.get_latest_versions(name=model_name)
             if not versions:
@@ -271,10 +273,7 @@ class MLflowTracker:
             latest = versions[0]
             # Transition to Production
             client.transition_model_version_stage(
-                name=model_name,
-                version=latest.version,
-                stage="Production",
-                archive_existing_versions=True
+                name=model_name, version=latest.version, stage="Production", archive_existing_versions=True
             )
             logger.info("Transitioned %s version %s to Production", model_name, latest.version)
         except Exception as e:
@@ -323,15 +322,15 @@ def list_registered_models(experiment: str | None = None, max_results: int = 50)
             # Filter by experiment name if requested (assumes model name starts with experiment name)
             if experiment and not rm.name.startswith(experiment):
                 continue
-                
+
             latest_versions = rm.latest_versions
             if not latest_versions:
                 continue
-                
+
             # Prefer Production version, else fallback to latest
             prod_version = next((v for v in latest_versions if v.current_stage == "Production"), latest_versions[0])
             run_id = prod_version.run_id
-            
+
             try:
                 run = client.get_run(run_id)
                 data = run.data

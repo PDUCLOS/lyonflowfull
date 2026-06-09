@@ -46,51 +46,73 @@ if export_format == "saeiv":
     render_saeiv_export(report_config)
 elif export_format == "excel":
     st.markdown("##### 📊 Export Excel")
+    # Init session_state pour les buffers
+    if "excel_buffer_bytes" not in st.session_state:
+        st.session_state["excel_buffer_bytes"] = None
+        st.session_state["excel_buffer_name"] = None
+        st.session_state["excel_buffer_mime"] = None
+        st.session_state["excel_buffer_label"] = None
+
     if st.button("📤 Générer Excel", key="excel_export_btn"):
-        import io
+        with st.spinner("Génération du fichier Excel..."):
+            import io
 
-        import pandas as pd
+            import pandas as pd
 
-        from dashboard.components.data_cache import cached_line_kpis
+            from dashboard.components.data_cache import cached_line_kpis
 
-        line_kpis_dict = cached_line_kpis()
-        df = pd.DataFrame(
-            [
-                {
-                    "Ligne": lid,
-                    "OTP %": k.get("otp_pct"),
-                    "Retard (min)": k.get("avg_delay_min"),
-                    "Fréquence (min)": k.get("frequency_min"),
-                    "Charge %": k.get("load_pct"),
-                }
-                for lid, k in line_kpis_dict.items()
-            ]
+            line_kpis_dict = cached_line_kpis()
+            df = pd.DataFrame(
+                [
+                    {
+                        "Ligne": lid,
+                        "OTP %": k.get("otp_pct"),
+                        "Retard (min)": k.get("avg_delay_min"),
+                        "Fréquence (min)": k.get("frequency_min"),
+                        "Charge %": k.get("load_pct"),
+                    }
+                    for lid, k in line_kpis_dict.items()
+                ]
+            )
+            base_name = f"lyonflow_export_{report_config.get('start_date', '')}"
+            try:
+                buffer = io.BytesIO()
+                df.to_excel(buffer, index=False, engine="openpyxl")
+                st.session_state["excel_buffer_bytes"] = buffer.getvalue()
+                st.session_state["excel_buffer_name"] = f"{base_name}.xlsx"
+                st.session_state["excel_buffer_mime"] = (
+                    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+                )
+                st.session_state["excel_buffer_label"] = "📥 Télécharger Excel"
+            except ImportError:
+                csv = df.to_csv(index=False).encode("utf-8")
+                st.session_state["excel_buffer_bytes"] = csv
+                st.session_state["excel_buffer_name"] = f"{base_name}.csv"
+                st.session_state["excel_buffer_mime"] = "text/csv"
+                st.session_state["excel_buffer_label"] = "📥 Télécharger CSV (fallback openpyxl manquant)"
+
+    # Le download_button reste HORS du if pour éviter StreamlitAPIException
+    # (recréer un widget sans key= dans un if provoque un conflit de clés)
+    if st.session_state["excel_buffer_bytes"] is not None:
+        st.download_button(
+            label=st.session_state["excel_buffer_label"],
+            data=st.session_state["excel_buffer_bytes"],
+            file_name=st.session_state["excel_buffer_name"],
+            mime=st.session_state["excel_buffer_mime"],
+            key="excel_dl_btn",  # clé stable et unique
         )
-        buffer = io.BytesIO()
-        try:
-            df.to_excel(buffer, index=False, engine="openpyxl")
-            st.download_button(
-                "📥 Télécharger Excel",
-                data=buffer.getvalue(),
-                file_name=f"lyonflow_export_{report_config.get('start_date', '')}.xlsx",
-                mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-            )
-        except ImportError:
-            csv = df.to_csv(index=False).encode("utf-8")
-            st.download_button(
-                "📥 Télécharger CSV (fallback openpyxl manquant)",
-                data=csv,
-                file_name=f"lyonflow_export_{report_config.get('start_date', '')}.csv",
-                mime="text/csv",
-            )
 elif export_format == "pdf":
     st.markdown("##### 📄 Export PDF")
     if st.button("📤 Générer PDF", key="pdf_export_btn"):
         st.info("🚧 Export PDF — utilise WeasyPrint côté backend (Sprint 4 elu track).")
 elif export_format == "hastus":
     st.markdown("##### ⏰ Export Hastus")
-    if st.button("📤 Générer Hastus", key="hastus_btn"):
-        st.success("✅ Scénario Hastus généré — voir Simulateur pour les détails.")
+    st.caption(
+        "Hastus = simulation d'horaires TCL. Le scénario se construit via le "
+        "Simulateur Pro TCL (fréquence bus par ligne, projection OTP)."
+    )
+    if st.button("🚀 Ouvrir le Simulateur", key="hastus_btn", type="primary"):
+        st.switch_page("pages/Pro_4_Simulateur.py")
 elif export_format == "api":
     st.markdown("##### 📡 Export API")
     st.code(

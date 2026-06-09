@@ -61,14 +61,15 @@ class XGBoostSpeedModel:
 
     def load(self, horizons: list[int] | None = None) -> None:
         """Charge les modèles depuis MLflow (si dispo) ou depuis le disque local."""
-        from src.ml.mlflow_integration import get_latest_run, is_mlflow_available
         import mlflow
-        
+
+        from src.ml.mlflow_integration import is_mlflow_available
+
         horizons = horizons or [5, 60, 180, 360]
         for h in horizons:
             model_name = f"xgb_speed_h{h}"
             model_path = self.model_dir / f"{model_name}.pkl"
-            
+
             # Essayer MLflow en premier (Model Registry)
             mlflow_success = False
             if is_mlflow_available():
@@ -81,7 +82,7 @@ class XGBoostSpeedModel:
                     mlflow_success = True
                 except Exception as e:
                     logger.warning(f"Failed to load {model_name} from MLflow Registry: {e}")
-            
+
             # Fallback disque local
             if not mlflow_success:
                 if model_path.exists():

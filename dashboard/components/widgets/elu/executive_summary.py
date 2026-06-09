@@ -15,9 +15,9 @@ def render_executive_summary() -> None:
     kpis = cached_elu_kpis_dict(force_mock=False)
     pm = kpis.get("part_modale_tc", {}).get("current", 0)
     ponc = kpis.get("ponctualite", {}).get("current", 0)
-    co2 = kpis.get("co2_evite_tonnes", {}).get("current", 0)
-    bn = kpis.get("bottlenecks_actifs", {}).get("current", 0)
-    sat = kpis.get("satisfaction_pct", {}).get("current", 0)
+    co2 = kpis.get("co2_evite_tonnes", {}).get("current", 0) or 0
+    bn = kpis.get("bottlenecks_actifs", {}).get("current", 0) or 0
+    sat = kpis.get("satisfaction_pct", {}).get("current", 0) or 0
 
     pm_delta = kpis.get("part_modale_tc", {}).get("delta_ytd", 0)
     ponc_delta = kpis.get("ponctualite", {}).get("delta_ytd", 0)

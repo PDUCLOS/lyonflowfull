@@ -51,100 +51,121 @@ def _cached_freshness() -> list[dict]:
 
 
 # Fallback mock — utilise par get_dags_status() quand Airflow indispo.
+# Les dates sont générées dynamiquement à partir de now() pour éviter qu'elles
+# soient figées dans le passé (avant : 2026-06-06 hardcodé, pépé en 2027).
+from datetime import datetime, timedelta  # noqa: E402
+
+_NOW = datetime.now()
+_FMT = "%Y-%m-%d %H:%M:%S"
+
+
+def _ago(minutes: int) -> str:
+    return (_NOW - timedelta(minutes=minutes)).strftime(_FMT)
+
+
+def _in_minutes(minutes: int) -> str:
+    return (_NOW + timedelta(minutes=minutes)).strftime(_FMT)
+
+
+def _in_months(months: int) -> str:
+    # Approximation (1 mois = 30j) — utilisée pour monthly schedules
+    return (_NOW + timedelta(days=30 * months)).strftime(_FMT)
+
+
 MOCK_DAGS = [
     {
         "dag_id": "collect_bronze",
         "schedule": "*/5 * * * *",
-        "last_run": "2026-06-06 14:55:00",
+        "last_run": _ago(5),
         "last_status": "success",
         "last_duration_s": 12,
-        "next_run": "2026-06-06 15:00:00",
+        "next_run": _in_minutes(5),
         "description": "Collecte 8 sources temps réel",
     },
     {
         "dag_id": "collect_calendriers_monthly",
         "schedule": "@monthly",
-        "last_run": "2026-06-01 03:00:00",
+        "last_run": _ago(60 * 24 * 5),
         "last_status": "success",
         "last_duration_s": 5,
-        "next_run": "2026-07-01 03:00:00",
+        "next_run": _in_months(1),
         "description": "Collecte calendriers (vacances, fériés)",
     },
     {
         "dag_id": "transform_bronze_to_silver",
         "schedule": "*/5* * * *",
-        "last_run": "2026-06-06 14:55:00",
+        "last_run": _ago(5),
         "last_status": "success",
         "last_duration_s": 8,
-        "next_run": "2026-06-06 15:00:00",
+        "next_run": _in_minutes(5),
         "description": "Bronze → Silver (5 sources)",
     },
     {
         "dag_id": "transform_silver_to_gold",
         "schedule": "*/10* * * *",
-        "last_run": "2026-06-06 14:50:00",
+        "last_run": _ago(10),
         "last_status": "success",
         "last_duration_s": 14,
-        "next_run": "2026-06-06 15:00:00",
+        "next_run": _in_minutes(10),
         "description": "Silver → Gold (3 builders)",
     },
     {
         "dag_id": "build_spatial_mapping",
         "schedule": "30 2* * *",
-        "last_run": "2026-06-06 02:30:00",
+        "last_run": _ago(60 * 12),
         "last_status": "success",
         "last_duration_s": 22,
-        "next_run": "2026-06-07 02:30:00",
+        "next_run": _in_minutes(60 * 12),
         "description": "Construit dim_spatial_grid_mapping + adjacency",
     },
     {
         "dag_id": "retrain_xgboost_speed",
         "schedule": "25* * * *",
-        "last_run": "2026-06-06 14:25:00",
+        "last_run": _ago(35),
         "last_status": "success",
         "last_duration_s": 184,
-        "next_run": "2026-06-06 15:25:00",
+        "next_run": _in_minutes(25),
         "description": "Retrain XGBoost Speed (4 horizons)",
     },
     {
         "dag_id": "retrain_xgboost_velov",
         "schedule": "50* * * *",
-        "last_run": "2026-06-06 14:50:00",
+        "last_run": _ago(10),
         "last_status": "success",
         "last_duration_s": 142,
-        "next_run": "2026-06-06 15:50:00",
+        "next_run": _in_minutes(10),
         "description": "Retrain XGBoost Velov (2 horizons)",
     },
     {
         "dag_id": "data_quality_daily",
         "schedule": "15 4* * *",
-        "last_run": "2026-06-06 04:15:00",
+        "last_run": _ago(60 * 11),
         "last_status": "success",
         "last_duration_s": 28,
-        "next_run": "2026-06-07 04:15:00",
+        "next_run": _in_minutes(60 * 13),
         "description": "6 checks qualité quotidien",
     },
     {
         "dag_id": "purge_bronze",
         "schedule": "0 3* * *",
-        "last_run": "2026-06-06 03:00:00",
+        "last_run": _ago(60 * 12),
         "last_status": "success",
         "last_duration_s": 8,
-        "next_run": "2026-06-07 03:00:00",
+        "next_run": _in_minutes(60 * 12),
         "description": "Purge Bronze rétention",
     },
 ]
 
 # Fraîcheur mock des sources Bronze (en prod : query DB)
 MOCK_FRESHNESS = [
-    {"source": "trafic_boucles", "last_ingestion": "2026-06-06 14:55:00", "n_records_24h": 316800, "status": "ok"},
-    {"source": "velov", "last_ingestion": "2026-06-06 14:55:00", "n_records_24h": 132192, "status": "ok"},
-    {"source": "tcl_vehicles", "last_ingestion": "2026-06-06 14:55:00", "n_records_24h": 69120, "status": "ok"},
-    {"source": "meteo", "last_ingestion": "2026-06-06 13:00:00", "n_records_24h": 24, "status": "ok"},
-    {"source": "air_quality", "last_ingestion": "2026-06-06 13:00:00", "n_records_24h": 24, "status": "ok"},
-    {"source": "chantiers", "last_ingestion": "2026-06-06 03:00:00", "n_records_24h": 1, "status": "ok"},
-    {"source": "calendrier_scolaire", "last_ingestion": "2026-06-01 03:00:00", "n_records_24h": 0, "status": "stale"},
-    {"source": "jours_feries", "last_ingestion": "2026-06-01 03:00:00", "n_records_24h": 0, "status": "stale"},
+    {"source": "trafic_boucles", "last_ingestion": _ago(5), "n_records_24h": 316800, "status": "ok"},
+    {"source": "velov", "last_ingestion": _ago(5), "n_records_24h": 132192, "status": "ok"},
+    {"source": "tcl_vehicles", "last_ingestion": _ago(5), "n_records_24h": 69120, "status": "ok"},
+    {"source": "meteo", "last_ingestion": _ago(60), "n_records_24h": 24, "status": "ok"},
+    {"source": "air_quality", "last_ingestion": _ago(60), "n_records_24h": 24, "status": "ok"},
+    {"source": "chantiers", "last_ingestion": _ago(60 * 12), "n_records_24h": 1, "status": "ok"},
+    {"source": "calendrier_scolaire", "last_ingestion": _ago(60 * 24 * 5), "n_records_24h": 0, "status": "stale"},
+    {"source": "jours_feries", "last_ingestion": _ago(60 * 24 * 5), "n_records_24h": 0, "status": "stale"},
 ]
 
 
@@ -163,7 +184,26 @@ def render_pipeline_status() -> None:
     n_success = sum(1 for d in dags if d.get("last_status") == "success")
     n_running = sum(1 for d in dags if d.get("last_status") == "running")
     n_failed = sum(1 for d in dags if d.get("last_status") == "failed")
-    n_alerts = 0  # Sera calculé depuis rgpd.audit_log en prod
+
+    # Calcule n_alerts depuis rgpd.audit_log (action LIKE 'alert%' OR severity=critical)
+    # sur les dernières 24h. Fallback mock si DB indispo.
+    n_alerts = 0
+    try:
+        from src.data.db_query import _df_from_query
+
+        df_alerts = _df_from_query(
+            """
+            SELECT COUNT(*) AS n
+            FROM rgpd.audit_log
+            WHERE timestamp >= NOW() - INTERVAL '24 hours'
+              AND (action LIKE 'alert%%' OR severity = 'critical')
+            """
+        )
+        if not df_alerts.empty:
+            n_alerts = int(df_alerts.iloc[0].get("n") or 0)
+    except Exception:
+        # DB indispo — fallback mock : 0 alertes en mode démo
+        n_alerts = 0
 
     with cols[0]:
         st.metric("✅ DAGs OK", n_success, delta=f"{n_success}/{len(dags) or 1}")
@@ -370,7 +410,9 @@ def _trigger_dag(dag_id: str) -> None:
         ok = trigger_dag(dag_id)
         if ok:
             st.success(f"✅ {dag_id} déclenché — voir Airflow UI pour progression")
+            # Avant ce fix : pas de rerun → la liste DAGs restait stale jusqu'au prochain event user.
             st.cache_data.clear()
+            st.rerun()
         else:
             st.warning(f"Impossible de déclencher {dag_id} (Airflow non joignable ou identifiants invalides).")
 

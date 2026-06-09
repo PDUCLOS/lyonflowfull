@@ -24,7 +24,11 @@ def render_roi_calculator(line_id: str | None = None) -> None:
         return
 
     # Sélection d'un bottleneck
-    options = [f"#{b.get('rank')} {b.get('zone')}" for b in bottlenecks]
+    options = []
+    for b in bottlenecks:
+        rank = b.get("rank", "—")
+        zone = b.get("zone") or "—"
+        options.append(f"#{rank} {zone}")
     selected = st.selectbox(
         "Sélectionner un aménagement",
         options,
@@ -34,8 +38,12 @@ def render_roi_calculator(line_id: str | None = None) -> None:
     if not selected:
         return
 
-    idx = options.index(selected)
-    b = bottlenecks[idx]
+    # Defensive : si la liste change entre 2 renders (mock vs DB), .index() peut
+    # lever ValueError. On filtre par label au lieu d'utiliser l'index.
+    matching = [b for b in bottlenecks if f"#{b.get('rank', '—')} {b.get('zone') or '—'}" == selected]
+    if not matching:
+        return
+    b = matching[0]
 
     # Inputs ajustables
     col1, col2 = st.columns(2)

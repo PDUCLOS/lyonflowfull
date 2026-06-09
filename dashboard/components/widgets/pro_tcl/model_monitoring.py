@@ -178,13 +178,22 @@ def _render_model_registry_table(models: list[dict]) -> None:
                 unsafe_allow_html=True,
             )
         with cols[3]:
-            mae = m.get("metrics", {}).get("mae", 0.0)
-            st.markdown(f"**{mae:.2f}**")
+            # mae None-safe (m["metrics"] peut être absent ou metrics.mae peut être None)
+            mae_raw = m.get("metrics", {}).get("mae") if m.get("metrics") else None
+            try:
+                mae_str = f"{float(mae_raw):.2f}"
+            except (TypeError, ValueError):
+                mae_str = "—"
+            st.markdown(f"**{mae_str}**")
         with cols[4]:
             trained = str(m.get("trained_at", "—"))[:19]  # tronque
             st.markdown(trained)
         with cols[5]:
-            st.markdown(f"{m.get('n_training_samples', 0):,}")
+            try:
+                samples = int(m.get("n_training_samples", 0) or 0)
+            except (TypeError, ValueError):
+                samples = 0
+            st.markdown(f"{samples:,}")
         with cols[6]:
             drift = m.get("drift_status", "ok")
             drift_emoji = {"ok": "✅", "warning": "⚠️", "critical": "🚨"}.get(drift, "—")
@@ -327,35 +336,60 @@ def render_metrics_comparison() -> None:
     except Exception:
         models = MOCK_MODELS
 
-    xgb_h60 = next((m for m in models if m["name"] == "xgboost_speed_h60"), None)
-    gnn_h60 = next((m for m in models if m["name"] == "stgcn_gnn_h60"), None)
+    xgb_h60 = next((m for m in models if m.get("name") == "xgboost_speed_h60"), None)
+    gnn_h60 = next((m for m in models if m.get("name") == "stgcn_gnn_h60"), None)
 
     if not xgb_h60 or not gnn_h60:
         return
 
+    # Defensive : valeurs None-safe pour éviter crash si MLflow renvoie un dict partiel
+    def _mae(m):
+        try:
+            return float(m.get("metrics", {}).get("mae", 0.0))
+        except (TypeError, ValueError):
+            return 0.0
+
+    def _r2(m):
+        try:
+            return float(m.get("metrics", {}).get("r2", 0.0))
+        except (TypeError, ValueError):
+            return 0.0
+
+    def _samples(m):
+        try:
+            return int(m.get("n_training_samples", 0) or 0)
+        except (TypeError, ValueError):
+            return 0
+
+    def _features(m):
+        try:
+            return int(m.get("feature_count", 0) or 0)
+        except (TypeError, ValueError):
+            return 0
+
     cols = st.columns(2)
     with cols[0]:
         st.markdown("**XGBoost Speed H+60min**")
-        st.metric("MAE", f"{xgb_h60['metrics']['mae']:.2f} km/h")
-        st.metric("R²", f"{xgb_h60['metrics']['r2']:.3f}")
-        st.metric("Samples", f"{xgb_h60['n_training_samples']:,}")
-        st.metric("Features", xgb_h60["feature_count"])
+        st.metric("MAE", f"{_mae(xgb_h60):.2f} km/h")
+        st.metric("R²", f"{_r2(xgb_h60):.3f}")
+        st.metric("Samples", f"{_samples(xgb_h60):,}")
+        st.metric("Features", _features(xgb_h60))
 
     with cols[1]:
         st.markdown("**ST-GCN GNN H+60min (Staging)**")
         st.metric(
             "MAE",
-            f"{gnn_h60['metrics']['mae']:.2f} km/h",
-            delta=f"{gnn_h60['metrics']['mae'] - xgb_h60['metrics']['mae']:+.2f} vs XGBoost",
+            f"{_mae(gnn_h60):.2f} km/h",
+            delta=f"{_mae(gnn_h60) - _mae(xgb_h60):+.2f} vs XGBoost",
             delta_color="inverse",
         )
         st.metric(
             "R²",
-            f"{gnn_h60['metrics']['r2']:.3f}",
-            delta=f"{gnn_h60['metrics']['r2'] - xgb_h60['metrics']['r2']:+.3f} vs XGBoost",
+            f"{_r2(gnn_h60):.3f}",
+            delta=f"{_r2(gnn_h60) - _r2(xgb_h60):+.3f} vs XGBoost",
         )
-        st.metric("Samples", f"{gnn_h60['n_training_samples']:,}")
-        st.metric("Features", gnn_h60["feature_count"])
+        st.metric("Samples", f"{_samples(gnn_h60):,}")
+        st.metric("Features", _features(gnn_h60))
 
     st.caption(
         "💡 Le GNN capture les dépendances spatiales entre segments. "
@@ -577,6 +611,8 @@ def render_data_quality_panel() -> None:
     """
     st.markdown("##### 🩺 Data Quality — freshness + volume (Elementary-style)")
     try:
+        from psycopg2 import sql
+
         from src.data.db_query import _df_from_query  # type: ignore
     except Exception as e:
         st.caption(f"Imports indisponibles : {e}")
@@ -597,14 +633,22 @@ def render_data_quality_panel() -> None:
     rows = []
     for schema, table, ts_col, expected in tables:
         try:
-            df = _df_from_query(
-                f"""
+            # psycopg2.sql.Identifier pour identifier (schema/table/colonne) — SQL injection-proof.
+            # ts_col est hardcodé dans la liste ci-dessus, mais on utilise Identifier par cohérence
+            # avec la règle "SQL paramétré partout" du AGENTS.md.
+            query = sql.SQL(
+                """
                 SELECT COUNT(*) AS n_rows,
                        MAX({ts_col}) AS last_ts,
                        NOW() - MAX({ts_col}) AS lag
                 FROM {schema}.{table}
                 """
+            ).format(
+                ts_col=sql.Identifier(ts_col),
+                schema=sql.Identifier(schema),
+                table=sql.Identifier(table),
             )
+            df = _df_from_query(query)
             if df.empty:
                 rows.append(
                     {

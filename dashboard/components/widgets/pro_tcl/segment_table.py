@@ -24,16 +24,25 @@ def render_segment_table(line_id: str | None = None, height: int = 400) -> None:
     df_seg = cached_segments(force_mock=False)
     if not df_seg.empty:
         # Adapte au format attendu (mock)
+        def _line_id_from_channel(channel_id):
+            """Extrait le line_id du channel_id, None-safe."""
+            if not channel_id:
+                return "?"
+            try:
+                return channel_id.split("_")[0]
+            except (AttributeError, IndexError):
+                return "?"
+
         segments = [
             {
-                "line_id": row.get("channel_id", "?").split("_")[0] if row.get("channel_id") else "?",
-                "name": row["segment_id"],
+                "line_id": _line_id_from_channel(row.get("channel_id")),
+                "name": row.get("segment_id", "—"),
                 "bus_state": "—",  # pas dans la table segments de base
                 "traffic_state": "—",
                 "diagnosis": "ok",  # sera enrichi par jointure dans Sprint 9
                 "delay_min": 0,
-                "lat": row.get("lat_start", 0),
-                "lon": row.get("lng_start", 0),
+                "lat": row.get("lat_start", 0) or 0,
+                "lon": row.get("lng_start", 0) or 0,
             }
             for _, row in df_seg.iterrows()
         ]

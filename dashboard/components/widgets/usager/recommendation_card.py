@@ -18,8 +18,32 @@ def render_recommendation_card(option: dict) -> None:
                 cost_eur, co2_g, confidence_pct, why (list), etc.
     """
     bg_color = COLORS["bg_card"]
-    accent = COLORS["status_ok"]
+    confidence = option.get("confidence_pct", 0)
+
+    if confidence >= 90:
+        accent = COLORS["status_ok"]
+        bg_accent = "rgba(76,175,80,0.1)"  # Green tinted
+    elif confidence >= 70:
+        accent = COLORS["status_warning"]
+        bg_accent = "rgba(255,152,0,0.1)"  # Orange tinted
+    else:
+        accent = COLORS["status_critical"]
+        bg_accent = "rgba(244,67,54,0.1)"  # Red tinted
+
     border = f"4px solid {accent}"
+
+    # Helpers défensifs — None / string / float manquant
+    def _fmt_eur(v) -> str:
+        try:
+            return f"{float(v):.2f}€"
+        except (TypeError, ValueError):
+            return "—"
+
+    def _fmt_g(v) -> str:
+        try:
+            return f"{int(float(v))}g"
+        except (TypeError, ValueError):
+            return "—g"
 
     st.markdown(
         f"""
@@ -46,13 +70,13 @@ def render_recommendation_card(option: dict) -> None:
                 <div>
                     <div style="font-size:0.75rem;opacity:0.6;">Coût</div>
                     <div style="font-size:1.1rem;font-weight:600;">
-                        {option.get("cost_eur", 0):.2f}€
+                        {_fmt_eur(option.get("cost_eur"))}
                     </div>
                 </div>
                 <div>
                     <div style="font-size:0.75rem;opacity:0.6;">CO₂</div>
                     <div style="font-size:1.1rem;font-weight:600;">
-                        {option.get("co2_g", 0)}g
+                        {_fmt_g(option.get("co2_g"))}
                     </div>
                 </div>
                 <div>
@@ -64,13 +88,13 @@ def render_recommendation_card(option: dict) -> None:
                 <div>
                     <div style="font-size:0.75rem;opacity:0.6;">Fiabilité</div>
                     <div style="font-size:1.1rem;font-weight:600;color:{accent};">
-                        {option.get("confidence_pct", 0)}%
+                        {confidence}%
                     </div>
                 </div>
             </div>
 
-            <div style="margin-top:1rem;padding:0.8rem;background:rgba(76,175,80,0.1);
-                        border-radius:6px;font-size:0.9rem;">
+            <div style="margin-top:1rem;padding:0.8rem;background:{bg_accent};
+                        border-radius:6px;font-size:0.9rem;color:{accent};">
                 <b>{option.get("confidence_text", "")}</b>
             </div>
         </div>
@@ -78,14 +102,16 @@ def render_recommendation_card(option: dict) -> None:
         unsafe_allow_html=True,
     )
 
-    if option.get("recommended"):
-        if st.button(
-            f"➡️ Partir en {option.get('mode_label', '')}",
-            type="primary",
-            use_container_width=True,
-            key="recommendation_go",
-        ):
-            st.success(f"Trajet lancé en {option.get('mode_label', '')} — bon voyage !")
+    # Bouton "Partir" rendu TOUJOURS visible (avant : sous if option.get("recommended")
+    # → invisible si aucune option mock n'a recommended=True).
+    # Le badge "Recommended" est maintenant un label visuel séparé.
+    if st.button(
+        f"➡️ Partir en {option.get('mode_label', '')}",
+        type="primary",
+        use_container_width=True,
+        key=f"recommendation_go_{option.get('mode', 'default')}",
+    ):
+        st.success(f"Trajet lancé en {option.get('mode_label', '')} — bon voyage !")
 
 
 def render_steps(steps: list) -> None:

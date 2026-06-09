@@ -36,7 +36,8 @@ def render_correlation_matrix(line_id: str | None = None) -> None:
     # Charge les segments (pour le détail)
     segments = SEGMENTS
     if line_id:
-        segments = [s for s in segments if s["line_id"] == line_id]
+        # Defensive : s.get("line_id") au lieu de s["line_id"] (KeyError-safe)
+        segments = [s for s in segments if s.get("line_id") == line_id]
 
     if not segments:
         st.info("Aucun segment à analyser.")

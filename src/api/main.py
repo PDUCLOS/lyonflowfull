@@ -289,14 +289,30 @@ async def health():
 @app.get("/api/v1/models", tags=["models"])
 async def list_models(api_key: None = Depends(verify_api_key)):
     """Liste les modèles MLflow disponibles."""
-    # Placeholder — interrogation MLflow Registry
-    return {
-        "models": [
-            {"name": "xgboost_speed", "version": "1.2.0", "stage": "Production", "metrics": {"mae": 1.96, "r2": 0.947}},
-            {"name": "xgboost_velov", "version": "1.0.0", "stage": "Production", "metrics": {"mae": 4.2, "r2": 0.331}},
-            {"name": "stgcn_gnn", "version": "0.3.0", "stage": "Staging", "metrics": {"mae": 2.8, "r2": 0.92}},
-        ]
-    }
+    from src.ml.mlflow_integration import is_mlflow_available, list_registered_models
+
+    if not is_mlflow_available():
+        # Fallback si MLflow est indisponible
+        return {
+            "models": [
+                {
+                    "name": "xgboost_speed",
+                    "version": "1.2.0",
+                    "stage": "Production",
+                    "metrics": {"mae": 1.96, "r2": 0.947},
+                },
+                {
+                    "name": "xgboost_velov",
+                    "version": "1.0.0",
+                    "stage": "Production",
+                    "metrics": {"mae": 4.2, "r2": 0.331},
+                },
+                {"name": "stgcn_gnn", "version": "0.3.0", "stage": "Staging", "metrics": {"mae": 2.8, "r2": 0.92}},
+            ]
+        }
+
+    models = list_registered_models()
+    return {"models": models}
 
 
 @app.post("/api/v1/predict/traffic", response_model=PredictTrafficResponse, tags=["predict"])
@@ -304,16 +320,13 @@ async def predict_traffic(req: PredictTrafficRequest, api_key: None = Depends(ve
     """Prédit la vitesse trafic pour un nœud et un horizon."""
     # Sprint VPS-4 : métriques ML
     with PREDICTION_LATENCY.labels(model="xgboost_speed").time():
-        # Placeholder — appel MLflow en prod
-        # from src.models.xgboost_speed import predict_one
-        # prediction = predict_one(req.node_idx, req.horizon_minutes)
-        prediction = {
-            "predicted_speed_kmh": 28.4,
-            "confidence_low": 24.0,
-            "confidence_high": 32.0,
-            "model_name": "xgboost_speed",
-            "model_version": "1.2.0",
-        }
+        from src.models.xgboost_speed import XGBoostSpeedModel
+
+        # TODO: Câbler la récupération du modèle depuis MLflow Registry en priorité
+        # En attendant, on utilise la logique locale/fallback du modèle XGBoost
+        model = XGBoostSpeedModel()
+        prediction = model.predict(req.node_idx, req.horizon_minutes)
+
     PREDICTIONS_TOTAL.labels(
         model="xgboost_speed",
         horizon_minutes=str(req.horizon_minutes),
@@ -339,7 +352,12 @@ async def predict_velov(req: PredictVelovRequest, api_key: None = Depends(verify
     """Prédit la disponibilité Vélov pour une station et un horizon."""
     # Sprint VPS-4 : métriques ML
     with PREDICTION_LATENCY.labels(model="xgboost_velov").time():
-        predicted = 8.0
+        from src.models.xgboost_velov import XGBoostVelovModel
+
+        model = XGBoostVelovModel()
+        # Fallback local le temps que MLflow soit câblé
+        pred_dict = model.predict(req.station_id, req.horizon_minutes)
+        predicted = pred_dict["predicted_bikes"]
     PREDICTIONS_TOTAL.labels(
         model="xgboost_velov",
         horizon_minutes=str(req.horizon_minutes),

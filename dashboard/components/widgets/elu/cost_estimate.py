@@ -40,12 +40,19 @@ def render_cost_estimate(zone: str | None = None) -> None:
         "Pôle d'échanges multimodal (PEM)": 8_000_000,  # forfait PEM
     }
 
-    if "Pôle" in type_amenagement or "carrefour" in type_amenagement.lower():
-        cout_total = cout_par_m.get(type_amenagement, 0)
+    # Forfaits : carrefour (par unité) ou PEM (par projet)
+    is_forfait = "Pôle" in type_amenagement or "carrefour" in type_amenagement.lower()
+    cout_unitaire = cout_par_m.get(type_amenagement)
+    if cout_unitaire is None:
+        st.warning(f"⚠️ Type d'aménagement inconnu : « {type_amenagement} ». Coût par défaut appliqué (500€/m).")
+        cout_unitaire = 500
+
+    if is_forfait:
+        cout_total = cout_unitaire
         cout_unite = "forfait"
     else:
-        cout_total = longueur_km * 1000 * cout_par_m.get(type_amenagement, 500)
-        cout_unite = f"{cout_par_m.get(type_amenagement, 0)}€/m × {longueur_km} km"
+        cout_total = longueur_km * 1000 * cout_unitaire
+        cout_unite = f"{cout_unitaire}€/m × {longueur_km} km"
 
     st.markdown(
         f"""

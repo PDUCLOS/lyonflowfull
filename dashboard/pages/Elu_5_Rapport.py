@@ -44,10 +44,12 @@ st.markdown("---")
 
 # Options avancées
 with st.expander("🔧 Options avancées", expanded=False):
-    st.checkbox("Inclure méthodologie complète", value=True, key="pdf_opt_methodo")
-    st.checkbox("Inclure sources de données", value=True, key="pdf_opt_sources")
-    st.checkbox("Inclure limites et biais", value=False, key="pdf_opt_limits")
-    st.checkbox("Inclure annexes techniques", value=False, key="pdf_opt_annexes")
+    # IMPORTANT: assigner les retours des checkboxes (sinon StreamlitAPIException)
+    # + propager dans sections (sinon options cosmétiques, choix jetés)
+    include_methodo = st.checkbox("Inclure méthodologie complète", value=True, key="pdf_opt_methodo")
+    include_sources = st.checkbox("Inclure sources de données", value=True, key="pdf_opt_sources")
+    include_limits = st.checkbox("Inclure limites et biais", value=False, key="pdf_opt_limits")
+    include_annexes = st.checkbox("Inclure annexes techniques", value=False, key="pdf_opt_annexes")
 
 st.markdown("---")
 
@@ -80,9 +82,15 @@ sections = {
     ],
     "decisions": [
         f"{b.get('zone', '—')} — {b.get('gain_min', 0)} min gagnées · "
-        f"{b.get('cout_M_euros', 0)} M€ · ROI {int(b.get('roi_mois', 0))} mois"
+        f"{b.get('cout_M_euros', 0)} M€ · ROI {int(b.get('roi_mois', 0) or 0)} mois"
         for b in bottlenecks_top[:5]
     ],
+    "include_methodo": include_methodo,
+    "include_sources": include_sources,
+    "include_limits": include_limits,
+    "include_annexes": include_annexes,
+    "slides": slides,  # propagé au PDF (sinon jeté)
+    "template_name": template.get("name", "—") if template else "—",
 }
 render_pdf_generator(sections)
 

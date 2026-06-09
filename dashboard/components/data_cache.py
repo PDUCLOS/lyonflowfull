@@ -188,8 +188,14 @@ def cached_spatial_mapping(force_mock: bool = False) -> pd.DataFrame:
 
 
 @st.cache_data(ttl=TTL_SLOW, show_spinner=False)
-def cached_traffic_predictions_for_map(*args, **kwargs) -> pd.DataFrame:
-    return dl.load_traffic_predictions_for_map(*args, **kwargs)
+def cached_traffic_predictions_for_map(horizon_minutes: int = 30, limit: int = 500) -> pd.DataFrame:
+    """Cache les prédictions trafic pour la carte GNN.
+
+    Args typés explicitement (pas *args/**kwargs) pour garantir le hashage
+    correct des arguments par @st.cache_data (sinon UnhashableParamError si
+    un caller passe un dict/list/df).
+    """
+    return dl.load_traffic_predictions_for_map(horizon_minutes=horizon_minutes, limit=limit)
 
 
 @st.cache_data(ttl=TTL_SLOW, show_spinner=False)

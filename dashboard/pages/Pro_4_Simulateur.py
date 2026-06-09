@@ -33,9 +33,9 @@ st.caption("Simule l'impact d'ajout/retrait de bus sur l'OTP d'une ligne.")
 
 st.markdown("---")
 
-# Choix de la ligne (normalise list -> str)
+# Choix de la ligne (render_line_selector retourne TOUJOURS une list)
 selected = render_line_selector(multiselect=False, key_suffix="simul")
-target_line = (selected[0] if selected else "C3") if isinstance(selected, list) else (selected or "C3")
+target_line = selected[0] if selected else "C3"
 
 # KPIs de la ligne sélectionnée (live via data_loader)
 st.markdown(f"##### 📊 État actuel — {target_line}")

@@ -101,7 +101,9 @@ if uploaded_files:
 
     if n_uploaded > 0:
         st.success(f"✅ {n_uploaded} fichier(s) uploadé(s)")
-        st.rerun()
+        # Pas de st.rerun() : le file_uploader a déjà déclenché un rerun implicite,
+        # un second rerun pendant ce rerun = StreamlitAPIException sur Streamlit >=1.30.
+        # Le st.success suffit, l'user voit la liste mise à jour au prochain event.
 
 st.markdown("---")
 

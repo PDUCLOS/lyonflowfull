@@ -18,6 +18,11 @@ def render_impact_projection(zone: str | None = None) -> None:
         return
 
     # Modèle simplifié (Sprint 5 : GNN + XGBoost)
+    st.warning(
+        "⚠️ **Estimation générique** — ces valeurs (-12% VP, +18% bus, +45% vélo, -23% CO₂) "
+        "ne sont PAS calculées pour la zone sélectionnée. Sprint suivant : modèle ML (GNN + XGBoost) "
+        "affiné par zone."
+    )
     col1, col2, col3, col4 = st.columns(4)
     with col1:
         st.metric("Trafic VP", "-12%", delta_color="inverse", help="Réduction attendue du trafic véhicule particulier")
@@ -33,7 +38,6 @@ def render_impact_projection(zone: str | None = None) -> None:
     st.caption(
         "- Réduction VP : élastique au report modal TC/vélo\n"
         "- Gain bus : attractivité + fréquence perçue\n"
-        "- Gain vélo : effet réseau +安全感\n"
+        "- Gain vélo : effet réseau\n"
         "- CO₂ : mix modal post-aménagement × facteur d'émission"
     )
-    st.caption("🚧 Sprint 5 : modèle ML (GNN + XGBoost) affiné par zone")

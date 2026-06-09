@@ -36,14 +36,21 @@ def render_network_map(buses: list | None = None, height: int = 400) -> None:
         df = cached_buses_positions(force_mock=False)
         if not df.empty:
             # Adapter le format DB → format attendu par le widget
+            def _safe_delay_min(seconds):
+                """Convertit delay_seconds en minutes, None/string safe."""
+                try:
+                    return int(float(seconds) / 60)
+                except (TypeError, ValueError):
+                    return 0
+
             buses = [
                 {
-                    "bus_id": row["vehicle_ref"],
-                    "line_id": row["line_ref"],
-                    "lat": row["lat"],
-                    "lon": row["lng"],
+                    "bus_id": row.get("vehicle_ref", "—"),
+                    "line_id": row.get("line_ref", "—"),
+                    "lat": row.get("lat", 0) or 0,
+                    "lon": row.get("lng", 0) or 0,
                     "segment": "—",  # pas dans la table de base
-                    "delay_min": int(row["delay_seconds"] / 60) if row.get("delay_seconds") else 0,
+                    "delay_min": _safe_delay_min(row.get("delay_seconds")),
                 }
                 for _, row in df.iterrows()
             ]

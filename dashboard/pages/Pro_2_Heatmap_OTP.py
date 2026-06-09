@@ -34,10 +34,18 @@ st.markdown("---")
 
 # Choix période
 period = filters.get("period", "Aujourd'hui")
-days = {"Aujourd'hui": 1, "7 derniers jours": 7, "30 derniers jours": 30}.get(period, 1)
+days_map = {"Aujourd'hui": 1, "7 derniers jours": 7, "30 derniers jours": 30}
+days = days_map.get(period, 1)
+# "Personnalisé" = aujourd'hui par défaut (futur Sprint : date_input range)
+if period == "Personnalisé":
+    days = 1
+
+# Filtres day_type / weather — avant jetés, maintenant propagés
+day_type = filters.get("day_type", [])
+weather = filters.get("weather", [])
 
 st.markdown(f"##### Vue : {period}")
-render_otp_heatmap(days=days, height=500)
+render_otp_heatmap(days=days, day_type=day_type, weather=weather, height=500)
 
 st.markdown("---")
 

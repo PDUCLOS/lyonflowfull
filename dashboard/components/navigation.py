@@ -60,12 +60,25 @@ def _render_nav_entry(entry: dict[str, Any]) -> None:
     icon = entry.get("icon", "")
 
     if file:
+        # Calcul du highlight : match exact sur le nom de fichier (sans .py)
+        # Avant : `_current_page_file() in file` matchait par substring → faux positifs
+        # (ex: "Pro_4" matchait dans "Pro_4_Simulateur" ET dans "Pro_4_Correlation" si current="Pro_4")
+        current = _current_page_file()
+        is_active = bool(current) and (file == current or file == f"{current}.py")
         try:
-            st.page_link(
-                f"pages/{file}",
-                label=label,
-                icon=icon,
-            )
+            if is_active:
+                # Marqueur visuel pour la page active
+                st.page_link(
+                    f"pages/{file}",
+                    label=f"▶ {label}",
+                    icon=icon,
+                )
+            else:
+                st.page_link(
+                    f"pages/{file}",
+                    label=label,
+                    icon=icon,
+                )
         except Exception:
             # Fallback si la page n'existe pas encore
             st.button(f"{icon} {label} (à créer)", key=f"nav_{file}", disabled=True, use_container_width=True)
@@ -81,10 +94,10 @@ def render_sidebar_navigation() -> None:
     4. Footer avec bouton de retour à l'accueil
     """
     from src.persona.personas_loader import list_personas
-    
+
     pm = PersonaManager()
     persona_id = get_current_persona()
-    
+
     # Trouver les infos du persona courant
     personas = list_personas()
     current_p = next((p for p in personas if p["id"] == persona_id), None)
@@ -106,7 +119,7 @@ def render_sidebar_navigation() -> None:
                 st.markdown(f"**{gdata['icon']} {gname.upper()}**")
                 for entry in gdata["entries"]:
                     _render_nav_entry(entry)
-                st.write("") # Espacement
+                st.write("")  # Espacement
 
         # 3. Pages communes
         common = get_common_pages()
@@ -120,7 +133,8 @@ def render_sidebar_navigation() -> None:
         st.markdown("---")
         if st.button("🚪 Changer de profil", use_container_width=True, type="secondary"):
             from src.persona.manager import clear_current_persona
+
             clear_current_persona()
             st.switch_page("Accueil.py")
-            
+
         st.caption("LyonFlowFull v0.3.0")

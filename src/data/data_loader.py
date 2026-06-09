@@ -111,11 +111,7 @@ def load_traffic(force_mock: bool = False) -> dict[str, Any]:
                 "lon": 4.83 + (int(row["node_idx"]) % 10) * 0.005,
                 "speed_kmh": speed_val,
                 "delay_min": max(0, int((30 - speed_val) / 5)),
-                "severity": "high"
-                if speed_val < 15
-                else "medium"
-                if speed_val < 25
-                else "low",
+                "severity": "high" if speed_val < 15 else "medium" if speed_val < 25 else "low",
             }
         )
 

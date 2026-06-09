@@ -84,17 +84,17 @@ sections = {
         {
             "rank": b.get("rank", i + 1),
             "zone": b.get("zone", "—"),
-            "lines_impacted": b.get("lines_impacted", []),
-            "voyageurs_jour": b.get("voyageurs_jour", 0),
-            "gain_min": b.get("gain_min", 0),
-            "cout_M_euros": b.get("cout_M_euros", 0),
-            "roi_mois": b.get("roi_mois", 0),
+            "lines_impacted": b.get("lines_impacted", []) or [],
+            "voyageurs_jour": b.get("voyageurs_jour", 0) or 0,
+            "gain_min": b.get("gain_min", 0) or 0,
+            "cout_M_euros": b.get("cout_M_euros", 0) or 0,
+            "roi_mois": b.get("roi_mois", 0) or 0,
         }
         for i, b in enumerate(bottlenecks_top[:5])
     ],
     "decisions": [
         f"{b.get('zone', '—')} — {b.get('gain_min', 0)} min gagnées, "
-        f"{b.get('cout_M_euros', 0)} M€, ROI {int(b.get('roi_mois', 0))} mois"
+        f"{b.get('cout_M_euros', 0)} M€, ROI {int(b.get('roi_mois', 0) or 0)} mois"
         for b in bottlenecks_top[:5]
     ],
 }

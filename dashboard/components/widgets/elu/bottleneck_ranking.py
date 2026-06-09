@@ -22,14 +22,14 @@ def render_bottleneck_ranking(top_n: int | None = None) -> None:
         bottlenecks = bottlenecks[:top_n]
 
     for b in bottlenecks:
-        zone = b.get("zone", "—")
+        zone = b.get("zone") or "—"
         rank = b.get("rank", "—")
-        lignes = ", ".join(b.get("lines_impacted", []))
-        voyageurs = b.get("voyageurs_jour", 0)
-        gain = b.get("gain_min", 0)
-        cout = b.get("cout_M_euros", 0)
-        roi = b.get("roi_mois", 0)
-        delai = b.get("delai_mois", 0)
+        lignes = ", ".join(b.get("lines_impacted") or []) or "—"
+        voyageurs = b.get("voyageurs_jour", 0) or 0
+        gain = b.get("gain_min", 0) or 0
+        cout = b.get("cout_M_euros", 0) or 0
+        roi = b.get("roi_mois", 0) or 0
+        delai = b.get("delai_mois", 0) or 0
 
         # Couleur selon ROI
         if roi <= 12:
@@ -41,6 +41,9 @@ def render_bottleneck_ranking(top_n: int | None = None) -> None:
         else:
             roi_color = COLORS["status_critical"]
             roi_emoji = "🔴"
+
+        # Format cout en M€ (avant : "{cout} M€" brut → "1500000 M€" si DB renvoie euros)
+        cout_str = f"{cout:.1f} M€" if cout < 1000 else f"{cout / 1_000_000:.1f} M€"
 
         st.markdown(
             f"""
@@ -66,7 +69,7 @@ def render_bottleneck_ranking(top_n: int | None = None) -> None:
                     </div>
                     <div style="text-align:center;">
                         <div style="font-size:0.7rem;opacity:0.6;">Coût</div>
-                        <div style="font-weight:600;">{cout} M€</div>
+                        <div style="font-weight:600;">{cout_str}</div>
                     </div>
                     <div style="text-align:center;">
                         <div style="font-size:0.7rem;opacity:0.6;">Délai</div>

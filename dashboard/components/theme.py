@@ -133,7 +133,7 @@ def inject_theme() -> None:
         background: linear-gradient(180deg, #0E1117 0%, #14171D 100%);
         border-right: 1px solid var(--border-card);
     }}
-    
+
     /* Beautiful Sidebar Menu Links */
     [data-testid="stPageLink-NavLink"] {{
         padding: 0.6rem 0.8rem;

@@ -125,14 +125,30 @@ st.markdown("---")
 st.markdown("##### 📊 Lyon en ce moment (aperçu — valeurs de référence, mode démo)")
 
 stat_cols = st.columns(4)
-# TODO Sprint 6+ : query DB pour vraies valeurs
-# SELECT COUNT(*) FROM bronze.velov, etc.
+# Sprint 7+ : query live DB pour vraies valeurs (fallback mock si DB indispo).
+# Avant ce fix : "1 100", "118", "458" hardcodés en dur — incohérent avec le
+# bandeau "🟢 Live" en haut de page.
+try:
+    from dashboard.components.data_cache import (
+        cached_tcl_lines,
+        cached_velov_stations,
+    )
+
+    n_lines = len(cached_tcl_lines(force_mock=False)) or 118
+except Exception:
+    n_lines = 118  # fallback mock
+
+try:
+    n_stations_velov = len(cached_velov_stations(force_mock=False)) or 458
+except Exception:
+    n_stations_velov = 458  # fallback mock
+
 with stat_cols[0]:
-    st.metric("Capteurs trafic", "1 100", delta="📊 référence")
+    st.metric("Capteurs trafic", "1 100", delta="référence Grand Lyon")
 with stat_cols[1]:
-    st.metric("Lignes TCL", "118", delta="📊 référence")
+    st.metric("Lignes TCL", f"{n_lines}", delta="live" if n_lines != 118 else "📊 référence")
 with stat_cols[2]:
-    st.metric("Stations Vélov", "458", delta="📊 référence")
+    st.metric("Stations Vélov", f"{n_stations_velov}", delta="live" if n_stations_velov != 458 else "📊 référence")
 with stat_cols[3]:
     st.metric("Prédictions/jour", "~26k", delta="GNN + XGBoost")
 

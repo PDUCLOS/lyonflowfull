@@ -63,6 +63,9 @@ security:  ## Bandit + pip-audit
 test:  ## Tous les tests
 	$(PYTHON) -m pytest tests/ -v
 
+test-docker:  ## Lance tous les tests dans un container éphémère (isole les dépendances C complexes)
+	docker compose run --rm api pytest tests/ -v
+
 test-unit:  ## Tests persona (UI)
 	$(PYTHON) -m pytest tests/persona/ -v
 

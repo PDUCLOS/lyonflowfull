@@ -38,6 +38,19 @@ _TYPE_LABEL = {
 }
 
 
+def _set_search_target(name: str, target: str) -> None:
+    """Callback on_click : écrit dans la clé du text_input AVANT qu'il soit instancié.
+
+    Streamlit interdit `st.session_state[key] = ...` après que le widget avec
+    `key` a été rendu dans le run. Le callback s'exécute au début du rerun,
+    avant les widgets → l'écriture passe, puis le text_input lit la valeur.
+    """
+    if "Départ" in target:
+        st.session_state["search_origin"] = name
+    else:
+        st.session_state["search_destination"] = name
+
+
 def render_search_bar() -> dict[str, typing.Any]:
     """Affiche la barre de recherche trajet cliquable.
 
@@ -84,17 +97,14 @@ def render_search_bar() -> dict[str, typing.Any]:
                 addr = addresses[i + j]
                 icon = _TYPE_ICON.get(addr["type"], "📍")
                 with col:
-                    if st.button(
+                    st.button(
                         f"{icon} {addr['name']}",
                         key=f"addr_btn_{addr['name']}",
                         help=f"{_TYPE_LABEL.get(addr['type'], addr['type'])} — clic = remplit {target}",
                         use_container_width=True,
-                    ):
-                        if "Départ" in target:
-                            st.session_state["search_origin"] = addr["name"]
-                        else:
-                            st.session_state["search_destination"] = addr["name"]
-                        st.rerun()
+                        on_click=_set_search_target,
+                        args=(addr["name"], target),
+                    )
 
     # ---- Bloc départ (maintenant / heure) ----
     st.markdown("##### 🕐 Départ")

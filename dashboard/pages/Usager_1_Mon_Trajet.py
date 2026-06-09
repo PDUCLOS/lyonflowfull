@@ -57,6 +57,9 @@ st.markdown("---")
 # Bouton de recherche
 col_btn = st.columns([1, 2, 1])
 with col_btn[1]:
+    # Le clic set results_loaded=True, et on rerun pour afficher les résultats.
+    # Avant ce fix, le bouton était mort : results_loaded passait à True au 1er
+    # render et n'était jamais remis à False, donc le bloc s'affichait toujours.
     search_clicked = st.button(
         "🔍 Trouver mon trajet",
         type="primary",
@@ -70,13 +73,17 @@ st.markdown("---")
 # binding complet recherche -> coords -> pathfinder, on affiche la trame demo.
 st.caption(
     "ℹ️ Recommandation demo — l'integration src.routing.pathfinder requiert "
-    "le geocoding origine/destination (Sprint suivant)."
+    "le geocoding origine/destination (Sprint suivant). "
+    "Les options mock ne sont pas filtrées par origine/destination."
 )
 trip = MOCK_TRIP_RESULTS["default"]
 options = trip.get("options", [])
 
-if search_clicked or not st.session_state.get("results_loaded"):
+# Init : results_loaded=False au 1er render, set True au clic bouton.
+if search_clicked:
     st.session_state["results_loaded"] = True
+elif "results_loaded" not in st.session_state:
+    st.session_state["results_loaded"] = False
 
 if st.session_state.get("results_loaded"):
     # Contexte : météo + Vélov + trafic

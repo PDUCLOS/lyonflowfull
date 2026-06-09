@@ -14,20 +14,33 @@ from dashboard.components.data_cache import cached_elu_kpis_dict
 def render_kpi_cards() -> None:
     """Affiche les 5 KPI cards ronds avec deltas colorés."""
     kpis = cached_elu_kpis_dict(force_mock=False)
-    cols = st.columns(5)
     kpi_keys = list(kpis.keys())
+    # Adapter le nb de colonnes au nb de KPIs (sinon clés 6+ silencieusement perdues)
+    if not kpi_keys:
+        st.info("Aucun KPI disponible.")
+        return
+    cols = st.columns(len(kpi_keys))
 
     for col, key in zip(cols, kpi_keys):
         k = kpis[key]
-        current = k.get("current", 0)
-        unit = k.get("unit", "")
-        delta = k.get("delta_ytd", 0)
-        target = k.get("target_2026", 0)
+        # None-safe : DB peut renvoyer NULL
+        current = k.get("current", 0) or 0
+        unit = k.get("unit", "") or ""
+        delta = k.get("delta_ytd", 0) or 0
+        target = k.get("target_2026", 0) or 0
 
         d_color = delta_color(delta)
-        delta_str = f"{delta:+.1f}" if isinstance(delta, float) else f"{delta:+d}"
+        # Exclure bool (sous-classe de int)
+        if isinstance(delta, bool):
+            delta_str = "—"
+        elif isinstance(delta, float):
+            delta_str = f"{delta:+.1f}"
+        else:
+            delta_str = f"{delta:+d}"
 
-        if isinstance(current, int) and current > 1000:
+        if isinstance(current, bool):
+            value_str = "✅" if current else "❌"
+        elif isinstance(current, int) and current > 1000:
             value_str = f"{current:,}"
         elif isinstance(current, float):
             value_str = f"{current:.1f}"

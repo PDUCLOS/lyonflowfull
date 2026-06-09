@@ -14,16 +14,18 @@ from dashboard.components.widgets.usager import (
 )
 from src.data.mock.usager import MOCK_FAVORITES
 
-# Favoris persistes en session_state (demo) — futur: table user_favorites.
-if "user_favorites" not in st.session_state:
-    st.session_state["user_favorites"] = list(MOCK_FAVORITES)
-favorites = st.session_state["user_favorites"]
-
+# IMPORTANT: set_page_config() doit être la PREMIÈRE commande Streamlit de la page.
+# Sinon StreamlitAPIException au runtime.
 st.set_page_config(
     page_title="Mes favoris — LyonFlowFull",
     page_icon="⭐",
     layout="wide",
 )
+
+# Favoris persistes en session_state (demo) — futur: table user_favorites.
+if "user_favorites" not in st.session_state:
+    st.session_state["user_favorites"] = list(MOCK_FAVORITES)
+favorites = st.session_state["user_favorites"]
 
 apply_persona_guard(expected_persona="usager")
 inject_theme()

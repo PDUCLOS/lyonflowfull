@@ -46,14 +46,15 @@ class XGBoostVelovModel:
 
     def load(self, horizons: list[int] | None = None) -> None:
         """Charge les modèles depuis MLflow (si dispo) ou depuis le disque local."""
-        from src.ml.mlflow_integration import get_latest_run, is_mlflow_available
         import mlflow
-        
+
+        from src.ml.mlflow_integration import is_mlflow_available
+
         horizons = horizons or [30, 60]
         for h in horizons:
             model_name = f"xgb_velov_h{h}"
             model_path = self.model_dir / f"{model_name}.pkl"
-            
+
             mlflow_success = False
             if is_mlflow_available():
                 try:
@@ -64,7 +65,7 @@ class XGBoostVelovModel:
                     mlflow_success = True
                 except Exception as e:
                     logger.warning(f"Failed to load {model_name} from MLflow Registry: {e}")
-            
+
             if not mlflow_success:
                 if model_path.exists():
                     self.models[h] = joblib.load(model_path)
