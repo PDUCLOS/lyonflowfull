@@ -9,7 +9,7 @@ def test_persona_switcher(page: Page, streamlit_server: str):
 
     # Wait for the main app to load by checking the first button
     expect(page.get_by_role("button", name="➡️ Adopter").first).to_be_visible()
-    
+
     # We want to test the sidebar persona switcher, NOT the main page button
     # The persona switcher is a selectbox in the sidebar
     combobox = page.locator("[data-testid='stSidebar']").get_by_role("combobox")

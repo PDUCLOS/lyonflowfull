@@ -24,6 +24,8 @@ def streamlit_server():
     env = os.environ.copy()
     env["STREAMLIT_SERVER_PORT"] = str(port)
     env["STREAMLIT_SERVER_HEADLESS"] = "true"
+    env["PERSONA_PRO_TCL_PASSWORD"] = "testpwd"
+    env["PERSONA_ELU_PASSWORD"] = "testpwd"
 
     import sys
 
