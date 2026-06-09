@@ -77,50 +77,45 @@ st.markdown("---")
 
 
 # -----------------------------------------------------------------------------
-# Qui es-tu ?
+# Auto-redirection ou Splash Screen (Onboarding)
 # -----------------------------------------------------------------------------
-st.markdown("### 👋 Qui es-tu ?")
-st.caption("Choisis ton profil pour voir la version de LyonFlowFull adaptée à ton usage.")
+# Si l'utilisateur a explicitement un persona actif en session, on le redirige.
+# L'Accueil devient uniquement une page d'Onboarding / Splash Screen.
+from src.persona.manager import _SESSION_KEY
+has_explicit_persona = _SESSION_KEY in st.session_state
 
-render_persona_switcher(layout="cards")
-
-st.markdown("---")
-
-
-# -----------------------------------------------------------------------------
-# Authentification si persona protégé
-# -----------------------------------------------------------------------------
-persona_id = get_current_persona()
-persona_config = get_current_persona_config()
-auth_required = persona_config.get("access", {}).get("auth_required", False)
-
-if auth_required and not is_authenticated():
-    st.markdown("### 🔐 Authentification requise")
-    st.caption(
-        f"Le profil **{persona_config.get('icon', '')} {persona_config.get('label', persona_id)}** "
-        f"est protégé. Saisis le mot de passe fourni par l'administrateur."
-    )
-    require_password()
+if has_explicit_persona:
+    persona_id = get_current_persona()
+    persona_config = get_current_persona_config()
+    landing_page = persona_config.get("landing_page", "")
+    auth_required = persona_config.get("access", {}).get("auth_required", False)
+    
+    # Check auth before redirecting
+    if auth_required and not is_authenticated():
+        st.markdown("### 🔐 Authentification requise")
+        st.caption(
+            f"Le profil **{persona_config.get('icon', '')} {persona_config.get('label', persona_id)}** "
+            f"est protégé. Saisis le mot de passe fourni par l'administrateur."
+        )
+        require_password()
+        st.stop()
+    
+    # Si auth OK ou non requise, on redirige
+    st.info(f"Redirection vers l'espace {persona_config.get('label', persona_id)}...")
+    if landing_page:
+        st.switch_page(f"pages/{landing_page}.py")
+    else:
+        st.warning("Landing page non configurée pour ce persona.")
     st.stop()
 
 
 # -----------------------------------------------------------------------------
-# Accès à l'app
+# Qui es-tu ? (Onboarding / Premier accès)
 # -----------------------------------------------------------------------------
-st.markdown("### 🚀 Prêt à démarrer ?")
-landing_page = persona_config.get("landing_page", "")
+st.markdown("### 👋 Bienvenue sur LyonFlowFull")
+st.caption("Choisis ton profil pour voir la version de l'application adaptée à ton usage.")
 
-col1, col2, col3 = st.columns([1, 2, 1])
-with col2:
-    if st.button(
-        f"➡️ Entrer en mode {persona_config.get('label', persona_id)}",
-        type="primary",
-        use_container_width=True,
-    ):
-        if landing_page:
-            st.switch_page(f"pages/{landing_page}.py")
-        else:
-            st.warning("Landing page non configurée pour ce persona.")
+render_persona_switcher(layout="cards")
 
 # -----------------------------------------------------------------------------
 # Footer : stats globales (lisibles par tous)

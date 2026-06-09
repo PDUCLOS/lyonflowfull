@@ -83,8 +83,8 @@ if uploaded_files:
         safe_name = "".join(c for c in uploaded_file.name if c.isalnum() or c in "._- ")
         dest = UPLOAD_DIR / f"{timestamp}_{safe_name}"
         try:
-            with open(dest, "wb") as f:
-                f.write(uploaded_file.getbuffer())
+            with open(dest, "wb") as out_file:
+                out_file.write(uploaded_file.getbuffer())
             n_uploaded += 1
             # Audit log
             from src.rgpd.service import log_audit

@@ -36,7 +36,9 @@ _TYPE_LABEL = {
 }
 
 
-def render_search_bar() -> dict:
+import typing
+
+def render_search_bar() -> dict[str, typing.Any]:
     """Affiche la barre de recherche trajet cliquable.
 
     Returns:

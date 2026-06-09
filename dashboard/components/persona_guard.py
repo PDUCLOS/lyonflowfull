@@ -45,11 +45,12 @@ def apply_persona_guard(expected_persona: PersonaId | None = None) -> PersonaMan
             import inspect
 
             frame = inspect.currentframe()
-            caller_file = frame.f_back.f_code.co_filename
-            for prefix, persona_id in _PAGE_TO_PERSONA.items():
-                if prefix in caller_file:
-                    expected_persona = persona_id
-                    break
+            if frame and frame.f_back:
+                caller_file = frame.f_back.f_code.co_filename
+                for prefix, persona_id in _PAGE_TO_PERSONA.items():
+                    if prefix in caller_file:
+                        expected_persona = persona_id
+                        break
         except Exception:
             pass
 

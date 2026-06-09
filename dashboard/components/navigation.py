@@ -74,44 +74,31 @@ def _render_nav_entry(entry: dict[str, Any]) -> None:
             st.info(f"Page : {file} (à créer)")
 
 
-def _render_persona_card(pm: PersonaManager) -> None:
-    """Badge persona en haut de la sidebar (icône + label + description)."""
-    cfg = pm.config
-    color = pm.color_primary
-    st.sidebar.markdown(
-        f"""
-        <div style="background:{color}1A;border-left:4px solid {color};
-                    padding:10px 14px;border-radius:6px;margin-bottom:8px;">
-            <div style="font-size:1.3rem;font-weight:700;
-                        color:{color};line-height:1.2;">
-                {cfg.get("icon", "👤")} {cfg.get("label", pm.persona_id)}
-            </div>
-            <div style="font-size:0.78rem;opacity:0.75;margin-top:2px;">
-                {cfg.get("short_label", "")}
-            </div>
-        </div>
-        """,
-        unsafe_allow_html=True,
+def _render_persona_switcher(pm: PersonaManager) -> None:
+    """Workspace switcher (dropdown) en haut de la sidebar."""
+    from src.persona.personas_loader import list_personas
+    from dashboard.components.persona_switcher import _route_after_switch
+
+    personas = list_personas()
+    current = pm.persona_id
+    options = [p["id"] for p in personas]
+
+    def format_func(p_id: str) -> str:
+        p = next(x for x in personas if x["id"] == p_id)
+        return f"{p.get('icon', '👤')} {p.get('label', p_id)}"
+
+    st.sidebar.markdown("##### 🏢 Espace de travail")
+    selected = st.sidebar.selectbox(
+        "Changer de Persona",
+        options=options,
+        index=options.index(current) if current in options else 0,
+        format_func=format_func,
+        label_visibility="collapsed",
+        key="nav_persona_switcher"
     )
-    st.sidebar.caption(cfg.get("description", ""))
 
-
-def _render_home_button() -> None:
-    """Bouton '← Accueil' — point d'entrée unique pour changer de persona.
-
-    UX : on évite d'exposer un sélecteur de persona dans la sidebar (bazar,
-    states cachés). Le changement de persona = retour explicite à l'accueil.
-    """
-    if st.sidebar.button(
-        "← Accueil",
-        key="nav_home",
-        use_container_width=True,
-        help="Changer de persona ou se déconnecter",
-    ):
-        try:
-            st.switch_page(_HOME_PAGE)
-        except Exception:
-            st.rerun()
+    if selected != current:
+        _route_after_switch(selected)
 
 
 def render_sidebar_navigation() -> None:
@@ -128,11 +115,8 @@ def render_sidebar_navigation() -> None:
     persona_id = get_current_persona()
 
     with st.sidebar:
-        # 1. Card persona
-        _render_persona_card(pm)
-
-        # 2. Bouton retour accueil (changement de persona)
-        _render_home_button()
+        # 1. Switcher de workspace/persona
+        _render_persona_switcher(pm)
 
         st.sidebar.markdown("---")
         st.sidebar.markdown("##### Navigation")

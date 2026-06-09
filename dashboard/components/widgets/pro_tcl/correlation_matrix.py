@@ -45,7 +45,7 @@ def render_correlation_matrix(line_id: str | None = None) -> None:
     # Compter par diagnostic
     counts = {"ok": 0, "infra": 0, "operations": 0, "bus_lane_ok": 0}
     for s in segments:
-        d = s.get("diagnosis", "ok")
+        d = str(s.get("diagnosis", "ok"))
         counts[d] = counts.get(d, 0) + 1
 
     # 4 quadrants visuels

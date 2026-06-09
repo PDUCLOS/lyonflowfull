@@ -454,8 +454,8 @@ def render_drift_panel() -> None:
                         <div style="font-size:0.8rem;opacity:0.7;">
                             Drift score: {d["drift_score"]:.2f} / seuil {d["threshold"]} · {d["detected_at"]}
                         </div>
-                        {('<div style="font-size:0.8rem;color:var(--status-warning);margin-top:0.2rem;">⚠️ ' + ", ".join(d.get("features_drifted", [])) + "</div>") if d.get("features_drifted") else ""}
-                        {('<div style="font-size:0.8rem;margin-top:0.2rem;">→ ' + d.get("action", "") + "</div>") if d.get("action") else ""}
+                        {('<div style="font-size:0.8rem;color:var(--status-warning);margin-top:0.2rem;">⚠️ ' + ", ".join(str(feat) for feat in d.get("features_drifted", [])) + "</div>") if d.get("features_drifted") else ""}
+                        {('<div style="font-size:0.8rem;margin-top:0.2rem;">→ ' + str(d.get("action", "")) + "</div>") if d.get("action") else ""}
                     </div>
                 </div>
             </div>
