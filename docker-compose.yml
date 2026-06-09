@@ -424,7 +424,8 @@ services:
       retries: 3
     volumes:
       - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
-      # ssl.conf source de vérité : chemins /etc/letsencrypt/live/lyonflow/*.pem
+      - ./nginx/ssl.conf:/etc/nginx/ssl.conf:ro
+      # ssl.conf pointe /etc/letsencrypt/live/lyonflow/*.pem
       # En attendant Let's Encrypt, on monte des certs self-signed à ce path.
       # Voir scripts/generate-self-signed-cert.sh
       - ./nginx/certs:/etc/letsencrypt/live/lyonflow:ro
