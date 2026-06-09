@@ -188,6 +188,15 @@ ORDER BY 1 DESC, 2;
 -- (channel_id <-> point TomTom). A faire dans une migration ulterieure
 -- une fois que le mapping est defini (probable: ST_DWithin sur geom).
 
+-- -----------------------------------------------------------------------------
+-- 8. BRONZE — tcl_vehicles : relâcher contraintes (collector stocke blob JSON)
+-- -----------------------------------------------------------------------------
+-- Le collecteur _save_raw insère 1 row par fetch avec raw_data JSONB entier.
+-- Le parse en silver.tcl_vehicles_clean extrait vehicle_ref depuis raw_data.
+-- D'où DROP NOT NULL + DROP unique constraint historique.
+ALTER TABLE bronze.tcl_vehicles ALTER COLUMN vehicle_ref DROP NOT NULL;
+ALTER TABLE bronze.tcl_vehicles DROP CONSTRAINT IF EXISTS tcl_vehicles_fetched_at_vehicle_ref_key;
+
 COMMIT;
 
 -- =============================================================================
