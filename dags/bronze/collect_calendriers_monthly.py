@@ -18,7 +18,7 @@ logger = logging.getLogger(__name__)
 
 
 def _run_collector(collector_class: type[DataCollector]) -> dict:
-    collector = collector_class()
+    collector = collector_class()  # type: ignore
     result = collector.run()
     return {
         "source": result.source,

@@ -167,7 +167,7 @@ class DataCollector(abc.ABC):
         query = f"""
             INSERT INTO bronze.{self.bronze_table} (fetched_at, raw_data)
             VALUES (%s, %s)
-        """
+        """  # nosec B608
         raw_json = json.dumps(result.raw_data, ensure_ascii=False, default=str)
         execute_query(query, (result.fetched_at, raw_json))
 

@@ -73,7 +73,7 @@ class STGCNWrapper:
 
             from training.stgcn.model import build_module
 
-            ckpt = torch.load(model_path, map_location="cpu", weights_only=False)
+            ckpt = torch.load(model_path, map_location="cpu", weights_only=True)
             self._config = ckpt["config"]
             self._model = build_module(_config_to_stgcn_config(self._config))
             self._model.load_state_dict(ckpt["state_dict"])

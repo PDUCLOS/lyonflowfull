@@ -442,7 +442,7 @@ async def itinerary(req: ItineraryRequest, api_key: None = Depends(verify_api_ke
         total_duration_s=itin.total_duration_s,
         average_speed_kmh=itin.average_speed_kmh,
         total_duration_min=itin.total_duration_min,
-        confiance=itin.confiance,
+        confiance=itin.confidence,
     )
 
 

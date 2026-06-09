@@ -506,7 +506,7 @@ def get_data_freshness(schema: str = "bronze", table: str = "trafic_boucles") ->
         logger.warning("Schema/table (%s.%s) not whitelisted in db_query", schema, table)
         return None
 
-    query = f"SELECT MAX(fetched_at) FROM {schema}.{table}"  # safe: identifiants whitelistés
+    query = f"SELECT MAX(fetched_at) FROM {schema}.{table}"  # nosec B608 (safe: identifiants whitelistés)
     try:
         result = execute_scalar(query)
         return pd.Timestamp(result) if result else None
@@ -539,10 +539,10 @@ def get_bronze_source_counts(hours: int = 1) -> pd.DataFrame:
         # Une requête par table (pas de UNION sur des tables hétérogènes)
         try:
             count = execute_scalar(
-                f"SELECT COUNT(*) FROM bronze.{table} WHERE fetched_at >= NOW() - make_interval(hours => %s)",
+                f"SELECT COUNT(*) FROM bronze.{table} WHERE fetched_at >= NOW() - make_interval(hours => %s)",  # nosec B608
                 (hours,),
             )
-            last = execute_scalar(f"SELECT MAX(fetched_at) FROM bronze.{table}")
+            last = execute_scalar(f"SELECT MAX(fetched_at) FROM bronze.{table}")  # nosec B608
             rows.append(
                 {
                     "source": label,
