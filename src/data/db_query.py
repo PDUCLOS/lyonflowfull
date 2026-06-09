@@ -97,10 +97,14 @@ def get_latest_traffic(limit: int = 100) -> pd.DataFrame:
         DataFrame avec colonnes: measurement_time, node_idx, channel_id,
         speed_kmh, importance_code. Vide si DB down (mock fallback).
     """
+    # Schema réel : gold.traffic_features_live = computed_at, channel_id, speed_kmh
+    # (pas de node_idx ni importance_code dans la table effective)
     query = """
-        SELECT measurement_time, node_idx, channel_id, speed_kmh, importance_code
+        SELECT computed_at AS measurement_time, channel_id, speed_kmh,
+               vitesse_limite_kmh, lag_1, lag_2, lag_3,
+               hour_of_day, day_of_week
         FROM gold.traffic_features_live
-        ORDER BY measurement_time DESC
+        ORDER BY computed_at DESC
         LIMIT %s
     """
     df = _df_from_query(query, (limit,))
@@ -227,13 +231,17 @@ def get_velov_stations_geo() -> pd.DataFrame:
         DataFrame: station_id, station_name, bikes_available, docks_available,
         lat, lng, is_operational.
     """
+    # Schema réel silver.velov_clean : num_bikes_available, num_docks_available, lat, lon, is_active
     query = """
-        SELECT station_id, station_name, bikes_available, docks_available,
-               ST_Y(geom_wgs84) AS lat, ST_X(geom_wgs84) AS lng,
-               is_operational
+        SELECT DISTINCT ON (station_id)
+               station_id, station_name,
+               num_bikes_available AS bikes_available,
+               num_docks_available AS docks_available,
+               lat, lon AS lng,
+               is_active AS is_operational
         FROM silver.velov_clean
-        WHERE measurement_time >= NOW() - INTERVAL '15 minutes'
-        ORDER BY station_id
+        WHERE measurement_time >= NOW() - INTERVAL '30 minutes'
+        ORDER BY station_id, measurement_time DESC
     """
     df = _df_from_query(query)
     if df.empty and not _is_db_available():
@@ -254,10 +262,13 @@ def get_velov_predictions(horizon_minutes: int = 30, limit: int = 500) -> pd.Dat
         DataFrame: prediction_timestamp, target_timestamp, station_id,
         station_id_encoded, predicted_bikes, confidence_low, confidence_high.
     """
+    # Schema réel gold.velov_predictions : pas de station_id_encoded ni confidence_low/high.
+    # Colonnes : prediction_timestamp, target_timestamp, horizon_minutes, station_id,
+    # predicted_bikes, actual_bikes, model_name, model_version
     query = """
         SELECT prediction_timestamp, target_timestamp, horizon_minutes,
-               station_id, station_id_encoded, predicted_bikes,
-               confidence_low, confidence_high
+               station_id, predicted_bikes, actual_bikes,
+               model_name, model_version
         FROM gold.velov_predictions
         WHERE horizon_minutes = %s
         ORDER BY prediction_timestamp DESC
