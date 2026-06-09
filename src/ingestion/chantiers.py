@@ -22,13 +22,16 @@ class ChantiersGrandLyon(DataCollector):
             bronze_table="chantiers",
             timeout=60,
         )
+        # Geoserver Métropole — chantiers perturbants (sans auth, fonctionne)
+        # download.data.grandlyon.com/wfs/grandlyon avec adr_voie_liee.adrchantier
+        # retourne 404. URL ci-dessous testée HTTP 200 (~350KB GeoJSON).
         self.wfs_url = os.getenv(
-            "GRANDLYON_WFS_URL",
-            "https://download.data.grandlyon.com/wfs/grandlyon",
+            "GRANDLYON_CHANTIERS_WFS_URL",
+            "https://data.grandlyon.com/geoserver/metropole-de-lyon/ows",
         )
         self.typename = os.getenv(
             "GRANDLYON_CHANTIERS_TYPENAME",
-            "adr_voie_liee.adrchantier",
+            "metropole-de-lyon:pvo_patrimoine_voirie.pvochantierperturbant",
         )
         # HTTP Basic Auth Grand Lyon Portal
         _user = os.getenv("GRANDLYON_USERNAME") or os.getenv("API_LOGIN", "")

@@ -22,11 +22,15 @@ class TraficGrandLyon(DataCollector):
             bronze_table="trafic_boucles",
             timeout=60,
         )
+        # Geoserver Métropole (auth Basic) — endpoint validé HTTP 200 + 3000+ records
         self.wfs_url = os.getenv(
             "GRANDLYON_WFS_URL",
-            "https://download.data.grandlyon.com/wfs/grandlyon",
+            "https://data.grandlyon.com/geoserver/metropole-de-lyon/ows",
         )
-        self.typename = os.getenv("GRANDLYON_TRAFFIC_TYPENAME", "pvo_patrimoine_voirie.pvotrafic")
+        self.typename = os.getenv(
+            "GRANDLYON_TRAFFIC_TYPENAME",
+            "metropole-de-lyon:pvo_patrimoine_voirie.pvotrafic",
+        )
         # HTTP Basic Auth Grand Lyon Portal (data.grandlyon.com)
         _user = os.getenv("GRANDLYON_USERNAME") or os.getenv("API_LOGIN", "")
         _pwd = os.getenv("GRANDLYON_PASSWORD") or os.getenv("API_PASSWORD", "")

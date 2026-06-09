@@ -23,9 +23,11 @@ class TclSiriLite(DataCollector):
             bronze_table="tcl_vehicles",
             timeout=60,
         )
+        # Endpoint v2.0 sur data.grandlyon.com (HTTP Basic auth obligatoire)
+        # download.data.grandlyon.com/siri-lite/1.8/* est mort (404).
         self.url = os.getenv(
             "TCL_SIRI_LITE_URL",
-            "https://download.data.grandlyon.com/siri-lite/1.8/vehicle-monitoring.json",
+            "https://data.grandlyon.com/siri-lite/2.0/vehicle-monitoring.json",
         )
         # HTTP Basic Auth Grand Lyon Portal (depuis 2025 SIRI requiert auth)
         _user = os.getenv("GRANDLYON_USERNAME") or os.getenv("API_LOGIN", "")
