@@ -103,17 +103,18 @@ def load_traffic(force_mock: bool = False) -> dict[str, Any]:
     # Top 4 jams depuis bottlenecks
     main_jams = []
     for _, row in bottlenecks_df.head(4).iterrows():
+        speed_val = float(row.get("avg_speed") or 0.0) if not pd.isna(row.get("avg_speed")) else 0.0
         main_jams.append(
             {
                 "road": f"Channel {row['channel_id']}",
                 "lat": 45.75 + (int(row["node_idx"]) % 10) * 0.005,  # approx
                 "lon": 4.83 + (int(row["node_idx"]) % 10) * 0.005,
-                "speed_kmh": float(row["avg_speed"]),
-                "delay_min": max(0, int((30 - float(row["avg_speed"])) / 5)),
+                "speed_kmh": speed_val,
+                "delay_min": max(0, int((30 - speed_val) / 5)),
                 "severity": "high"
-                if float(row["avg_speed"]) < 15
+                if speed_val < 15
                 else "medium"
-                if float(row["avg_speed"]) < 25
+                if speed_val < 25
                 else "low",
             }
         )
@@ -180,8 +181,8 @@ def load_velov_stations(force_mock: bool = False) -> list[dict]:
         {
             "id": int(row.get("station_id", i)),
             "name": row.get("station_name", f"Station {i}"),
-            "lat": float(row["lat"]),
-            "lon": float(row["lng"]),
+            "lat": float(row.get("lat") or 0.0) if not pd.isna(row.get("lat")) else 0.0,
+            "lon": float(row.get("lng") or 0.0) if not pd.isna(row.get("lng")) else 0.0,
             "bikes_available": int(row.get("bikes_available", 0)),
             "stands_available": int(row.get("docks_available", 0)),
             "distance_m": 0,
