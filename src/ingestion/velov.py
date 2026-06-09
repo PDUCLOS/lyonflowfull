@@ -8,13 +8,14 @@ Volume : ~458 stations
 
 from __future__ import annotations
 
+import os
 from datetime import UTC, datetime
 
 from src.ingestion.base import CollectorError, DataCollector, FetchResult
 
 
 class VelovCollector(DataCollector):
-    """Collecteur pour les stations Vélov' (GBFS)."""
+    """Collecteur pour les stations Vélov' (GBFS via Grand Lyon Portal)."""
 
     def __init__(self):
         super().__init__(
@@ -22,33 +23,20 @@ class VelovCollector(DataCollector):
             bronze_table="velov",
             timeout=30,
         )
-        self.gbfs_url = "https://velov.grandlyon.com/gbfs/gbfs.json"
+        # URL directe Grand Lyon Portal (HTTP Basic auth requise depuis 2025)
+        # L'ancien manifeste gbfs.json sur velov.grandlyon.com retourne du HTML.
+        self.station_status_url = os.getenv(
+            "VELOV_STATION_STATUS_URL",
+            "https://download.data.grandlyon.com/files/rdata/jcd_jcdecaux.jcdvelov/station_status.json",
+        )
+        _user = os.getenv("GRANDLYON_USERNAME") or os.getenv("API_LOGIN", "")
+        _pwd = os.getenv("GRANDLYON_PASSWORD") or os.getenv("API_PASSWORD", "")
+        self._auth = (_user, _pwd) if _user and _pwd else None
 
     def fetch_raw(self) -> FetchResult:
         try:
-            # 1. Découvrir l'URL station_status via le manifeste GBFS
-            r = self._http_get(self.gbfs_url)
-            manifest = r.json()
-
-            station_status_url = None
-            for feed in manifest.get("data", {}).get("fr", {}).get("feeds", []):
-                if feed.get("name") == "station_status":
-                    station_status_url = feed.get("url")
-                    break
-            if not station_status_url:
-                # Fallback : essayer en anglais
-                for feed in manifest.get("data", {}).get("en", {}).get("feeds", []):
-                    if feed.get("name") == "station_status":
-                        station_status_url = feed.get("url")
-                        break
-
-            if not station_status_url:
-                raise CollectorError("station_status URL non trouvée dans manifeste GBFS")
-
-            # 2. Fetch station_status
-            r2 = self._http_get(station_status_url)
-            data = r2.json()
-
+            r = self._http_get(self.station_status_url, auth=self._auth)
+            data = r.json()
         except Exception as e:
             raise CollectorError(f"Erreur fetch Vélov: {e}") from e
 
@@ -58,6 +46,6 @@ class VelovCollector(DataCollector):
             fetched_at=datetime.now(UTC),
             raw_data=data,
             n_records=n_records,
-            bytes_fetched=len(r2.content),
-            status_code=r2.status_code,
+            bytes_fetched=len(r.content),
+            status_code=r.status_code,
         )

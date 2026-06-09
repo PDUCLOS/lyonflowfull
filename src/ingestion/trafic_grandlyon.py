@@ -26,7 +26,7 @@ class TraficGrandLyon(DataCollector):
             "GRANDLYON_WFS_URL",
             "https://download.data.grandlyon.com/wfs/grandlyon",
         )
-        self.typename = os.getenv("GRANDLYON_TRAFFIC_TYPENAME", "pvo_patrimoine_voirie.pvochausstraf")
+        self.typename = os.getenv("GRANDLYON_TRAFFIC_TYPENAME", "pvo_patrimoine_voirie.pvotrafic")
         # HTTP Basic Auth Grand Lyon Portal (data.grandlyon.com)
         _user = os.getenv("GRANDLYON_USERNAME") or os.getenv("API_LOGIN", "")
         _pwd = os.getenv("GRANDLYON_PASSWORD") or os.getenv("API_PASSWORD", "")
