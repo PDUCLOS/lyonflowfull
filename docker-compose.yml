@@ -46,6 +46,8 @@ x-common-env: &common-env
   AIRFLOW_ADMIN_USERNAME: ${AIRFLOW_ADMIN_USERNAME:-admin}
   AIRFLOW_ADMIN_PASSWORD: ${AIRFLOW_ADMIN_PASSWORD:-admin}
   AIRFLOW__WEBSERVER__SECRET_KEY: ${AIRFLOW_SECRET_KEY:-lyonflow_default_secret_key_12345}
+  # Prefixe /airflow nécessaire pour nginx reverse-proxy (cf. Lyontraffic config)
+  AIRFLOW__WEBSERVER__BASE_URL: ${AIRFLOW_BASE_URL:-http://51.83.159.224/airflow}
   PYTHONUNBUFFERED: "1"
   TZ: Europe/Paris
 
