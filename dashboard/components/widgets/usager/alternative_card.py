@@ -30,7 +30,7 @@ def render_alternative_card(option: dict) -> None:
         option: dict avec mode_icon, mode_label, duration_text, cost_eur, co2_g, why
     """
     bg = COLORS["bg_card_alt"]
-    st.markdown(
+    st.html(
         f"""
         <div style="background:{bg};border:1px solid var(--border-card);border-radius:8px;
                     padding:0.8rem 1rem;margin:0.5rem 0;">
@@ -50,6 +50,5 @@ def render_alternative_card(option: dict) -> None:
                 </div>
             </div>
         </div>
-        """,
-        unsafe_allow_html=True,
+        """
     )

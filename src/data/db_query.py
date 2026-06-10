@@ -104,6 +104,7 @@ def get_latest_traffic(limit: int = 100) -> pd.DataFrame:
                vitesse_limite_kmh, lag_1, lag_2, lag_3,
                hour_of_day, day_of_week
         FROM gold.traffic_features_live
+        WHERE computed_at >= NOW() - INTERVAL '2 hours'
         ORDER BY computed_at DESC
         LIMIT %s
     """

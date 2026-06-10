@@ -45,7 +45,7 @@ def render_recommendation_card(option: dict) -> None:
         except (TypeError, ValueError):
             return "—g"
 
-    st.markdown(
+    st.html(
         f"""
         <div style="background:{bg_color};border-left:{border};border-radius:12px;
                     padding:1.5rem;margin:1rem 0;color:white;">
@@ -96,8 +96,7 @@ def render_recommendation_card(option: dict) -> None:
                 <b>{option.get("confidence_text", "")}</b>
             </div>
         </div>
-        """,
-        unsafe_allow_html=True,
+        """
     )
 
     # Bouton "Partir" rendu TOUJOURS visible (avant : sous if option.get("recommended")

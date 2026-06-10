@@ -86,11 +86,16 @@ def load_traffic(force_mock: bool = False) -> dict[str, Any]:
     if _maybe_force_mock(force_mock):
         return usager_mock.MOCK_TRAFFIC
 
-    df = get_latest_traffic(limit=200)
+    df = get_latest_traffic(limit=1000)
     if df.empty:
         return usager_mock.MOCK_TRAFFIC
 
-    avg_speed = float(df["speed_kmh"].mean()) if not df.empty else 0.0
+    # Ne considérer que les voies en ville (vitesse limite <= 50) pour une moyenne réaliste
+    city_df = df[df["vitesse_limite_kmh"] <= 50]
+    if not city_df.empty:
+        avg_speed = float(city_df["speed_kmh"].mean())
+    else:
+        avg_speed = float(df["speed_kmh"].mean())
     bottlenecks_df = get_traffic_bottlenecks(top=10)
     n_bottlenecks = len(bottlenecks_df)
 
