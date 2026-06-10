@@ -204,7 +204,16 @@ def _transform_trafic_boucles() -> int:
 
 
 def _transform_velov() -> int:
-    """Bronze.velov → silver.velov_clean."""
+    """Bronze.velov → silver.velov_clean.
+
+    Sprint 10 — payload GBFS unifié ``{status: [...], information: [...]}``.
+    Join par ``station_id`` pour récupérer ``name/lat/lon/address`` depuis
+    l'endpoint ``station_information`` (l'endpoint ``status`` ne contient
+    plus que les compteurs temps réel depuis l'API Grand Lyon de juin 2026).
+
+    Backward-compat : si ``raw_data`` est l'ancien format (liste plate
+    de stations avec name/lat/lon au top-level), on dégrade proprement.
+    """
     with raw_connection() as conn, conn.cursor() as cur:
         cur.execute("""
                 SELECT id, fetched_at, raw_data
@@ -219,8 +228,31 @@ def _transform_velov() -> int:
         for _id, fetched_at, raw_data in rows:
             if not isinstance(raw_data, dict):
                 continue
-            stations = raw_data.get("data", {}).get("stations", []) or raw_data.get("stations", [])
-            for st in stations:
+
+            # Format nouveau (Sprint 10) : {status: [...], information: [...]}
+            # Format legacy (avant Sprint 10) : {data: {stations: [...]}} ou liste plate
+            if "status" in raw_data and "information" in raw_data:
+                stations_status = raw_data.get("status", []) or []
+                stations_info_list = raw_data.get("information", []) or []
+                # Index par station_id pour lookup O(1)
+                info_by_id: dict[str, dict] = {
+                    str(s.get("station_id")): s
+                    for s in stations_info_list
+                    if s.get("station_id") is not None
+                }
+                stations_iter = (
+                    {**st, **info_by_id.get(str(st.get("station_id")), {})}
+                    for st in stations_status
+                )
+            else:
+                # Backward-compat : ancien format où name/lat/lon étaient dans status
+                stations_legacy = (
+                    raw_data.get("data", {}).get("stations", [])
+                    or raw_data.get("stations", [])
+                )
+                stations_iter = (st for st in stations_legacy)
+
+            for st in stations_iter:
                 sid = st.get("station_id")
                 if not sid:
                     continue
@@ -238,15 +270,18 @@ def _transform_velov() -> int:
                                  lat, lon)
                             VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
                             ON CONFLICT (station_id, measurement_time) DO UPDATE
-                            SET num_bikes_available = EXCLUDED.num_bikes_available,
+                            SET station_name = EXCLUDED.station_name,
+                                num_bikes_available = EXCLUDED.num_bikes_available,
                                 num_docks_available = EXCLUDED.num_docks_available,
-                                is_active = EXCLUDED.is_active
+                                is_active = EXCLUDED.is_active,
+                                lat = EXCLUDED.lat,
+                                lon = EXCLUDED.lon
                         """,
                         (
                             fetched_at,
                             fetched_at,  # measurement_time = fetched_at (GBFS pas de timestamp station-level)
                             sid,
-                            st.get("name", ""),
+                            st.get("name", "") or f"Station {sid}",
                             st.get("num_bikes_available", 0),
                             st.get("num_docks_available", 0),
                             bool(

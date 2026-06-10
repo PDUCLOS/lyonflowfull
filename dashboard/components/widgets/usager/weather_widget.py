@@ -24,10 +24,13 @@ def render_weather_widget(weather: dict | None = None) -> None:
         df = cached_weather_hourly(force_mock=False)
         if not df.empty:
             current = df.iloc[0].to_dict()
-            # Adapter le format dict → attendu par le widget
+            # Sprint 10 : weather_code est un int WMO (Open-Meteo). On le convertit
+            # en label FR lisible + emoji via _wmo_to_label().
+            raw_code = current.get("condition_label") or current.get("weather_code")
+            label, icon_from_code = _wmo_to_label(raw_code)
             weather = {
-                "condition_icon": _weather_icon(current.get("condition_label", "")),
-                "condition": current.get("condition_label", ""),
+                "condition_icon": icon_from_code,
+                "condition": label,
                 "temp_c": current.get("temperature_c", 0),
                 "rain_mm_h": current.get("rain_mm", 0),
                 "wind_kmh": current.get("wind_kmh", 0),
@@ -38,9 +41,11 @@ def render_weather_widget(weather: dict | None = None) -> None:
 
     icon = str(weather.get("condition_icon", "☀️"))
     cond = str(weather.get("condition", ""))
-    temp = float(weather.get("temp_c", 0))
-    rain = float(weather.get("rain_mm_h", 0))
-    wind = float(weather.get("wind_kmh", 0))
+    # Sprint 10 : arrondi 1 décimale pour éviter les artefacts float32
+    # ('16.700000762939453' → '16.7').
+    temp = round(float(weather.get("temp_c", 0)), 1)
+    rain = round(float(weather.get("rain_mm_h", 0)), 1)
+    wind = round(float(weather.get("wind_kmh", 0)), 1)
 
     # Score vélo basé sur pluie et vent
     cycling_score = weather.get("cycling_score", 1.0)
@@ -101,3 +106,59 @@ def _weather_icon(label: str) -> str:
         "Neige": "❄️",
     }
     return mapping.get(label, "☀️")
+
+
+# WMO Weather interpretation codes (Open-Meteo / WMO 4677).
+# https://open-meteo.com/en/docs (table "WMO Weather interpretation codes")
+# Mappés vers un label FR lisible + emoji. Couvre les codes les plus courants
+# observés sur Lyon (1xxx = pas de précip, 2xxx = stable, 3xxx = doux,
+# 4xxx = brouillard, 5xxx = bruine, 6xxx = pluie, 7xxx = neige,
+# 8xxx = averses, 9xxx = orage).
+_WMO_CODE_MAP: dict[int, tuple[str, str]] = {
+    0:  ("Ensoleillé", "☀️"),
+    1:  ("Peu nuageux", "🌤️"),
+    2:  ("Partiellement nuageux", "⛅"),
+    3:  ("Couvert", "☁️"),
+    45: ("Brouillard", "🌫️"),
+    48: ("Brouillard givrant", "🌫️"),
+    51: ("Bruine légère", "🌦️"),
+    53: ("Bruine", "🌦️"),
+    55: ("Bruine dense", "🌧️"),
+    56: ("Bruine verglaçante", "🌧️"),
+    57: ("Bruine verglaçante forte", "🌧️"),
+    61: ("Pluie faible", "🌦️"),
+    63: ("Pluie", "🌧️"),
+    65: ("Pluie forte", "🌧️"),
+    66: ("Pluie verglaçante", "🌧️"),
+    67: ("Pluie verglaçante forte", "🌧️"),
+    71: ("Neige faible", "🌨️"),
+    73: ("Neige", "❄️"),
+    75: ("Neige forte", "❄️"),
+    77: ("Grains de neige", "❄️"),
+    80: ("Averse faible", "🌦️"),
+    81: ("Averse", "🌧️"),
+    82: ("Averse forte", "⛈️"),
+    85: ("Averse de neige", "🌨️"),
+    86: ("Averse de neige forte", "❄️"),
+    95: ("Orage", "⛈️"),
+    96: ("Orage grêle", "⛈️"),
+    99: ("Orage grêle fort", "⛈️"),
+}
+
+
+def _wmo_to_label(code: Any) -> tuple[str, str]:
+    """Convertit un code météo WMO (int/str) en (label FR, emoji).
+
+    Tolérant : accepte str (depuis JSONB), int, None, ou un label FR déjà
+    valide (cas MOCK_WEATHER). Fallback "Couvert" si code inconnu.
+    """
+    if code is None:
+        return "Couvert", "☁️"
+    # Si c'est déjà un label FR (mock path), on garde
+    if isinstance(code, str) and code in ("Ensoleillé", "Nuageux", "Pluvieux", "Brouillard", "Orageux", "Neige"):
+        return code, _weather_icon(code)
+    try:
+        code_int = int(float(code))
+    except (ValueError, TypeError):
+        return "Couvert", "☁️"
+    return _WMO_CODE_MAP.get(code_int, ("Couvert", "☁️"))
