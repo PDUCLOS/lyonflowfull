@@ -151,22 +151,53 @@ def get_traffic_predictions(horizon_minutes: int = 60, limit: int = 200) -> pd.D
 
     Args:
         horizon_minutes: Horizon de prédiction en minutes (5/15/30/60/180/360).
+            Mappé vers horizon_h en DB : 5min→0, 30min→0, 60min→1, 180min→3, 360min→6.
         limit: Nombre max de lignes.
 
     Returns:
-        DataFrame: prediction_timestamp, target_timestamp, node_idx, model_name,
-        model_version, predicted_speed, confidence_low, confidence_high, actual_speed.
+        DataFrame avec colonnes nouveau schéma (v0.3.1) ::
+            axis_key, horizon_h, calculated_at, speed_pred, etat_pred,
+            color, vitesse_limite_kmh, label, model_version, lat, lon.
+        Pour rétro-compat, expose aussi ``predicted_speed`` (= speed_pred)
+        et ``prediction_timestamp`` (= calculated_at).
     """
+    # Mapping horizon_minutes -> horizon_h
+    # Le schéma gold stocke en heures : 0=H+5min, 1=H+1h, 3=H+3h, 6=H+6h
+    horizon_h = _minutes_to_hours(horizon_minutes)
+    if horizon_h is None:
+        logger.warning("horizon_minutes=%s non mappable vers horizon_h", horizon_minutes)
+        return pd.DataFrame()
+
     query = """
-        SELECT prediction_timestamp, target_timestamp, horizon_minutes,
-               node_idx, model_name, model_version, predicted_speed,
-               confidence_low, confidence_high, actual_speed
+        SELECT axis_key, horizon_h, calculated_at, speed_pred, etat_pred,
+               color, vitesse_limite_kmh, label, model_version, lat, lon
         FROM gold.trafic_predictions
-        WHERE horizon_minutes = %s
-        ORDER BY prediction_timestamp DESC
+        WHERE horizon_h = %s
+          AND calculated_at >= NOW() - INTERVAL '2 hours'
+        ORDER BY calculated_at DESC
         LIMIT %s
     """
-    return _df_from_query(query, (horizon_minutes, limit))
+    df = _df_from_query(query, (horizon_h, limit))
+    if df.empty:
+        return df
+    # Colonnes rétro-compat pour les anciens callers
+    df["prediction_timestamp"] = df["calculated_at"]
+    df["predicted_speed"] = df["speed_pred"]
+    return df
+
+
+def _minutes_to_hours(horizon_minutes: int) -> int | None:
+    """Convertit un horizon en minutes vers l'unité heures du schéma gold.
+
+    Mapping convention (cf init-db.sql ligne 1244) ::
+        5min  -> 0  (H+5min)
+        30min -> 0  (H+30min — vu dans la même fenêtre que H+5min pour 1h-granularité)
+        60min -> 1
+        180min -> 3
+        360min -> 6
+    """
+    mapping = {5: 0, 15: 0, 30: 0, 60: 1, 180: 3, 360: 6}
+    return mapping.get(horizon_minutes)
 
 
 def get_traffic_bottlenecks(top: int = 20) -> pd.DataFrame:
@@ -372,8 +403,8 @@ def get_spatial_mapping() -> pd.DataFrame:
         DataFrame: node_idx, channel_id, matrix_i, matrix_j, h3_id, lat, lng.
     """
     query = """
-        SELECT node_idx, channel_id, matrix_i, matrix_j, h3_id,
-               ST_Y(geom_wgs84) AS lat, ST_X(geom_wgs84) AS lng
+        SELECT node_idx, properties_twgid AS channel_id, matrix_i, matrix_j, h3_id,
+               lat, lon AS lng
         FROM gold.dim_spatial_grid_mapping
         ORDER BY node_idx
     """
@@ -619,15 +650,15 @@ def get_recent_alerts(hours: int = 24, limit: int = 50) -> pd.DataFrame:
     """
     query = """
         SELECT
-            alert_id,
-            alert_time,
-            severity,
-            line_ref,
-            title,
+            chantier_id AS alert_id,
+            COALESCE(date_debut::timestamp with time zone, fetched_at) AS alert_time,
+            'Warning' AS severity,
+            'Toutes' AS line_ref,
+            titre AS title,
             description,
-            action
-        FROM gold.v_recent_alerts
-        WHERE alert_time >= NOW() - make_interval(hours => %s)
+            'Déviation potentielle' AS action
+        FROM silver.chantiers_actifs
+        WHERE is_active = true
         ORDER BY alert_time DESC
         LIMIT %s
     """
@@ -668,15 +699,15 @@ def get_buses_positions(limit: int = 200) -> pd.DataFrame:
     """Positions temps réel des bus TCL."""
     query = """
         SELECT
-            vehicle_ref,
+            journey_ref AS vehicle_ref,
             line_ref,
-            ST_Y(geom_wgs84) AS lat,
-            ST_X(geom_wgs84) AS lng,
-            bearing,
+            lat,
+            lon AS lng,
+            0 AS bearing,
             delay_seconds,
-            recorded_at
+            measurement_time AS recorded_at
         FROM silver.tcl_vehicles_clean
-        WHERE recorded_at >= NOW() - INTERVAL '5 minutes'
+        WHERE measurement_time >= NOW() - INTERVAL '5 minutes'
         LIMIT %s
     """
     return _df_from_query(query, (limit,))
