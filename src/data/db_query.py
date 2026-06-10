@@ -201,22 +201,24 @@ def _minutes_to_hours(horizon_minutes: int) -> int | None:
 
 
 def get_traffic_bottlenecks(top: int = 20) -> pd.DataFrame:
-    """Top N nœuds avec la vitesse médiane la plus basse sur 1h.
+    """Top N axes avec la vitesse médiane la plus basse sur 1h.
 
-    Args:
-        top: Nombre de nœuds à retourner (défaut 20).
+    Sprint VPS-5 — v0.3.1 schema : ``gold.traffic_features_live`` n'a plus
+    ``node_idx`` ni ``measurement_time``. La clé d'agrégation est ``channel_id``
+    et la colonne temps est ``computed_at``.
 
     Returns:
-        DataFrame: node_idx, channel_id, avg_speed, min_speed, observations.
+        DataFrame: channel_id, avg_speed, min_speed, observations.
     """
     query = """
-        SELECT node_idx, channel_id,
+        SELECT channel_id,
                AVG(speed_kmh) AS avg_speed,
                MIN(speed_kmh) AS min_speed,
                COUNT(*) AS observations
         FROM gold.traffic_features_live
-        WHERE measurement_time >= NOW() - INTERVAL '1 hour'
-        GROUP BY node_idx, channel_id
+        WHERE computed_at >= NOW() - INTERVAL '1 hour'
+          AND speed_kmh IS NOT NULL
+        GROUP BY channel_id
         ORDER BY avg_speed ASC
         LIMIT %s
     """
@@ -630,9 +632,9 @@ def get_weather_hourly(hours: int = 24) -> pd.DataFrame:
             measurement_time,
             temperature_c,
             rain_mm,
-            wind_kmh,
-            humidity_pct,
-            condition_label
+            wind_speed_10m AS wind_kmh,
+            humidity AS humidity_pct,
+            weather_code::text AS condition_label
         FROM silver.meteo_hourly
         WHERE measurement_time >= NOW() - make_interval(hours => %s)
         ORDER BY measurement_time DESC

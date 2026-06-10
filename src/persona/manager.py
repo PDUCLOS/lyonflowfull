@@ -84,6 +84,13 @@ def clear_current_persona_auth() -> None:
     _auth_state().pop(get_current_persona(), None)
 
 
+def clear_current_persona() -> None:
+    """Retire le persona actif de la session, permettant de revenir à l'accueil."""
+    import streamlit as st
+    st.session_state.pop(_SESSION_KEY, None)
+    clear_current_persona_auth()
+
+
 class PersonaManager:
     """Façade pour la gestion de persona dans les pages.
 
