@@ -25,7 +25,7 @@ secondaryBackgroundColor = "#1A1D24"
 textColor = "#FAFAFA"
 font = "sans serif"
 
-[ui]
-hideSidebarNav = true   # ← clé : on cache la nav native, navigation custom
+[client]
+showSidebarNavigation = false
 # Les autres options utiles :
 # showHideSidebar = true   # permet de replier la sidebar
