@@ -61,6 +61,31 @@ def _maybe_force_mock(force_mock: bool) -> bool:
     return not _is_db_available()
 
 
+def _approx_lonlat_from_channel_id(channel_id: Any) -> tuple[float, float]:
+    """Position approximative (lat, lon) dérivée déterministe du channel_id.
+
+    Contexte (Sprint VPS-5 + dette schéma v0.3.1) :
+        ``get_traffic_bottlenecks()`` ne ramène plus ``node_idx`` ni lat/lon.
+        Le mapping ``channel_id`` (str 'LYO00xxx') ↔ ``properties_twgid``
+        (int) est cassé côté DB (cf. AGENTS.md). On dérive donc une
+        pseudo-position dans la bounding box de Lyon à partir d'un hash
+        stable, pour que les markers sur la carte soient distincts et
+        reproductibles.
+
+    Bounding box Lyon (approx) : lat 45.72-45.81, lon 4.81-4.90.
+    """
+    base_lat, base_lon = 45.72, 4.81
+    span_lat, span_lon = 0.09, 0.09
+    if channel_id is None or (isinstance(channel_id, float) and pd.isna(channel_id)):
+        return base_lat + span_lat / 2, base_lon + span_lon / 2
+    key = str(channel_id)
+    h = abs(hash(key))
+    return (
+        base_lat + ((h % 1000) / 1000.0) * span_lat,
+        base_lon + (((h // 1000) % 1000) / 1000.0) * span_lon,
+    )
+
+
 # =============================================================================
 # Trafic routier
 # =============================================================================
@@ -113,11 +138,12 @@ def load_traffic(force_mock: bool = False) -> dict[str, Any]:
     main_jams = []
     for _, row in bottlenecks_df.head(4).iterrows():
         speed_val = float(row.get("avg_speed") or 0.0) if not pd.isna(row.get("avg_speed")) else 0.0
+        lat_jam, lon_jam = _approx_lonlat_from_channel_id(row.get("channel_id"))
         main_jams.append(
             {
                 "road": f"Channel {row['channel_id']}",
-                "lat": 45.75 + (int(row["node_idx"]) % 10) * 0.005,  # approx
-                "lon": 4.83 + (int(row["node_idx"]) % 10) * 0.005,
+                "lat": lat_jam,
+                "lon": lon_jam,
                 "speed_kmh": speed_val,
                 "delay_min": max(0, int((30 - speed_val) / 5)),
                 "severity": "high" if speed_val < 15 else "medium" if speed_val < 25 else "low",
