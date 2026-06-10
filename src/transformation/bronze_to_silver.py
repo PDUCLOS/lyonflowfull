@@ -15,6 +15,8 @@ from __future__ import annotations
 
 import contextlib
 import logging
+import re
+from datetime import UTC, datetime, timedelta
 
 from src.db import raw_connection
 
@@ -47,22 +49,66 @@ def transform_to_silver(source: str, dry_run: bool = False) -> int:
     return fn()
 
 
+def _parse_grandlyon_vitesse(raw: object) -> float | None:
+    """Parse la nouvelle forme WFS Grand Lyon v3 (2026+).
+
+    Exemples acceptés :
+      - "18 km/h"        → 18.0
+      - "56.5 km/h"      → 56.5
+      - "Vitesse réglementaire"  → None (capteur en vitesse libre, vitesse_kmh inconnue)
+      - "" / None        → None
+
+    Returns:
+        Vitesse en km/h (float) ou None si non exploitable.
+    """
+    if raw is None:
+        return None
+    if not isinstance(raw, str):
+        try:
+            return float(raw)
+        except (TypeError, ValueError):
+            return None
+    s = raw.strip()
+    if not s:
+        return None
+    m = re.match(r"^\s*(\d+(?:[.,]\d+)?)\s*km/h", s)
+    if m:
+        return float(m.group(1).replace(",", "."))
+    return None
+
+
 def _transform_trafic_boucles() -> int:
-    """Bronze.trafic_boucles → silver.trafic_boucles_clean."""
+    """Bronze.trafic_boucles → silver.trafic_boucles_clean.
+
+    Nouveau format WFS Grand Lyon (juin 2026+) :
+      - props["code"]      : channel_id (ex. "LYO02336")  ← source de vérité
+      - props["gid"]       : identifiant numérique interne
+      - props["twgid"]     : identifiant numérique (utilisé par dim_spatial_grid_mapping)
+      - props["etat"]      : code 1 char — G (vert), V (orange), R (rouge)
+      - props["vitesse"]   : "18 km/h" (mesurée) ou "Vitesse réglementaire" (libre)
+      - props["est_a_jour"]: bool — on garde seulement les capteurs frais
+      - props["sens"], props["libelle"], props["longueur"], props["fournisseur"]
+
+    Schéma silver v0.3.1 :
+      channel_id, measurement_time, vitesse_kmh, vitesse_limite_kmh,
+      is_sanitary, geom (4326), geom_2154, silver_updated_at
+
+    Performance : le DAG tourne toutes les 5 min, on ne process donc que les
+    5 dernières minutes de bronze (1 cycle) pour rester < 1 minute runtime.
+    """
     with raw_connection() as conn, conn.cursor() as cur:
-        # 1. Lire Bronze non encore transformés (ou tous, idempotent)
         cur.execute("""
                 SELECT id, fetched_at, raw_data
                 FROM bronze.trafic_boucles
+                WHERE fetched_at > NOW() - INTERVAL '5 minutes'
                 ORDER BY fetched_at DESC
-                LIMIT 10000
+                LIMIT 200
             """)
         rows = cur.fetchall()
 
         n_inserted = 0
-        seen = set()
+        seen: set[tuple[str, object]] = set()
         for _id, fetched_at, raw_data in rows:
-            # Parse la FeatureCollection GeoJSON
             if not isinstance(raw_data, dict):
                 continue
             features = raw_data.get("features", [])
@@ -70,58 +116,86 @@ def _transform_trafic_boucles() -> int:
                 props = feat.get("properties", {})
                 geom = feat.get("geometry", {})
 
-                channel_id = props.get("id") or props.get("gid")
+                channel_id = props.get("code")
                 if not channel_id:
                     continue
+
                 measurement_time = fetched_at.replace(tzinfo=None) if fetched_at else None
                 if not measurement_time:
                     continue
 
-                # Dédup
                 key = (channel_id, measurement_time)
                 if key in seen:
                     continue
                 seen.add(key)
 
-                vitesse = props.get("vitesse")
-                etat = props.get("etat")
-                importance = props.get("importance")
+                vitesse_kmh = _parse_grandlyon_vitesse(props.get("vitesse"))
+                vitesse_limite_kmh = 50.0  # Lyon intra-muros
+                is_sanitary_flag = bool(props.get("est_a_jour", False))
 
-                # Géométrie LineString WKT
                 geom_wkt = None
                 if geom.get("type") == "LineString":
                     coords = geom.get("coordinates", [])
                     if coords:
-                        wkt_coords = ", ".join(f"{c[0]} {c[1]}" for c in coords)
-                        geom_wkt = f"LINESTRING({wkt_coords})"
+                        # silver.trafic_boucles_clean.geom est typé geometry(Point, 4326)
+                        # (contrainte schema legacy) — on ne peut pas y stocker
+                        # un LineString directement. Workaround : on prend le
+                        # point médian du segment. Cela donne une position
+                        # approximative du capteur (centre du tronçon routier).
+                        # TODO Sprint 10 : modifier le schéma pour passer en
+                        # geometry(LineString, 4326) (ou geometry générique) et
+                        # stocker le segment complet.
+                        mid = coords[len(coords) // 2]
+                        geom_wkt = f"POINT({mid[0]} {mid[1]})"
 
+                cur.execute("SAVEPOINT sp_trafic")
                 try:
                     cur.execute(
                         """
                             INSERT INTO silver.trafic_boucles_clean
-                                (measurement_time, channel_id, vitesse_kmh, etat,
-                                 importance_code, geom_wgs84)
+                                (channel_id, measurement_time,
+                                 vitesse_kmh, vitesse_limite_kmh,
+                                 is_sanitary, geom, geom_2154,
+                                 silver_updated_at)
                             VALUES (%s, %s, %s, %s, %s,
                                 CASE WHEN %s IS NOT NULL
                                      THEN ST_GeomFromText(%s, 4326)
-                                     ELSE NULL END)
+                                     ELSE NULL END,
+                                CASE WHEN %s IS NOT NULL
+                                     THEN ST_Transform(
+                                            ST_GeomFromText(%s, 4326), 2154)
+                                     ELSE NULL END,
+                                NOW())
                             ON CONFLICT (channel_id, measurement_time) DO UPDATE
-                            SET vitesse_kmh = EXCLUDED.vitesse_kmh,
-                                etat = EXCLUDED.etat,
-                                importance_code = EXCLUDED.importance_code
+                            SET vitesse_kmh       = EXCLUDED.vitesse_kmh,
+                                vitesse_limite_kmh= EXCLUDED.vitesse_limite_kmh,
+                                is_sanitary       = EXCLUDED.is_sanitary,
+                                geom              = EXCLUDED.geom,
+                                geom_2154         = EXCLUDED.geom_2154,
+                                silver_updated_at = NOW()
                         """,
                         (
-                            measurement_time,
                             channel_id,
-                            vitesse,
-                            etat,
-                            importance,
+                            measurement_time,
+                            vitesse_kmh,
+                            vitesse_limite_kmh,
+                            is_sanitary_flag,
+                            geom_wkt,
+                            geom_wkt,
                             geom_wkt,
                             geom_wkt,
                         ),
                     )
+                    cur.execute("RELEASE SAVEPOINT sp_trafic")
                     n_inserted += 1
                 except Exception as e:
+                    # Rollback au savepoint : annule juste l'INSERT foireux,
+                    # pas toute la transaction. On garde tous les autres
+                    # inserts valides.
+                    try:
+                        cur.execute("ROLLBACK TO SAVEPOINT sp_trafic")
+                    except Exception:
+                        pass
                     logger.warning(f"Skip feature {channel_id}: {e}")
                     continue
 
@@ -214,11 +288,32 @@ def _parse_siri_delay(raw_delay) -> int:
     return total
 
 
+def _siri_ref(node: object) -> str | None:
+    """SIRI 2.0 (juin 2026+) : les refs (LineRef, VehicleRef, StopPointRef, ...)
+    sont des objets ``{"value": "ActIV:..."}`` au lieu de strings brutes.
+
+    Cette fonction extrait la string de value, ou None si structure inattendue.
+    """
+    if node is None:
+        return None
+    if isinstance(node, str):
+        return node or None
+    if isinstance(node, dict):
+        v = node.get("value")
+        if isinstance(v, str) and v:
+            return v
+    return None
+
+
 def _transform_tcl_vehicles() -> int:
     """Bronze.tcl_vehicles -> silver.tcl_vehicles_clean.
 
-    Schema: migrate_realign_v0.3.1.sql
-    UNIQUE (line_ref, journey_ref, stop_ref, measurement_time)
+    Schema silver : UNIQUE (line_ref, journey_ref, stop_ref, measurement_time).
+
+    Nouveau format SIRI 2.0 (juin 2026+) : LineRef, VehicleRef, DirectionRef,
+    StopPointRef sont des objets ``{"value": "..."}`` et non plus des strings.
+    Ancien code ``mvj.get("LineRef")`` retournait un dict, qui passait la garde
+    ``if not line_ref`` (dict truthy) puis crashait à l'INSERT TEXT.
     """
     with raw_connection() as conn, conn.cursor() as cur:
         cur.execute("""
@@ -230,7 +325,7 @@ def _transform_tcl_vehicles() -> int:
         rows = cur.fetchall()
 
         n_inserted = 0
-        seen = set()
+        seen: set[tuple[str, str, str, object]] = set()
         for _id, fetched_at, raw_data in rows:
             if not isinstance(raw_data, dict):
                 continue
@@ -240,20 +335,25 @@ def _transform_tcl_vehicles() -> int:
                 .get("VehicleMonitoringDelivery", [{}])[0]
             )
             activities = delivery.get("VehicleActivity", [])
+            if not activities:
+                continue
 
             for act in activities:
                 mvj = act.get("MonitoredVehicleJourney", {})
-                line_ref = mvj.get("LineRef")
+
+                line_ref = _siri_ref(mvj.get("LineRef"))
                 if not line_ref:
                     continue
 
+                fvj = mvj.get("FramedVehicleJourneyRef") or {}
                 journey_ref = (
-                    mvj.get("FramedVehicleJourneyRef", {}).get("DatedVehicleJourneyRef")
-                    or mvj.get("VehicleRef")
-                    or "unknown"
-                )
-                call = mvj.get("MonitoredCall", {})
-                stop_ref = call.get("StopPointRef") or "unknown"
+                    fvj.get("DatedVehicleJourneyRef")
+                    if isinstance(fvj, dict)
+                    else None
+                ) or _siri_ref(mvj.get("VehicleRef")) or "unknown"
+
+                call = mvj.get("MonitoredCall") or {}
+                stop_ref = _siri_ref(call.get("StopPointRef")) or "unknown"
 
                 key = (line_ref, journey_ref, stop_ref, fetched_at)
                 if key in seen:
@@ -261,7 +361,8 @@ def _transform_tcl_vehicles() -> int:
                 seen.add(key)
 
                 delay_s = _parse_siri_delay(mvj.get("Delay"))
-                loc = mvj.get("VehicleLocation", {})
+                loc = mvj.get("VehicleLocation") or {}
+                direction_ref = _siri_ref(mvj.get("DirectionRef"))
 
                 try:
                     cur.execute(
@@ -274,18 +375,18 @@ def _transform_tcl_vehicles() -> int:
                             ON CONFLICT (line_ref, journey_ref, stop_ref, measurement_time)
                             DO UPDATE SET
                                 delay_seconds = EXCLUDED.delay_seconds,
-                                fetched_at = EXCLUDED.fetched_at
+                                fetched_at    = EXCLUDED.fetched_at
                         """,
                         (
                             fetched_at,
                             fetched_at,
                             line_ref,
-                            mvj.get("DirectionRef"),
+                            direction_ref,
                             journey_ref,
                             stop_ref,
                             delay_s,
-                            loc.get("Latitude"),
-                            loc.get("Longitude"),
+                            loc.get("Latitude") if isinstance(loc, dict) else None,
+                            loc.get("Longitude") if isinstance(loc, dict) else None,
                         ),
                     )
                     n_inserted += 1

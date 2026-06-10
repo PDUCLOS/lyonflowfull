@@ -24,7 +24,7 @@ def transform_silver_to_gold(target: str = "all", dry_run: bool = False) -> dict
     """Transform Silver → Gold pour un ou tous les modèles.
 
     Args:
-        target: 'traffic' | 'velov' | 'bus_delay' | 'all'
+        target: 'traffic' | 'velov' | 'bus_delay' | 'tcl_realtime' | 'bottleneck' | 'all'
         dry_run: log uniquement.
 
     Returns:
@@ -41,6 +41,8 @@ def transform_silver_to_gold(target: str = "all", dry_run: bool = False) -> dict
         results["velov"] = _build_velov_features()
     if target in ("bus_delay", "all"):
         results["bus_delay"] = _build_bus_delay_segments()
+    if target in ("tcl_realtime", "all"):
+        results["tcl_realtime"] = _build_tcl_realtime()
     if target in ("bottleneck", "all"):
         results["bottleneck"] = _build_infrastructure_bottlenecks()
     return results
@@ -103,23 +105,29 @@ def _ensure_helpers(cur) -> None:
 
 _TRAFFIC_SQL = """
 WITH recent AS (
-    SELECT measurement_time, channel_id, vitesse_kmh
-    FROM silver.trafic_boucles_clean
-    WHERE measurement_time > NOW() - INTERVAL '2 hours'
+    SELECT
+        s.measurement_time,
+        s.channel_id,
+        s.vitesse_kmh,
+        s.vitesse_limite_kmh
+    FROM silver.trafic_boucles_clean s
+    WHERE s.measurement_time > NOW() - INTERVAL '2 hours'
+      AND s.vitesse_kmh IS NOT NULL
 ),
 windowed AS (
     SELECT
         r.measurement_time,
         r.channel_id,
         r.vitesse_kmh,
-        LAG(r.vitesse_kmh, 1) OVER w AS speed_lag_1,
-        LAG(r.vitesse_kmh, 2) OVER w AS speed_lag_2,
-        LAG(r.vitesse_kmh, 3) OVER w AS speed_lag_3,
+        r.vitesse_limite_kmh,
+        LAG(r.vitesse_kmh, 1) OVER w AS lag_1,
+        LAG(r.vitesse_kmh, 2) OVER w AS lag_2,
+        LAG(r.vitesse_kmh, 3) OVER w AS lag_3,
         AVG(r.vitesse_kmh) OVER (
             PARTITION BY r.channel_id
             ORDER BY r.measurement_time
-            ROWS BETWEEN 5 PRECEDING AND 1 PRECEDING
-        ) AS rolling_mean_5min
+            ROWS BETWEEN 3 PRECEDING AND 1 PRECEDING
+        ) AS rolling_mean_3
     FROM recent r
     WINDOW w AS (PARTITION BY r.channel_id ORDER BY r.measurement_time)
 ),
@@ -128,56 +136,89 @@ fresh AS (
     WHERE measurement_time > NOW() - INTERVAL '15 minutes'
 )
 INSERT INTO gold.traffic_features_live (
-    measurement_time, node_idx, channel_id, speed_kmh,
-    speed_lag_1, speed_lag_2, speed_lag_3, speed_delta_1,
-    rolling_mean_5min, hour_sin, hour_cos, day_sin, day_cos,
-    temperature_c, rain_mm, is_vacances, is_ferie, importance_code
+    channel_id, fetched_at, computed_at,
+    speed_kmh, vitesse_limite_kmh,
+    lag_1, lag_2, lag_3, delta_current, delta_1, rolling_mean_3,
+    hour_of_day, day_of_week, is_weekend,
+    sin_hour, cos_hour, sin_dow, cos_dow, channel_hash,
+    temperature_2m, precipitation, rain, is_raining,
+    visibility, wind_speed_10m, weather_code,
+    lat, lon, importance_code, x_2154, y_2154,
+    is_vacances, is_ferie
 )
 SELECT
-    f.measurement_time,
-    m.node_idx,
     f.channel_id,
+    f.measurement_time                      AS fetched_at,
+    NOW()                                   AS computed_at,
     f.vitesse_kmh,
-    f.speed_lag_1,
-    f.speed_lag_2,
-    f.speed_lag_3,
-    f.vitesse_kmh - f.speed_lag_1                              AS speed_delta_1,
-    f.rolling_mean_5min,
-    SIN(2 * PI() * EXTRACT(HOUR FROM f.measurement_time) / 24.0) AS hour_sin,
-    COS(2 * PI() * EXTRACT(HOUR FROM f.measurement_time) / 24.0) AS hour_cos,
-    SIN(2 * PI() * EXTRACT(DOW  FROM f.measurement_time) / 7.0)  AS day_sin,
-    COS(2 * PI() * EXTRACT(DOW  FROM f.measurement_time) / 7.0)  AS day_cos,
-    met.temperature_c,
-    met.rain_mm,
-    _is_vacances(f.measurement_time::date)                     AS is_vacances,
-    _is_ferie(f.measurement_time::date)                        AS is_ferie,
-    '0'                                                         AS importance_code
+    f.vitesse_limite_kmh,
+    f.lag_1,
+    f.lag_2,
+    f.lag_3,
+    f.vitesse_kmh - f.lag_1                 AS delta_current,
+    f.vitesse_kmh - COALESCE(f.lag_1, f.vitesse_kmh) AS delta_1,
+    f.rolling_mean_3,
+    EXTRACT(HOUR FROM f.measurement_time)::smallint AS hour_of_day,
+    EXTRACT(DOW  FROM f.measurement_time)::smallint AS day_of_week,
+    CASE WHEN EXTRACT(DOW FROM f.measurement_time) IN (0, 6)
+         THEN 1 ELSE 0 END                 AS is_weekend,
+    SIN(2 * PI() * EXTRACT(HOUR FROM f.measurement_time) / 24.0) AS sin_hour,
+    COS(2 * PI() * EXTRACT(HOUR FROM f.measurement_time) / 24.0) AS cos_hour,
+    SIN(2 * PI() * EXTRACT(DOW  FROM f.measurement_time) /  7.0) AS sin_dow,
+    COS(2 * PI() * EXTRACT(DOW  FROM f.measurement_time) /  7.0) AS cos_dow,
+    -- channel_hash : hash stable du channel_id → permet de linker aux node_idx
+    -- sans JOIN sur dim_spatial_grid_mapping (qui n'est pas peuplée par channel_id)
+    ('x' || substr(md5(f.channel_id), 1, 8))::bit(32)::int::double precision
+        / 2147483647.0                      AS channel_hash,
+    met.temperature_c                        AS temperature_2m,
+    met.rain_mm                              AS precipitation,
+    met.rain_mm                              AS rain,
+    CASE WHEN met.rain_mm > 0
+         THEN 1 ELSE 0 END                 AS is_raining,
+    met.visibility,
+    met.wind_speed_10m,
+    met.weather_code::smallint              AS weather_code,
+    m.lat,
+    m.lon,
+    0::smallint                             AS importance_code,
+    NULL::double precision                  AS x_2154,
+    NULL::double precision                  AS y_2154,
+    _is_vacances(f.measurement_time::date)  AS is_vacances,
+    _is_ferie(f.measurement_time::date)     AS is_ferie
 FROM fresh f
-JOIN gold.dim_spatial_grid_mapping m ON m.channel_id = f.channel_id
+LEFT JOIN gold.dim_spatial_grid_mapping m
+       ON m.properties_twgid = f.channel_id
 LEFT JOIN LATERAL (
-    SELECT temperature_c, rain_mm
+    SELECT temperature_c, rain_mm, visibility, wind_speed_10m, weather_code
     FROM silver.meteo_hourly
     WHERE measurement_time <= f.measurement_time
     ORDER BY measurement_time DESC
     LIMIT 1
 ) met ON TRUE
-ON CONFLICT (node_idx, measurement_time) DO UPDATE SET
+ON CONFLICT (channel_id, fetched_at) DO UPDATE SET
     speed_kmh         = EXCLUDED.speed_kmh,
-    speed_lag_1       = EXCLUDED.speed_lag_1,
-    speed_delta_1     = EXCLUDED.speed_delta_1,
-    rolling_mean_5min = EXCLUDED.rolling_mean_5min,
-    temperature_c     = EXCLUDED.temperature_c,
-    rain_mm           = EXCLUDED.rain_mm,
+    lag_1             = EXCLUDED.lag_1,
+    delta_current     = EXCLUDED.delta_current,
+    delta_1           = EXCLUDED.delta_1,
+    rolling_mean_3    = EXCLUDED.rolling_mean_3,
+    temperature_2m    = EXCLUDED.temperature_2m,
+    precipitation     = EXCLUDED.precipitation,
+    rain              = EXCLUDED.rain,
+    is_raining        = EXCLUDED.is_raining,
     is_vacances       = EXCLUDED.is_vacances,
-    is_ferie          = EXCLUDED.is_ferie
+    is_ferie          = EXCLUDED.is_ferie,
+    lat               = EXCLUDED.lat,
+    lon               = EXCLUDED.lon,
+    computed_at       = NOW()
 """
 
 
 _VELOV_SQL = """
 WITH recent AS (
-    SELECT fetched_at, station_id, bikes_available
+    SELECT fetched_at, station_id, num_bikes_available
     FROM silver.velov_clean
     WHERE fetched_at > NOW() - INTERVAL '2 hours'
+      AND num_bikes_available IS NOT NULL
 ),
 encoded AS (
     SELECT
@@ -188,10 +229,10 @@ encoded AS (
 windowed AS (
     SELECT
         e.*,
-        LAG(bikes_available, 1) OVER w AS bikes_lag_1,
-        LAG(bikes_available, 2) OVER w AS bikes_lag_2,
-        LAG(bikes_available, 3) OVER w AS bikes_lag_3,
-        AVG(bikes_available) OVER (
+        LAG(num_bikes_available, 1) OVER w AS bikes_lag_1,
+        LAG(num_bikes_available, 2) OVER w AS bikes_lag_2,
+        LAG(num_bikes_available, 3) OVER w AS bikes_lag_3,
+        AVG(num_bikes_available) OVER (
             PARTITION BY e.station_id
             ORDER BY e.fetched_at
             ROWS BETWEEN 36 PRECEDING AND 1 PRECEDING
@@ -212,7 +253,7 @@ SELECT
     f.fetched_at,
     f.station_id_encoded,
     f.station_id,
-    f.bikes_available,
+    f.num_bikes_available,
     f.bikes_lag_1, f.bikes_lag_2, f.bikes_lag_3,
     f.rolling_mean_3h,
     SIN(2 * PI() * EXTRACT(HOUR FROM f.fetched_at) / 24.0) AS hour_sin,
@@ -242,37 +283,64 @@ ON CONFLICT (station_id_encoded, measurement_time) DO UPDATE SET
 
 _BUS_DELAY_SQL = """
 INSERT INTO gold.bus_delay_segments (
-    line_ref, segment_id, hour_of_day, day_of_week,
+    date, hour, line_ref, segment_id,
     avg_delay_seconds, n_observations,
     is_vacances, is_ferie, weather_code
 )
 SELECT
+    d                                          AS date,
+    h::smallint                                AS hour,
     line_ref,
-    'all'                                     AS segment_id,
-    h::smallint                               AS hour_of_day,
-    dow::smallint                             AS day_of_week,
-    AVG(delay_seconds)::real                  AS avg_delay_seconds,
-    COUNT(*)::int                             AS n_observations,
-    _is_vacances(d)                           AS is_vacances,
-    _is_ferie(d)                              AS is_ferie,
-    NULL::int                                 AS weather_code
+    'all'                                      AS segment_id,
+    AVG(delay_seconds)::numeric(8,2)           AS avg_delay_seconds,
+    COUNT(*)::int                              AS n_observations,
+    _is_vacances(d)                            AS is_vacances,
+    _is_ferie(d)                               AS is_ferie,
+    NULL::int                                  AS weather_code
 FROM (
     SELECT
         DATE(measurement_time)                        AS d,
         EXTRACT(HOUR FROM measurement_time)::int      AS h,
-        EXTRACT(DOW FROM measurement_time)::int       AS dow,
         line_ref,
         delay_seconds
     FROM silver.tcl_vehicles_clean
     WHERE measurement_time > NOW() - INTERVAL '7 days'
       AND line_ref IS NOT NULL
 ) src
-GROUP BY line_ref, h, dow, d
-ON CONFLICT (line_ref, segment_id, hour_of_day, day_of_week) DO UPDATE SET
+GROUP BY line_ref, h, d
+ON CONFLICT (date, hour, line_ref, segment_id) DO UPDATE SET
     avg_delay_seconds = EXCLUDED.avg_delay_seconds,
     n_observations    = EXCLUDED.n_observations,
     is_vacances       = EXCLUDED.is_vacances,
     is_ferie          = EXCLUDED.is_ferie
+"""
+
+
+_TCL_REALTIME_SQL = """
+-- Alimente gold.tcl_vehicle_realtime à partir de silver.tcl_vehicles_clean
+-- (1 ligne par véhicule distinct, avec sa dernière position observée).
+-- Sert au Pro_4_Simulateur pour la carte TCL temps réel.
+INSERT INTO gold.tcl_vehicle_realtime (
+    vehicle_ref, line_ref, latitude, longitude,
+    delay_seconds, is_delayed, recorded_at
+)
+SELECT DISTINCT ON (journey_ref)
+    journey_ref                                 AS vehicle_ref,
+    line_ref,
+    lat                                         AS latitude,
+    lon                                         AS longitude,
+    delay_seconds,
+    delay_seconds > 60                          AS is_delayed,
+    measurement_time                            AS recorded_at
+FROM silver.tcl_vehicles_clean
+WHERE measurement_time > NOW() - INTERVAL '15 minutes'
+  AND journey_ref IS NOT NULL
+ORDER BY journey_ref, measurement_time DESC
+ON CONFLICT (vehicle_ref, recorded_at) DO UPDATE SET
+    latitude      = EXCLUDED.latitude,
+    longitude     = EXCLUDED.longitude,
+    delay_seconds = EXCLUDED.delay_seconds,
+    is_delayed    = EXCLUDED.is_delayed
 """
 
 
@@ -303,32 +371,53 @@ def _build_bus_delay_segments() -> int:
     return n
 
 
+def _build_tcl_realtime() -> int:
+    """Alimente gold.tcl_vehicle_realtime depuis silver.tcl_vehicles_clean.
+
+    Le Pro_4_Simulateur (Sprint VPS-5) lit cette table ; sans ce feed elle
+    est stale depuis 2 semaines (juin 2026), alors que silver.tcl_vehicles_clean
+    reçoit bien les positions temps réel.
+    """
+    with raw_connection() as conn, conn.cursor() as cur:
+        # Cleanup : on garde 1h d'historique. Le Pro_4 n'a besoin que de la
+        # dernière position par véhicule, mais un peu d'historique est utile
+        # pour les graphes "trajet des 5 dernières minutes".
+        cur.execute(
+            "DELETE FROM gold.tcl_vehicle_realtime "
+            "WHERE recorded_at < NOW() - INTERVAL '1 hour'"
+        )
+        cur.execute(_TCL_REALTIME_SQL)
+        n = cur.rowcount
+    logger.info("gold.tcl_vehicle_realtime: %d rows upserted", n)
+    return n
+
+
 _BOTTLENECK_SQL = """
 WITH bus_hourly AS (
     SELECT
         line_ref,
-        hour_of_day,
+        hour,
         AVG(avg_delay_seconds)::numeric(8,2) AS avg_delay,
         SUM(n_observations)::int             AS total_obs
     FROM gold.bus_delay_segments
-    WHERE computed_at > NOW() - INTERVAL '7 days'
-    GROUP BY line_ref, hour_of_day
+    WHERE date >= CURRENT_DATE - INTERVAL '7 days'
+    GROUP BY line_ref, hour
 ),
 traffic_hourly AS (
     SELECT
-        EXTRACT(HOUR FROM measurement_time)::int AS hour_of_day,
-        AVG(speed_kmh)::numeric(8,2)             AS avg_speed
+        EXTRACT(HOUR FROM fetched_at)::int AS hour_of_day,
+        AVG(speed_kmh)::numeric(8,2)        AS avg_speed
     FROM gold.traffic_features_live
-    WHERE measurement_time > NOW() - INTERVAL '7 days'
-    GROUP BY EXTRACT(HOUR FROM measurement_time)::int
+    WHERE fetched_at > NOW() - INTERVAL '7 days'
+    GROUP BY EXTRACT(HOUR FROM fetched_at)::int
 )
 INSERT INTO gold.infrastructure_bottlenecks (
-    segment_id, line_ref, diagnosis,
+    segment_id, line_ref, diagnosis, computed_at,
     bus_delay_seconds, traffic_speed_kmh, traffic_congestion,
     lat, lon, n_observations
 )
 SELECT
-    bh.line_ref || '_h' || bh.hour_of_day,
+    bh.line_ref || '_h' || bh.hour,
     bh.line_ref,
     CASE
         WHEN bh.avg_delay > 120 AND COALESCE(th.avg_speed, 50) < 25 THEN 'infra'
@@ -336,6 +425,7 @@ SELECT
         WHEN COALESCE(th.avg_speed, 50) < 25 THEN 'bus_lane_ok'
         ELSE 'ok'
     END,
+    NOW()                                              AS computed_at,
     bh.avg_delay,
     COALESCE(th.avg_speed, 0),
     CASE WHEN th.avg_speed IS NOT NULL
@@ -346,7 +436,7 @@ SELECT
     4.84  + (HASHTEXT(bh.line_ref) % 70)  * 0.0003,
     bh.total_obs
 FROM bus_hourly bh
-LEFT JOIN traffic_hourly th ON th.hour_of_day = bh.hour_of_day
+LEFT JOIN traffic_hourly th ON th.hour_of_day = bh.hour
 """
 
 
