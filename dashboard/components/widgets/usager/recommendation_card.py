@@ -65,7 +65,6 @@ def render_recommendation_card(option: dict) -> None:
                     </div>
                 </div>
             </div>
-
             <div style="display:flex;gap:1.5rem;margin-top:1rem;flex-wrap:wrap;">
                 <div>
                     <div style="font-size:0.75rem;opacity:0.6;">Coût</div>
@@ -92,7 +91,6 @@ def render_recommendation_card(option: dict) -> None:
                     </div>
                 </div>
             </div>
-
             <div style="margin-top:1rem;padding:0.8rem;background:{bg_accent};
                         border-radius:6px;font-size:0.9rem;color:{accent};">
                 <b>{option.get("confidence_text", "")}</b>

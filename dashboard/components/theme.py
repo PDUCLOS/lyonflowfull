@@ -330,9 +330,11 @@ def inject_theme() -> None:
     }}
 
     /* Hide Streamlit chrome */
-    #MainMenu {{visibility: hidden;}}
-    footer {{visibility: hidden;}}
-    [data-testid="stSidebarNav"] {{display: none !important;}}
+    #MainMenu {visibility: hidden;}
+    footer {visibility: hidden;}
+    [data-testid="stSidebarNav"] {display: none !important;}
+    [data-testid="stSidebarNavItems"] {display: none !important;}
+    ul[data-testid="stSidebarNavItems"] {display: none !important;}
     </style>
     """
     st.markdown(css, unsafe_allow_html=True)
