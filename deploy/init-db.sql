@@ -2375,6 +2375,96 @@ ALTER TABLE ONLY gold.channel_tomtom_mapping
 
 
 --
+-- Silver tables added by migrate_realign_v0.3.1
+--
+
+CREATE TABLE IF NOT EXISTS silver.tcl_vehicles_clean (
+    id              BIGSERIAL PRIMARY KEY,
+    fetched_at      TIMESTAMPTZ NOT NULL,
+    measurement_time TIMESTAMPTZ NOT NULL,
+    line_ref        TEXT NOT NULL,
+    direction_ref   TEXT,
+    journey_ref     TEXT,
+    stop_ref        TEXT,
+    delay_seconds   INTEGER,
+    lat             DOUBLE PRECISION,
+    lon             DOUBLE PRECISION,
+    raw_data        JSONB,
+    CONSTRAINT silver_tcl_uniq UNIQUE (line_ref, journey_ref, stop_ref, measurement_time)
+);
+CREATE INDEX IF NOT EXISTS idx_silver_tcl_line_time ON silver.tcl_vehicles_clean (line_ref, measurement_time DESC);
+
+CREATE TABLE IF NOT EXISTS silver.velov_clean (
+    id                  BIGSERIAL PRIMARY KEY,
+    fetched_at          TIMESTAMPTZ NOT NULL,
+    measurement_time    TIMESTAMPTZ NOT NULL,
+    station_id          TEXT NOT NULL,
+    station_name        TEXT,
+    lat                 DOUBLE PRECISION,
+    lon                 DOUBLE PRECISION,
+    num_bikes_available INTEGER,
+    num_docks_available INTEGER,
+    is_active           BOOLEAN DEFAULT TRUE,
+    CONSTRAINT silver_velov_uniq UNIQUE (station_id, measurement_time)
+);
+CREATE INDEX IF NOT EXISTS idx_silver_velov_station_time ON silver.velov_clean (station_id, measurement_time DESC);
+
+CREATE TABLE IF NOT EXISTS silver.chantiers_actifs (
+    id              BIGSERIAL PRIMARY KEY,
+    fetched_at      TIMESTAMPTZ NOT NULL,
+    chantier_id     TEXT NOT NULL,
+    titre           TEXT,
+    description     TEXT,
+    date_debut      DATE,
+    date_fin        DATE,
+    lat             DOUBLE PRECISION,
+    lon             DOUBLE PRECISION,
+    is_active       BOOLEAN GENERATED ALWAYS AS (
+        date_debut <= CURRENT_DATE AND (date_fin IS NULL OR date_fin >= CURRENT_DATE)
+    ) STORED,
+    raw_data        JSONB,
+    CONSTRAINT silver_chantiers_uniq UNIQUE (chantier_id, fetched_at)
+);
+CREATE INDEX IF NOT EXISTS idx_silver_chantiers_active ON silver.chantiers_actifs (is_active, date_fin);
+
+--
+-- Gold tables added by migrate_realign_v0.3.1
+--
+
+CREATE TABLE IF NOT EXISTS gold.bus_delay_segments (
+    id                  BIGSERIAL PRIMARY KEY,
+    line_ref            TEXT NOT NULL,
+    segment_id          TEXT NOT NULL,
+    hour_of_day         SMALLINT,
+    day_of_week         SMALLINT,
+    is_vacances         BOOLEAN,
+    is_ferie            BOOLEAN,
+    weather_code        INTEGER,
+    avg_delay_seconds   REAL,
+    p90_delay_seconds   REAL,
+    n_observations      INTEGER,
+    computed_at         TIMESTAMPTZ DEFAULT NOW(),
+    CONSTRAINT gold_bus_delay_uniq UNIQUE (line_ref, segment_id, hour_of_day, day_of_week)
+);
+CREATE INDEX IF NOT EXISTS idx_gold_bus_delay_line ON gold.bus_delay_segments (line_ref);
+
+CREATE TABLE IF NOT EXISTS gold.infrastructure_bottlenecks (
+    id                  BIGSERIAL PRIMARY KEY,
+    segment_id          TEXT NOT NULL,
+    line_ref            TEXT,
+    diagnosis           TEXT NOT NULL,
+    bus_delay_seconds   REAL,
+    traffic_speed_kmh   REAL,
+    traffic_congestion  REAL,
+    lat                 DOUBLE PRECISION,
+    lon                 DOUBLE PRECISION,
+    computed_at         TIMESTAMPTZ DEFAULT NOW(),
+    n_observations      INTEGER,
+    CONSTRAINT gold_infra_uniq UNIQUE (segment_id, line_ref, computed_at)
+);
+CREATE INDEX IF NOT EXISTS idx_gold_infra_diagnosis ON gold.infrastructure_bottlenecks (diagnosis);
+
+--
 -- PostgreSQL database dump complete
 --
 

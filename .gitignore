@@ -102,3 +102,4 @@ site/
 
 # TLS certs (generated, never committed)
 nginx/certs/*.pem
+.opencode/

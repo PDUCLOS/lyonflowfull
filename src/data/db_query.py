@@ -371,16 +371,15 @@ def get_infrastructure_bottlenecks(top: int = 30) -> pd.DataFrame:
     """Bottlenecks infrastructure (croisement bus × trafic).
 
     Returns:
-        DataFrame: segment_id, line_refs, diagnosis, impact_score,
-        voyageurs_jour, geom.
+        DataFrame: segment_id, line_ref, diagnosis, bus_delay_seconds,
+        traffic_speed_kmh, traffic_congestion, lat, lng, n_observations.
     """
     query = """
-        SELECT bottleneck_id, segment_id, line_refs, diagnosis, impact_score,
-               voyageurs_jour,
-               ST_Y(ST_Centroid(geom_wgs84)) AS lat,
-               ST_X(ST_Centroid(geom_wgs84)) AS lng
+        SELECT id, segment_id, line_ref, diagnosis,
+               bus_delay_seconds, traffic_speed_kmh, traffic_congestion,
+               lat, lon AS lng, n_observations, computed_at
         FROM gold.infrastructure_bottlenecks
-        ORDER BY impact_score DESC
+        ORDER BY bus_delay_seconds DESC NULLS LAST
         LIMIT %s
     """
     df = _df_from_query(query, (top,))

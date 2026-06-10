@@ -45,6 +45,7 @@ from src.data.db_query import (
     get_velov_predictions,
     get_velov_stations_geo,
 )
+from src.db.connection import execute_query
 from src.data.mock import elu as elu_mock
 from src.data.mock import pro_tcl as pro_tcl_mock
 from src.data.mock import usager as usager_mock
@@ -119,8 +120,10 @@ def load_traffic(force_mock: bool = False) -> dict[str, Any]:
     predictions: dict[str, dict] = {"h_plus_30min": {}, "h_plus_1h": {}, "h_plus_3h": {}}
     for horizon, key in [(30, "h_plus_30min"), (60, "h_plus_1h"), (180, "h_plus_3h")]:
         pred_df = get_traffic_predictions(horizon_minutes=horizon, limit=200)
-        if not pred_df.empty:
-            mean_pred = float(pred_df["predicted_speed"].mean())
+        # Nouveau schéma : speed_pred (alias predicted_speed posé par db_query)
+        speed_col = "predicted_speed" if "predicted_speed" in pred_df.columns else "speed_pred"
+        if not pred_df.empty and speed_col in pred_df.columns:
+            mean_pred = float(pred_df[speed_col].mean())
             if mean_pred >= 35:
                 pred_level = "fluide"
             elif mean_pred >= 25:
@@ -477,9 +480,70 @@ def load_amenagements_passes(limit: int = 50, force_mock: bool = False) -> pd.Da
 
 
 def load_tcl_lines(force_mock: bool = False) -> list[dict]:
-    """Liste des lignes TCL (données quasi-statiques)."""
-    # Pas de DB query ici — données statiques Grand Lyon
-    return pro_tcl_mock.MOCK_TCL_LINES
+    """Liste exhaustive des lignes TCL.
+
+    Sprint VPS-5 — Charge TOUTES les lignes distinctes présentes en DB
+    (gold.tcl_vehicle_realtime.line_ref — ~166 lignes historiques TCL)
+    plutôt que les 12 lignes du mock. Catégorisation automatique :
+    * ``T*`` (T1, T2, T3...) → tram
+    * ``M*`` (M_A, M_B, M_C, M_D) → metro
+    * reste → bus
+
+    Args:
+        force_mock: True pour bypasser la DB et utiliser MOCK_TCL_LINES.
+
+    Returns:
+        Liste de dicts {id, name, mode, color, icon} triés par mode puis id.
+    """
+    if _maybe_force_mock(force_mock):
+        return pro_tcl_mock.MOCK_TCL_LINES
+
+    # Query DB pour toutes les lignes distinctes
+    try:
+        rows = execute_query(
+            """
+            SELECT line_ref, COUNT(*) AS n_vehicles, MAX(recorded_at) AS last_seen
+            FROM gold.tcl_vehicle_realtime
+            WHERE line_ref IS NOT NULL
+            GROUP BY line_ref
+            ORDER BY line_ref
+            """
+        )
+    except Exception as e:  # pragma: no cover
+        logger.warning("load_tcl_lines DB query failed, falling back to mock: %s", e)
+        return pro_tcl_mock.MOCK_TCL_LINES
+
+    if not rows:
+        return pro_tcl_mock.MOCK_TCL_LINES
+
+    out: list[dict] = []
+    for row in rows:
+        line_id = (row.get("line_ref") or "").strip()
+        if not line_id:
+            continue
+        first = line_id[0].upper()
+        if first == "T":
+            mode, icon, color = "tram", "🚊", "#FFCD00"
+        elif first == "M":
+            mode, icon, color = "metro", "🚇", "#E2001A"
+        else:
+            mode, icon, color = "bus", "🚌", "#3498DB"
+        out.append(
+            {
+                "id": line_id,
+                "name": f"{ 'Tram' if mode=='tram' else 'Métro' if mode=='metro' else 'Bus' } {line_id}",
+                "mode": mode,
+                "color": color,
+                "icon": icon,
+                "n_vehicles": int(row.get("n_vehicles") or 0),
+                "last_seen": str(row.get("last_seen")) if row.get("last_seen") else None,
+            }
+        )
+
+    # Tri : métro d'abord, puis tram, puis bus, alpha à l'intérieur
+    mode_order = {"metro": 0, "tram": 1, "bus": 2}
+    out.sort(key=lambda x: (mode_order.get(x["mode"], 9), x["id"]))
+    return out
 
 
 def load_lyon_addresses(force_mock: bool = False) -> list[str]:

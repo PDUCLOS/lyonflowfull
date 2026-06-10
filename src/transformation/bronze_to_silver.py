@@ -13,6 +13,7 @@ Usage :
 
 from __future__ import annotations
 
+import contextlib
 import logging
 
 from src.db import raw_connection
@@ -191,8 +192,34 @@ def _transform_velov() -> int:
         return n_inserted
 
 
+def _parse_siri_delay(raw_delay) -> int:
+    """Parse SIRI Delay: integer seconds or ISO 8601 duration (PT2M30S)."""
+    if raw_delay is None:
+        return 0
+    if isinstance(raw_delay, (int, float)):
+        return int(raw_delay)
+    s = str(raw_delay).strip()
+    if not s.startswith("PT"):
+        try:
+            return int(float(s))
+        except (ValueError, TypeError):
+            return 0
+    total = 0
+    s = s[2:]
+    for unit, factor in [("H", 3600), ("M", 60), ("S", 1)]:
+        if unit in s:
+            val, s = s.split(unit, 1)
+            with contextlib.suppress(ValueError, TypeError):
+                total += int(float(val)) * factor
+    return total
+
+
 def _transform_tcl_vehicles() -> int:
-    """Bronze.tcl_vehicles → silver.tcl_vehicles_clean."""
+    """Bronze.tcl_vehicles -> silver.tcl_vehicles_clean.
+
+    Schema: migrate_realign_v0.3.1.sql
+    UNIQUE (line_ref, journey_ref, stop_ref, measurement_time)
+    """
     with raw_connection() as conn, conn.cursor() as cur:
         cur.execute("""
                 SELECT id, fetched_at, raw_data
@@ -207,47 +234,65 @@ def _transform_tcl_vehicles() -> int:
         for _id, fetched_at, raw_data in rows:
             if not isinstance(raw_data, dict):
                 continue
-            # SIRI Lite structure: ServiceDelivery > VehicleMonitoringDelivery > VehicleActivity[]
-            delivery = raw_data.get("Siri", {}).get("ServiceDelivery", {}).get("VehicleMonitoringDelivery", [{}])[0]
+            delivery = (
+                raw_data.get("Siri", {})
+                .get("ServiceDelivery", {})
+                .get("VehicleMonitoringDelivery", [{}])[0]
+            )
             activities = delivery.get("VehicleActivity", [])
 
             for act in activities:
-                monitored = act.get("MonitoredVehicleJourney", {})
-                vehicle_ref = monitored.get("VehicleRef") or monitored.get("VehicleMode")
-                if not vehicle_ref:
+                mvj = act.get("MonitoredVehicleJourney", {})
+                line_ref = mvj.get("LineRef")
+                if not line_ref:
                     continue
-                key = (vehicle_ref, fetched_at)
+
+                journey_ref = (
+                    mvj.get("FramedVehicleJourneyRef", {}).get("DatedVehicleJourneyRef")
+                    or mvj.get("VehicleRef")
+                    or "unknown"
+                )
+                call = mvj.get("MonitoredCall", {})
+                stop_ref = call.get("StopPointRef") or "unknown"
+
+                key = (line_ref, journey_ref, stop_ref, fetched_at)
                 if key in seen:
                     continue
                 seen.add(key)
+
+                delay_s = _parse_siri_delay(mvj.get("Delay"))
+                loc = mvj.get("VehicleLocation", {})
 
                 try:
                     cur.execute(
                         """
                             INSERT INTO silver.tcl_vehicles_clean
-                                (fetched_at, vehicle_ref, line_ref, direction_ref,
-                                 delay_seconds, latitude, longitude, monitored)
-                            VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
-                            ON CONFLICT (vehicle_ref, fetched_at) DO UPDATE
-                            SET delay_seconds = EXCLUDED.delay_seconds,
-                                line_ref = EXCLUDED.line_ref
+                                (fetched_at, measurement_time, line_ref,
+                                 direction_ref, journey_ref, stop_ref,
+                                 delay_seconds, lat, lon)
+                            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
+                            ON CONFLICT (line_ref, journey_ref, stop_ref, measurement_time)
+                            DO UPDATE SET
+                                delay_seconds = EXCLUDED.delay_seconds,
+                                fetched_at = EXCLUDED.fetched_at
                         """,
                         (
                             fetched_at,
-                            vehicle_ref,
-                            monitored.get("LineRef"),
-                            monitored.get("DirectionRef"),
-                            monitored.get("Delay", 0),
-                            monitored.get("VehicleLocation", {}).get("Latitude"),
-                            monitored.get("VehicleLocation", {}).get("Longitude"),
-                            True,
+                            fetched_at,
+                            line_ref,
+                            mvj.get("DirectionRef"),
+                            journey_ref,
+                            stop_ref,
+                            delay_s,
+                            loc.get("Latitude"),
+                            loc.get("Longitude"),
                         ),
                     )
                     n_inserted += 1
                 except Exception as e:
-                    logger.warning(f"Skip TCL vehicle {vehicle_ref}: {e}")
+                    logger.warning("Skip TCL %s/%s: %s", line_ref, journey_ref, e)
 
-        logger.info(f"Silver tcl_vehicles: {n_inserted} rows inserted/updated")
+        logger.info("Silver tcl_vehicles: %d rows inserted/updated", n_inserted)
         return n_inserted
 
 

@@ -255,12 +255,14 @@ class ItineraryResponse(BaseModel):
 
 
 class BottleneckItem(BaseModel):
-    bottleneck_id: int
+    id: int
     segment_id: str
-    line_refs: list[str]
+    line_ref: str | None
     diagnosis: str
-    impact_score: float
-    voyageurs_jour: int
+    bus_delay_seconds: float | None
+    traffic_speed_kmh: float | None
+    traffic_congestion: float | None
+    n_observations: int | None
 
 
 class RgpdRequest(BaseModel):
@@ -466,12 +468,13 @@ async def itinerary(req: ItineraryRequest, api_key: None = Depends(verify_api_ke
 
 @app.get("/api/v1/bottlenecks", response_model=list[BottleneckItem], tags=["bottlenecks"])
 async def list_bottlenecks(limit: int = 10, api_key: None = Depends(verify_api_key)):
-    """Top bottlenecks infrastructure (par impact_score)."""
+    """Top bottlenecks infrastructure (par retard bus)."""
     query = """
-        SELECT bottleneck_id, segment_id, line_refs, diagnosis,
-               impact_score, voyageurs_jour
+        SELECT id, segment_id, line_ref, diagnosis,
+               bus_delay_seconds, traffic_speed_kmh,
+               traffic_congestion, n_observations
         FROM gold.infrastructure_bottlenecks
-        ORDER BY impact_score DESC
+        ORDER BY bus_delay_seconds DESC NULLS LAST
         LIMIT %s
     """
     rows = execute_query(query, (limit,))

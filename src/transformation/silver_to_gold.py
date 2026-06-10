@@ -41,6 +41,8 @@ def transform_silver_to_gold(target: str = "all", dry_run: bool = False) -> dict
         results["velov"] = _build_velov_features()
     if target in ("bus_delay", "all"):
         results["bus_delay"] = _build_bus_delay_segments()
+    if target in ("bottleneck", "all"):
+        results["bottleneck"] = _build_infrastructure_bottlenecks()
     return results
 
 
@@ -240,32 +242,33 @@ ON CONFLICT (station_id_encoded, measurement_time) DO UPDATE SET
 
 _BUS_DELAY_SQL = """
 INSERT INTO gold.bus_delay_segments (
-    date, hour, line_ref, segment_id,
+    line_ref, segment_id, hour_of_day, day_of_week,
     avg_delay_seconds, n_observations,
     is_vacances, is_ferie, weather_code
 )
 SELECT
-    d::date                                   AS date,
-    h::int                                    AS hour,
     line_ref,
     'all'                                     AS segment_id,
-    AVG(delay_seconds)::numeric(8,2)          AS avg_delay_seconds,
-    COUNT(*)                                  AS n_observations,
-    _is_vacances(d::date)                     AS is_vacances,
-    _is_ferie(d::date)                        AS is_ferie,
+    h::smallint                               AS hour_of_day,
+    dow::smallint                             AS day_of_week,
+    AVG(delay_seconds)::real                  AS avg_delay_seconds,
+    COUNT(*)::int                             AS n_observations,
+    _is_vacances(d)                           AS is_vacances,
+    _is_ferie(d)                              AS is_ferie,
     NULL::int                                 AS weather_code
 FROM (
     SELECT
-        DATE(fetched_at)                        AS d,
-        EXTRACT(HOUR FROM fetched_at)::int      AS h,
+        DATE(measurement_time)                        AS d,
+        EXTRACT(HOUR FROM measurement_time)::int      AS h,
+        EXTRACT(DOW FROM measurement_time)::int       AS dow,
         line_ref,
         delay_seconds
     FROM silver.tcl_vehicles_clean
-    WHERE fetched_at > NOW() - INTERVAL '7 days'
+    WHERE measurement_time > NOW() - INTERVAL '7 days'
       AND line_ref IS NOT NULL
 ) src
-GROUP BY d, h, line_ref
-ON CONFLICT (date, hour, line_ref, segment_id) DO UPDATE SET
+GROUP BY line_ref, h, dow, d
+ON CONFLICT (line_ref, segment_id, hour_of_day, day_of_week) DO UPDATE SET
     avg_delay_seconds = EXCLUDED.avg_delay_seconds,
     n_observations    = EXCLUDED.n_observations,
     is_vacances       = EXCLUDED.is_vacances,
@@ -297,4 +300,60 @@ def _build_bus_delay_segments() -> int:
         cur.execute(_BUS_DELAY_SQL)
         n = cur.rowcount
     logger.info("gold.bus_delay_segments: %d rows upserted", n)
+    return n
+
+
+_BOTTLENECK_SQL = """
+WITH bus_hourly AS (
+    SELECT
+        line_ref,
+        hour_of_day,
+        AVG(avg_delay_seconds)::numeric(8,2) AS avg_delay,
+        SUM(n_observations)::int             AS total_obs
+    FROM gold.bus_delay_segments
+    WHERE computed_at > NOW() - INTERVAL '7 days'
+    GROUP BY line_ref, hour_of_day
+),
+traffic_hourly AS (
+    SELECT
+        EXTRACT(HOUR FROM measurement_time)::int AS hour_of_day,
+        AVG(speed_kmh)::numeric(8,2)             AS avg_speed
+    FROM gold.traffic_features_live
+    WHERE measurement_time > NOW() - INTERVAL '7 days'
+    GROUP BY EXTRACT(HOUR FROM measurement_time)::int
+)
+INSERT INTO gold.infrastructure_bottlenecks (
+    segment_id, line_ref, diagnosis,
+    bus_delay_seconds, traffic_speed_kmh, traffic_congestion,
+    lat, lon, n_observations
+)
+SELECT
+    bh.line_ref || '_h' || bh.hour_of_day,
+    bh.line_ref,
+    CASE
+        WHEN bh.avg_delay > 120 AND COALESCE(th.avg_speed, 50) < 25 THEN 'infra'
+        WHEN bh.avg_delay > 120 THEN 'operations'
+        WHEN COALESCE(th.avg_speed, 50) < 25 THEN 'bus_lane_ok'
+        ELSE 'ok'
+    END,
+    bh.avg_delay,
+    COALESCE(th.avg_speed, 0),
+    CASE WHEN th.avg_speed IS NOT NULL
+         THEN (1.0 - LEAST(th.avg_speed / 50.0, 1.0))::numeric(4,3)
+         ELSE 0
+    END,
+    45.76 + (HASHTEXT(bh.line_ref) % 100) * 0.0002,
+    4.84  + (HASHTEXT(bh.line_ref) % 70)  * 0.0003,
+    bh.total_obs
+FROM bus_hourly bh
+LEFT JOIN traffic_hourly th ON th.hour_of_day = bh.hour_of_day
+"""
+
+
+def _build_infrastructure_bottlenecks() -> int:
+    with raw_connection() as conn, conn.cursor() as cur:
+        cur.execute("DELETE FROM gold.infrastructure_bottlenecks")
+        cur.execute(_BOTTLENECK_SQL)
+        n = cur.rowcount
+    logger.info("gold.infrastructure_bottlenecks: %d rows upserted", n)
     return n

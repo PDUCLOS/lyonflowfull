@@ -132,9 +132,9 @@ def render_sidebar_navigation() -> None:
         # 4. Footer & Quitter
         st.markdown("---")
         if st.button("🚪 Changer de profil", use_container_width=True, type="secondary"):
-            from src.persona.manager import clear_current_persona
+            from src.persona.manager import clear_current_persona_auth
 
-            clear_current_persona()
+            clear_current_persona_auth()
             st.switch_page("Accueil.py")
 
         st.caption("LyonFlowFull v0.3.0")

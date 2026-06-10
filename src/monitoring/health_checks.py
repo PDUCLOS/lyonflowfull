@@ -147,7 +147,7 @@ def check_predictions_presentes() -> CheckResult:
     """Vérifie qu'on a des prédictions récentes en Gold."""
     n = int(
         execute_scalar(
-            "SELECT COUNT(*) FROM gold.trafic_predictions WHERE prediction_timestamp > NOW() - INTERVAL '2 hours'"
+            "SELECT COUNT(*) FROM gold.trafic_predictions WHERE calculated_at > NOW() - INTERVAL '2 hours'"
         )
         or 0
     )
