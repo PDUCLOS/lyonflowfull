@@ -29,6 +29,7 @@ Dashboard" du Sprint 6 — un widget marche dans 100% des cas, DB ou pas.
 
 from __future__ import annotations
 
+import logging
 from typing import Any
 
 import pandas as pd
@@ -45,10 +46,12 @@ from src.data.db_query import (
     get_velov_predictions,
     get_velov_stations_geo,
 )
-from src.db.connection import execute_query
 from src.data.mock import elu as elu_mock
 from src.data.mock import pro_tcl as pro_tcl_mock
 from src.data.mock import usager as usager_mock
+from src.db.connection import execute_query
+
+logger = logging.getLogger(__name__)
 
 
 def _maybe_force_mock(force_mock: bool) -> bool:

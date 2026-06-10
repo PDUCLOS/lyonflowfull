@@ -6,16 +6,17 @@
 #
 # Auteur: Patrice DUCLOS — Senior Data Analyst, Jedha RNCP 38777
 # Repo: PDUCLOS/lyonflowfull
-# Version: 0.5.0-rc1 (Phase 3 demo prête, Phase 2 K8s prête, Phase 1 v0.3.1)
+# Version: 0.6.1 (Sprint VPS-5 livré — voir SPRINT_VPS-5_REPORT.md)
 #
 # Branches :
 #   - main         : Phase 1 production-ready local + fixes pipeline
-#   - vps          : snapshot Phase 1 deployé sur VPS
-#   - kubernetes   : Phase 2 manifests Kustomize (production K8s)
-#   - cloud-demo   : Phase 3 Scaleway Kapsule (démo soutenance Jedha)
+#   - vps          : ACTIVE — Phase 2 déploiement VPS production (Sprints VPS 1-5)
+#   - kubernetes   : DORMANTE — Phase 2 alternative K8s, futur AWS/GCP, NON mergée
+#   - cloud-demo   : DORMANTE — Phase 3 Scaleway Kapsule, démo Jedha, NON mergée
 #
 # Voir docs/GIT_STRUCTURE.md pour le workflow branches/merges.
 # Voir docs/REPO_STRUCTURE.md pour l'arbre annoté du repo.
+# Voir SPRINT_VPS-5_REPORT.md pour le détail du dernier sprint.
 # =============================================================================
 
 # Table des matières

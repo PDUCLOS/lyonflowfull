@@ -5,6 +5,55 @@ Toutes les modifications notables de ce projet sont documentées ici.
 Le format suit [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/),
 et ce projet adhère au [Semantic Versioning](https://semver.org/lang/fr/).
 
+## [0.6.1] - 2026-06-10 — Sprint VPS-5 (branche `vps`)
+
+Voir [SPRINT_VPS-5_REPORT.md](SPRINT_VPS-5_REPORT.md) pour le détail complet.
+
+### Ajouté
+- **DAG `dags/ml/dag_live_speed_retrain.py`** : train 4 XGBoost speed (5min/1h/3h/6h)
+  + INSERT hourly dans `gold.trafic_predictions` (schéma v0.3.1).
+  Schedule `:20` hourly. Stratégie = **baseline** (dernière vitesse observée
+  par channel_id, propagée sur 4 horizons), car le vrai modèle XGBoost a un
+  drift de schéma à fixer en Sprint 9+ (voir "Dette technique").
+- **Widget KPIs par ligne** (`dashboard/components/widgets/pro_tcl/line_kpis.py`)
+  : sélecteur de tri (10 options : OTP/Retard/Charge/Fréq/LineID ↑↓), slider
+  Top N (5→50), checkbox "Détails par ligne" avec cards dépliables, tableau
+  Streamlit avec barres de progression OTP/Charge.
+- **Pro_4_Simulateur** : `load_tcl_lines()` charge **166 lignes TCL distinctes**
+  depuis `gold.tcl_vehicle_realtime.line_ref` (9 trams T1..T7/TB11/TB12 +
+  157 bus). Auto-catégorisation `T*=tram, M*=metro, reste=bus`. Mock fallback.
+
+### Corrige
+- **Pipeline trafic reconnecté** : `gold.trafic_predictions` n'était plus
+  alimentée depuis 2026-06-06 (4 jours de trou). Cause : aucun DAG ne
+  persistait les prédictions après le refactor v0.3.1.
+- **`src/data/db_query.get_traffic_predictions()`** réécrit pour le nouveau
+  schéma v0.3.1 (mapping horizon_minutes → horizon_h, colonnes `axis_key,
+  horizon_h, calculated_at, speed_pred, etat_pred`).
+- **`src/data/db_query.get_traffic_bottlenecks()`** : `node_idx/measurement_time`
+  → `channel_id/computed_at` (colonnes inexistantes en v0.3.1).
+- **`src/monitoring/health_checks.py.check_predictions_presentes()`** :
+  `prediction_timestamp` → `calculated_at`.
+- **`dashboard/components/widgets/pro_tcl/model_monitoring.py`** : idem dans
+  la liste data-quality tables.
+- **`src/data/data_loader.py.load_traffic()`** : utilise la nouvelle signature
+  `get_traffic_predictions(horizon_minutes=...)` et colonnes `speed_pred`.
+- **Bug permissions `logs/`** : `chown -R 50000:0 /opt/lyonflow/logs` après
+  chaque rsync (sinon le worker Celery crash silencieusement et les tasks
+  restent en `queued`). Fix durable TODO = entrypoint Dockerfile.
+- **Bug air UI "DAGs visibles"** : `airflow dags reserialize` + `rm -rf __pycache__`
+  quand un nouveau DAG n'apparaît pas après rsync.
+
+### Dette technique (Sprint 9+)
+- **`src/models/xgboost_speed.py` + `xgboost_velov.py`** : 9+ colonnes
+  référencées n'existent plus dans `gold.traffic_features_live` v0.3.1
+  (`speed_lag_1, node_idx, hour_sin, temperature_c, rain_mm, measurement_time`
+  → `lag_1, delta_1, sin_hour, temperature_2m, precipitation, computed_at`).
+  Le `train_one()` échoue → le baseline prend le relais dans `dag_live_speed_retrain`.
+- **Mapping `dim_spatial_grid_mapping.properties_twgid` (entiers)** ≠
+  **`traffic_features_live.channel_id` (format LYO00xxx)** : pas de JOIN possible
+  → `lat/lon` écrits NULL dans `gold.trafic_predictions`. Réconcilier en Sprint 9+.
+
 ## [0.6.0] - 2026-06-07 — VPS production (branche `vps`, ACTIVE)
 
 **Décision déploiement : VPS unique.** Branche `vps` = source de vérité du

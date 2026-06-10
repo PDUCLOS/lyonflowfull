@@ -4,14 +4,55 @@ Sprint 6 — binding DB :
 * ``line_ids=None`` → ``data_loader.cached_line_kpis()`` (DB Gold vue matérialisée
   ``gold.mv_line_kpis_live`` ou mock fallback).
 * Le widget reste rétro-compatible (accepte un dict en arg).
+
+Sprint VPS-5 — Mode explorable :
+* Tri par n'importe quelle colonne (OTP, retard, charge, fréquence, line_id)
+* Slider "top N" pour ne pas tout afficher d'un coup
+* Bouton "Voir toutes les lignes" pour explorer
+* Détails dépliables par ligne
 """
 
 from __future__ import annotations
 
+import pandas as pd
 import streamlit as st
 
 from dashboard.components.colors import COLORS
 from dashboard.components.data_cache import cached_line_kpis
+
+SORT_OPTIONS = {
+    "OTP (%) ↓": ("otp_pct", False),
+    "OTP (%) ↑": ("otp_pct", True),
+    "Retard min ↓": ("avg_delay_min", False),
+    "Retard min ↑": ("avg_delay_min", True),
+    "Charge (%) ↓": ("load_pct", False),
+    "Charge (%) ↑": ("load_pct", True),
+    "Fréquence min ↑": ("frequency_min", True),
+    "Fréquence min ↓": ("frequency_min", False),
+    "Line ID (A-Z)": ("line_id", True),
+    "Line ID (Z-A)": ("line_id", False),
+}
+
+
+def _to_dataframe(kpis_dict: dict) -> pd.DataFrame:
+    """Convertit le dict de KPIs en DataFrame pour tri/filtre Streamlit."""
+    rows = []
+    for line_id, kpis in kpis_dict.items():
+        if not kpis:
+            continue
+        rows.append(
+            {
+                "line_id": line_id,
+                "otp_pct": float(kpis.get("otp_pct", 0)),
+                "avg_delay_min": float(kpis.get("avg_delay_min", 0)),
+                "frequency_min": float(kpis.get("frequency_min", 0)),
+                "load_pct": float(kpis.get("load_pct", 0)),
+                "trend": kpis.get("trend", "stable"),
+                "trend_delta": float(kpis.get("trend_delta", 0)),
+            }
+        )
+    df = pd.DataFrame(rows)
+    return df
 
 
 def render_line_kpis(
@@ -32,54 +73,140 @@ def render_line_kpis(
     if line_ids is None:
         line_ids = list(kpis_dict.keys())
 
-    for line_id in line_ids:
-        kpis = kpis_dict.get(line_id)
-        if not kpis:
-            continue
+    df = _to_dataframe({lid: kpis_dict.get(lid) for lid in line_ids if kpis_dict.get(lid)})
 
-        otp = kpis.get("otp_pct", 0)
-        otp_color = (
-            COLORS["status_ok"] if otp >= 88 else COLORS["status_warning"] if otp >= 80 else COLORS["status_critical"]
-        )
-        delay = kpis.get("avg_delay_min", 0)
-        load = kpis.get("load_pct", 0)
-        load_color = (
-            COLORS["status_ok"] if load < 70 else COLORS["status_warning"] if load < 90 else COLORS["status_critical"]
-        )
-        trend = kpis.get("trend", "stable")
-        trend_icon = {"up": "📈", "down": "📉", "stable": "➡️"}.get(trend, "➡️")
-        trend_delta = kpis.get("trend_delta", 0)
+    if df.empty:
+        st.info("Aucun KPI ligne disponible.")
+        return
 
-        st.markdown(
-            f"""
-            <div class="lyonflow-card" style="padding:0.6rem 0.8rem;margin:0.3rem 0;">
-                <div style="display:flex;align-items:center;justify-content:space-between;
-                            margin-bottom:6px;">
-                    <div style="font-weight:600;font-size:0.95rem;">{line_id}</div>
-                    <div style="font-size:0.75rem;opacity:0.7;">
-                        {trend_icon} {trend_delta:+.1f}pts
+    # ---- Contrôles de tri + exploration (Sprint VPS-5) ----
+    ctrl_col1, ctrl_col2, ctrl_col3 = st.columns([2, 2, 1])
+    with ctrl_col1:
+        sort_label = st.selectbox(
+            "Trier par",
+            options=list(SORT_OPTIONS.keys()),
+            index=0,
+            key="line_kpis_sort",
+        )
+    with ctrl_col2:
+        top_n = st.slider(
+            "Top N lignes affichées",
+            min_value=5,
+            max_value=min(50, len(df)),
+            value=min(20, len(df)),
+            step=5,
+            key="line_kpis_top_n",
+        )
+    with ctrl_col3:
+        show_details = st.checkbox(
+            "Détails par ligne",
+            value=False,
+            key="line_kpis_details",
+            help="Déplie chaque ligne pour voir les détails complets",
+        )
+
+    # ---- Tri + filtre ----
+    col_name, ascending = SORT_OPTIONS[sort_label]
+    df_sorted = df.sort_values(col_name, ascending=ascending, na_position="last").reset_index(drop=True)
+    df_view = df_sorted.head(top_n)
+
+    # ---- Tableau Streamlit avec sort natif en plus ----
+    display_cols = ["line_id", "otp_pct", "avg_delay_min", "frequency_min", "load_pct", "trend"]
+    df_display = df_view[display_cols].rename(
+        columns={
+            "line_id": "Ligne",
+            "otp_pct": "OTP (%)",
+            "avg_delay_min": "Retard (min)",
+            "frequency_min": "Fréq. (min)",
+            "load_pct": "Charge (%)",
+            "trend": "Tendance",
+        }
+    )
+    st.dataframe(
+        df_display,
+        use_container_width=True,
+        hide_index=True,
+        column_config={
+            "OTP (%)": st.column_config.ProgressColumn(
+                "OTP (%)",
+                min_value=0,
+                max_value=100,
+                format="%.0f",
+            ),
+            "Charge (%)": st.column_config.ProgressColumn(
+                "Charge (%)",
+                min_value=0,
+                max_value=100,
+                format="%.0f",
+            ),
+        },
+    )
+
+    st.caption(
+        f"📊 {len(df)} lignes au total · affichage des {len(df_view)} premières après tri"
+    )
+
+    # ---- Mode détails dépliables (optionnel) ----
+    if show_details:
+        st.markdown("##### 🔍 Détails par ligne")
+        for _, row in df_view.iterrows():
+            with st.expander(f"**{row['line_id']}** — OTP {row['otp_pct']:.0f}% · retard {row['avg_delay_min']:.1f} min"):
+                c1, c2, c3, c4 = st.columns(4)
+                c1.metric("OTP", f"{row['otp_pct']:.1f}%")
+                c2.metric("Retard moyen", f"{row['avg_delay_min']:.1f} min")
+                c3.metric("Fréquence", f"{row['frequency_min']:.0f} min")
+                c4.metric("Charge", f"{row['load_pct']:.0f}%")
+                trend_icon = {"up": "📈", "down": "📉", "stable": "➡️"}.get(row["trend"], "➡️")
+                st.write(f"Tendance : {trend_icon} {row['trend_delta']:+.1f} pts")
+
+    # ---- Mode legacy : cards colorées (si demandé) ----
+    if not compact:
+        st.markdown("---")
+        st.markdown("##### 🟢🟠🔴 Vue cartes (legacy)")
+        for _, row in df_view.iterrows():
+            line_id = row["line_id"]
+            kpis = kpis_dict.get(line_id, {})
+            otp = row["otp_pct"]
+            otp_color = (
+                COLORS["status_ok"] if otp >= 88 else COLORS["status_warning"] if otp >= 80 else COLORS["status_critical"]
+            )
+            delay = row["avg_delay_min"]
+            load = row["load_pct"]
+            load_color = (
+                COLORS["status_ok"] if load < 70 else COLORS["status_warning"] if load < 90 else COLORS["status_critical"]
+            )
+            trend_icon = {"up": "📈", "down": "📉", "stable": "➡️"}.get(row["trend"], "➡️")
+
+            st.markdown(
+                f"""
+                <div class="lyonflow-card" style="padding:0.6rem 0.8rem;margin:0.3rem 0;">
+                    <div style="display:flex;align-items:center;justify-content:space-between;
+                                margin-bottom:6px;">
+                        <div style="font-weight:600;font-size:0.95rem;">{line_id}</div>
+                        <div style="font-size:0.75rem;opacity:0.7;">
+                            {trend_icon} {row['trend_delta']:+.1f}pts
+                        </div>
+                    </div>
+                    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:0.5rem;
+                                font-size:0.8rem;">
+                        <div>
+                            <div style="opacity:0.6;font-size:0.7rem;">OTP</div>
+                            <div style="font-weight:600;color:{otp_color};">{otp:.0f}%</div>
+                        </div>
+                        <div>
+                            <div style="opacity:0.6;font-size:0.7rem;">Retard</div>
+                            <div style="font-weight:600;">{delay:.1f} min</div>
+                        </div>
+                        <div>
+                            <div style="opacity:0.6;font-size:0.7rem;">Fréq.</div>
+                            <div style="font-weight:600;">{row['frequency_min']:.0f} min</div>
+                        </div>
+                        <div>
+                            <div style="opacity:0.6;font-size:0.7rem;">Charge</div>
+                            <div style="font-weight:600;color:{load_color};">{load:.0f}%</div>
+                        </div>
                     </div>
                 </div>
-                <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:0.5rem;
-                            font-size:0.8rem;">
-                    <div>
-                        <div style="opacity:0.6;font-size:0.7rem;">OTP</div>
-                        <div style="font-weight:600;color:{otp_color};">{otp}%</div>
-                    </div>
-                    <div>
-                        <div style="opacity:0.6;font-size:0.7rem;">Retard</div>
-                        <div style="font-weight:600;">{delay} min</div>
-                    </div>
-                    <div>
-                        <div style="opacity:0.6;font-size:0.7rem;">Fréq.</div>
-                        <div style="font-weight:600;">{kpis.get("frequency_min", 0)} min</div>
-                    </div>
-                    <div>
-                        <div style="opacity:0.6;font-size:0.7rem;">Charge</div>
-                        <div style="font-weight:600;color:{load_color};">{load}%</div>
-                    </div>
-                </div>
-            </div>
-            """,
-            unsafe_allow_html=True,
-        )
+                """,
+                unsafe_allow_html=True,
+            )

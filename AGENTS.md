@@ -17,12 +17,26 @@
 #
 # PHASE 2 (ACTIVE) — Déploiement VPS production (branche `vps`)
 # - Cible production unique : VPS 51.83.159.224
-# - Sprints VPS 1-4 livrés :
+# - Sprints VPS 1-5 livrés :
 #   * VPS-1 : TLS Let's Encrypt + healthcheck + hardening SSH/firewall
 #   * VPS-2 : systemd unit + backup timer + rollback + CI vps branch
 #   * VPS-3 : Prometheus + Alertmanager + Grafana + exporters (node, postgres, nginx, redis)
 #   * VPS-4 : métriques FastAPI custom (predictions, latency, personas, DAGs, MLflow, DB)
-# - Docs : docs/VPS_HARDENING.md, docs/MONITORING.md, docs/CONTROLE_VPS_VS_CLOUD_DEMO.md
+#   * VPS-5 : pipeline trafic reconnecté (dag_live_speed_retrain) + 166 lignes TCL
+#     Pro_4_Simulateur + sort/explore KPIs par ligne + 5 régressions SQL corrigées
+#     + fix perms logs/ worker Airflow
+# - Docs : docs/VPS_HARDENING.md, docs/MONITORING.md, docs/CONTROLE_VPS_VS_CLOUD_DEMO.md,
+#   SPRINT_VPS-5_REPORT.md
+#
+# Dette technique connue (Sprint 9+) :
+# - src/models/xgboost_speed.py : 9+ colonnes référencent l'ancien schéma
+#   gold.traffic_features_live. Refacto nécessaire pour vraies prédictions ML
+#   (en attendant : baseline = dernière vitesse observée propagée sur 4 horizons).
+# - dim_spatial_grid_mapping.properties_twgid (entiers) ne match pas
+#   traffic_features_live.channel_id (LYO00xxx). Réconcilier pour géocoder
+#   les prédictions sur la carte.
+# - /opt/lyonflow/logs/ doit être chown 50000:0 récursif après chaque rsync.
+#   Fix durable = entrypoint Dockerfile.
 #
 # PHASE 3 (dormante, futur AWS/GCP) — Kubernetes (branche `kubernetes`)
 # - NE PAS MERGER dans `vps` ni `main`

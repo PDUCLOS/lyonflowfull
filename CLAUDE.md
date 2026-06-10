@@ -7,17 +7,17 @@ LyonFlowFull est une plateforme MLOps end-to-end de prédiction et d'analyse du 
 **Auteur**: Patrice DUCLOS — Senior Data Analyst, Jedha RNCP 38777 (Architecte en IA)
 **Repo**: PDUCLOS/lyonflowfull
 
-**Version actuelle** : v0.3.0 (Sprints 1-7 complétés)
-**Statut** : production-ready local — voir [SPRINT_7_REPORT.md](SPRINT_7_REPORT.md)
-- 18 pages × 3 personas · 47 widgets · 8 collecteurs Bronze · 8 DAGs Airflow
+**Version actuelle** : v0.6.1 (Sprints 1-7 + VPS 1-5)
+**Statut** : production VPS (branche `vps`, ACTIVE) — voir [SPRINT_VPS-5_REPORT.md](SPRINT_VPS-5_REPORT.md)
+- 18 pages × 3 personas · 47 widgets · 8 collecteurs Bronze · **9 DAGs Airflow** (8 actifs + 1 legacy paused)
 - 9 endpoints API · 3 modèles ML (2 XGBoost + SpatioTemporalGCN) · RGPD complet
-- 142 fichiers Python · ~18 300 lignes · 104 tests (12 verts Sprint 6/7, 6 skip torch)
-- Couche data complète (db_query + data_loader) — 6 widgets branchés DB
-- Migration 41 widgets restants documentée dans SPRINT_6_WIDGET_MIGRATION_CHECKLIST.md
+- 142 fichiers Python · ~18 600 lignes · 104+ tests
+- Couche data complète (db_query + data_loader) — `gold.trafic_predictions` repeuplée hourly
+- Sprint VPS-5 : connexion pipeline trafic (DAG manquant) + 166 lignes TCL sur Pro_4_Simulateur + sort/explore KPIs par ligne
 
-**Phases (état 2026-06-07)** :
+**Phases (état 2026-06-10)** :
 - ✅ Phase 1 — Production-ready local (branche `main`, Sprints 1-7)
-- ✅ **Phase 2 — Déploiement VPS production (branche `vps`, ACTIVE)** — Sprints VPS 1-4 : TLS Let's Encrypt, systemd, monitoring Prometheus + Grafana + Alertmanager, backup automatique, métriques FastAPI custom
+- ✅ **Phase 2 — Déploiement VPS production (branche `vps`, ACTIVE)** — Sprints VPS 1-5 : TLS Let's Encrypt, systemd, monitoring Prometheus + Grafana + Alertmanager, backup automatique, métriques FastAPI custom, **connexion pipeline trafic**
 - ⏸ Phase 3 (futur, AWS/GCP) — Kubernetes (branche `kubernetes`, dormante)
 - ⏸ Phase 4 (futur, AWS/GCP) — Cloud démo Jedha (branche `cloud-demo`, dormante)
 
@@ -148,12 +148,18 @@ Chaque table Bronze: `fetched_at TIMESTAMPTZ` + `raw_data JSONB`. Immutable. Ré
 
 | Table | Rôle |
 |-------|------|
-| gold.traffic_features_live | Features ML: speed, lags gap-checked, temporel, météo, is_vacances, is_ferie, importance_code |
-| gold.dim_spatial_grid_mapping | Capteurs → nœuds GNN (H3 res.13, cell_to_local_ij) |
+| gold.traffic_features_live | Features ML: `channel_id, fetched_at, computed_at, speed_kmh, vitesse_limite_kmh, lag_1/2/3, delta_1, rolling_mean_3, sin_hour, cos_hour, sin_dow, cos_dow, temperature_2m, precipitation, is_vacances, is_ferie, lat, lon, x_2154, y_2154` |
+| gold.dim_spatial_grid_mapping | Capteurs → nœuds GNN (H3 res.13, cell_to_local_ij). ~1518 nœuds, PK = `properties_twgid` |
 | gold.dim_gnn_adjacency | Arêtes graphe (K=2 grid_disk, bidirectionnel + self-loops) |
 | gold.fact_traffic_series | Séries temporelles normalisées (5 canaux: speed, hour_sin/cos, day_sin/cos) |
-| gold.trafic_predictions | Prédictions GNN + XGBoost multi-horizon |
+| **gold.trafic_predictions** | **Prédictions pré-calculées. Schéma v0.3.1 : `axis_key, horizon_h (0/1/3/6), calculated_at, speed_pred, etat_pred, color, vitesse_limite_kmh, label, model_version, lat, lon`. Alimentée hourly par `dag_live_speed_retrain`** (Sprint VPS-5, baseline = dernière vitesse observée) |
 | gold.predictions_vs_actuals | Backtesting pour comparaison modèles |
+
+> **⚠️ Dette schéma Sprint VPS-5** : `src/models/xgboost_speed.py` référence encore
+> `speed_lag_1, node_idx, hour_sin, temperature_c, rain_mm, measurement_time` qui
+> n'existent plus dans `gold.traffic_features_live` (renommés en
+> `lag_1/delta_1/sin_hour/temperature_2m/precipitation/computed_at`).
+> Refacto `xgboost_speed.py` + `xgboost_velov.py` = Sprint 9+.
 
 **Domaine Bus:**
 
@@ -178,7 +184,8 @@ Chaque table Bronze: `fetched_at TIMESTAMPTZ` + `raw_data JSONB`. Immutable. Ré
 :02  Collecte bronze (SIRI Lite + Vélov)
 :05  Transform bronze → silver (4 parallèles)
 :15  Transform silver → gold (3 domaines parallèles)
-:25  Retrain XGBoost trafic (4 horizons, ~10 min)
+:20  dag_live_speed_retrain (Sprint VPS-5) — train 4 XGBoost + INSERT gold.trafic_predictions
+:25  Retrain XGBoost trafic (legacy, 4 horizons, ~10 min)
 :50  Retrain Vélov (2 horizons : H+30min, H+1h, ~5 min)
 03h  Retrain GNN daily (lourd, GPU si dispo)
 04h  Data quality daily (6 checks) + bottleneck analysis
@@ -211,6 +218,21 @@ Visualisation sur carte Folium:
 - **Bleu**: pistes cyclables contournant zones rouges
 - **Violet**: stations métro accessibles à pied (~500m) depuis zones rouges
 - **Vert**: alternatives fonctionnelles identifiées
+
+### Pro_4_Simulateur — Sélecteur de ligne TCL (Sprint VPS-5)
+
+Charge **toutes les lignes TCL distinctes** depuis `gold.tcl_vehicle_realtime.line_ref`
+(166 lignes historiques : 9 trams T1..T7/TB11/TB12 + 157 bus). Auto-catégorisation :
+`T*` → 🚊 tram, `M*` → 🚇 metro, reste → 🚌 bus. Mock fallback si DB down.
+
+### Widget KPIs par ligne — Sort + Explore (Sprint VPS-5)
+
+Le widget `dashboard/components/widgets/pro_tcl/line_kpis.py` expose :
+- **Sélecteur "Trier par"** : 10 options (OTP↑↓, Retard↑↓, Charge↑↓, Fréq↑↓, Line ID A-Z/Z-A)
+- **Slider "Top N"** : 5 → 50 lignes affichées
+- **Checkbox "Détails par ligne"** : déplie chaque ligne en cards 4 KPIs
+- **Tableau Streamlit** avec barres de progression sur OTP et Charge
+- Tri natif Streamlit en plus (click sur les headers)
 
 ---
 
@@ -257,9 +279,23 @@ Branche `vps` = source de vérité du déploiement actif.
 | Monitoring | Prometheus + Alertmanager + Grafana via `docker-compose.monitoring.yml` (Sprint VPS-3) |
 | Exporters | node, postgres, nginx, redis (Sprint VPS-3) |
 | Métriques custom | `src/api/metrics.py` — prédictions, latence, personas, DAGs, MLflow, DB (Sprint VPS-4) |
+| **Pipeline trafic** | **`dags/ml/dag_live_speed_retrain.py` (Sprint VPS-5)** — train 4 XGBoost + INSERT hourly dans `gold.trafic_predictions` (baseline) |
 | Stockage DB | `/opt/lyonflow/postgres_data` (volume Docker) |
 | Réseau | Ports internes sur 127.0.0.1 uniquement, Nginx seul exposé 80/443 |
 | Secrets | `.env` chmod 600, jamais en repo |
+
+### ⚠️ Gotchas déploiement VPS (Sprint VPS-5)
+
+- **`/opt/lyonflow/logs/`** doit être `chown 50000:0` récursivement après chaque
+  `rsync` frais. Sinon le worker Celery crash en boucle sur
+  `PermissionError: '/opt/airflow/logs/dag_id=*/run_id=*'` et l'UI Airflow devient
+  incohérente (DAGs présents mais tasks stuck en queued). Fix durable TODO :
+  entrypoint dans Dockerfile Airflow qui chown au boot.
+- **DNS `lyonflowfull.fr` mort** (NXDOMAIN) + cert TLS Let's Encrypt expiré
+  → accès par IP `https://51.83.159.224` (warning cert self-signed `CN=51.83.159.224`).
+- **Mapping `dim_spatial_grid_mapping.properties_twgid` (entiers)** ≠
+  **`traffic_features_live.channel_id` (format "LYO00xxx")** — JOIN impossible
+  directement. Prédictions écrites avec `lat/lon=NULL` (Sprint 9+ pour réconcilier).
 
 ### Commandes déploiement VPS
 
