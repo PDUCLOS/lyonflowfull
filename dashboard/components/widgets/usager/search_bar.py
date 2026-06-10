@@ -27,121 +27,80 @@ _TYPE_ICON = {
     "banlieue": "🏙",
 }
 
-_TYPE_LABEL = {
-    "gare": "Gare",
-    "place": "Place",
-    "monument": "Monument",
-    "quartier": "Quartier",
-    "parc": "Parc",
-    "universite": "Université",
-    "banlieue": "Banlieue",
-}
-
-
-def _set_search_target(name: str, target: str) -> None:
-    """Callback on_click : écrit dans la clé du text_input AVANT qu'il soit instancié.
-
-    Streamlit interdit `st.session_state[key] = ...` après que le widget avec
-    `key` a été rendu dans le run. Le callback s'exécute au début du rerun,
-    avant les widgets → l'écriture passe, puis le text_input lit la valeur.
-    """
-    if "Départ" in target:
-        st.session_state["search_origin"] = name
-    else:
-        st.session_state["search_destination"] = name
-
-
 def render_search_bar() -> dict[str, typing.Any]:
-    """Affiche la barre de recherche trajet cliquable.
-
-    Returns:
-        Dict avec clés 'origin', 'destination', 'departure_mode', 'departure_time',
-        'modes'.
-    """
-    # ---- 2 champs texte (éditables à la main aussi) ----
-    col1, col2 = st.columns([1, 1])
-    with col1:
-        origin = st.text_input(
-            "🟢 Départ",
-            placeholder="Adresse, arrêt, station…",
-            value=st.session_state.get("search_origin", "Villeurbanne"),
-            key="search_origin",
-        )
-    with col2:
-        destination = st.text_input(
-            "🔴 Destination",
-            placeholder="Adresse, arrêt, station…",
-            value=st.session_state.get("search_destination", "Part-Dieu"),
-            key="search_destination",
-        )
-
-    # ---- Auto-complétion cliquable ----
-    with st.expander("📍 Adresses suggérées — clique pour sélectionner", expanded=True):
-        # Toggle : le prochain clic va dans départ OU destination
-        st.caption("Le bouton ira dans :")
-        target = st.radio(
-            "Cible du prochain clic",
-            ["🟢 Départ", "🔴 Destination"],
-            horizontal=True,
-            key="search_target",
-            label_visibility="collapsed",
-        )
-
-        addresses = cached_lyon_addresses_with_coords(force_mock=False)
-        # Affichage en grille 3 colonnes pour économiser la hauteur
-        for i in range(0, len(addresses), 3):
-            cols = st.columns(3)
-            for j, col in enumerate(cols):
-                if i + j >= len(addresses):
-                    break
-                addr = addresses[i + j]
-                icon = _TYPE_ICON.get(addr["type"], "📍")
-                with col:
-                    st.button(
-                        f"{icon} {addr['name']}",
-                        key=f"addr_btn_{addr['name']}",
-                        help=f"{_TYPE_LABEL.get(addr['type'], addr['type'])} — clic = remplit {target}",
-                        use_container_width=True,
-                        on_click=_set_search_target,
-                        args=(addr["name"], target),
-                    )
-
-    # ---- Bloc départ (maintenant / heure) ----
-    st.markdown("##### 🕐 Départ")
-    dep_col1, dep_col2 = st.columns(2)
-    with dep_col1:
-        departure_mode = st.radio(
-            "Mode",
-            ["🚶 Partir maintenant", "⏰ Arriver à l'heure"],
-            horizontal=True,
-            key="search_dep_mode",
-        )
-    with dep_col2:
-        departure_time = st.time_input(
-            "Heure",
-            value=None,
-            key="search_dep_time",
-        )
-
-    # ---- Modes de transport autorisés ----
-    st.markdown("##### 🚦 Modes autorisés")
-    modes = st.multiselect(
-        "Filtrer",
-        [
-            "🚇 Métro",
-            "🚊 Tram",
-            "🚌 Bus",
-            "🚲 Vélov",
-            "🚗 Voiture",
-            "🚶 Marche",
-        ],
-        default=st.session_state.get(
-            "search_modes",
-            ["🚇 Métro", "🚊 Tram", "🚌 Bus", "🚲 Vélov", "🚶 Marche"],
-        ),
-        key="search_modes",
-        help="Les modes autorisés filtrent les recommandations affichées plus bas",
-    )
+    """Affiche la barre de recherche trajet, élégante et ergonomique."""
+    addresses = cached_lyon_addresses_with_coords(force_mock=False)
+    # Préparer les options pour la selectbox
+    addr_options = [f"{_TYPE_ICON.get(a['type'], '📍')} {a['name']}" for a in addresses]
+    
+    # Injection de CSS pour un style épuré
+    st.markdown("""
+    <style>
+    /* Styling des selectbox pour un effet plus premium */
+    div[data-baseweb="select"] > div {
+        border-radius: 8px;
+        background-color: var(--secondary-background-color);
+        border: 1px solid var(--border-color);
+        transition: all 0.3s ease;
+    }
+    div[data-baseweb="select"] > div:hover {
+        border-color: var(--primary-color);
+    }
+    /* Stylisation du container principal de recherche */
+    .search-container {
+        padding: 1.5rem;
+        border-radius: 12px;
+        background: linear-gradient(145deg, rgba(255,255,255,0.05) 0%, rgba(255,255,255,0.02) 100%);
+        box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+        border: 1px solid rgba(255,255,255,0.1);
+        margin-bottom: 1rem;
+    }
+    </style>
+    """, unsafe_allow_html=True)
+    
+    with st.container(border=True):
+        st.markdown("#### 🗺️ Où allez-vous ?")
+        
+        col1, col2 = st.columns(2)
+        with col1:
+            origin = st.selectbox(
+                "🟢 Point de départ",
+                options=addr_options,
+                index=addr_options.index("🏙 Villeurbanne") if "🏙 Villeurbanne" in addr_options else 0,
+                key="search_origin",
+                help="Tapez pour rechercher une adresse"
+            )
+        with col2:
+            destination = st.selectbox(
+                "🔴 Destination",
+                options=addr_options,
+                index=addr_options.index("🚉 Part-Dieu") if "🚉 Part-Dieu" in addr_options else min(1, len(addr_options)-1),
+                key="search_destination",
+                help="Tapez pour rechercher une adresse"
+            )
+            
+        st.markdown("<br/>", unsafe_allow_html=True)
+        
+        # Bloc départ et filtres
+        col_time, col_modes = st.columns([1, 1])
+        with col_time:
+            departure_mode = st.radio(
+                "Quand ?",
+                ["🚶 Partir maintenant", "⏰ Arriver à l'heure"],
+                horizontal=True,
+                key="search_dep_mode",
+            )
+            departure_time = None
+            if departure_mode == "⏰ Arriver à l'heure":
+                departure_time = st.time_input("Heure prévue", key="search_dep_time")
+                
+        with col_modes:
+            modes = st.multiselect(
+                "Modes de transport autorisés",
+                ["🚇 Métro", "🚊 Tram", "🚌 Bus", "🚲 Vélov", "🚗 Voiture", "🚶 Marche"],
+                default=["🚇 Métro", "🚊 Tram", "🚌 Bus", "🚲 Vélov", "🚶 Marche"],
+                key="search_modes"
+            )
 
     return {
         "origin": origin,
