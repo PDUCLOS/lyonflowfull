@@ -54,6 +54,99 @@ Voir [SPRINT_VPS-5_REPORT.md](SPRINT_VPS-5_REPORT.md) pour le détail complet.
   **`traffic_features_live.channel_id` (format LYO00xxx)** : pas de JOIN possible
   → `lat/lon` écrits NULL dans `gold.trafic_predictions`. Réconcilier en Sprint 9+.
 
+## [0.6.2] - 2026-06-10 — Réparation 3 chaînes bronze→silver→gold silencieusement cassées
+
+Suite au déploiement Sprint VPS-5, 3 chaînes de données étaient en
+**échec silencieux** depuis 2-15 jours (DAGs verts mais 0 rows insérées).
+Cause = dette schéma `gold.traffic_features_live` v0.3.1 (colonnes
+renommées : `lag_1`, `delta_1`, `sin_hour`, `temperature_2m`,
+`precipitation`, `computed_at`...) **non propagée à `silver_to_gold.py`**,
+combinée à un changement de structure JSON côté WFS Grand Lyon, GBFS
+Vélov et SIRI Lite TCL (juin 2026+).
+
+### Corrigé
+
+#### bronze_to_silver (3 transformers)
+
+- **`_transform_trafic_boucles`** : nouveau format WFS Grand Lyon
+  - `channel_id` extrait de `props["code"]` (ex. `LYO02336`), plus de
+    `props["id"]` (chemin WFS complet, pas un identifiant capteur).
+  - `vitesse` parsé depuis `"18 km/h"` → `18.0` (avant : string brute).
+  - Filtre fraîcheur basé sur `fetched_at` (le WFS signale
+    `est_a_jour=false` quasi systématiquement à cause de la dérive
+    d'horloge des capteurs).
+  - Geom : `silver.trafic_boucles_clean` attend `geometry(Point, 4326)`,
+    le WFS renvoie `LineString` → workaround = point médian du segment.
+    TODO Sprint 10 : passer la colonne en `LineString`.
+  - SAVEPOINT par feature pour ne pas perdre les inserts valides en
+    cas d'erreur sur une feature.
+
+- **`_transform_tcl_vehicles`** : SIRI 2.0
+  - `LineRef`, `VehicleRef`, `DirectionRef`, `StopPointRef` sont des
+    objets `{"value": "..."}` au lieu de strings brutes → extraction
+    via helper `_siri_ref()`.
+
+- **`_transform_velov`** : inchangé, déjà fonctionnel (lat/lon absents
+  du nouveau payload GBFS → NULL accepté).
+
+#### silver_to_gold (5 requêtes SQL)
+
+- **`_TRAFFIC_SQL`** : alignement schéma v0.3.1 (12+ colonnes renommées)
+  - JOIN sur `dim_spatial_grid_mapping.properties_twgid` (et plus
+    `channel_id` qui n'existe pas dans dim).
+  - LATERAL `meteo` avec alias explicites (`temperature_c` →
+    `temperature_2m`, `rain_mm` → `precipitation`).
+  - `x_2154, y_2154` NULL (colonnes pas encore dans dim).
+  - ON CONFLICT adapté : `(channel_id, fetched_at)`.
+
+- **`_VELOV_SQL`** : CTE lit `silver.velov_clean.num_bikes_available`
+  (et plus `bikes_available` qui n'existe pas).
+
+- **`_BUS_DELAY_SQL`** : PK réel `(date, hour, line_ref, segment_id)`
+  (et plus `(line_ref, segment_id, hour_of_day, day_of_week)`).
+
+- **`_BOTTLENECK_SQL`** : filtre `date >= CURRENT_DATE - 7 days` (et
+  plus `computed_at > ...` qui n'existe pas sur `bus_delay_segments`).
+
+- **Nouveau `_build_tcl_realtime` + `_TCL_REALTIME_SQL`** : alimente
+  `gold.tcl_vehicle_realtime` (Pro_4_Simulateur) depuis
+  `silver.tcl_vehicles_clean` via `DISTINCT ON journey_ref` (dernière
+  position par véhicule). Cleanup 1h (le Pro a besoin d'historique pour
+  les graphes "trajet des 5 dernières minutes").
+
+#### DAG `transform_silver_to_gold.py`
+
+- Remplacement des **NOOP explicites** (`build_traffic_features`,
+  `build_velov_features`) par les vrais appels `_run_traffic`,
+  `_run_velov`. Le docstring "Tasks NOOP (gérées par
+  legacy_github/dag_pipeline.py)" est obsolète : la chaîne
+  `transform_silver_to_gold` est désormais autonome.
+- Ajout de `build_tcl_realtime` dans la chaîne.
+- Dépendance bottleneck : `[traffic, velov, tcl_realtime, bus_delay] >> bottleneck`.
+
+### Résultats e2e (vérifiés sur VPS, snapshots 14:32 UTC+2)
+
+| Table                              | Avant    | Après (15 min) |
+| ---------------------------------- | -------- | -------------- |
+| `silver.trafic_boucles_clean`      | 0 recent | **7 209 rows** |
+| `silver.tcl_vehicles_clean`        | 0 recent | **1 546 rows** |
+| `gold.traffic_features_live`       | 0 recent | **2 084 rows** |
+| `gold.velov_features`              | 0 recent | **926 rows**   |
+| `gold.bus_delay_segments`          | 0 rows   | **1 567 rows** |
+| `gold.tcl_vehicle_realtime`        | 0 (15j)  | **577 rows**   |
+| `gold.infrastructure_bottlenecks`  | 0 rows   | **1 567 rows** |
+
+### Dette technique restante (Sprint 10+)
+
+- `silver.trafic_boucles_clean.geom` devrait être `geometry(LineString, 4326)`
+  (ou générique) pour stocker le tronçon complet au lieu du point médian.
+- `gold.dim_spatial_grid_mapping` devrait exposer `x_2154, y_2154` (pour
+  permettre le `JOIN` géométrique côté `_TRAFFIC_SQL`).
+- `src/models/xgboost_speed.py` référence encore les anciennes colonnes
+  (`speed_lag_1`, `node_idx`, `hour_sin`, `temperature_c`, `rain_mm`,
+  `measurement_time`). Le baseline `dag_live_speed_retrain` prend le
+  relais en attendant — Sprint 9+ prévu pour la migration.
+
 ## [0.6.0] - 2026-06-07 — VPS production (branche `vps`, ACTIVE)
 
 **Décision déploiement : VPS unique.** Branche `vps` = source de vérité du
