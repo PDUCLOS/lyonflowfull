@@ -84,7 +84,10 @@ def render_velov_widget(stations: list | None = None, max_stations: int = 3) -> 
             pred_line = ""
 
         with col:
-            st.markdown(
+            # Sprint 10 : on utilise st.html() au lieu de st.markdown(unsafe_allow_html=True)
+            # car le markdown parser wrappait la partie préd_line (avec un <span>
+            # imbriqué) dans un <pre><code>, affichant le HTML brut.
+            st.html(
                 f"""
                 <div class="lyonflow-card" style="border-left:4px solid {color};">
                     <div style="font-size:0.85rem;font-weight:600;">{s.get("name", "—")}</div>
@@ -99,6 +102,5 @@ def render_velov_widget(stations: list | None = None, max_stations: int = 3) -> 
                         {s.get("distance_m", 0)}m
                     </div>
                 </div>
-                """,
-                unsafe_allow_html=True,
+                """
             )
