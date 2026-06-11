@@ -1118,3 +1118,72 @@ def get_velov_neighbors_batch(station_ids: list[str], k: int = 3) -> dict[str, l
         if len(out[r["station_id_a"]]) < k:
             out[r["station_id_a"]].append(d)
     return out
+
+
+# =============================================================================
+# Sprint 7 (post-VPS-6) — Vues matérialisées KPIs TCL + Heatmap OTP
+# =============================================================================
+# Vues gold.mv_line_kpis_live + gold.mv_otp_heatmap
+# Cf. scripts/sql/create_mv_line_kpis_otp.sql
+# Débloque Pro_2_Heatmap_OTP.py et Pro_4_Simulateur.py
+# =============================================================================
+
+
+def get_line_kpis(line_ids: list[str] | None = None) -> dict:
+    """KPIs par ligne TCL depuis la vue matérialisée mv_line_kpis_live.
+
+    Args:
+        line_ids: filtre optionnel sur les lignes. None = toutes.
+
+    Returns:
+        Dict au format ``{line_id: {otp_pct, retard_moyen_s,
+        freq_vehicules_par_h, charge_pct, mode, otp_status, n_obs_total,
+        n_days}}`` — rétro-compatible avec le mock ``pro_tcl.LINE_KPIS``.
+    """
+    where_clause = ""
+    params: tuple = ()
+    if line_ids:
+        where_clause = "WHERE line_ref = ANY(%s)"
+        params = (line_ids,)
+
+    query = f"""
+        SELECT line_ref, otp_pct, retard_moyen_s, freq_vehicules_par_h,
+               charge_pct, mode, otp_status, n_obs_total, n_days
+        FROM gold.mv_line_kpis_live
+        {where_clause}
+        ORDER BY line_ref
+    """
+    rows = execute_query(query, params)
+    out: dict = {}
+    for r in rows:
+        out[r["line_ref"]] = {
+            "otp_pct": float(r["otp_pct"]) if r["otp_pct"] is not None else 0.0,
+            "retard_moyen_s": float(r["retard_moyen_s"]) if r["retard_moyen_s"] is not None else 0.0,
+            "freq_vehicules_par_h": float(r["freq_vehicules_par_h"]) if r["freq_vehicules_par_h"] is not None else 0.0,
+            "charge_pct": float(r["charge_pct"]) if r["charge_pct"] is not None else 0.0,
+            "mode": r["mode"],
+            "otp_status": r["otp_status"],
+            "n_obs_total": int(r["n_obs_total"]),
+            "n_days": int(r["n_days"]),
+        }
+    return out
+
+
+def get_otp_heatmap(days: int = 7) -> pd.DataFrame:
+    """Heatmap OTP (ligne × date × heure) sur les N derniers jours.
+
+    Args:
+        days: fenêtre temporelle en jours (défaut 7).
+
+    Returns:
+        DataFrame avec colonnes ``line_id, date, hour, otp_pct,
+        avg_delay_s, n_obs`` (rétro-compatible avec le mock aplati
+        ``OTP_GRID`` → ``[line_id, date, hour, otp_pct]``).
+    """
+    query = """
+        SELECT line_id, date, hour, otp_pct, avg_delay_s, n_obs
+        FROM gold.mv_otp_heatmap
+        WHERE date >= CURRENT_DATE - %s
+        ORDER BY line_id, date, hour
+    """
+    return _df_from_query(query, (days,))
