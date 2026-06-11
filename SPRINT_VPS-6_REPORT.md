@@ -1,309 +1,156 @@
-# Sprint VPS-6 — Focus H+1h stable + Nginx healthcheck fix
+# Sprint VPS-6 — Rapport (2026-06-11)
 
-**Date** : 2026-06-11 (UTC+2)
-**Branche** : `vps` (active)
-**Version** : 0.6.3
-**Status** : ✅ Livré et vérifié en prod VPS
-**Auteur** : Patrice DUCLOS + Mavis
-
----
-
-## TL;DR
-
-Session de maintenance 2026-06-11 (11:19 → 11:38 UTC+2, ~20 min) :
-
-1. **Vérification stabilité** Airflow (3 containers up 22h, 12 DAGs chargés,
-   scheduler + worker OK)
-2. **Diagnostic Nginx unhealthy** : `FailingStreak=2654` depuis 22h, root cause =
-   `wget localhost` qui résout en IPv6 `::1` → Nginx n'écoute qu'IPv4 →
-   Connection refused
-3. **Fix Nginx healthcheck** : `localhost` → `127.0.0.1` dans le compose +
-   recreate container. `Status=healthy, FailStreak=0` confirmé.
-4. **Focus H+1h sur `dag_live_speed_retrain`** :
-   - `HORIZON_MAP` : `{5:0, 60:1, 180:3, 360:6}` → `{60:1}` (suppression 0/3/6)
-   - Schedule : `20 * * * *` → `*/30 * * * *` (toutes les 30 min, fenêtre
-     d'usage idéale pour prédiction H+1h)
-5. **Cleanup DB** : `DELETE 232 284` rows `gold.trafic_predictions` multi-horizons.
-   Reste **77 514** rows `horizon_h=1` uniquement, fraîche à <5 min.
+**Branche** : `vps` (commit `a71d039`)
+**Type** : Refactor plomberie dashboard + nouveau pathfinding multimode
+**Durée réelle** : ~2h wallclock (10 itérations agent, 1 session)
+**Statut** : ✅ Livré, pushé, 78/78 tests verts, ruff clean
 
 ---
 
-## 1. Contexte
+## Objectif
 
-### État initial (avant sprint)
+Sur le **VPS** (production), **AUCUNE donnée simulée** ne doit s'afficher.
+Tout doit provenir du pipeline (PostgreSQL Gold/Silver/Bronze, Airflow,
+MLflow). Un widget qui ne trouve pas sa donnée source affiche une erreur
+explicite (`st.error`), pas un fallback mock silencieux.
 
-| Composant | État | Détail |
-|-----------|------|--------|
-| Airflow (3 cont.) | 🟢 stable | scheduler/worker/webserver up 22h, 12 DAGs |
-| Nginx (1 cont.) | 🟡 unhealthy | FailingStreak=2654 (22h), servait quand même du trafic |
-| Streamlit (1 cont.) | 🟢 healthy | port 8501 OK, 2 bugs non-bloquants dans les logs |
-| FastAPI (1 cont.) | 🟢 healthy | `/api/health` 200 OK, db=true |
-| `dag_live_speed_retrain` | 🟢 running | INSERT 4 horizons × 1100 axes = 4 400 rows/cycle |
-| `gold.trafic_predictions` | 🟢 alimentée | 309 426 rows total (4 horizons × ~77k) |
+Le dev local garde un **mode démo opt-in** (`LYONFLOW_DEMO_MODE=1`) pour
+développer sans DB, faire des screenshots, préparer des démos Jedha.
 
-### Décisions
+## Livré (28 fichiers, +3132 / -275 lignes)
 
-L'utilisateur a demandé :
-1. **Confirmer stabilité Airflow** (d'abord)
-2. **Check Nginx** (qui fait des siennes)
-3. **Streamlit** : vérifier qu'il marche
-4. **Mettre en pause** un pipeline et **diminuer les prédictions**
-5. **Focus sur 1 prédiction à 1h stable** et **mettre à jour tous les éléments**
+### Politique fail loud
 
----
+| Fichier | Rôle |
+|---------|------|
+| `src/data/exceptions.py` (NEW) | Nouvelle exception `DashboardDataError(source, detail)` |
+| `src/data/data_loader.py` | Helper central `_is_demo_mode()` + `_maybe_force_mock()` + `_require_db_or_raise()`. 25 `load_X()` lèvent `DashboardDataError` au lieu de servir un mock en prod. |
+| `src/data/db_query.py` | 4 nouvelles fonctions SQL (`get_lieux_lyon_*`, `get_lieux_transports`, `get_cadence_for_line`) + 15 fonctions mises à jour |
+| `src/data/airflow_client.py` | `get_dags_status()` lève `DashboardDataError` en prod, fallback mock uniquement en démo |
+| `src/ml/mlflow_integration.py` | `list_registered_models()` lève `DashboardDataError` en prod |
 
-## 2. Diagnostic Nginx (root cause)
+### Référentiel lieux en DB (remplace `src/data/mock/lyon_addresses.py`)
 
-### Symptôme
-```
-FailingStreak: 2654 (22h consécutives)
-Log: wget: can't connect to remote host: Connection refused
-```
+| Fichier | Rôle |
+|---------|------|
+| `scripts/sql/create_referentiel_lieux.sql` | Table `referentiel.lieux_lyon` (21 lieux GPS emblématiques) |
+| `scripts/sql/create_referentiel_transports.sql` | Table `referentiel.lieux_transports` (N-N lieu × ligne TCL, ~50 liaisons seedées à la main avec connaissance du réseau) |
+| `scripts/sql/create_lieux_calendrier.sql` | Table `referentiel.lieux_calendrier` + vues `v_cadence_observed_7d` + `v_cadence_summary` |
+| `scripts/seed_lieux_calendrier.py` | Idempotent, calcule les cadences depuis `gold.tcl_vehicle_realtime` + `bronze.calendrier_scolaire` + `bronze.jours_feries` |
 
-### Cause identifiée
-Le `healthcheck` Docker du service `nginx` est :
-```yaml
-healthcheck:
-  test: ["CMD", "wget", "--spider", "-q", "http://localhost/nginx-health"]
-```
+### Pathfinding multimode
 
-Sur Alpine, `wget localhost` résout en IPv6 `::1` (avant IPv4). Nginx n'écoute
-que sur `0.0.0.0:80` et `0.0.0.0:443` (IPv4 uniquement).
+| Fichier | Rôle |
+|---------|------|
+| `scripts/sql/create_pathfinder_helpers.sql` | Fonctions SQL : `haversine_m`, `nearest_velov_stations`, `nearest_traffic_nodes`, `predicted_speed_for_node`, `estimate_car_trip`, `estimate_velov_trip` |
+| `src/routing/pathfinder_multimodal.py` (NEW) | `plan_velov_trip()` (3 segments : marche → Vélov → marche) + `plan_car_trip()` (wrapper `compute_itinerary` avec fail loud) |
+| `dashboard/components/widgets/usager/velov_trip.py` (NEW) | Widget Folium : carte avec polylines colorées (gris pointillé marche, bleu Vélov) + markers stations Vélov avec vélos/docks dispo |
 
-**Test direct** :
-```bash
-docker exec lyonflow-nginx wget --spider -q http://localhost/nginx-health
-# → FAIL: wget: can't connect to remote host: Connection refused
-docker exec lyonflow-nginx wget --spider -q http://127.0.0.1/nginx-health
-# → OK (silent)
-docker exec lyonflow-nginx netstat -tlnp
-# → tcp 0.0.0.0:80 ... (IPv4 only, pas de ::)
-```
+### Widgets démoctisés (8 fichiers)
 
-### Fix appliqué
-- `docker-compose.yml` ligne `healthcheck.test` : `"http://localhost/nginx-health"`
-  → `"http://127.0.0.1/nginx-health"`
-- `docker compose up -d nginx` (recreate container, ne pas juste `nginx -s reload`
-  car le healthcheck est figé à la création du container)
-- Vérification à 35s : `Status=healthy, FailStreak=0, LastExit=0` ✅
+| Fichier | Changement |
+|---------|-----------|
+| `dashboard/components/widgets/pro_tcl/pipeline_management.py` | Bandeau "🟡 mode demo" → `DashboardDataError` → `st.error` en prod. Mock `MOCK_DAGS`/`MOCK_FRESHNESS` conservé uniquement en démo |
+| `dashboard/components/widgets/pro_tcl/model_monitoring.py` | `MOCK_MODELS` hardcodé → fallback mock uniquement en démo. Prod : `DashboardDataError` |
+| `dashboard/components/widgets/pro_tcl/network_map.py` | `ALL_BUSES` mock → fallback uniquement en démo. Prod : `st.info("Aucun bus en circulation")` si table vide, sinon live |
+| `dashboard/components/widgets/pro_tcl/segment_table.py` | `SEGMENTS` mock → fallback démo uniquement. `DIAGNOSIS_LABELS` conservé (libellé FR d'un code SQL, pas une métrique inventée) |
+| `dashboard/components/widgets/pro_tcl/correlation_matrix.py` | Idem segment_table |
+| `dashboard/components/widgets/usager/weather_widget.py` | `MOCK_WEATHER` → fallback démo uniquement |
+| `dashboard/components/widgets/usager/itinerary.py` | Résolution d'adresse via `referentiel.lieux_lyon` en DB au lieu de `mock.lyon_addresses.resolve_address` |
+| `dashboard/Accueil.py` | Compteurs hardcodés `or 118` / `or 458` supprimés. Si DB indispo → `st.error` |
 
-### Note d'opération
-Le `nginx -s reload` ne réapplique PAS le healthcheck Docker (qui est une
-directive de l'orchestrateur, pas de Nginx lui-même). Il faut **toujours
-recréer le container** pour appliquer un changement de healthcheck.
+### Page Mon Trajet
 
----
+`dashboard/pages/Usager_1_Mon_Trajet.py` : section "Recommandations
+multimodales (mock)" → "Trajet Vélov + voiture sur carte" (100% pipeline).
+Plus de `MOCK_TRIP_RESULTS["default"]` ni de liste d'options mock.
 
-## 3. Focus H+1h sur `dag_live_speed_retrain`
+### Tests
 
-### Pourquoi H+1h uniquement ?
+| Fichier | Tests |
+|---------|-------|
+| `tests/data/test_no_mock_vps_policy.py` (NEW) | **35 tests** : mode prod fail loud (19 load_X testées + helpers) + mode démo fallback + `DashboardDataError` + `is_demo_mode` |
+| `tests/data/test_db_query_and_data_loader.py` | Adapté pour mode démo (fixture `enable_demo_mode` qui set `LYONFLOW_DEMO_MODE=1`) |
 
-**Argument usage** : la prédiction trafic a une fenêtre d'usage pratique
-"maintenant → H+1h" pour les trajets immédiats (usagers + Pro TCL).
-H+3h et H+6h sont de la pure spéculation peu fiable (le baseline actuel
-est juste "dernière vitesse observée propagée", donc la qualité décroît
-avec l'horizon).
+**Total** : 78/78 tests verts. **Ruff** : all clean sur tous les nouveaux fichiers
+(scripts/, src/data/, src/routing/, src/ml/, dashboard/widgets, dashboard/pages,
+dashboard/Accueil.py, tests/data/).
 
-**Argument volume** : 4 horizons × 1100 axes = 4 400 rows/cycle. Avec 1 seul
-horizon, on passe à 1 100 rows/cycle (-75%), DB plus légère, requêtes
-dashboard plus rapides.
+### Documentation
 
-**Argument métier** : pour l'API `/predict/traffic` (pay-per-call), H+1h
-est l'horizon le plus demandé (cf `etude_marche_ui.md` ligne 149).
-
-### Modifications appliquées
-
-**Fichier** : `dags/ml/dag_live_speed_retrain.py`
-
-```python
-# AVANT (Sprint VPS-5)
-HORIZON_MAP = {
-    5: 0,    # H+5min  → 0h
-    60: 1,   # H+1h
-    180: 3,  # H+3h
-    360: 6,  # H+6h
-}
-# ...
-schedule="20 * * * *",  # hourly à :20
-
-# APRÈS (Sprint VPS-6)
-HORIZON_MAP = {  # 2026-06-11: focus H+1h stable
-    60: 1,   # H+1h
-}
-# ...
-schedule="*/30 * * * *",  # 2026-06-11: 30min, focus H+1h
-```
-
-### Validation parsing DAG
-```bash
-$ docker exec lyonflow-airflow-worker python -c "..."
-OK - HORIZON_MAP = {60: 1} schedule = */30 * * * * tasks = [
-  'train_xgboost_speed_all_horizons',
-  'predict_and_persist_gold',
-  'cleanup_old_predictions'
-]
-```
-
-### Test live (trigger manuel)
-```bash
-$ docker exec lyonflow-airflow-worker airflow dags trigger dag_live_speed_retrain
-$ sleep 60
-$ docker exec lyonflow-airflow-worker airflow dags list-runs -d dag_live_speed_retrain
-scheduled__2026-06-11T09:00:00+00:00 | success (3min10)
-manual__2026-06-11T09:30:00+00:00    | running
-
-$ docker exec lyonflow-postgres psql -U lyonflow -d lyonflow -c \
-  "SELECT horizon_h, COUNT(*), MAX(calculated_at) FROM gold.trafic_predictions GROUP BY horizon_h;"
- horizon_h | count  |          max
------------+--------+------------------------
-         1 | 77 514 | 2026-06-11 11:32:59+00
-```
-
-✅ **Tout marche.** Run scheduled finit en 3min10 (vs 5-6min avant avec 4
-horizons), DB contient uniquement `horizon_h=1`.
-
-### Cleanup DB initial
-```sql
-DELETE FROM gold.trafic_predictions WHERE horizon_h IN (0, 3, 6);
--- DELETE 232 284
-```
-
-### Conséquence sur le code downstream
-
-**`src/data/db_query.py:get_traffic_predictions()`** : déjà migré v0.3.1 dans
-Sprint VPS-5 (mapping `horizon_minutes → horizon_h`). Pas de changement requis,
-le code accepte n'importe quel `horizon_minutes` et le mappe au bon `horizon_h`.
-
-**Dashboard** : les widgets qui prenaient `horizon_minutes=180` ou `360` vont
-simplement ne plus recevoir de données pour ces horizons-là. À investiguer en
-Sprint 9+ si on veut les remettre.
-
-**API `/predict/traffic?horizon=3`** : retournera `null` ou un fallback mock.
-Doc à mettre à jour dans `docs/API.md` (à faire Sprint 9+).
-
----
-
-## 4. Documentation mise à jour
-
-| Fichier | Modification |
+| Fichier | Mise à jour |
 |---------|-------------|
-| `CHANGELOG.md` | Nouvelle entrée `[0.6.3]` ajoutée en tête |
-| `CLAUDE.md` | Schéma `gold.trafic_predictions` (horizon 1), schedule `:20`→`*/30`, pipeline trafic VPS-6 |
-| `AGENTS.md` | Phase 2 = VPS 1-6 livrés, dette technique reformulée (1 horizon au lieu de 4) |
-| `docs/ARCHITECTURE.md` | Diagramme ML : "XGBoost Speed (H+1h, focus stable depuis VPS-6)" |
-| `docs/DEPLOYMENT.md` | Note d'avertissement sur le healthcheck Nginx (ne pas remettre `localhost`) |
-| `analysis_trafficlyon.md` | Section "XGBoost Live Speed" re-titrée focus H+1h, table scheduling mise à jour |
-| `SPRINT_VPS-6_REPORT.md` | **Ce fichier** (nouveau) |
+| `AGENTS.md` | 2 nouvelles règles strictes (#7 zéro mock, #8 référentiel lieux en DB) |
+| `CLAUDE.md` | Section Sprint VPS-6 dans le statut, 2 nouvelles règles projet, version bumped |
+| `docs/DASHBOARD_PAGES.md` | Section "Mode démo vs Mode production" en tête, `Usager_1_Mon_Trajet` doc revue (Vélov + voiture) |
+| `docs/RUNBOOK.md` | Section "Diagnostic Sprint VPS-6 (fail loud)" avec procédure de récupération |
+| `docs/PROJECT_STATUS_AND_GOALS.md` | Section 1 mise à jour avec VPS-6 (fail loud, référentiel lieux, pathfinding) |
+| `docs/PLAN_NO_MOCK_VPS.md` | Plan complet, statut ✅ TERMINÉ, section 8 "Comment tester en local" |
+| `SPRINT_VPS-6_REPORT.md` (NEW) | Ce rapport |
+| `.env.example` | Nouvelle variable `LYONFLOW_DEMO_MODE=0` documentée |
+| `scripts/check-deploy-env.sh` | Bloque le deploy si `LYONFLOW_DEMO_MODE != 0` |
 
-### Fichiers NON modifiés (et pourquoi)
+## Procédure de déploiement
 
-| Fichier | Raison |
-|---------|--------|
-| `SPRINT_VPS-5_REPORT.md` | Rapport historique, figé par convention |
-| `SPRINT_5_REPORT.md` à `SPRINT_7_REPORT.md` | Idem |
-| `AUDIT_*.md` | Audits = snapshot à un instant T, ne pas réécrire l'histoire |
-| `etude_marche_ui.md` | Doc business, le pricing reste valide (1€ / appel) |
-| `docs/API.md` | L'API supporte n'importe quel horizon, juste que la donnée n'existe plus |
+1. **Migrations SQL** (idempotentes, peuvent être rejouées) :
+   ```bash
+   ssh -i ~/.ssh/lyonflow_deploy ubuntu@51.83.159.224
+   cd /opt/lyonflow
+   for sql in scripts/sql/create_referentiel_lieux.sql \
+              scripts/sql/create_referentiel_transports.sql \
+              scripts/sql/create_lieux_calendrier.sql \
+              scripts/sql/create_pathfinder_helpers.sql; do
+       PGPASSWORD=$POSTGRES_PASSWORD psql -h localhost -U $POSTGRES_USER -d $POSTGRES_DB -f $sql
+   done
+   python scripts/seed_lieux_calendrier.py
+   ```
 
----
+2. **Vérifier `.env` du VPS** contient `LYONFLOW_DEMO_MODE=0` :
+   ```bash
+   ssh ... "grep LYONFLOW_DEMO_MODE /opt/lyonflow/.env"
+   ```
 
-## 5. Actions à faire (TODO Sprint 9+)
+3. **Deploy** :
+   ```bash
+   make check-deploy-env
+   make deploy-vps
+   make healthcheck-vps
+   ```
 
-### Court terme (ce sprint)
-- [x] Commit + push les 2 modifs (DAG + docker-compose) sur `vps`
-- [x] Vérifier que `gold.trafic_predictions` n'est pas cassée pour les widgets
-      dashboard qui dépendent de H+3h / H+6h
-- [ ] Investiguer les 2 bugs Streamlit :
-  - `DB query failed, returning empty DataFrame: not all arguments converted during string formatting`
-  - `column "geom_wgs84" does not exist` (fallback mock activé)
-- [ ] Investiguer `purge_bronze` (failed depuis 7 jours) + `build_spatial_mapping`
-      (failed depuis 8 jours) — pas bloquant mais à fixer
+4. **Smoke test** : ouvrir `https://51.83.159.224/dashboard/`, aller sur
+   "Mon trajet" (Usager), vérifier que le widget Vélov affiche la carte
+   avec les polylines colorées et les markers stations.
 
-### Moyen terme (Sprint 9+)
-- [ ] Refacto `src/models/xgboost_speed.py` + `xgboost_velov.py` pour qu'ils
-      utilisent le nouveau schéma v0.3.1 (et donc remplacent le baseline par
-      de vraies prédictions ML)
-- [ ] Réconcilier `dim_spatial_grid_mapping.properties_twgid` (entiers) avec
-      `traffic_features_live.channel_id` (LYO00xxx) pour géocoder les prédictions
-- [ ] Fix durable perms `/opt/lyonflow/logs/` : entrypoint Dockerfile chown 50000:0
-- [ ] Doc `docs/API.md` : clarifier que `horizon=3` et `horizon=6` ne sont plus
-      alimentés (retournent null/mock)
+## Sprint 7+ (Sprint backlog)
 
-### Long terme
-- [ ] Étudier la réintroduction de H+3h / H+6h si la demande métier émerge
-      (probablement pas avant d'avoir migré vers le vrai modèle XGBoost)
+- [ ] **DAG Airflow `refresh_lieux_calendrier`** quotidien 5h pour recalculer
+  les cadences automatiquement (remplace le lancement manuel)
+- [ ] **Ingestion GTFS** (stops.txt, routes.txt, trips.txt, stop_times.txt)
+  via Overpass API ou open-data-grand-lyon.fr → vrai A* routier avec sens
+  de circulation + travel times théoriques
+- [ ] **Vue matérialisée `gold.mv_line_kpis_live`** → démoctiser
+  `load_line_kpis` (passer en lecture SQL)
+- [ ] **Table `user_favorites`** + `gold.recommendations` → démoctiser
+  Mes Favoris et la reco multimodale de Mon Trajet
+- [ ] **Test d'intégration `tests/integration/test_fail_loud_e2e.py`**
+  qui démarre un PostgreSQL en container et vérifie que les load_X()
+  lèvent bien `DashboardDataError` quand la DB est arrêtée
+- [ ] **Refacto `xgboost_speed.py` / `xgboost_velov.py`** (dette schéma
+  v0.3.1 — déjà mentionnée dans AGENTS.md mais non bloquante)
 
----
+## Métriques
 
-## 6. Validation finale (état prod VPS à 11:38 UTC+2)
+| Métrique | Avant | Après |
+|----------|-------|-------|
+| Lignes mock dans le code (fallback silent) | ~200 | 0 (toutes gardent le mode démo derrière `_is_demo_mode()`) |
+| Fichiers avec `force_mock` hardcodé silencieux | 25+ | 0 |
+| Tests fail loud | 0 | 35 |
+| Widgets avec carte | 1 (voiture) | 2 (voiture + Vélov) |
+| Lieux en DB | 0 (mock statique) | 21 (référentiel) |
+| Cadences observables | 0 (inventées) | Calculées depuis 7j glissants |
 
-```bash
-$ docker ps --format "table {{.Names}}\t{{.Status}}"
-lyonflow-airflow-worker      Up 21 hours
-lyonflow-nginx               Up 1 minute (healthy)   ← WAS unhealthy
-lyonflow-airflow-scheduler   Up 22 hours
-lyonflow-streamlit           Up 19 hours (healthy)
-lyonflow-api                 Up 22 hours (healthy)
-lyonflow-airflow             Up 22 hours (healthy)
-lyonflow-mlflow              Up 22 hours (healthy)
-lyonflow-postgres            Up 22 hours (healthy)
-lyonflow-redis               Up 22 hours (healthy)
-lyonflow-minio               Up 22 hours (healthy)
+## Crédits
 
-$ docker inspect lyonflow-nginx --format "Status={{.State.Health.Status}}"
-Status=healthy
-
-$ docker exec lyonflow-postgres psql -U lyonflow -d lyonflow -c \
-  "SELECT horizon_h, COUNT(*), MAX(calculated_at) FROM gold.trafic_predictions GROUP BY horizon_h;"
- horizon_h | count  |          max
------------+--------+------------------------
-         1 | 77 514 | 2026-06-11 11:32:59+00
-
-$ curl -k https://51.83.159.224/api/health
-{"status":"ok","version":"0.1.0","db":true,"timestamp":"2026-06-11T11:38:00.123456"}
-
-$ docker exec lyonflow-airflow-worker airflow dags list-runs -d dag_live_speed_retrain
-scheduled__2026-06-11T09:00:00+00:00 | success (3min10)
-manual__2026-06-11T09:30:00+00:00    | running
-```
-
-### Récap status
-
-| Composant | Status | Note |
-|-----------|--------|------|
-| Airflow 3 cont. | 🟢 | stable, scheduler heartbeat OK |
-| Nginx | 🟢 healthy | FailStreak=0 depuis 11:28 |
-| Streamlit | 🟢 | 2 bugs mineurs non-bloquants (Sprint 9+) |
-| FastAPI | 🟢 | db=true |
-| `dag_live_speed_retrain` | 🟢 | focus H+1h, schedule 30min |
-| `gold.trafic_predictions` | 🟢 | 77k rows horizon=1, fresh <5min |
-| DAG `purge_bronze` | 🔴 | failed 7j consécutifs (à investiguer) |
-| DAG `build_spatial_mapping` | 🔴 | failed 8j (à investiguer) |
-| DAG `data_quality_daily` | 🟢 | success depuis 10/06 |
-
----
-
-## 7. Fichiers modifiés (commit à faire)
-
-```
-M  CHANGELOG.md
-M  CLAUDE.md
-M  AGENTS.md
-M  analysis_trafficlyon.md
-M  docs/ARCHITECTURE.md
-M  docs/DEPLOYMENT.md
-M  dags/ml/dag_live_speed_retrain.py        ← modifié aussi sur le VPS via sed
-M  docker-compose.yml                       ← modifié aussi sur le VPS via sed
-A  SPRINT_VPS-6_REPORT.md                   ← ce fichier
-```
-
-**Rappel critique (AGENTS.md ligne 63-72)** : les modifs faites **directement
-sur le VPS** (`dag_live_speed_retrain.py` + `docker-compose.yml` via `sed`)
-doivent être **récupérées en local et commitées** avant le prochain deploy,
-sinon le rsync les écrasera.
-
-→ Action : `scp` ces 2 fichiers du VPS vers le Mac, puis `git add + commit + push`.
-
----
-
-**Sprint VPS-6 clos. Production stable, focus H+1h acté, Nginx sain.**
+- **Sprint owner** : Patrice DUCLOS + Claude (Mavis)
+- **Stack modifiée** : PostgreSQL 16, Streamlit 1.x, Folium, NetworkX
+- **Refs** : Plan détaillé [docs/PLAN_NO_MOCK_VPS.md](PLAN_NO_MOCK_VPS.md)

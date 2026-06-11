@@ -148,6 +148,83 @@ find /var/log -name "*.gz" -mtime +30 -delete
 - [ ] Performance profiling
 - [ ] Capacity planning
 
+## Diagnostic Sprint VPS-6 (fail loud)
+
+### Widget affiche `⚠️ Données pipeline indisponibles`
+
+**Symptôme** : un ou plusieurs widgets Streamlit affichent un `st.error` rouge avec un message contenant `DashboardDataError` ou `[postgresql]` / `[airflow]` / `[mlflow]`.
+
+**Diagnostic** :
+
+```bash
+# 1. Identifier la source impactée
+# Le message d'erreur contient [postgresql], [airflow] ou [mlflow].
+docker compose ps postgres   # doit être "Up (healthy)"
+docker compose ps airflow-webserver  # idem
+docker compose ps mlflow     # idem
+
+# 2. Logs DB
+docker compose logs --tail=100 postgres | grep -i "error\|crash"
+
+# 3. Logs Airflow
+docker compose logs --tail=100 airflow-webserver | grep -i "error\|crash"
+
+# 4. Test connexion manuelle
+docker compose exec postgres pg_isready -U $POSTGRES_USER -d $POSTGRES_DB
+```
+
+**Cause typique 1** : DB/Service down → restart.
+
+**Cause typique 2** : Table Gold vide (DAG en retard) → vérifier que les DAGs tournent :
+```bash
+# DAG collect_bronze (5min) — doit avoir tourné il y a < 10 min
+docker compose exec airflow-webserver airflow dags list-runs -d collect_bronze --state success --limit 3
+# DAG transform_silver_to_gold (10min) — idem
+```
+
+**Cause typique 3** : `LYONFLOW_DEMO_MODE=1` accidentel sur le VPS (interdit en prod).
+```bash
+ssh -i ~/.ssh/lyonflow_deploy ubuntu@51.83.159.224 \
+  "grep LYONFLOW_DEMO_MODE /opt/lyonflow/.env"
+# Doit afficher : LYONFLOW_DEMO_MODE=0
+# Si =1 → corriger + redeploy + restart streamlit
+```
+
+**Récupération** : corriger la cause, puis soit attendre le TTL cache (5-30 min),
+soit forcer un refresh côté browser (`Ctlr+R`).
+
+Voir [PLAN_NO_MOCK_VPS.md](PLAN_NO_MOCK_VPS.md) pour la politique complète.
+
+### Le dashboard n'affiche plus rien depuis le deploy
+
+**Symptôme** : tous les widgets en erreur après un `make deploy-vps`.
+
+**Cause probable** : nouveau schéma DB (Sprint VPS-6 ajoute `referentiel.lieux_lyon`,
+`referentiel.lieux_transports`, `referentiel.lieux_calendrier` + fonctions SQL).
+
+**Fix** : appliquer les scripts de migration sur le VPS :
+```bash
+ssh -i ~/.ssh/lyonflow_deploy ubuntu@51.83.159.224
+cd /opt/lyonflow
+for sql in scripts/sql/create_referentiel_lieux.sql \
+           scripts/sql/create_referentiel_transports.sql \
+           scripts/sql/create_lieux_calendrier.sql \
+           scripts/sql/create_pathfinder_helpers.sql; do
+    PGPASSWORD=$POSTGRES_PASSWORD psql -h localhost -U $POSTGRES_USER -d $POSTGRES_DB -f $sql
+done
+# Recalculer les cadences (idempotent)
+python scripts/seed_lieux_calendrier.py
+```
+
+### Cron `refresh_lieux_calendrier` recommandé (Sprint 7+)
+
+À mettre en place après le Sprint VPS-6 : un DAG Airflow quotidien 5h qui
+recrée `referentiel.lieux_calendrier` depuis les 7 derniers jours de
+`gold.tcl_vehicle_realtime`. En attendant, lancer manuellement :
+```bash
+ssh ... "cd /opt/lyonflow && python scripts/seed_lieux_calendrier.py"
+```
+
 ## Contacts
 
 | Rôle | Contact |

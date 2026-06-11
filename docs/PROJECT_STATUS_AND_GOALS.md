@@ -1,6 +1,6 @@
 # État d'avancement et Objectifs du Projet LyonFlowFull
 
-**Dernière mise à jour :** Juin 2026
+**Dernière mise à jour :** 2026-06-11 (Sprint VPS-6 livré, branche `vps`)
 
 Ce document récapitule l'état actuel de l'infrastructure de LyonFlowFull et fixe le cap pour le déploiement MLOps en cours.
 
@@ -11,15 +11,39 @@ Ce document récapitule l'état actuel de l'infrastructure de LyonFlowFull et fi
 Le socle technique et logiciel est désormais à un stade de fiabilité "Production-ready".
 
 ### Infrastructure & Déploiement (Branche `vps`)
-- **Serveur Unique** : Le projet est hébergé de manière autonome sur un VPS Ubuntu (pas de dépendance AWS/GCP). L'environnement Docker est complet (PostgreSQL + MinIO + Redis + Airflow + MLflow + FastAPI + Streamlit).
-- **Hardening** : Certificats TLS via Let's Encrypt (Nginx reverse proxy), firewall, et services gérés par Systemd (avec relance automatique en cas de reboot).
-- **Supervision** : Stack Prometheus + Grafana configurée. Les métriques de FastAPI et du Dashboard remontent en direct.
+- **Serveur Unique** : Le projet est hébergé de manière autonome sur un VPS Ubuntu (51.83.159.224, pas de dépendance AWS/GCP). L'environnement Docker est complet (PostgreSQL + MinIO + Redis + Airflow + MLflow + FastAPI + Streamlit).
+- **Hardening** (Sprint VPS-1) : Certificats TLS via Let's Encrypt (Nginx reverse proxy), firewall, et services gérés par Systemd (avec relance automatique en cas de reboot).
+- **Supervision** (Sprint VPS-3) : Stack Prometheus + Grafana configurée. Les métriques de FastAPI et du Dashboard remontent en direct.
+- **Backup offsite** (Sprint VPS-2) : Timer systemd quotidien 03:00 → `scripts/backup-offsite.sh` (Google Drive via rclone OU serveur SSH). Stream pur, rien d'écrit sur le disque VPS.
+- **Rollback** (Sprint VPS-2) : `make rollback-vps` ramène à la release précédente.
+- **Monitoring custom** (Sprint VPS-4) : `src/api/metrics.py` — prédictions, latence, personas, DAGs, MLflow, DB.
 
 ### Fiabilité Applicative (Data & QA)
-- **Data Binding Total** : Les 45 widgets du Dashboard consomment les données réelles issues de la base de données.
-- **Résilience Anti-Crash** : Si la base de données subit une micro-coupure (ex: erreur `OperationalError`), l'application l'intercepte silencieusement, active un "mode hors-ligne" transparent et utilise des données de fallback (Mocks) avec un bandeau préventif. Zéro écran blanc.
-- **Couverture de Tests (E2E)** : Les scénarios de navigation pour les différents Personas (notamment les accès sécurisés "Pro TCL" et "Élu") sont validés par **Playwright**.
-- **Testabilité Universelle** : Grâce à `make test-docker`, toute la suite de tests s'exécute isolée de l'hôte, évitant l'enfer des dépendances locales (C++, GDAL).
+- **Sprint VPS-6 (2026-06-11) — Politique "zéro mock"** : sur le VPS,
+  `LYONFLOW_DEMO_MODE=0` est obligatoire. Toute source de données
+  indisponible (PostgreSQL, Airflow, MLflow) lève `DashboardDataError` et
+  le widget affiche `st.error` explicite. Plus de mock silencieux en prod.
+  Mode démo (`LYONFLOW_DEMO_MODE=1`) réservé au dev local, screenshots,
+  démos Jedha. `make check-deploy-env` valide la variable avant chaque
+  deploy. Détails : [PLAN_NO_MOCK_VPS.md](PLAN_NO_MOCK_VPS.md).
+- **Référentiel lieux en DB** (Sprint VPS-6) : 21 lieux emblématiques
+  Lyon + 50+ liaisons transports (T*, M*, C*, bus) + cadences observées
+  par tranche horaire × type de jour. Tables `referentiel.lieux_lyon`,
+  `referentiel.lieux_transports`, `referentiel.lieux_calendrier`.
+- **Pathfinding multimode** (Sprint VPS-6) : voiture (Dijkstra sur
+  `silver.trafic_boucles_clean` + prédictions `gold.trafic_predictions`)
+  + Vélov+marche (3 segments : marche → Vélov → marche, stations
+  `silver.velov_clean`). Widget Folium avec carte + polylines colorées.
+- **Data Binding Total** : Les 47 widgets du Dashboard consomment les
+  données réelles issues de la base de données.
+- **Tests** : 78/78 tests verts (data + dashboard + pathfinding), 35
+  nouveaux tests fail loud. ruff clean sur les nouveaux fichiers.
+- **Couverture de Tests (E2E)** : Les scénarios de navigation pour les
+  différents Personas (notamment les accès sécurisés "Pro TCL" et "Élu")
+  sont validés par **Playwright**.
+- **Testabilité Universelle** : Grâce à `make test-docker`, toute la
+  suite de tests s'exécute isolée de l'hôte, évitant l'enfer des
+  dépendances locales (C++, GDAL).
 
 ---
 
