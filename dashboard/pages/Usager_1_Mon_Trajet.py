@@ -81,13 +81,62 @@ elif "results_loaded" not in st.session_state:
     st.session_state["results_loaded"] = False
 
 if st.session_state.get("results_loaded"):
-    # Contexte : météo + Vélov + trafic
+    # Sprint VPS-6 (2026-06-11) : les cards Vélov et la météo sont
+    # désormais **contextuelles** à la destination choisie (et non
+    # plus un point fixe Part-Dieu). Calcul des stations Vélov
+    # proches de la destination via referentiel.nearest_velov_stations.
+    from dashboard.components.widgets.usager.velov_trip import (
+        _resolve_lieu,
+    )
+    from src.data.exceptions import DashboardDataError
+    from src.db.connection import execute_query
+
+    # Résoudre les 2 lieux pour contexte
+    origin_coords = _resolve_lieu(search["origin"])
+    dest_coords = _resolve_lieu(search["destination"])
+
+    # === 1. Météo (toujours Lyon global) + Vélov destination ===
     st.markdown("##### 🌤 Conditions actuelles")
     ctx1, ctx2 = st.columns([1, 1])
     with ctx1:
         render_weather_widget()
     with ctx2:
-        render_velov_widget(max_stations=3)
+        # Vélov proches de la destination (3 stations)
+        if dest_coords is not None:
+            try:
+                rows = execute_query(
+                    """
+                    SELECT station_id, station_name, lat, lon,
+                           num_bikes_available AS bikes_available,
+                           num_docks_available AS stands_available,
+                           distance_m, is_active
+                    FROM referentiel.nearest_velov_stations(
+                        %s::double precision, %s::double precision,
+                        3, 0, 0
+                    )
+                    """,
+                    (dest_coords[1], dest_coords[0]),  # lat, lon
+                )
+                stations_dest = [
+                    {
+                        "station_id": str(r["station_id"]),
+                        "name": r["station_name"],
+                        "lat": r["lat"], "lon": r["lon"],
+                        "bikes_available": r["bikes_available"],
+                        "stands_available": r["stands_available"],
+                        "distance_m": int(r["distance_m"]),
+                    }
+                    for r in rows
+                ]
+                if stations_dest:
+                    st.caption(f"🚲 3 stations Vélov les plus proches de **{search['destination']}** :")
+                    render_velov_widget(stations=stations_dest, max_stations=3)
+                else:
+                    st.info(f"Aucune station Vélov proche de {search['destination']}.")
+            except DashboardDataError as e:
+                st.error(f"⚠️ {e}")
+        else:
+            render_velov_widget(max_stations=3)
 
     st.markdown("##### 🚦 État du trafic routier")
     render_traffic_widget()
@@ -96,8 +145,36 @@ if st.session_state.get("results_loaded"):
     st.markdown("##### 🗺️ Carte du trafic — H+30min")
     render_traffic_map_compact(height=320, horizon_minutes=30, key_suffix="usager")
 
-    # Carte Vélo'v — dispo actuelle + tooltip prédictions H+30/H+1h (Sprint 10)
-    st.markdown("##### 🚲 Stations Vélo'v — dispo + prédictions")
+    # === 2. Trajet Vélov + marche sur carte (calculé en live) ===
+    st.markdown("---")
+    st.markdown("### 🚲 Trajet Vélov + marche (calculé depuis le pipeline)")
+    st.caption(
+        "Marche → Vélov → Marche. Stations Vélov + graphe routier Dijkstra + "
+        "prédictions trafic. Source 100% pipeline (silver.velov_clean, "
+        "gold.trafic_predictions, referentiel.lieux_lyon)."
+    )
+
+    if origin_coords and dest_coords:
+        try:
+            render_velov_trip(
+                origin=search["origin"],
+                destination=search["destination"],
+                origin_coords=origin_coords,
+                dest_coords=dest_coords,
+            )
+        except DashboardDataError as e:
+            st.error(f"⚠️ {e}")
+    else:
+        st.warning(
+            f"⚠️ Impossible de résoudre les adresses GPS pour le calcul : "
+            f"origin={search['origin']} → {origin_coords}, "
+            f"dest={search['destination']} → {dest_coords}"
+        )
+
+    st.markdown("---")
+
+    # === 3. Carte stations Vélov globale (info, pas contextuelle) ===
+    st.markdown("##### 🚲 Toutes les stations Vélo'v (info)")
     render_velov_map_compact(height=320, key_suffix="usager")
 
     st.markdown("---")
@@ -149,24 +226,6 @@ if st.session_state.get("results_loaded"):
             destination=search["destination"],
             horizon_minutes=horizon,
         )
-
-    st.markdown("---")
-
-    # === TRAJET VÉLOV + VOITURE SUR CARTE (Sprint VPS-6) ===
-    st.markdown("### 🚲 Trajet Vélov + marche (calculé depuis le pipeline)")
-    st.caption(
-        "Marche → Vélov → Marche. Stations Vélov + graphe routier Dijkstra + "
-        "prédictions trafic. Source 100% pipeline (silver.velov_clean, "
-        "gold.trafic_predictions)."
-    )
-
-    try:
-        render_velov_trip(
-            origin=search["origin"],
-            destination=search["destination"],
-        )
-    except DashboardDataError as e:
-        st.error(f"⚠️ {e}")
 
     st.markdown("---")
 
