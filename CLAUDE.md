@@ -152,7 +152,7 @@ Chaque table Bronze: `fetched_at TIMESTAMPTZ` + `raw_data JSONB`. Immutable. Ré
 | gold.dim_spatial_grid_mapping | Capteurs → nœuds GNN (H3 res.13, cell_to_local_ij). ~1518 nœuds, PK = `properties_twgid` |
 | gold.dim_gnn_adjacency | Arêtes graphe (K=2 grid_disk, bidirectionnel + self-loops) |
 | gold.fact_traffic_series | Séries temporelles normalisées (5 canaux: speed, hour_sin/cos, day_sin/cos) |
-| **gold.trafic_predictions** | **Prédictions pré-calculées. Schéma v0.3.1 : `axis_key, horizon_h (0/1/3/6), calculated_at, speed_pred, etat_pred, color, vitesse_limite_kmh, label, model_version, lat, lon`. Alimentée hourly par `dag_live_speed_retrain`** (Sprint VPS-5, baseline = dernière vitesse observée) |
+| **gold.trafic_predictions** | **Prédictions pré-calculées. Schéma v0.3.1 : `axis_key, horizon_h (1), calculated_at, speed_pred, etat_pred, color, vitesse_limite_kmh, label, model_version, lat, lon`. Alimentée toutes les 30 min par `dag_live_speed_retrain`** (Sprint VPS-5, baseline = dernière vitesse observée, **focus H+1h** depuis Sprint VPS-6 2026-06-11) |
 | gold.predictions_vs_actuals | Backtesting pour comparaison modèles |
 
 > **⚠️ Dette schéma Sprint VPS-5** : `src/models/xgboost_speed.py` référence encore
@@ -184,7 +184,8 @@ Chaque table Bronze: `fetched_at TIMESTAMPTZ` + `raw_data JSONB`. Immutable. Ré
 :02  Collecte bronze (SIRI Lite + Vélov)
 :05  Transform bronze → silver (4 parallèles)
 :15  Transform silver → gold (3 domaines parallèles)
-:20  dag_live_speed_retrain (Sprint VPS-5) — train 4 XGBoost + INSERT gold.trafic_predictions
+:20  dag_live_speed_retrain (Sprint VPS-5, *focus H+1h* depuis VPS-6) — train XGBoost H+1h + INSERT gold.trafic_predictions
+*/30  Idem, toutes les 30 min (cf. v0.6.3 — plus pratique pour la fenêtre d'usage H+1h)
 :25  Retrain XGBoost trafic (legacy, 4 horizons, ~10 min)
 :50  Retrain Vélov (2 horizons : H+30min, H+1h, ~5 min)
 03h  Retrain GNN daily (lourd, GPU si dispo)
@@ -279,7 +280,7 @@ Branche `vps` = source de vérité du déploiement actif.
 | Monitoring | Prometheus + Alertmanager + Grafana via `docker-compose.monitoring.yml` (Sprint VPS-3) |
 | Exporters | node, postgres, nginx, redis (Sprint VPS-3) |
 | Métriques custom | `src/api/metrics.py` — prédictions, latence, personas, DAGs, MLflow, DB (Sprint VPS-4) |
-| **Pipeline trafic** | **`dags/ml/dag_live_speed_retrain.py` (Sprint VPS-5)** — train 4 XGBoost + INSERT hourly dans `gold.trafic_predictions` (baseline) |
+| **Pipeline trafic** | **`dags/ml/dag_live_speed_retrain.py` (Sprint VPS-5)** — train XGBoost H+1h + INSERT `*/30` dans `gold.trafic_predictions` (baseline) |
 | Stockage DB | `/opt/lyonflow/postgres_data` (volume Docker) |
 | Réseau | Ports internes sur 127.0.0.1 uniquement, Nginx seul exposé 80/443 |
 | Secrets | `.env` chmod 600, jamais en repo |

@@ -5,7 +5,7 @@
 # du projet. À lire en premier par tout assistant IA.
 # =============================================================================
 
-# Phases du projet (état 2026-06-07)
+# Phases du projet (état 2026-06-11)
 # --------------------------------
 
 # PHASE 1 (livrée) — Production-ready LOCAL (branche `main`)
@@ -17,7 +17,7 @@
 #
 # PHASE 2 (ACTIVE) — Déploiement VPS production (branche `vps`)
 # - Cible production unique : VPS 51.83.159.224
-# - Sprints VPS 1-5 livrés :
+# - Sprints VPS 1-6 livrés :
 #   * VPS-1 : TLS Let's Encrypt + healthcheck + hardening SSH/firewall
 #   * VPS-2 : systemd unit + backup timer + rollback + CI vps branch
 #   * VPS-3 : Prometheus + Alertmanager + Grafana + exporters (node, postgres, nginx, redis)
@@ -25,13 +25,18 @@
 #   * VPS-5 : pipeline trafic reconnecté (dag_live_speed_retrain) + 166 lignes TCL
 #     Pro_4_Simulateur + sort/explore KPIs par ligne + 5 régressions SQL corrigées
 #     + fix perms logs/ worker Airflow
+#   * VPS-6 (2026-06-11) : focus H+1h stable
+#       - dag_live_speed_retrain : HORIZON_MAP={60:1} (suppression 0/3/6)
+#       - schedule :20 hourly → */30 * * * * (toutes les 30 min)
+#       - Nginx Docker healthcheck fix : `localhost` → `127.0.0.1` (IPv6 ::1 connection refused)
+#       - DB cleanup : DELETE 232k rows multi-horizons, reste 77k rows horizon=1
 # - Docs : docs/VPS_HARDENING.md, docs/MONITORING.md, docs/CONTROLE_VPS_VS_CLOUD_DEMO.md,
-#   SPRINT_VPS-5_REPORT.md
+#   SPRINT_VPS-5_REPORT.md, SPRINT_VPS-6_REPORT.md
 #
 # Dette technique connue (Sprint 9+) :
 # - src/models/xgboost_speed.py : 9+ colonnes référencent l'ancien schéma
 #   gold.traffic_features_live. Refacto nécessaire pour vraies prédictions ML
-#   (en attendant : baseline = dernière vitesse observée propagée sur 4 horizons).
+#   (en attendant : baseline = dernière vitesse observée propagée sur 1 horizon = H+1h).
 # - dim_spatial_grid_mapping.properties_twgid (entiers) ne match pas
 #   traffic_features_live.channel_id (LYO00xxx). Réconcilier pour géocoder
 #   les prédictions sur la carte.
