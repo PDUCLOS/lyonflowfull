@@ -39,7 +39,10 @@ WITH per_line AS (
         -- Retard moyen
         ROUND(AVG(avg_delay_seconds)::numeric, 1) AS retard_moyen_s,
         -- Fréquence : véhicules observés par heure (moyenne)
-        ROUND((SUM(n_observations)::numeric / NULLIF(COUNT(DISTINCT date, hour), 0)), 1) AS freq_vehicules_par_h,
+        ROUND(
+            (SUM(n_observations)::numeric / NULLIF(COUNT(DISTINCT (date::text || '-' || hour::text)), 0)),
+            1
+        ) AS freq_vehicules_par_h,
         -- Charge = intensité d'observations (proxy)
         ROUND((SUM(n_observations)::numeric / NULLIF(COUNT(*), 0)) * 100.0, 1) AS charge_pct
     FROM gold.bus_delay_segments

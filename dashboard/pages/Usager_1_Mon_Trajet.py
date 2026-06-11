@@ -19,9 +19,9 @@ from dashboard.components.theme import inject_theme
 from dashboard.components.widgets.pro_tcl import render_traffic_map_compact
 from dashboard.components.widgets.usager import (
     render_itinerary_result,
+    render_lieux_velov_map,
     render_search_bar,
-    render_traffic_widget,
-    render_velov_map_compact,
+    render_traffic_map_compact,
     render_velov_trip,
     render_velov_widget,
     render_weather_widget,
@@ -90,6 +90,23 @@ if st.session_state.get("results_loaded"):
     )
     from src.data.exceptions import DashboardDataError
     from src.db.connection import execute_query
+
+    # === 0. Carte globale lieux × Vélov proches (Sprint VPS-6 hotfix) ===
+    # 21 lieux emblématiques reliés à leur borne Vélov la plus proche.
+    # Permet à l'usager de voir d'un coup d'œil la couverture Vélov
+    # de tous les lieux emblématiques (avant : aucune vue d'ensemble).
+    st.markdown("##### 🗺️ Couverture Vélov des lieux emblématiques")
+    st.caption(
+        "21 lieux emblématiques Lyon × borne Vélov la plus proche. "
+        "Lignes pointillées : vert < 100m, orange < 300m, rouge ≥ 300m. "
+        "Source = referentiel.v_lieux_velov_proches (jointure haversine)."
+    )
+    try:
+        render_lieux_velov_map(height=500)
+    except DashboardDataError as e:
+        st.error(f"⚠️ {e}")
+
+    st.markdown("---")
 
     # Résoudre les 2 lieux pour contexte
     origin_coords = _resolve_lieu(search["origin"])
