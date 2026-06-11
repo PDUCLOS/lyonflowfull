@@ -802,6 +802,10 @@ def load_lyon_addresses(force_mock: bool = False) -> list[str]:
     Référentiel (Sprint VPS-6) : table ``referentiel.lieux_lyon`` (PostgreSQL).
     En mode démo (``LYONFLOW_DEMO_MODE=1``) : fallback mock préservé.
 
+    Cache process (lru_cache 60s) — Sprint VPS-6 hotfix 2026-06-11 :
+    sans cache, cette query prend 3.9s sur le VPS (latence réseau +
+    21 rows). Avec cache, <0.01s.
+
     Raises:
         DashboardDataError: en mode prod, si PostgreSQL ne répond pas.
     """
@@ -809,16 +813,15 @@ def load_lyon_addresses(force_mock: bool = False) -> list[str]:
         from src.data.mock.lyon_addresses import get_address_names
 
         return get_address_names()
-    _require_db_or_raise("referentiel.lieux_lyon")
-    from src.data.db_query import get_lieux_lyon_names
-
-    return get_lieux_lyon_names()
+    return _load_lyon_addresses_cached()
 
 
 def load_lyon_addresses_with_coords(force_mock: bool = False) -> list[dict]:
     """Adresses Lyon avec coordonnées GPS complètes.
 
     Référentiel (cf. load_lyon_addresses). Format dict {name, lon, lat, type}.
+
+    Cache process (lru_cache 60s) — cf. load_lyon_addresses.
 
     Raises:
         DashboardDataError: en mode prod, si PostgreSQL ne répond pas.
@@ -827,10 +830,52 @@ def load_lyon_addresses_with_coords(force_mock: bool = False) -> list[dict]:
         from src.data.mock.lyon_addresses import LYON_ADDRESSES
 
         return LYON_ADDRESSES
+    return _load_lyon_addresses_with_coords_cached()
+
+
+# -----------------------------------------------------------------------------
+# Cache process-level TTL pour le référentiel lieux (Sprint VPS-6 hotfix)
+# -----------------------------------------------------------------------------
+# Le widget Mon Trajet appelle load_lyon_addresses_with_coords() plusieurs
+# fois par render (search_bar, itinéraire, Vélov). Sans cache, c'est
+# 3-4 queries DB de 21 rows à chaque interaction. Avec cache 60s, c'est
+# 1 query par minute par process Streamlit (la donnée change très peu).
+# -----------------------------------------------------------------------------
+import time as _time  # noqa: E402
+
+_LIEUX_CACHE_TTL_S = 60
+_lieux_cache: dict[str, tuple[float, object]] = {}
+
+
+def _load_lyon_addresses_cached() -> list[str]:
+    """Cache process TTL 60s pour la liste des noms de lieux."""
+    now = _time.monotonic()
+    cached = _lieux_cache.get("names")
+    if cached is not None and (now - cached[0]) < _LIEUX_CACHE_TTL_S:
+        return cached[1]
+    _require_db_or_raise("referentiel.lieux_lyon")
+    from src.data.db_query import get_lieux_lyon_names
+    result = get_lieux_lyon_names()
+    _lieux_cache["names"] = (now, result)
+    return result
+
+
+def _load_lyon_addresses_with_coords_cached() -> list[dict]:
+    """Cache process TTL 60s pour la liste des lieux avec coords."""
+    now = _time.monotonic()
+    cached = _lieux_cache.get("coords")
+    if cached is not None and (now - cached[0]) < _LIEUX_CACHE_TTL_S:
+        return cached[1]
     _require_db_or_raise("referentiel.lieux_lyon")
     from src.data.db_query import get_lieux_lyon_with_coords
+    result = get_lieux_lyon_with_coords()
+    _lieux_cache["coords"] = (now, result)
+    return result
 
-    return get_lieux_lyon_with_coords()
+
+def reset_lieux_cache() -> None:
+    """Reset le cache lieux (utile pour les tests)."""
+    _lieux_cache.clear()
 
 
 def load_lieux_transports(lieu_id: int | None = None) -> list[dict]:

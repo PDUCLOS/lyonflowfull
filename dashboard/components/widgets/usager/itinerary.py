@@ -28,6 +28,8 @@ def _resolve_address(text: str) -> tuple[float, float] | None:
 
     En mode démo : utilise ``src.data.mock.lyon_addresses.resolve_address``.
     En mode prod : query SQL fuzzy match sur ``referentiel.lieux_lyon``.
+
+    Robuste aux labels préfixés par emoji (cf. search_bar).
     """
     if _is_demo_mode():
         from src.data.mock.lyon_addresses import resolve_address
@@ -41,7 +43,15 @@ def _resolve_address(text: str) -> tuple[float, float] | None:
 
     if not text:
         return None
-    text_lower = text.lower().strip()
+    # Strip emoji préfixe (search_bar préfixe avec emoji + espace)
+    cleaned = text.strip()
+    if cleaned and ord(cleaned[0]) > 0x2700:
+        sp = cleaned.find(" ")
+        if sp > 0 and sp <= 3:
+            cleaned = cleaned[sp + 1:].strip()
+    text_lower = cleaned.lower().strip()
+    if not text_lower:
+        return None
     rows = execute_query(
         """
         SELECT lon, lat FROM referentiel.lieux_lyon

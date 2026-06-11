@@ -279,6 +279,10 @@ def _resolve_lieu(text: str) -> tuple[float, float] | None:
     """Résout un nom de lieu → (lon, lat) depuis ``referentiel.lieux_lyon``.
 
     En mode démo : utilise le mock ``lyon_addresses``.
+
+    Robuste aux labels préfixés par emoji (ex: ``"🌳 Parc de la Tête d'Or, Lyon"``
+    retourné par ``search_bar.render_search_bar()``). L'emoji et l'espace
+    initial sont strippés avant la query SQL.
     """
     if _is_demo_mode():
         from src.data.mock.lyon_addresses import resolve_address
@@ -292,7 +296,18 @@ def _resolve_lieu(text: str) -> tuple[float, float] | None:
 
     if not text:
         return None
-    text_lower = text.lower().strip()
+    # Strip emoji préfixe (search_bar préfixe avec "🏙 Villeurbanne", etc.)
+    # Les emojis sont en dehors du BMP, on strip le 1er "mot" s'il est <= 3 chars
+    # et ne contient que des non-ASCII.
+    cleaned = text.strip()
+    if cleaned and ord(cleaned[0]) > 0x2700:  # Symboles Unicode (emojis)
+        # Skip premier char + espace
+        sp = cleaned.find(" ")
+        if sp > 0 and sp <= 3:
+            cleaned = cleaned[sp + 1:].strip()
+    text_lower = cleaned.lower().strip()
+    if not text_lower:
+        return None
     rows = execute_query(
         """
         SELECT lon, lat FROM referentiel.lieux_lyon
