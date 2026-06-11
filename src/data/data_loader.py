@@ -952,10 +952,53 @@ def load_traffic_predictions_for_map(
     """
     if _maybe_force_mock(force_mock):
         return pd.DataFrame(usager_mock.MOCK_TRAFIC_PREDICTIONS)
+    _require_db_or_raise("gold.trafic_predictions")
     from src.data.db_query import get_traffic_predictions
 
-    _require_db_or_raise("gold.trafic_predictions")
     return get_traffic_predictions(horizon_minutes=horizon_minutes, limit=limit)
+
+
+def load_traffic_combined_for_map(force_mock: bool = False) -> pd.DataFrame:
+    """Vue unifiée trafic temps réel pour la carte dashboard (Sprint VPS-6).
+
+    Combine 3 sources par ordre de priorité :
+    1. ``gold_live`` — capteurs Grand Lyon < 5 min (le plus frais)
+    2. ``gold_pred`` — prédictions GNN/XGBoost H+1h (Sprint VPS-5)
+    3. ``tomtom`` — trafic temps réel TomTom (zones hors couverture boucles)
+
+    Source : ``gold.v_traffic_combined`` (vue SQL créée par
+    ``scripts/sql/create_tomtom_traffic.sql``).
+
+    En mode démo, retourne un DataFrame vide (le widget affiche un
+    message d'info). En prod, lève ``DashboardDataError`` si DB indispo.
+
+    Returns:
+        DataFrame avec colonnes ``channel_id, lat, lon, speed_kmh,
+        computed_at, source, confidence``. ``source`` ∈ {gold_live,
+        gold_pred, tomtom} indique la priorité.
+    """
+    if _maybe_force_mock(force_mock):
+        return pd.DataFrame()
+    _require_db_or_raise("gold.v_traffic_combined")
+    from src.data.db_query import get_traffic_combined
+
+    return get_traffic_combined()
+
+
+def get_tomtom_health() -> dict:
+    """Renvoie l'état du connecteur TomTom (Sprint VPS-6).
+
+    Pour les healthchecks dashboard / monitoring. Ne lève jamais
+    d'exception : renvoie un dict avec les compteurs (quota, cache size,
+    clé configurée ou non).
+    """
+    if _is_demo_mode():
+        return {"api_key_configured": False, "demo_mode": True}
+    try:
+        from src.ingestion.tomtom_traffic import health as tomtom_health
+        return tomtom_health()
+    except Exception as e:  # pragma: no cover
+        return {"error": str(e)}
 
 
 def load_mlflow_models(

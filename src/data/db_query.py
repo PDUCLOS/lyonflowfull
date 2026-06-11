@@ -878,3 +878,52 @@ def get_cadence_for_line(
     """
     rows = execute_query(query, tuple(params))
     return [dict(r) for r in rows]
+
+
+# =============================================================================
+# TomTom + vue unifiée trafic (Sprint VPS-6, 2026-06-11)
+# =============================================================================
+# Table bronze.tomtom_traffic : snapshots TomTom Flow (cf. scripts/sql/create_tomtom_traffic.sql)
+# Vue gold.v_tomtom_traffic_live : dernier snapshot par tuile (24h)
+# Vue gold.v_traffic_combined : fusion Gold live > Gold pred > TomTom
+# =============================================================================
+
+
+def get_traffic_combined(limit: int = 5000) -> pd.DataFrame:
+    """Vue unifiée trafic temps réel (Gold live + Gold pred + TomTom).
+
+    Sprint VPS-6 — permet au dashboard carte d'afficher du trafic
+    partout à Lyon, y compris hors couverture des boucles Grand Lyon.
+
+    Args:
+        limit: nb max de lignes retournées (défaut 5000).
+
+    Returns:
+        DataFrame avec colonnes ``channel_id, lat, lon, speed_kmh,
+        computed_at, source, confidence``. ``source`` ∈ {gold_live,
+        gold_pred, tomtom}.
+    """
+    query = """
+        SELECT channel_id, lat, lon, speed_kmh, computed_at, source, confidence
+        FROM gold.v_traffic_combined
+        LIMIT %s
+    """
+    return _df_from_query(query, (limit,))
+
+
+def get_tomtom_latest(limit: int = 100) -> pd.DataFrame:
+    """Dernier snapshot TomTom par tuile (vue ``gold.v_tomtom_traffic_live``).
+
+    Returns:
+        DataFrame avec colonnes ``tile_key, lat, lon, current_speed_kmh,
+        free_flow_speed_kmh, ratio, confidence, etat, color, fetched_at``.
+    """
+    query = """
+        SELECT tile_key, lat, lon, current_speed_kmh, free_flow_speed_kmh,
+               ratio, confidence, current_travel_time_s, free_flow_travel_time_s,
+               etat, color, fetched_at
+        FROM gold.v_tomtom_traffic_live
+        ORDER BY tile_key
+        LIMIT %s
+    """
+    return _df_from_query(query, (limit,))
