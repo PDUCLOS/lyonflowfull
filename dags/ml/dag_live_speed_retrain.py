@@ -32,11 +32,8 @@ from src.db.connection import raw_connection
 logger = logging.getLogger(__name__)
 
 # Mapping horizon_minutes (modèle) -> horizon_h (schéma gold)
-HORIZON_MAP = {
-    5: 0,    # H+5min  → 0h
+HORIZON_MAP = {  # 2026-06-11: focus H+1h stable
     60: 1,   # H+1h
-    180: 3,  # H+3h
-    360: 6,  # H+6h
 }
 
 # Vitesse limite par défaut (Lyon intra-muros : 50 km/h)
@@ -231,7 +228,7 @@ with DAG(
         "Alimente les widgets dashboard et la couche routing."
     ),
     default_args=default_args,
-    schedule="20 * * * *",  # hourly à :20 (cf analyse_trafficlyon.md)
+    schedule="*/30 * * * *",  # 2026-06-11: 30min, focus H+1h (cf analyse_trafficlyon.md)
     start_date=datetime(2026, 1, 1),
     catchup=False,
     max_active_runs=1,
