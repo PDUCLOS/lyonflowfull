@@ -114,9 +114,12 @@ def _nearest_velov_station(
     min_docks = 1 if require_docks else 0
     rows = execute_query(
         """
-        SELECT * FROM referentiel.nearest_velov_stations(%s, %s, 1, %s, %s)
+        SELECT * FROM referentiel.nearest_velov_stations(
+            %s::double precision, %s::double precision,
+            1, %s, %s
+        )
         """,
-        (lat, lon, 1, min_bikes, min_docks),
+        (lat, lon, min_bikes, min_docks),
     )
     return dict(rows[0]) if rows else None
 

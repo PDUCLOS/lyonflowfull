@@ -43,39 +43,46 @@ typed AS (
         CASE
             WHEN EXISTS (
                 SELECT 1 FROM bronze.jours_feries jf
-                WHERE jf.date = s.d
+                WHERE jf.date_ferie = s.d
             ) OR s.dow = 0 THEN 'sunday_holiday'
             WHEN EXISTS (
                 SELECT 1 FROM bronze.calendrier_scolaire cs
-                WHERE cs.date_debut <= s.d AND cs.date_fin >= s.d
+                WHERE cs.start_date <= s.d AND cs.end_date >= s.d
                   AND cs.zone = 'A'
             ) AND s.dow BETWEEN 1 AND 5 THEN 'vacation'
             WHEN s.dow = 6 THEN 'saturday'
             ELSE 'weekday'
         END AS day_type
     FROM snapshots s
+),
+hour_slots AS (
+    -- Pour chaque (line_ref, d, h, day_type), on liste les véhicules vus
+    -- dans la fenêtre de 1h, via LATERAL.
+    SELECT
+        t.line_ref,
+        t.d,
+        t.h,
+        t.day_type,
+        v.vehicle_ref
+    FROM typed t
+    CROSS JOIN LATERAL (
+        SELECT DISTINCT v2.vehicle_ref
+        FROM gold.tcl_vehicle_realtime v2
+        WHERE v2.line_ref = t.line_ref
+          AND v2.recorded_at >= t.d + t.h * INTERVAL '1 hour'
+          AND v2.recorded_at <  t.d + (t.h + 1) * INTERVAL '1 hour'
+    ) v
 )
 SELECT
     line_ref,
-    LPAD(h::text, 2, '0') || ':00' AS time_bucket,
+    LPAD(h::int::text, 2, '0') || ':00' AS time_bucket,
     day_type,
-    COUNT(DISTINCT (d, h)) AS n_observations,         -- nb de snapshots 5min
-    COUNT(DISTINCT vehicle_ref_per_slot) AS n_vehicles_seen
-FROM (
-    SELECT
-        line_ref, d, h, day_type,
-        -- véhicules vus dans ce snapshot de 5min (slot d'1h = 12 snapshots de 5min)
-        vehicle_ref
-    FROM typed t
-    CROSS JOIN LATERAL (
-        SELECT DISTINCT vehicle_ref
-        FROM gold.tcl_vehicle_realtime v
-        WHERE v.line_ref = t.line_ref
-          AND v.recorded_at >= t.d + t.h * INTERVAL '1 hour'
-          AND v.recorded_at <  t.d + (t.h + 1) * INTERVAL '1 hour'
-    ) v
-) raw
-GROUP BY line_ref, time_bucket, day_type;
+    -- nb d'observations 1h distinctes (1 par heure/slot de la semaine)
+    COUNT(DISTINCT (d::text || '-' || h::text))::int AS n_observations,
+    -- nb de véhicules uniques vus sur tous les slots de cette ligne/heure/type_jour
+    COUNT(DISTINCT vehicle_ref)::int AS n_vehicles_seen
+FROM hour_slots
+GROUP BY line_ref, h, day_type;
 
 COMMENT ON VIEW referentiel.v_cadence_observed_7d IS 'Observations brutes (7j glissants) des véhicules TCL par ligne × tranche horaire × type de jour. Base de calcul de la table lieux_calendrier.';
 

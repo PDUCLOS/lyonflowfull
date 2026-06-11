@@ -108,11 +108,12 @@ COMMENT ON FUNCTION referentiel.nearest_traffic_nodes IS 'K plus proches nœuds 
 
 -- Vitesse moyenne prédite H+1h (par défaut) pour un nœud routier
 -- Source : gold.trafic_predictions (Sprint VPS-5, populée par dag_live_speed_retrain)
+-- Schéma réel : (axis_key, horizon_h, calculated_at, speed_pred, etat_pred, color, lat, lon, ...)
 CREATE OR REPLACE FUNCTION referentiel.predicted_speed_for_node(
-    p_node_idx INTEGER,
+    p_axis_key TEXT,
     p_horizon_h INTEGER DEFAULT 1
 ) RETURNS TABLE (
-    node_idx        INTEGER,
+    axis_key        TEXT,
     speed_pred      DOUBLE PRECISION,
     etat_pred       TEXT,
     color           TEXT,
@@ -121,17 +122,17 @@ CREATE OR REPLACE FUNCTION referentiel.predicted_speed_for_node(
 LANGUAGE SQL
 STABLE
 AS $$
-    -- Prend la prédiction la plus récente pour ce nœud à l'horizon demandé
-    SELECT DISTINCT ON (tp.node_idx)
-        tp.node_idx, tp.speed_pred, tp.etat_pred, tp.color, tp.calculated_at
+    -- Prend la prédiction la plus récente pour cet axis_key à l'horizon demandé
+    SELECT
+        tp.axis_key, tp.speed_pred::float8, tp.etat_pred, tp.color, tp.calculated_at
     FROM gold.trafic_predictions tp
-    WHERE tp.node_idx = $1
+    WHERE tp.axis_key = $1
       AND tp.horizon_h = $2
-    ORDER BY tp.node_idx, tp.calculated_at DESC
+    ORDER BY tp.calculated_at DESC
     LIMIT 1;
 $$;
 
-COMMENT ON FUNCTION referentiel.predicted_speed_for_node IS 'Vitesse prédite pour un nœud routier à un horizon donné. gold.trafic_predictions (Sprint VPS-5).';
+COMMENT ON FUNCTION referentiel.predicted_speed_for_node IS 'Vitesse prédite pour un axis_key (capteur/segment) à un horizon donné. gold.trafic_predictions (Sprint VPS-5). Schéma v0.3.1.';
 
 
 -- Vue : vitesse moyenne par nœud (moyenne historique 7j)
@@ -184,24 +185,25 @@ LANGUAGE SQL
 STABLE
 AS $$
     WITH origin_node AS (
-        SELECT node_idx, lat, lon, distance_m
+        SELECT node_idx, properties_twgid, lat, lon, distance_m
         FROM referentiel.nearest_traffic_nodes($1, $2, 1)
     ),
     dest_node AS (
-        SELECT node_idx, lat, lon, distance_m
+        SELECT node_idx, properties_twgid, lat, lon, distance_m
         FROM referentiel.nearest_traffic_nodes($3, $4, 1)
     ),
     speed_lookup AS (
+        -- Lookup prédiction via axis_key = properties_twgid (mapping Sprint VPS-5)
         SELECT
             o.node_idx AS origin_node_idx,
             d.node_idx AS dest_node_idx,
             COALESCE(
-                (SELECT speed_pred FROM referentiel.predicted_speed_for_node(d.node_idx, $5) LIMIT 1),
+                (SELECT speed_pred FROM referentiel.predicted_speed_for_node(d.properties_twgid, $5) LIMIT 1),
                 (SELECT avg_speed_kmh FROM referentiel.v_avg_speed_7d WHERE node_idx = d.node_idx LIMIT 1),
                 $6
             ) AS speed_kmh,
             CASE
-                WHEN (SELECT speed_pred FROM referentiel.predicted_speed_for_node(d.node_idx, $5) LIMIT 1) IS NOT NULL
+                WHEN (SELECT speed_pred FROM referentiel.predicted_speed_for_node(d.properties_twgid, $5) LIMIT 1) IS NOT NULL
                     THEN 'predicted'
                 WHEN (SELECT avg_speed_kmh FROM referentiel.v_avg_speed_7d WHERE node_idx = d.node_idx LIMIT 1) IS NOT NULL
                     THEN 'avg_7d'
@@ -221,7 +223,7 @@ AS $$
         origin_node_idx, dest_node_idx, haversine_m,
         speed_kmh AS predicted_speed_kmh, source,
         -- durée en minutes : (distance_km / speed_kmh) * 60
-        ROUND((haversine_m / 1000.0) / NULLIF(speed_kmh, 0) * 60.0, 1) AS est_min
+        ROUND(((haversine_m / 1000.0) / NULLIF(speed_kmh, 0) * 60.0)::numeric, 1) AS est_min
     FROM dist;
 $$;
 
@@ -274,7 +276,7 @@ AS $$
         os.lat                 AS to_lat,
         os.lon                 AS to_lon,
         os.distance_m,
-        ROUND(os.distance_m / 1000.0 / $5 * 60.0, 1) AS duration_min,
+        ROUND((os.distance_m / 1000.0 / $5 * 60.0)::numeric, 1) AS duration_min,
         os.num_bikes_available  AS n_bikes_depart,
         NULL::INTEGER           AS n_docks_arrive
     FROM origin_station os
@@ -288,7 +290,7 @@ AS $$
         ds.station_name,
         os.lat, os.lon, ds.lat, ds.lon,
         referentiel.haversine_m(os.lat, os.lon, ds.lat, ds.lon) AS dist_m,
-        ROUND(referentiel.haversine_m(os.lat, os.lon, ds.lat, ds.lon) / 1000.0 / $6 * 60.0, 1),
+        ROUND((referentiel.haversine_m(os.lat, os.lon, ds.lat, ds.lon) / 1000.0 / $6 * 60.0)::numeric, 1),
         os.num_bikes_available,
         ds.num_docks_available
     FROM origin_station os, dest_station ds
@@ -303,7 +305,7 @@ AS $$
         ds.lat, ds.lon,
         $3::DOUBLE PRECISION, $4::DOUBLE PRECISION,
         ds.distance_m,
-        ROUND(ds.distance_m / 1000.0 / $5 * 60.0, 1),
+        ROUND((ds.distance_m / 1000.0 / $5 * 60.0)::numeric, 1),
         NULL::INTEGER,
         ds.num_docks_available
     FROM dest_station ds;
