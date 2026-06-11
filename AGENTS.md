@@ -117,6 +117,18 @@
 # 4. Pas de credentials en dur
 # 5. Containers non-root
 # 6. Pas de merge `kubernetes` ou `cloud-demo` dans `vps` ou `main` (dormantes AWS/GCP)
+# 7. **ZÉRO MOCK EN PROD** (Sprint VPS-6, 2026-06-11) : sur le VPS, ``LYONFLOW_DEMO_MODE=0``
+#    est OBLIGATOIRE. Toute source de données indisponible lève
+#    ``DashboardDataError`` et le widget affiche ``st.error()``. Pas de
+#    fallback mock silencieux en production. Mode démo réservé au dev local
+#    (``LYONFLOW_DEMO_MODE=1``).
+# 8. **Référentiel lieux en DB** : 21 lieux emblématiques Lyon stockés dans
+#    ``referentiel.lieux_lyon`` (PostgreSQL) — pas de codé-en-dur dans
+#    ``src/data/mock/lyon_addresses.py``. Les desserts TCL sont dans
+#    ``referentiel.lieux_transports``, les cadences dans
+#    ``referentiel.lieux_calendrier`` (calculées depuis
+#    ``gold.tcl_vehicle_realtime`` + ``bronze.calendrier_scolaire`` +
+#    ``bronze.jours_feries``).
 
 # Liens utiles
 # ------------

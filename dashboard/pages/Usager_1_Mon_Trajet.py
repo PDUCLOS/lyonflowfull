@@ -18,18 +18,15 @@ from dashboard.components.persona_guard import apply_persona_guard
 from dashboard.components.theme import inject_theme
 from dashboard.components.widgets.pro_tcl import render_traffic_map_compact
 from dashboard.components.widgets.usager import (
-    render_alternative_card,
     render_itinerary_result,
-    render_recommendation_card,
     render_search_bar,
-    render_steps,
     render_traffic_widget,
     render_velov_map_compact,
+    render_velov_trip,
     render_velov_widget,
     render_weather_widget,
-    render_why_explainer,
 )
-from src.data.mock.usager import MOCK_TRIP_RESULTS
+from src.data.exceptions import DashboardDataError
 
 st.set_page_config(
     page_title="Mon trajet — LyonFlowFull",
@@ -68,16 +65,14 @@ with col_btn[1]:
 
 st.markdown("---")
 
-# Résultats — la recommandation multimodale live (src.routing.pathfinder)
-# necessite des coordonnees origine/destination geocodees. En attendant le
-# binding complet recherche -> coords -> pathfinder, on affiche la trame demo.
+# Résultats — Sprint VPS-6 (2026-06-11) : 100% pipeline. Le pathfinding
+# multimode (voiture + Vélov) lit PostgreSQL, le référentiel lieux est en
+# DB, plus de mock silencieux.
 st.caption(
-    "ℹ️ Recommandation demo — l'integration src.routing.pathfinder requiert "
-    "le geocoding origine/destination (Sprint suivant). "
-    "Les options mock ne sont pas filtrées par origine/destination."
+    "ℹ️ Sprint VPS-6 : trajet Vélov + voiture calculés depuis le pipeline. "
+    "Source = PostgreSQL (silver.velov_clean, gold.trafic_predictions, "
+    "referentiel.lieux_lyon)."
 )
-trip = MOCK_TRIP_RESULTS["default"]
-options = trip.get("options", [])
 
 # Init : results_loaded=False au 1er render, set True au clic bouton.
 if search_clicked:
@@ -157,61 +152,29 @@ if st.session_state.get("results_loaded"):
 
     st.markdown("---")
 
-    # === RECOMMANDATIONS MULTIMODALES (mock) ===
-    st.markdown("### ⭐ Recommandations multimodales")
-    st.caption("Compare différents modes de transport (mock — Sprint 6+ : ranking traffic-aware)")
+    # === TRAJET VÉLOV + VOITURE SUR CARTE (Sprint VPS-6) ===
+    st.markdown("### 🚲 Trajet Vélov + marche (calculé depuis le pipeline)")
+    st.caption(
+        "Marche → Vélov → Marche. Stations Vélov + graphe routier Dijkstra + "
+        "prédictions trafic. Source 100% pipeline (silver.velov_clean, "
+        "gold.trafic_predictions)."
+    )
 
-    # Filtre : ne garder que les options dont le mode est autorisé
-    # (mapping option.mode → label user-facing)
-    MODE_TO_LABEL = {
-        "transit": "🚇 Métro",
-        "tram": "🚊 Tram",
-        "bus": "🚌 Bus",
-        "bike": "🚲 Vélov",
-        "car": "🚗 Voiture",
-        "walk": "🚶 Marche",
-    }
-    from typing import Any, cast
-
-    authorized = set(search.get("modes") or [])
-    # Cast options explicitly since mock dict inference returns Collection[str]
-    typed_options = cast(list[dict[str, Any]], options)
-    filtered_options = [opt for opt in typed_options if MODE_TO_LABEL.get(str(opt.get("mode"))) in authorized]
-    if not filtered_options:
-        filtered_options = options  # fallback si tous filtrés
-        st.caption("⚠️ Aucun mode autorisé ne correspond aux options mock — toutes affichées.")
-
-    if filtered_options:
-        # Sélecteur : l'utilisateur choisit la reco principale
-        mode_choices = [
-            f"{opt.get('mode_icon', '🚦')} {opt.get('mode_label', 'Mode')}" + f" — {opt.get('duration_text', '? min')}"
-            for opt in filtered_options
-        ]
-        selected_idx = st.selectbox(
-            "Mode de transport mis en avant",
-            range(len(filtered_options)),
-            format_func=lambda i: mode_choices[i],
-            index=0,
-            key="usager_reco_selector",
+    try:
+        render_velov_trip(
+            origin=search["origin"],
+            destination=search["destination"],
         )
-        top = filtered_options[selected_idx]
-        render_recommendation_card(top)
-        why = top.get("why", [])
-        if isinstance(why, str):
-            why = [why]
-        if why:
-            render_why_explainer(why)
-        if top.get("steps"):
-            with st.expander("🧭 Voir les étapes détaillées", expanded=False):
-                render_steps(top["steps"])
-
-    # Alternatives (les autres options)
-    if len(filtered_options) > 1:
-        st.markdown("### 🔄 Autres options")
-        for opt in filtered_options:
-            if opt is filtered_options[selected_idx]:
-                continue
-            render_alternative_card(opt)
+    except DashboardDataError as e:
+        st.error(f"⚠️ {e}")
 
     st.markdown("---")
-    st.caption("Mode démonstration · Données simulées · Sprint 6+ : branchement PostgreSQL Gold")
+
+    # === ITINÉRAIRE VOITURE (déjà calculé par render_itinerary_result) ===
+    # Si l'utilisateur a cliqué "Calculer l'itinéraire" plus haut, on a déjà
+    # la carte voiture. Sinon on l'invite à le faire.
+
+    st.caption(
+        "LyonFlowFull · v0.6.x · Sprint VPS-6 (2026-06-11) — "
+        "Zéro mock : 100% pipeline (PostgreSQL, Airflow, MLflow)"
+    )

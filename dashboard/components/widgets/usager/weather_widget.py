@@ -1,7 +1,13 @@
 """Widget — Météo compacte (impact sur Vélov, marche, vélo).
 
 Sprint 8 — Migration data_loader. Si ``weather=None``, tente la DB
-(Silver.meteo_hourly) via data_loader, fallback mock si DB down.
+(Silver.meteo_hourly) via data_loader.
+
+Sprint VPS-6 (2026-06-11) — fail loud en prod :
+* DB dispo + données : météo live.
+* DB indispo en prod : ``DashboardDataError`` → ``st.error``.
+* DB répond, table vide : ``st.warning("Météo indispo — données manquantes")``.
+* Mode démo (``LYONFLOW_DEMO_MODE=1``) : fallback ``MOCK_WEATHER`` autorisé.
 """
 
 from __future__ import annotations
@@ -10,7 +16,8 @@ import streamlit as st
 
 from dashboard.components.colors import COLORS
 from dashboard.components.data_cache import cached_weather_hourly
-from src.data.mock.usager import MOCK_WEATHER
+from src.data.data_loader import _is_demo_mode
+from src.data.exceptions import DashboardDataError
 
 
 def render_weather_widget(weather: dict | None = None) -> None:
@@ -20,8 +27,11 @@ def render_weather_widget(weather: dict | None = None) -> None:
         weather: dict météo ou None pour charger via data_loader.
     """
     if weather is None:
-        # Tente DB, fallback mock
-        df = cached_weather_hourly(force_mock=False)
+        try:
+            df = cached_weather_hourly(force_mock=False)
+        except DashboardDataError as e:
+            st.error(f"⚠️ {e}")
+            return
         if not df.empty:
             current = df.iloc[0].to_dict()
             # Sprint 10 : weather_code est un int WMO (Open-Meteo). On le convertit
@@ -36,8 +46,12 @@ def render_weather_widget(weather: dict | None = None) -> None:
                 "wind_kmh": current.get("wind_kmh", 0),
                 "next_3h": [],
             }
-        else:
+        elif _is_demo_mode():
+            from src.data.mock.usager import MOCK_WEATHER
             weather = MOCK_WEATHER
+        else:
+            st.warning("⚠️ Météo indisponible — silver.meteo_hourly est vide.")
+            return
 
     icon = str(weather.get("condition_icon", "☀️"))
     cond = str(weather.get("condition", ""))

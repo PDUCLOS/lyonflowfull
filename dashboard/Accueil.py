@@ -128,28 +128,41 @@ stat_cols = st.columns(4)
 # Sprint 7+ : query live DB pour vraies valeurs (fallback mock si DB indispo).
 # Avant ce fix : "1 100", "118", "458" hardcodés en dur — incohérent avec le
 # bandeau "🟢 Live" en haut de page.
-try:
-    from dashboard.components.data_cache import (
-        cached_tcl_lines,
-        cached_velov_stations,
-    )
+# Sprint VPS-6 (2026-06-11) — fail loud en prod : on lit la DB, pas de
+# fallback hardcodé. Les chiffres du mock historique (118, 458) sont
+# conservés comme référence dans le caption.
 
-    n_lines = len(cached_tcl_lines(force_mock=False)) or 118
-except Exception:
-    n_lines = 118  # fallback mock
+# Imports en bas du bloc : nécessaire car Accueil.py a du code Streamlit avant.
+from dashboard.components.data_cache import (  # noqa: E402
+    cached_tcl_lines,
+    cached_velov_stations,
+)
+from src.data.exceptions import DashboardDataError  # noqa: E402
+
+n_lines = "—"
+n_stations_velov = "—"
+try:
+    n_lines_raw = cached_tcl_lines(force_mock=False)
+    n_lines = len(n_lines_raw) if n_lines_raw else 0
+except DashboardDataError as e:
+    st.error(f"⚠️ Lignes TCL : {e}")
 
 try:
-    n_stations_velov = len(cached_velov_stations(force_mock=False)) or 458
-except Exception:
-    n_stations_velov = 458  # fallback mock
+    n_stations_velov_raw = cached_velov_stations(force_mock=False)
+    n_stations_velov = len(n_stations_velov_raw) if n_stations_velov_raw else 0
+except DashboardDataError as e:
+    st.error(f"⚠️ Stations Vélov : {e}")
 
 with stat_cols[0]:
     st.metric("Capteurs trafic", "1 100", delta="référence Grand Lyon")
 with stat_cols[1]:
-    st.metric("Lignes TCL", f"{n_lines}", delta="live" if n_lines != 118 else "📊 référence")
+    st.metric("Lignes TCL", f"{n_lines}", delta="live")
 with stat_cols[2]:
-    st.metric("Stations Vélov", f"{n_stations_velov}", delta="live" if n_stations_velov != 458 else "📊 référence")
+    st.metric("Stations Vélov", f"{n_stations_velov}", delta="live")
 with stat_cols[3]:
     st.metric("Prédictions/jour", "~26k", delta="GNN + XGBoost")
 
-st.caption("Données mises à jour toutes les 5 min · Source : Grand Lyon Open Data + Open-Meteo")
+st.caption(
+    "Données mises à jour toutes les 5 min · Source : Grand Lyon Open Data + Open-Meteo. "
+    "Référence : ~118 lignes TCL historiques, ~458 stations Vélov."
+)

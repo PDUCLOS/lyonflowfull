@@ -18,10 +18,11 @@ import streamlit as st
 
 from dashboard.components.colors import COLORS
 from dashboard.components.data_cache import cached_infra_bottlenecks
-from src.data.mock.pro_tcl import (
-    DIAGNOSIS_LABELS,
-    SEGMENTS,
-)
+from src.data.data_loader import _is_demo_mode
+from src.data.exceptions import DashboardDataError
+
+# DIAGNOSIS_LABELS = libellé FR d'un code SQL, pas une métrique inventée.
+from src.data.mock.pro_tcl import DIAGNOSIS_LABELS
 
 _DELAY_THRESHOLD = 120
 _SPEED_THRESHOLD = 25
@@ -56,12 +57,20 @@ def _bottlenecks_to_segments(df: pd.DataFrame) -> list[dict]:
 
 def render_correlation_matrix(line_id: str | None = None) -> None:
     """Affiche la matrice de corrélation bus × trafic pour une ou toutes lignes."""
-    df = cached_infra_bottlenecks(top=500)
+    try:
+        df = cached_infra_bottlenecks(top=500)
+    except DashboardDataError as e:
+        st.error(f"⚠️ {e}")
+        return
 
     if not df.empty:
         segments = _bottlenecks_to_segments(df)
-    else:
+    elif _is_demo_mode():
+        from src.data.mock.pro_tcl import SEGMENTS
         segments = SEGMENTS
+    else:
+        st.info("Aucun segment瓶颈 — gold.infrastructure_bottlenecks est vide.")
+        return
 
     if line_id:
         segments = [s for s in segments if s.get("line_id") == line_id]

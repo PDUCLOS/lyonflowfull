@@ -14,10 +14,11 @@ LyonFlowFull est une plateforme MLOps end-to-end de prédiction et d'analyse du 
 - 142 fichiers Python · ~18 600 lignes · 104+ tests
 - Couche data complète (db_query + data_loader) — `gold.trafic_predictions` repeuplée hourly
 - Sprint VPS-5 : connexion pipeline trafic (DAG manquant) + 166 lignes TCL sur Pro_4_Simulateur + sort/explore KPIs par ligne
+- **Sprint VPS-6 (2026-06-11) — ZÉRO MOCK SUR LE VPS** : fail loud via ``DashboardDataError``, ``LYONFLOW_DEMO_MODE=0`` obligatoire en prod. Référentiel lieux en DB (21 lieux + transports + cadences). Pathfinding multimode Vélov+voiture sur carte Folium. **78/78 tests verts**, ruff clean sur les nouveaux fichiers.
 
-**Phases (état 2026-06-10)** :
+**Phases (état 2026-06-11)** :
 - ✅ Phase 1 — Production-ready local (branche `main`, Sprints 1-7)
-- ✅ **Phase 2 — Déploiement VPS production (branche `vps`, ACTIVE)** — Sprints VPS 1-5 : TLS Let's Encrypt, systemd, monitoring Prometheus + Grafana + Alertmanager, backup automatique, métriques FastAPI custom, **connexion pipeline trafic**
+- ✅ **Phase 2 — Déploiement VPS production (branche `vps`, ACTIVE)** — Sprints VPS 1-6 : TLS Let's Encrypt, systemd, monitoring Prometheus + Grafana + Alertmanager, backup automatique, métriques FastAPI custom, connexion pipeline trafic, **politique fail loud + référentiel lieux + pathfinding multimode**
 - ⏸ Phase 3 (futur, AWS/GCP) — Kubernetes (branche `kubernetes`, dormante)
 - ⏸ Phase 4 (futur, AWS/GCP) — Cloud démo Jedha (branche `cloud-demo`, dormante)
 
@@ -35,6 +36,8 @@ Voir [AGENTS.md](AGENTS.md) pour les conventions et la mémoire projet.
 - **🔴 BACKUP OFFSITE OBLIGATOIRE** — JAMAIS de backup persistant sur le VPS (full à 100%, 583M libre sur 96G). Toujours offsite via `scripts/backup-offsite.sh` (Google Drive via rclone OU serveur SSH). Stream pur, rien d'écrit sur le disque VPS.
 - Langue: français pour pipeline/docs, anglais pour code modèle
 - SQL paramétré partout, zéro f-string dans les requêtes
+- **🔴 ZÉRO MOCK SUR LE VPS** (Sprint VPS-6) — Variable d'env ``LYONFLOW_DEMO_MODE=0`` obligatoire. Toute source de données indisponible (PostgreSQL, Airflow, MLflow) lève ``DashboardDataError`` et le widget affiche ``st.error``. Mode démo (``LYONFLOW_DEMO_MODE=1``) réservé au dev local. Plan détaillé : [docs/PLAN_NO_MOCK_VPS.md](docs/PLAN_NO_MOCK_VPS.md)
+- **🔴 RÉFÉRENTIEL LIEUX EN DB** (Sprint VPS-6) — Tables ``referentiel.lieux_lyon``, ``referentiel.lieux_transports``, ``referentiel.lieux_calendrier``. Plus de mock codé en dur dans ``src/data/mock/lyon_addresses.py``. Scripts SQL dans ``scripts/sql/``.
 
 ---
 

@@ -6,8 +6,8 @@ Affiche :
 - Comparaison temps actuel vs temps prédit (H+30min par défaut)
 - Bouton "recommencer"
 
-Sprint 8 — utilise la liste d'adresses centralisée
-src.data.mock.lyon_addresses.LYON_ADDRESSES (20 lieux avec coords GPS).
+Sprint VPS-6 (2026-06-11) — démoctisé : résolution d'adresse via
+``referentiel.lieux_lyon`` (PostgreSQL) au lieu du mock ``lyon_addresses``.
 """
 
 from __future__ import annotations
@@ -15,8 +15,54 @@ from __future__ import annotations
 import streamlit as st
 
 from dashboard.components.colors import COLORS
-from src.data.mock.lyon_addresses import get_address_names, resolve_address
+from src.data.data_loader import (
+    _is_demo_mode,
+    load_lyon_addresses,
+)
+from src.data.exceptions import DashboardDataError
 from src.routing import Itinerary, compute_itinerary
+
+
+def _resolve_address(text: str) -> tuple[float, float] | None:
+    """Résout une adresse texte → (lon, lat).
+
+    En mode démo : utilise ``src.data.mock.lyon_addresses.resolve_address``.
+    En mode prod : query SQL fuzzy match sur ``referentiel.lieux_lyon``.
+    """
+    if _is_demo_mode():
+        from src.data.mock.lyon_addresses import resolve_address
+        return resolve_address(text)
+
+    # Mode prod : DB
+    from src.data.db_query import _is_db_available, execute_query
+
+    if not _is_db_available():
+        raise DashboardDataError(source="referentiel.lieux_lyon", detail="DB indisponible")
+
+    if not text:
+        return None
+    text_lower = text.lower().strip()
+    rows = execute_query(
+        """
+        SELECT lon, lat FROM referentiel.lieux_lyon
+        WHERE is_active = TRUE
+          AND LOWER(name) LIKE %s
+        ORDER BY LENGTH(name) ASC
+        LIMIT 1
+        """,
+        (f"%{text_lower}%",),
+    )
+    if not rows:
+        return None
+    return (float(rows[0]["lon"]), float(rows[0]["lat"]))
+
+
+def _sample_addresses(n: int = 5) -> list[str]:
+    """Renvoie N adresses pour les messages d'erreur."""
+    try:
+        return load_lyon_addresses()[:n]
+    except Exception:
+        return []
 
 
 def render_itinerary_result(
@@ -31,11 +77,15 @@ def render_itinerary_result(
         destination: adresse de destination (texte)
         horizon_minutes: 0 = maintenant, sinon H+ (utilise vitesse prédite)
     """
-    origin_coords = resolve_address(origin)
-    dest_coords = resolve_address(destination)
+    try:
+        origin_coords = _resolve_address(origin)
+        dest_coords = _resolve_address(destination)
+    except DashboardDataError as e:
+        st.error(f"⚠️ {e}")
+        return
 
     if not origin_coords:
-        sample = ", ".join(get_address_names()[:5])
+        sample = ", ".join(_sample_addresses(5))
         st.error(f"❌ Adresse d'origine non reconnue : '{origin}'. Essayez : {sample}...")
         return
     if not dest_coords:

@@ -5,6 +5,11 @@ Affiche :
 - Health checks (6 checks depuis src.monitoring.health_checks)
 - Fraîcheur des données (Bronze ingestion times par source)
 - Boutons trigger manuel
+
+Sprint VPS-6 (2026-06-11) — fail loud en prod :
+* Mode démo (``LYONFLOW_DEMO_MODE=1``) : fallback ``MOCK_DAGS``/``MOCK_FRESHNESS``
+  préservé (Airflow indispo autorisé).
+* Mode prod : Airflow indispo → ``DashboardDataError`` propagé.
 """
 
 from __future__ import annotations
@@ -13,41 +18,87 @@ import streamlit as st
 
 from dashboard.components.colors import COLORS
 from src.data.airflow_client import get_dags_status, is_airflow_available, trigger_dag
+from src.data.data_loader import _is_demo_mode
+from src.data.exceptions import DashboardDataError
 from src.monitoring.health_checks import run_all_checks
 
 
 @st.cache_data(ttl=30, show_spinner=False)
 def _cached_dags() -> list[dict]:
-    return get_dags_status()
+    """Liste des DAGs Airflow. Fail loud en prod, fallback mock en démo."""
+    if _is_demo_mode() and not is_airflow_available():
+        from src.data.mock.pro_tcl_pipeline import MOCK_DAGS
+
+        return list(MOCK_DAGS)
+    # Mode prod ou Airflow dispo
+    try:
+        dags = get_dags_status()
+    except DashboardDataError:
+        raise
+    except Exception as e:
+        if _is_demo_mode():
+            from src.data.mock.pro_tcl_pipeline import MOCK_DAGS
+
+            return list(MOCK_DAGS)
+        raise DashboardDataError(
+            source="airflow",
+            detail=f"Airflow REST API a échoué : {e}",
+        ) from e
+    if not dags and not _is_demo_mode():
+        # Airflow répond mais 0 DAG : situation légitime (premier démarrage)
+        return []
+    return dags
 
 
 @st.cache_data(ttl=60, show_spinner=False)
 def _cached_freshness() -> list[dict]:
-    """Fraicheur live via gold.bronze_source_counts ou fallback mock."""
-    try:
-        from src.data.db_query import _is_db_available, get_bronze_source_counts
+    """Fraîcheur live des sources Bronze. Fail loud en prod."""
+    if _is_demo_mode():
+        try:
+            from src.data.db_query import _is_db_available, get_bronze_source_counts
 
-        if _is_db_available():
-            df = get_bronze_source_counts(hours=24)
-            if not df.empty:
-                rows: list[dict] = []
-                for _, r in df.iterrows():
-                    n_rows = int(r.get("n_rows", 0) or 0)
-                    last_fetch = r.get("last_fetch")
-                    rows.append(
-                        {
-                            "source": str(r.get("source", "—")),
-                            "last_ingestion": str(last_fetch) if last_fetch else "—",
-                            "n_records_24h": n_rows,
-                            "status": "ok" if n_rows > 0 else "stale",
-                        }
-                    )
-                return rows
-    except Exception:
-        pass
-    from src.data.mock.pro_tcl_pipeline import MOCK_FRESHNESS
+            if _is_db_available():
+                df = get_bronze_source_counts(hours=24)
+                if not df.empty:
+                    rows: list[dict] = []
+                    for _, r in df.iterrows():
+                        n_rows = int(r.get("n_rows", 0) or 0)
+                        last_fetch = r.get("last_fetch")
+                        rows.append(
+                            {
+                                "source": str(r.get("source", "—")),
+                                "last_ingestion": str(last_fetch) if last_fetch else "—",
+                                "n_records_24h": n_rows,
+                                "status": "ok" if n_rows > 0 else "stale",
+                            }
+                        )
+                    return rows
+        except Exception:
+            pass
+        from src.data.mock.pro_tcl_pipeline import MOCK_FRESHNESS
 
-    return list(MOCK_FRESHNESS)
+        return list(MOCK_FRESHNESS)
+    # Mode prod : DB obligatoire
+    from src.data.db_query import _is_db_available, get_bronze_source_counts
+
+    if not _is_db_available():
+        raise DashboardDataError(source="gold.bronze_source_counts", detail="PostgreSQL indisponible")
+    df = get_bronze_source_counts(hours=24)
+    if df.empty:
+        return []  # DB répond mais vide
+    rows: list[dict] = []
+    for _, r in df.iterrows():
+        n_rows = int(r.get("n_rows", 0) or 0)
+        last_fetch = r.get("last_fetch")
+        rows.append(
+            {
+                "source": str(r.get("source", "—")),
+                "last_ingestion": str(last_fetch) if last_fetch else "—",
+                "n_records_24h": n_rows,
+                "status": "ok" if n_rows > 0 else "stale",
+            }
+        )
+    return rows
 
 
 # Fallback mock — utilise par get_dags_status() quand Airflow indispo.
@@ -173,13 +224,24 @@ def render_pipeline_status() -> None:
     """Affiche le statut complet des pipelines."""
     st.markdown("##### 📊 Statut global")
 
-    if not is_airflow_available():
+    if not is_airflow_available() and not _is_demo_mode():
+        st.error(
+            "🔴 **Airflow REST API non joignable** — le statut DAGs est indisponible. "
+            "Vérifiez que le service Airflow tourne et que "
+            "`AIRFLOW_HOST`/`AIRFLOW_ADMIN_PASSWORD` sont corrects dans `.env`."
+        )
+        return
+    if not is_airflow_available() and _is_demo_mode():
         st.warning(
-            "🟡 Airflow REST API non joignable — les statuts DAGs sont en mode demo. "
-            "Configurez AIRFLOW_HOST/AIRFLOW_ADMIN_PASSWORD pour activer le live."
+            "🟡 Airflow REST API non joignable — affichage en **mode démo** "
+            "(fallback MOCK_DAGS autorisé quand `LYONFLOW_DEMO_MODE=1`)."
         )
 
-    dags = _cached_dags()
+    try:
+        dags = _cached_dags()
+    except DashboardDataError as e:
+        st.error(f"⚠️ {e}")
+        return
     cols = st.columns(4)
     n_success = sum(1 for d in dags if d.get("last_status") == "success")
     n_running = sum(1 for d in dags if d.get("last_status") == "running")
@@ -219,6 +281,15 @@ def render_dag_list() -> None:
     """Affiche la liste des DAGs avec leur état."""
     st.markdown("##### 📋 Liste des DAGs")
 
+    try:
+        dags = _cached_dags()
+    except DashboardDataError as e:
+        st.error(f"⚠️ {e}")
+        return
+    if not dags:
+        st.info("Aucun DAG enregistré pour le moment.")
+        return
+
     # En-tête
     header_cols = st.columns([3, 2, 1.5, 1, 1, 1.5])
     with header_cols[0]:
@@ -236,7 +307,8 @@ def render_dag_list() -> None:
 
     st.markdown("---")
 
-    for dag in _cached_dags():
+    # Réutilise la liste déjà chargée en tête de fonction
+    for dag in dags:
         cols = st.columns([3, 2, 1.5, 1, 1, 1.5])
         with cols[0]:
             st.markdown(f"**{dag.get('dag_id', '—')}**")
@@ -263,14 +335,25 @@ def render_health_panel() -> None:
     with st.spinner("Exécution des 6 health checks..."):
         try:
             results = run_all_checks()
+        except DashboardDataError as e:
+            st.error(f"⚠️ {e}")
+            return
         except Exception as e:
-            # Fallback mock si DB pas dispo
-            st.info(f"Mode mock — DB indisponible ({e})")
-            results = None
+            if _is_demo_mode():
+                st.info(f"Mode démo — health checks indisponibles ({e})")
+                results = None
+            else:
+                st.error(
+                    f"🔴 Health checks indisponibles ({e}). "
+                    "Vérifier que PostgreSQL répond et que le DAG "
+                    "data_quality_daily a tourné."
+                )
+                return
 
     if not results:
-        # Affichage mock
-        results = [
+        if _is_demo_mode():
+            # Fallback mock (mode démo uniquement)
+            results = [
             {
                 "name": "bronze_freshness",
                 "status": "ok",
@@ -352,7 +435,14 @@ def render_data_freshness() -> None:
     """Affiche la fraîcheur des données par source Bronze."""
     st.markdown("##### 📡 Fraîcheur des données (Bronze)")
 
-    freshness = _cached_freshness()
+    try:
+        freshness = _cached_freshness()
+    except DashboardDataError as e:
+        st.error(f"⚠️ {e}")
+        return
+    if not freshness:
+        st.info("Aucune source Bronze n'a collecté de données dans les 24 dernières heures.")
+        return
     # KPI
     n_ok = sum(1 for s in freshness if s.get("status") == "ok")
     n_stale = sum(1 for s in freshness if s.get("status") == "stale")

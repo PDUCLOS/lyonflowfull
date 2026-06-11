@@ -750,3 +750,131 @@ def get_amenagements_passes(limit: int = 50) -> pd.DataFrame:
         LIMIT %s
     """
     return _df_from_query(query, (limit,))
+
+
+# =============================================================================
+# Référentiel lieux × transports × calendrier (Sprint VPS-6, 2026-06-11)
+# =============================================================================
+# Ces 3 tables sont créées par :
+#   scripts/sql/create_referentiel_lieux.sql
+#   scripts/sql/create_referentiel_transports.sql
+#   scripts/sql/create_lieux_calendrier.sql
+# Le seed des cadences est fait par scripts/seed_lieux_calendrier.py.
+# =============================================================================
+
+
+def get_lieux_lyon_names(active_only: bool = True) -> list[str]:
+    """Liste des noms de lieux Lyon (pour autocomplete).
+
+    Returns:
+        Liste de strings ``['Part-Dieu, Lyon', 'Perrache, Lyon', ...]``.
+    """
+    where = "WHERE is_active = TRUE" if active_only else ""
+    rows = execute_query(
+        f"SELECT name FROM referentiel.lieux_lyon {where} ORDER BY name"
+    )
+    return [r["name"] for r in rows]
+
+
+def get_lieux_lyon_with_coords(active_only: bool = True) -> list[dict]:
+    """Lieux Lyon avec coordonnées GPS complètes.
+
+    Format identique à l'ancien mock ``LYON_ADDRESSES`` : ``{name, lon, lat, type}``.
+
+    Returns:
+        Liste de dicts ``[{name, lon, lat, type}, ...]``.
+    """
+    where = "WHERE is_active = TRUE" if active_only else ""
+    rows = execute_query(
+        f"""
+        SELECT name, lon, lat, type
+        FROM referentiel.lieux_lyon
+        {where}
+        ORDER BY name
+        """
+    )
+    return [dict(r) for r in rows]
+
+
+def get_lieux_transports(lieu_id: int | None = None) -> list[dict]:
+    """Dessertes TCL par lieu (référentiel N-N lieu ↔ ligne).
+
+    Args:
+        lieu_id: si fourni, filtre sur ce lieu. Sinon, tous les lieux actifs.
+
+    Returns:
+        Liste de dicts ``{lieu_id, lieu_name, line_ref, line_mode, stop_name,
+        distance_m, rank}`` triés par ``(lieu_name, rank)``.
+    """
+    if lieu_id is not None:
+        query = """
+            SELECT lt.lieu_id, ll.name AS lieu_name, lt.line_ref, lt.line_mode,
+                   lt.stop_name, lt.distance_m, lt.rank
+            FROM referentiel.lieux_transports lt
+            JOIN referentiel.lieux_lyon ll ON ll.lieu_id = lt.lieu_id
+            WHERE lt.is_active = TRUE AND lt.lieu_id = %s
+            ORDER BY ll.name, lt.rank
+        """
+        params: tuple = (lieu_id,)
+    else:
+        query = """
+            SELECT lt.lieu_id, ll.name AS lieu_name, lt.line_ref, lt.line_mode,
+                   lt.stop_name, lt.distance_m, lt.rank
+            FROM referentiel.lieux_transports lt
+            JOIN referentiel.lieux_lyon ll ON ll.lieu_id = lt.lieu_id
+            WHERE lt.is_active = TRUE
+            ORDER BY ll.name, lt.rank
+        """
+        params = ()
+    rows = execute_query(query, params)
+    return [dict(r) for r in rows]
+
+
+def get_cadence_for_line(
+    line_ref: str,
+    day_type: str | None = None,
+    time_bucket: str | None = None,
+) -> list[dict]:
+    """Cadence observée pour une ligne TCL (référentiel lieux_calendrier).
+
+    Args:
+        line_ref: identifiant TCL (ex. ``'M_A'``). NOT NULL.
+        day_type: filtre optionnel sur le type de jour.
+        time_bucket: filtre optionnel sur la tranche horaire (ex. ``'08:00'``).
+
+    Returns:
+        Liste de dicts ``{line_ref, day_type, time_bucket,
+        cadence_min_per_vehicle, n_observations, confidence}``.
+
+    Raises:
+        ValueError: si ``line_ref`` est vide.
+    """
+    if not line_ref:
+        raise ValueError("line_ref is required")
+
+    clauses = ["line_ref = %s"]
+    params: list = [line_ref]
+    if day_type is not None:
+        clauses.append("day_type = %s")
+        params.append(day_type)
+    if time_bucket is not None:
+        clauses.append("time_bucket = %s")
+        params.append(time_bucket)
+
+    query = f"""
+        SELECT line_ref, day_type, time_bucket, cadence_min_per_vehicle,
+               n_observations, confidence, computed_at
+        FROM referentiel.lieux_calendrier
+        WHERE {' AND '.join(clauses)}
+        ORDER BY
+            CASE day_type
+                WHEN 'weekday' THEN 1
+                WHEN 'saturday' THEN 2
+                WHEN 'sunday_holiday' THEN 3
+                WHEN 'vacation' THEN 4
+                ELSE 5
+            END,
+            time_bucket
+    """
+    rows = execute_query(query, tuple(params))
+    return [dict(r) for r in rows]

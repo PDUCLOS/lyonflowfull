@@ -1,7 +1,7 @@
 """Widget — Table des segments interactive.
 
 Segments chargés depuis gold.infrastructure_bottlenecks (croisement bus × trafic).
-Fallback mock si DB down.
+Sprint VPS-6 — fail loud en prod, fallback mock SEGMENTS uniquement en démo.
 """
 
 from __future__ import annotations
@@ -10,7 +10,12 @@ import pandas as pd
 import streamlit as st
 
 from dashboard.components.data_cache import cached_infra_bottlenecks
-from src.data.mock.pro_tcl import DIAGNOSIS_LABELS, SEGMENTS
+from src.data.data_loader import _is_demo_mode
+from src.data.exceptions import DashboardDataError
+
+# DIAGNOSIS_LABELS est un libellé FR d'un code SQL (cf. infra_bottlenecks.diagnosis),
+# pas une métrique inventée — on l'importe toujours.
+from src.data.mock.pro_tcl import DIAGNOSIS_LABELS
 
 _DELAY_THRESHOLD = 120
 _SPEED_THRESHOLD = 25
@@ -18,7 +23,11 @@ _SPEED_THRESHOLD = 25
 
 def render_segment_table(line_id: str | None = None, height: int = 400) -> None:
     """Affiche la table interactive des segments."""
-    df = cached_infra_bottlenecks(top=500)
+    try:
+        df = cached_infra_bottlenecks(top=500)
+    except DashboardDataError as e:
+        st.error(f"⚠️ {e}")
+        return
 
     if not df.empty:
         segments = []
@@ -35,8 +44,12 @@ def render_segment_table(line_id: str | None = None, height: int = 400) -> None:
                 "lat": row.get("lat", 0) or 0,
                 "lon": row.get("lng", 0) or 0,
             })
-    else:
+    elif _is_demo_mode():
+        from src.data.mock.pro_tcl import SEGMENTS
         segments = SEGMENTS
+    else:
+        st.info("Aucun segment瓶颈 — gold.infrastructure_bottlenecks est vide.")
+        return
 
     if line_id:
         segments = [s for s in segments if s["line_id"] == line_id]

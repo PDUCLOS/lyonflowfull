@@ -1,18 +1,23 @@
 """Client Airflow REST API — recupere DAGs + dagRuns + trigger.
 
-Mode operations: lit le statut live d'Airflow (DAGs, dernier run, duree,
-prochain run) via /api/v1/*. Fallback mock si Airflow indisponible.
+Sprint VPS-6 (2026-06-11) — fail loud en prod :
+
+* Mode prod (``LYONFLOW_DEMO_MODE!=1``) : Airflow indispo →
+  ``DashboardDataError``. Le widget appelant catch et affiche ``st.error``.
+* Mode démo (``LYONFLOW_DEMO_MODE=1``) : fallback ``MOCK_DAGS`` préservé
+  (dev local sans Airflow).
 
 Usage::
 
     from src.data.airflow_client import get_dags_status
     dags = get_dags_status()  # liste dicts compatible widgets
+    # En prod : lève DashboardDataError si Airflow indispo
 
 Variables env requises:
 - AIRFLOW_HOST (default: localhost)
 - AIRFLOW_PORT (default: 8080)
 - AIRFLOW_ADMIN_USERNAME (default: admin)
-- AIRFLOW_ADMIN_PASSWORD (default: vide -> bascule mock)
+- AIRFLOW_ADMIN_PASSWORD (default: vide -> bascule mock en démo, erreur en prod)
 """
 
 from __future__ import annotations
@@ -22,6 +27,9 @@ import os
 from typing import Any
 
 import requests
+
+from src.data.data_loader import _is_demo_mode
+from src.data.exceptions import DashboardDataError
 
 logger = logging.getLogger(__name__)
 
@@ -69,24 +77,39 @@ def reset_health_cache() -> None:
 def get_dags_status() -> list[dict[str, Any]]:
     """Liste des DAGs + dernier run (compatible widget pipeline_management).
 
-    Retourne une liste de dicts avec les clefs:
-    dag_id, schedule, last_run, last_status, last_duration_s, next_run,
-    description, paused.
+    Returns:
+        Liste de dicts avec les clefs:
+        dag_id, schedule, last_run, last_status, last_duration_s, next_run,
+        description, paused.
 
-    Fallback mock si Airflow indisponible.
+    Raises:
+        DashboardDataError: en mode prod, si Airflow indispo (health=False)
+            ou si la requête REST échoue.
     """
     if not is_airflow_available():
-        from src.data.mock.pro_tcl_pipeline import MOCK_DAGS
-
-        return list(MOCK_DAGS)
+        if _is_demo_mode():
+            from src.data.mock.pro_tcl_pipeline import MOCK_DAGS
+            return list(MOCK_DAGS)
+        raise DashboardDataError(
+            source="airflow",
+            detail=(
+                f"Airflow REST API non joignable ({_airflow_base_url()}/health). "
+                "Vérifier que le service tourne et que AIRFLOW_HOST/AIRFLOW_ADMIN_PASSWORD "
+                "sont corrects dans .env"
+            ),
+        )
 
     try:
         return _fetch_dags_from_airflow()
     except Exception as exc:
-        logger.warning("Airflow REST API failed, fallback mock: %s", exc)
-        from src.data.mock.pro_tcl_pipeline import MOCK_DAGS
-
-        return list(MOCK_DAGS)
+        if _is_demo_mode():
+            from src.data.mock.pro_tcl_pipeline import MOCK_DAGS
+            logger.warning("Airflow REST failed, fallback mock (démo): %s", exc)
+            return list(MOCK_DAGS)
+        raise DashboardDataError(
+            source="airflow",
+            detail=f"Airflow REST API a échoué : {exc}",
+        ) from exc
 
 
 def _fetch_dags_from_airflow() -> list[dict[str, Any]]:

@@ -96,15 +96,28 @@ def render_model_registry() -> None:
     """Affiche la liste des modèles dans le registry."""
     st.markdown("##### 📚 Model Registry")
 
-    # Sprint 9 — charge les modèles depuis MLflow live (fallback mock si down)
-    try:
-        from dashboard.components.data_cache import cached_mlflow_experiment_summary, cached_mlflow_models
+    # Sprint 9 — charge les modèles depuis MLflow live.
+    # Sprint VPS-6 — fail loud en prod, fallback mock en démo uniquement.
+    from dashboard.components.data_cache import (
+        cached_mlflow_experiment_summary,
+        cached_mlflow_models,
+    )
+    from src.data.data_loader import _is_demo_mode
+    from src.data.exceptions import DashboardDataError
 
+    try:
         summary = cached_mlflow_experiment_summary(force_mock=False)
         models = cached_mlflow_models(force_mock=False)
+    except DashboardDataError as e:
+        st.error(f"⚠️ {e}")
+        return
     except Exception:
-        models = MOCK_MODELS
-        summary = {"available": False, "run_count": 0, "model_names": []}
+        if _is_demo_mode():
+            models = MOCK_MODELS
+            summary = {"available": False, "run_count": 0, "model_names": []}
+        else:
+            st.error("🔴 MLflow a échoué — registry modèles indisponible.")
+            return
 
     # Bandeau source (transparence MLflow)
     if summary.get("available"):
@@ -113,8 +126,8 @@ def render_model_registry() -> None:
         )
     else:
         st.warning(
-            "🟡 **MLflow non accessible** — affichage fallback mock. "
-            "Pour activer : démarrer le service `mlflow` (docker compose) "
+            "🟡 **MLflow non accessible** — affichage fallback mock (mode démo). "
+            "Pour activer en prod : démarrer le service `mlflow` (docker compose) "
             "et recharger cette page."
         )
 
@@ -328,18 +341,32 @@ def render_metrics_comparison() -> None:
     """Affiche la comparaison des métriques entre modèles."""
     st.markdown("##### 📊 Comparaison métriques (XGBoost vs GNN)")
 
-    # Sources live MLflow (fallback mock auto via data_loader)
-    try:
-        from dashboard.components.data_cache import cached_mlflow_models
+    # Sources live MLflow (fail loud en prod, fallback mock en démo)
+    from dashboard.components.data_cache import cached_mlflow_models
+    from src.data.data_loader import _is_demo_mode
+    from src.data.exceptions import DashboardDataError
 
-        models = cached_mlflow_models(force_mock=False) or MOCK_MODELS
+    try:
+        models = cached_mlflow_models(force_mock=False)
+    except DashboardDataError as e:
+        st.error(f"⚠️ {e}")
+        return
     except Exception:
-        models = MOCK_MODELS
+        if _is_demo_mode():
+            models = MOCK_MODELS
+        else:
+            st.error("🔴 MLflow a échoué — métriques modèles indisponibles.")
+            return
+
+    if not models:
+        st.info("Aucun modèle tracké dans MLflow pour le moment.")
+        return
 
     xgb_h60 = next((m for m in models if m.get("name") == "xgboost_speed_h60"), None)
     gnn_h60 = next((m for m in models if m.get("name") == "stgcn_gnn_h60"), None)
 
     if not xgb_h60 or not gnn_h60:
+        st.info("Modèles XGBoost H+60min ou GNN H+60min non trouvés dans le registry.")
         return
 
     # Defensive : valeurs None-safe pour éviter crash si MLflow renvoie un dict partiel
