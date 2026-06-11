@@ -140,12 +140,20 @@ def _nearest_velov_stations_pair(
     """
     rows = execute_query(
         """
-        SELECT * FROM referentiel.nearest_velov_stations(
+        SELECT station_id, station_name, lat, lon,
+               num_bikes_available, num_docks_available,
+               distance_m, is_active,
+               'origin' AS role
+        FROM referentiel.nearest_velov_stations(
             %s::double precision, %s::double precision,
             1, 1, 0
         )
         UNION ALL
-        SELECT * FROM referentiel.nearest_velov_stations(
+        SELECT station_id, station_name, lat, lon,
+               num_bikes_available, num_docks_available,
+               distance_m, is_active,
+               'dest' AS role
+        FROM referentiel.nearest_velov_stations(
             %s::double precision, %s::double precision,
             1, 0, 1
         )
@@ -153,13 +161,11 @@ def _nearest_velov_stations_pair(
         (origin_lat, origin_lon, dest_lat, dest_lon),
     )
     out: dict[str, dict | None] = {"origin": None, "dest": None}
-    # rows est RealDictRow-like : on distingue via num_bikes vs num_docks
-    for r in rows[:2]:  # garde 2 max (1 par requête)
+    for r in rows[:2]:
         d = dict(r)
-        if d.get("num_bikes_available", 0) >= 1 and d.get("num_docks_available", 0) < 1:
-            out["origin"] = d
-        elif d.get("num_docks_available", 0) >= 1:
-            out["dest"] = d
+        role = d.pop("role", None)
+        if role in ("origin", "dest"):
+            out[role] = d
     return out
 
 
