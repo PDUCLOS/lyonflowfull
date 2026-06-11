@@ -108,17 +108,17 @@ def _build_graph_from_db(
         WITH latest AS (
             SELECT DISTINCT ON (channel_id)
                 channel_id,
-                ST_StartPoint(geom_wgs84) AS start_pt,
-                ST_EndPoint(geom_wgs84) AS end_pt,
-                ST_X(ST_StartPoint(geom_wgs84)) AS start_lon,
-                ST_Y(ST_StartPoint(geom_wgs84)) AS start_lat,
-                ST_X(ST_EndPoint(geom_wgs84)) AS end_lon,
-                ST_Y(ST_EndPoint(geom_wgs84)) AS end_lat,
-                ST_Length(geom_wgs84::geography) AS length_m,
+                ST_StartPoint(geom) AS start_pt,
+                ST_EndPoint(geom) AS end_pt,
+                ST_X(ST_StartPoint(geom)) AS start_lon,
+                ST_Y(ST_StartPoint(geom)) AS start_lat,
+                ST_X(ST_EndPoint(geom)) AS end_lon,
+                ST_Y(ST_EndPoint(geom)) AS end_lat,
+                ST_Length(geom::geography) AS length_m,
                 vitesse_kmh AS current_speed_kmh,
                 measurement_time
             FROM silver.trafic_boucles_clean
-            WHERE geom_wgs84 IS NOT NULL
+            WHERE geom IS NOT NULL
               AND vitesse_kmh IS NOT NULL
               AND measurement_time > NOW() - INTERVAL '1 hour'
             ORDER BY channel_id, measurement_time DESC

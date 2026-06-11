@@ -189,17 +189,34 @@ def _road_itinerary_between(
         Dict {total_length_m, total_duration_min, segments_count, speed_kmh}
         ou None si pas de chemin / DB indispo.
 
-    Note perf (Sprint VPS-6 hotfix, 2026-06-11) : Dijkstra routier sur le
-    segment inter-stations Vélov est en général *plus long* que haversine +
-    cycliste 15 km/h, et plante sur dette schéma v0.3.1 (geom_wgs84 manquant).
-    On skip le Dijkstra et on note "haversine fallback" — la durée reste
-    correcte à ±20% pour un trajet Vélov urbain. Sprint 7+ : fix schéma
-    silver.trafic_boucles_clean et réactiver Dijkstra.
+    Sprint 8 (post-VPS-6) : réactivé après fix dette schéma v0.3.1
+    (geom_wgs84 → geom dans src/routing/graph.py, sprint-8). Maintenant
+    le Dijkstra fonctionne sur le VPS, on l'utilise pour le segment
+    Vélov inter-stations. Si exception (DB indispo, graphe vide),
+    fallback gracieux haversine + vitesse cycliste.
     """
-    # Sprint VPS-6 hotfix : court-circuit Dijkstra pour Vélov (gain 5-10s
-    # par requête sur le VPS, et fallback gracieux en attendant le fix
-    # dette schéma v0.3.1).
-    return None  # caller fallback haversine + vitesse cycliste
+    try:
+        from src.routing.pathfinder import compute_itinerary
+
+        itin = compute_itinerary(
+            origin_lon=lon_a,
+            origin_lat=lat_a,
+            destination_lon=lon_b,
+            destination_lat=lat_b,
+            horizon_minutes=0,
+            use_cache=True,
+        )
+        if itin is None:
+            return None
+        return {
+            "total_length_m": itin.total_length_m,
+            "total_duration_min": itin.total_duration_min,
+            "segments_count": len(itin.segments),
+            "average_speed_kmh": itin.average_speed_kmh,
+        }
+    except Exception as e:
+        logger.debug("road_itinerary_between fallback haversine: %s", e)
+        return None
 
 
 def _haversine_velov_candidate(lat: float, lon: float) -> dict:
