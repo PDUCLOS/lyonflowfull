@@ -101,6 +101,23 @@ def render_velov_trip(
         return
 
     _render_velov_summary(itin)
+    # Diagnostics VIDE/PLEINE
+    for diag in itin.diagnostics:
+        st.warning(diag)
+    # Alternatives smart-routed
+    _render_alternatives_card(
+        "Alternatives à la borne de départ",
+        itin.origin_alternatives,
+        "origin",
+    )
+    _render_alternatives_card(
+        "Alternatives à la borne d'arrivée",
+        itin.dest_alternatives,
+        "dest",
+    )
+    # Légende maillage
+    _render_neighbors_legend(itin.origin_neighbors, itin.dest_neighbors)
+    # Carte + segments
     _render_velov_map(itin, origin_coords, dest_coords, height=height)
     _render_velov_segments(itin)
 
@@ -191,10 +208,14 @@ def _render_velov_map(
         )
         polyline.add_to(m)
 
-        # Marker Vélov (uniquement sur les nœuds stations)
+    # Maillage : lignes entre voisines < 200m (Sprint VPS-6 hotfix 2)
+    # On dessine les arêtes du graphe local pour visualiser la grappe.
+    _render_velov_maillage(m, itin.origin_neighbors, itin.dest_neighbors)
+
+    # Markers Vélov aux stations utilisées
+    for seg in itin.segments:
         if seg.mode in ("cycle",) or (seg.mode == "walk" and "Vélov" in seg.notes) \
                 or (seg.mode == "destination" and seg.from_label and seg.from_label != "Destination"):
-            # Marker station Vélov départ/arrivée
             if seg.n_bikes_depart is not None or seg.n_docks_arrive is not None:
                 popup = (
                     f"🚲 <b>{seg.to_label if seg.mode == 'walk' else seg.from_label}</b><br/>"
@@ -202,7 +223,6 @@ def _render_velov_map(
                     + (f"🅿️ Docks libres : {seg.n_docks_arrive}<br/>" if seg.n_docks_arrive is not None else "")
                     + f"📏 {seg.distance_m:.0f} m · 🕐 {seg.duration_min} min"
                 )
-                # Position de la station = to_label (départ) ou from_label (arrivée)
                 if seg.mode == "walk":
                     s_lat, s_lon = seg.to_lat, seg.to_lon
                 else:
@@ -257,6 +277,124 @@ def _render_velov_segments(itin: VelovItinerary) -> None:
                 """,
                 unsafe_allow_html=True,
             )
+
+
+def _render_alternatives_card(
+    title: str,
+    alternatives: list[dict],
+    role: str,  # "origin" | "dest"
+) -> None:
+    """Carte horizontale des bornes alternatives (Sprint VPS-6 hotfix 2).
+
+    Affichée quand la borne #1 a status VIDE ou PLEINE. Propose à l'usager
+    de marcher vers une autre borne à proximité.
+    """
+    if not alternatives:
+        return
+    st.markdown(f"##### 🔄 Alternatives à la borne {role} ({len(alternatives)})")
+    st.caption(
+        f"Marche à pied entre bornes voisines — la borne #1 est "
+        f"{'VIDE' if role == 'origin' else 'PLEINE'}"
+        if (role == 'origin' and any(a.get('status') == 'VIDE' for a in alternatives))
+        else "Bornes alternatives avec vélos/docks disponibles."
+    )
+    cols = st.columns(min(3, len(alternatives)))
+    for col, alt in zip(cols, alternatives):
+        if not alt.get("velov_name"):
+            continue
+        # Couleur selon dispo
+        status = alt.get("status", "UNKNOWN")
+        color_map = {
+            "OK": COLORS["status_ok"],
+            "FAIBLE": COLORS["status_warning"],
+            "VIDE": COLORS["status_critical"],
+            "PLEINE": COLORS["status_warning"],
+        }
+        color = color_map.get(status, COLORS["text_muted"])
+        bikes = alt.get("num_bikes_available", 0) or 0
+        docks = alt.get("num_docks_available", 0) or 0
+        walk_min = round(alt.get("distance_m", 0) / 1000.0 / 4.5 * 60.0, 1)
+        with col:
+            st.html(
+                f"""
+                <div class="lyonflow-card" style="border-left:4px solid {color};">
+                    <div style="font-size:0.85rem;font-weight:600;">
+                        🚲 {alt['velov_name']}
+                    </div>
+                    <div style="font-size:0.7rem;opacity:0.7;margin-top:0.2rem;">
+                        {status} · 📏 {int(alt.get('distance_m', 0))}m · 🚶 {walk_min}min
+                    </div>
+                    <div style="font-size:1.2rem;font-weight:700;margin:0.3rem 0;color:{color};">
+                        🚴 {bikes} vélos
+                    </div>
+                    <div style="font-size:0.7rem;opacity:0.7;">
+                        🅿️ {docks} docks
+                    </div>
+                </div>
+                """
+            )
+
+
+def _render_velov_maillage(
+    m,
+    origin_neighbors: list[dict],
+    dest_neighbors: list[dict],
+) -> None:
+    """Dessine le maillage local des bornes Vélov (lignes entre voisines < 200m).
+
+    Sprint VPS-6 hotfix 2 — visualise la "grappe" de bornes autour des
+    2 stations Vélov utilisées. Permet à l'usager de voir s'il y a des
+    alternatives à pied.
+    """
+    edges_drawn = set()  # éviter doublons (a-b == b-a)
+    for neighbors, color in (
+        (origin_neighbors, "#1976D2"),    # bleu pour voisines départ
+        (dest_neighbors, "#388E3C"),       # vert pour voisines arrivée
+    ):
+        for n in neighbors:
+            sid_a = n.get("station_id_a", "")
+            sid_b = n.get("station_id_b", "")
+            if not sid_a or not sid_b:
+                continue
+            key = tuple(sorted([sid_a, sid_b]))
+            if key in edges_drawn:
+                continue
+            edges_drawn.add(key)
+            try:
+                line = folium.PolyLine(
+                    locations=[
+                        [n["lat_a"], n["lon_a"]],
+                        [n["lat_b"], n["lon_b"]],
+                    ],
+                    color=color,
+                    weight=1.5,
+                    opacity=0.4,
+                    dash_array="2, 4",
+                )
+                line.add_to(m)
+            except KeyError:
+                # Fallback si la shape du dict est différente
+                pass
+
+
+def _render_neighbors_legend(
+    origin_neighbors: list[dict],
+    dest_neighbors: list[dict],
+) -> None:
+    """Mini-caption : nombre de voisines à < 200m pour chaque borne."""
+    parts = []
+    if origin_neighbors:
+        parts.append(
+            f"🚲 Borne départ : {len(origin_neighbors)} voisine(s) à < 200m "
+            f"(maillage actif)"
+        )
+    if dest_neighbors:
+        parts.append(
+            f"🚲 Borne arrivée : {len(dest_neighbors)} voisine(s) à < 200m "
+            f"(maillage actif)"
+        )
+    if parts:
+        st.caption(" · ".join(parts))
 
 
 def _segment_popup_html(seg: VelovSegment) -> str:

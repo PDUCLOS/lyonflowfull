@@ -927,3 +927,194 @@ def get_tomtom_latest(limit: int = 100) -> pd.DataFrame:
         LIMIT %s
     """
     return _df_from_query(query, (limit,))
+
+
+# =============================================================================
+# Lieux × Vélov proches (Sprint VPS-6, 2026-06-11)
+# =============================================================================
+# Vue referentiel.v_lieux_velov_proches : 1 lieu × top 3 bornes Vélov
+# Vue referentiel.v_lieux_velov_plus_proche : 1 lieu × 1 borne la + proche
+# Vue materialisée créée par scripts/sql/create_lieux_velov_proches.sql
+# =============================================================================
+
+
+def get_lieux_with_velov(k: int = 3, only_operational: bool = True) -> list[dict]:
+    """Renvoie la liste des lieux du référentiel avec leurs K bornes Vélov
+    les plus proches (par distance haversine).
+
+    Args:
+        k: nombre de bornes Vélov par lieu (défaut 3, max 10).
+        only_operational: si True, filtre les bornes Vélov inactives.
+
+    Returns:
+        Liste de dicts par lieu :
+        ``{lieu_id, lieu_name, lieu_lon, lieu_lat, lieu_type,
+        bornes: [{station_id, velov_name, velov_lon, velov_lat,
+                  num_bikes_available, num_docks_available, distance_m}]}``
+    """
+    query = """
+        SELECT
+            lieu_id, lieu_name, lieu_lon, lieu_lat, lieu_type,
+            station_id, velov_name, velov_lon, velov_lat,
+            num_bikes_available, num_docks_available, distance_m
+        FROM referentiel.v_lieux_velov_proches
+        WHERE rank <= %s
+        {extra_filter}
+        ORDER BY lieu_id, distance_m
+    """.format(extra_filter="AND num_bikes_available >= 0" if only_operational else "")
+    rows = execute_query(query, (k,))
+    # Regroupement par lieu
+    out: dict[int, dict] = {}
+    for r in rows:
+        lid = r["lieu_id"]
+        if lid not in out:
+            out[lid] = {
+                "lieu_id": lid,
+                "lieu_name": r["lieu_name"],
+                "lieu_lon": r["lieu_lon"],
+                "lieu_lat": r["lieu_lat"],
+                "lieu_type": r["lieu_type"],
+                "bornes": [],
+            }
+        out[lid]["bornes"].append(
+            {
+                "station_id": r["station_id"],
+                "velov_name": r["velov_name"],
+                "velov_lon": r["velov_lon"],
+                "velov_lat": r["velov_lat"],
+                "num_bikes_available": r["num_bikes_available"],
+                "num_docks_available": r["num_docks_available"],
+                "distance_m": float(r["distance_m"]),
+            }
+        )
+    return list(out.values())
+
+
+def get_velov_proche_for_lieu(lieu_id: int) -> dict | None:
+    """Renvoie la borne Vélov la plus proche d'un lieu (top 1).
+
+    Args:
+        lieu_id: identifiant du lieu (referentiel.lieux_lyon.lieu_id).
+
+    Returns:
+        Dict {station_id, velov_name, velov_lon, velov_lat,
+        num_bikes_available, num_docks_available, distance_m} ou None.
+    """
+    query = """
+        SELECT station_id, velov_name, velov_lon, velov_lat,
+               num_bikes_available, num_docks_available, distance_m
+        FROM referentiel.v_lieux_velov_plus_proche
+        WHERE lieu_id = %s
+    """
+    rows = execute_query(query, (lieu_id,))
+    return dict(rows[0]) if rows else None
+
+
+# =============================================================================
+# Vélov smart routing + maillage (Sprint VPS-6, 2026-06-11)
+# =============================================================================
+# Vues referentiel.v_lieux_velov_smart et v_velov_neighbors
+# Cf. scripts/sql/create_velov_maillage.sql
+# =============================================================================
+
+
+def get_smart_velov_for_lieu(lieu_id: int, k: int = 3) -> list[dict]:
+    """Top K bornes Vélov scorées pour un lieu, avec statut dispo.
+
+    Args:
+        lieu_id: identifiant du lieu (referentiel.lieux_lyon.lieu_id).
+        k: nombre de bornes à retourner (max 3 dans la vue, défaut 3).
+
+    Returns:
+        Liste de dicts triées par rank (1 = meilleur choix) :
+        ``{station_id, velov_name, velov_lon, velov_lat,
+        num_bikes_available, num_docks_available, distance_m,
+        score, status, rank}`` où status ∈ {VIDE, PLEINE, FAIBLE, OK}.
+    """
+    query = """
+        SELECT station_id, velov_name, velov_lon, velov_lat,
+               num_bikes_available, num_docks_available,
+               distance_m, score, status, rank
+        FROM referentiel.v_lieux_velov_smart
+        WHERE lieu_id = %s AND rank <= %s
+        ORDER BY rank
+    """
+    rows = execute_query(query, (lieu_id, k))
+    return [dict(r) for r in rows]
+
+
+def get_smart_velov_for_lieux(lieu_ids: list[int], k: int = 3) -> dict[int, list[dict]]:
+    """Top K bornes Vélov scorées pour plusieurs lieux (1 query).
+
+    Args:
+        lieu_ids: liste de lieu_id.
+        k: nb bornes par lieu (max 3).
+
+    Returns:
+        Dict {lieu_id: [bornes...]} avec bornes triées par rank.
+    """
+    if not lieu_ids:
+        return {}
+    query = """
+        SELECT lieu_id, station_id, velov_name, velov_lon, velov_lat,
+               num_bikes_available, num_docks_available,
+               distance_m, score, status, rank
+        FROM referentiel.v_lieux_velov_smart
+        WHERE lieu_id = ANY(%s) AND rank <= %s
+        ORDER BY lieu_id, rank
+    """
+    rows = execute_query(query, (lieu_ids, k))
+    out: dict[int, list[dict]] = {lid: [] for lid in lieu_ids}
+    for r in rows:
+        out[r["lieu_id"]].append(dict(r))
+    return out
+
+
+def get_velov_neighbors(station_id: str, k: int = 5) -> list[dict]:
+    """Top K voisines d'une borne Vélov (distance < 200m).
+
+    Args:
+        station_id: identifiant de la borne (silver.velov_clean.station_id).
+        k: nb de voisines à retourner (défaut 5).
+
+    Returns:
+        Liste de dicts triées par distance ASC :
+        ``{station_id_b, name_b, bikes_b, docks_b, lon_b, lat_b, distance_m}``.
+    """
+    query = """
+        SELECT station_id_b, name_b, bikes_b, docks_b, lon_b, lat_b, distance_m
+        FROM referentiel.v_velov_neighbors
+        WHERE station_id_a = %s
+        ORDER BY distance_m
+        LIMIT %s
+    """
+    rows = execute_query(query, (station_id, k))
+    return [dict(r) for r in rows]
+
+
+def get_velov_neighbors_batch(station_ids: list[str], k: int = 3) -> dict[str, list[dict]]:
+    """Voisines de plusieurs bornes (1 query).
+
+    Args:
+        station_ids: liste de station_id.
+        k: nb voisines par borne.
+
+    Returns:
+        Dict {station_id: [voisines...]} avec voisines triées par distance.
+    """
+    if not station_ids:
+        return {}
+    query = """
+        SELECT station_id_a, station_id_b, name_b, bikes_b, docks_b,
+               lon_b, lat_b, distance_m
+        FROM referentiel.v_velov_neighbors
+        WHERE station_id_a = ANY(%s)
+        ORDER BY station_id_a, distance_m
+    """
+    rows = execute_query(query, (station_ids,))
+    out: dict[str, list[dict]] = {sid: [] for sid in station_ids}
+    for r in rows:
+        d = dict(r)
+        if len(out[r["station_id_a"]]) < k:
+            out[r["station_id_a"]].append(d)
+    return out

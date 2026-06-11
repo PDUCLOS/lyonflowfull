@@ -61,7 +61,7 @@ class VelovSegment:
 
 @dataclass
 class VelovItinerary:
-    """Itinéraire Vélov complet (3 segments)."""
+    """Itinéraire Vélov complet (3 segments) + alternatives smart-routed."""
 
     origin_label: str
     destination_label: str
@@ -69,6 +69,17 @@ class VelovItinerary:
     total_distance_m: float = 0.0
     total_duration_min: float = 0.0
     source: str = "db"  # "db" | "demo"
+    # Sprint VPS-6 hotfix (2026-06-11) — alternatives si la borne #1 est
+    # vide/pleine. Liste de paires (rank 2, 3) avec mêmes champs que
+    # origin_station / dest_station, chargées via v_lieux_velov_smart.
+    origin_alternatives: list[dict] = field(default_factory=list)
+    dest_alternatives: list[dict] = field(default_factory=list)
+    # Voisines (maillage < 200m) des bornes utilisées. Pour le rendu
+    # carte "grappe" et les suggestions à pied.
+    origin_neighbors: list[dict] = field(default_factory=list)
+    dest_neighbors: list[dict] = field(default_factory=list)
+    # Diagnostics (warnings d'aide à l'utilisateur)
+    diagnostics: list[str] = field(default_factory=list)
 
     @property
     def feasible(self) -> bool:
@@ -191,6 +202,32 @@ def _road_itinerary_between(
     return None  # caller fallback haversine + vitesse cycliste
 
 
+def _haversine_velov_candidate(lat: float, lon: float) -> dict:
+    """Fallback : 1 candidate Vélov à partir d'un simple haversine.
+
+    Utilisé quand le point GPS est hors périmètre des 21 lieux du
+    référentiel (rare : Lyon + banlieue). Renvoie un dict compatible
+    avec le format ``v_lieux_velov_smart`` (status='UNKNOWN').
+
+    Returns:
+        Dict {station_id: None, velov_name: '?', velov_lon, velov_lat,
+        num_bikes_available: None, num_docks_available: None,
+        distance_m, score: 0, status: 'UNKNOWN', rank: 1}.
+    """
+    return {
+        "station_id": None,
+        "velov_name": "(point libre)",
+        "velov_lon": lon,
+        "velov_lat": lat,
+        "num_bikes_available": None,
+        "num_docks_available": None,
+        "distance_m": 0.0,
+        "score": 0.0,
+        "status": "UNKNOWN",
+        "rank": 1,
+    }
+
+
 def plan_velov_trip(
     origin_lat: float,
     origin_lon: float,
@@ -228,8 +265,79 @@ def plan_velov_trip(
 
     _require_db_or_raise("silver.velov_clean")
 
+    # Sprint VPS-6 hotfix 2 (2026-06-11) — Smart routing : on récupère
+    # le top 3 bornes scorées (distance + vélos/docks dispo) en 1 seule
+    # query via la vue referentiel.v_lieux_velov_smart. Si la borne #1
+    # est VIDE ou PLEINE, on bascule automatiquement sur #2 ou #3.
+    from src.data.db_query import get_smart_velov_for_lieu
+
+    # Approximation : on snap les coords GPS vers le lieu le plus
+    # proche du référentiel (dans un rayon 5km), pour bénéficier du
+    # scoring. Si hors périmètre, fallback sur haversine direct.
+    def _nearest_lieu_id(lat: float, lon: float) -> int | None:
+        from src.data.db_query import execute_query
+        rows = execute_query(
+            """
+            SELECT lieu_id FROM referentiel.lieux_lyon
+            WHERE is_active = TRUE
+            ORDER BY referentiel.haversine_m(lat, lon, %s, %s) ASC
+            LIMIT 1
+            """,
+            (lat, lon),
+        )
+        return int(rows[0]["lieu_id"]) if rows else None
+
+    origin_lieu_id = _nearest_lieu_id(origin_lat, origin_lon)
+    dest_lieu_id = _nearest_lieu_id(dest_lat, dest_lon)
+
+    origin_candidates = get_smart_velov_for_lieu(origin_lieu_id, k=3) if origin_lieu_id else []
+    dest_candidates = get_smart_velov_for_lieu(dest_lieu_id, k=3) if dest_lieu_id else []
+
+    # Si pas de lieu proche, fallback sur haversine direct
+    if not origin_candidates:
+        origin_candidates = [_haversine_velov_candidate(origin_lat, origin_lon)]
+    if not dest_candidates:
+        dest_candidates = [_haversine_velov_candidate(dest_lat, dest_lon)]
+
+    # Smart selection : prend la 1ère borne avec status=OK, sinon FAIBLE,
+    # sinon la 1ère dispo. Si toutes VIDE/PLEINE, garde la 1ère et ajoute
+    # un diagnostic.
+    def _pick_best(cands: list[dict], role: str) -> tuple[dict, list[dict]]:
+        if not cands:
+            return None, []
+        # Essaie OK > FAIBLE > toute dispo > 1ère par défaut
+        for priority in ("OK", "FAIBLE"):
+            for c in cands:
+                if c.get("status") == priority:
+                    alts = [c2 for c2 in cands if c2 is not c]
+                    return c, alts
+        # Aucune "OK"/"FAIBLE" : prendre la 1ère, alternatives = reste
+        chosen = cands[0]
+        alts = cands[1:]
+        return chosen, alts
+
+    origin_station, origin_alts = _pick_best(origin_candidates, "origin")
+    dest_station, dest_alts = _pick_best(dest_candidates, "dest")
+
+    if origin_station is None:
+        return VelovItinerary(
+            origin_label=origin_label,
+            destination_label=dest_label,
+            segments=[],
+            source="db",
+        )
+    if dest_station is None:
+        return VelovItinerary(
+            origin_label=origin_label,
+            destination_label=dest_label,
+            segments=[],
+            source="db",
+        )
+
+    _require_db_or_raise("silver.velov_clean")
+
     # Sprint VPS-6 hotfix (2026-06-11) — les 2 lookups Vélov sont
-    # séquentiels et représentent 2× le temps d'une query haversine sur
+    # séquentiels et représentent 2x le temps d'une query haversine sur
     # l'ensemble de silver.velov_clean. On batche en une seule query
     # UNION ALL : 1 round-trip DB au lieu de 2.
     stations = _nearest_velov_stations_pair(
@@ -253,31 +361,84 @@ def plan_velov_trip(
             source="db",
         )
 
+    # Sprint VPS-6 hotfix 2 — calcul du maillage (voisines) des 2 bornes
+    # choisies. Si on a des station_id, on récupère leurs voisines à
+    # < 200m. Sinon (cas UNKNOWN) on skip.
+    from src.data.db_query import get_velov_neighbors_batch
+
+    origin_sid = origin_station.get("station_id")
+    dest_sid = dest_station.get("station_id")
+    neighbors_map = get_velov_neighbors_batch(
+        [sid for sid in (origin_sid, dest_sid) if sid],
+        k=3,
+    )
+    origin_neighbors = neighbors_map.get(origin_sid, []) if origin_sid else []
+    dest_neighbors = neighbors_map.get(dest_sid, []) if dest_sid else []
+
+    # Diagnostics
+    diagnostics = []
+    if origin_station.get("status") == "VIDE":
+        diagnostics.append(
+            f"⚠️ Borne de départ {origin_station.get('velov_name')} est VIDE. "
+            f"Alternatives à pied : " + ", ".join(
+                f"{a.get('velov_name')} ({int(a.get('distance_m', 0))}m, {a.get('num_bikes_available')} vélos)"
+                for a in origin_alts[:2] if a.get("velov_name")
+            )
+        )
+    if origin_station.get("status") == "PLEINE":
+        diagnostics.append(
+            f"⚠️ Borne de départ {origin_station.get('velov_name')} est PLEINE. "
+            f"Alternatives à pied : " + ", ".join(
+                f"{a.get('velov_name')} ({int(a.get('distance_m', 0))}m, {a.get('num_docks_available')} docks)"
+                for a in origin_alts[:2] if a.get("velov_name")
+            )
+        )
+    if dest_station.get("status") == "VIDE":
+        diagnostics.append(
+            f"⚠️ Borne d'arrivée {dest_station.get('velov_name')} est VIDE (pas de vélos dispo). "
+            f"Alternatives à pied : " + ", ".join(
+                f"{a.get('velov_name')} ({int(a.get('distance_m', 0))}m, {a.get('num_bikes_available')} vélos)"
+                for a in dest_alts[:2] if a.get("velov_name")
+            )
+        )
+    if dest_station.get("status") == "PLEINE":
+        diagnostics.append(
+            f"⚠️ Borne d'arrivée {dest_station.get('velov_name')} est PLEINE (pas de dock dispo). "
+            f"Alternatives à pied : " + ", ".join(
+                f"{a.get('velov_name')} ({int(a.get('distance_m', 0))}m, {a.get('num_docks_available')} docks)"
+                for a in dest_alts[:2] if a.get("velov_name")
+            )
+        )
+    if not origin_alts and origin_station.get("status") in ("VIDE", "PLEINE"):
+        diagnostics.append("⚠️ Aucune borne alternative dans un rayon 1.5 km. Considérer bus/métro.")
+    if not dest_alts and dest_station.get("status") in ("VIDE", "PLEINE"):
+        diagnostics.append("⚠️ Aucune borne alternative dans un rayon 1.5 km. Considérer bus/métro.")
+
     # Segment 1 : marche origine → Vélov
-    walk_to = origin_station["distance_m"]
+    walk_to = origin_station.get("distance_m", 0.0)
     seg1 = VelovSegment(
         mode="walk",
         from_label=origin_label,
-        to_label=origin_station["station_name"],
+        to_label=origin_station.get("velov_name", "?"),
         from_lon=origin_lon,
         from_lat=origin_lat,
-        to_lon=float(origin_station["lon"]),
-        to_lat=float(origin_station["lat"]),
+        to_lon=float(origin_station["velov_lon"]),
+        to_lat=float(origin_station["velov_lat"]),
         distance_m=walk_to,
         duration_min=round(walk_to / 1000.0 / walk_speed_kmh * 60.0, 1),
-        n_bikes_depart=origin_station["num_bikes_available"],
+        n_bikes_depart=origin_station.get("num_bikes_available"),
         notes="Marche vers la station Vélov" if walk_to <= MAX_WALK_TO_STATION_M
               else f"⚠️ Marche longue ({int(walk_to)}m) — considérer bus/métro",
     )
 
     # Segment 2 : Vélov entre les 2 stations
     cycle_dist_m = _haversine_m(
-        float(origin_station["lat"]), float(origin_station["lon"]),
-        float(dest_station["lat"]), float(dest_station["lon"]),
+        float(origin_station["velov_lat"]), float(origin_station["velov_lon"]),
+        float(dest_station["velov_lat"]), float(dest_station["velov_lon"]),
     )
     road = _road_itinerary_between(
-        float(origin_station["lon"]), float(origin_station["lat"]),
-        float(dest_station["lon"]), float(dest_station["lat"]),
+        float(origin_station["velov_lon"]), float(origin_station["velov_lat"]),
+        float(dest_station["velov_lon"]), float(dest_station["velov_lat"]),
     )
     if road and road["total_length_m"] > 0:
         cycle_dist_m = road["total_length_m"]
@@ -288,32 +449,32 @@ def plan_velov_trip(
         cycle_note = f"Haversine (fallback, ~{cyclist_speed_kmh} km/h)"
     seg2 = VelovSegment(
         mode="cycle",
-        from_label=origin_station["station_name"],
-        to_label=dest_station["station_name"],
-        from_lon=float(origin_station["lon"]),
-        from_lat=float(origin_station["lat"]),
-        to_lon=float(dest_station["lon"]),
-        to_lat=float(dest_station["lat"]),
+        from_label=origin_station.get("velov_name", "?"),
+        to_label=dest_station.get("velov_name", "?"),
+        from_lon=float(origin_station["velov_lon"]),
+        from_lat=float(origin_station["velov_lat"]),
+        to_lon=float(dest_station["velov_lon"]),
+        to_lat=float(dest_station["velov_lat"]),
         distance_m=cycle_dist_m,
         duration_min=cycle_dur_min,
-        n_bikes_depart=origin_station["num_bikes_available"],
-        n_docks_arrive=dest_station["num_docks_available"],
+        n_bikes_depart=origin_station.get("num_bikes_available"),
+        n_docks_arrive=dest_station.get("num_docks_available"),
         notes=cycle_note,
     )
 
     # Segment 3 : marche Vélov → destination
-    walk_from = dest_station["distance_m"]
+    walk_from = dest_station.get("distance_m", 0.0)
     seg3 = VelovSegment(
         mode="destination",
-        from_label=dest_station["station_name"],
+        from_label=dest_station.get("velov_name", "?"),
         to_label=dest_label,
-        from_lon=float(dest_station["lon"]),
-        from_lat=float(dest_station["lat"]),
+        from_lon=float(dest_station["velov_lon"]),
+        from_lat=float(dest_station["velov_lat"]),
         to_lon=dest_lon,
         to_lat=dest_lat,
         distance_m=walk_from,
         duration_min=round(walk_from / 1000.0 / walk_speed_kmh * 60.0, 1),
-        n_docks_arrive=dest_station["num_docks_available"],
+        n_docks_arrive=dest_station.get("num_docks_available"),
         notes="Marche vers la destination" if walk_from <= MAX_WALK_TO_STATION_M
               else f"⚠️ Marche longue ({int(walk_from)}m)",
     )
@@ -328,6 +489,11 @@ def plan_velov_trip(
         total_distance_m=total_dist,
         total_duration_min=total_dur,
         source="db",
+        origin_alternatives=origin_alts,
+        dest_alternatives=dest_alts,
+        origin_neighbors=origin_neighbors,
+        dest_neighbors=dest_neighbors,
+        diagnostics=diagnostics,
     )
 
 
