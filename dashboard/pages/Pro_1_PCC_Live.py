@@ -47,7 +47,7 @@ with q1:
     with tab_traffic:
         render_traffic_map(
             height=320,
-            horizon_default=30,
+            horizon_default=60,  # Sprint 8+ : focus H+1h
             show_horizon_selector=True,
             show_legend=True,
             show_caption=False,

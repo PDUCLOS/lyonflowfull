@@ -49,15 +49,15 @@ def render_velov_widget(stations: list | None = None, max_stations: int = 3) -> 
         st.info("Aucune station Vélov disponible — vérifiez le pipeline.")
         return
 
-    # Sprint 10 : look-up prédictions H+30min
-    pred_30 = _build_predictions_lookup(30)
+    # Sprint 8+ (2026-06-12) — focus H+1h. Avant (Sprint 10) : H+30min.
+    pred_60 = _build_predictions_lookup(60)
 
     cols = st.columns(len(stations))
     for col, s in zip(cols, stations):
         bikes = s.get("bikes_available", 0)
         stands = s.get("stands_available", 0)
         station_id = str(s.get("station_id", ""))
-        pred = pred_30.get(station_id)
+        pred = pred_60.get(station_id)
 
         # Couleur selon dispo
         if bikes == 0:
@@ -70,7 +70,7 @@ def render_velov_widget(stations: list | None = None, max_stations: int = 3) -> 
             color = COLORS["status_ok"]
             status = "✅ OK"
 
-        # Prédiction H+30min — delta et icône
+        # Prédiction H+1h — delta et icône (Sprint 8+ : focus H+1h)
         if pred is not None:
             delta = pred - bikes
             if delta > 0:
@@ -79,7 +79,7 @@ def render_velov_widget(stations: list | None = None, max_stations: int = 3) -> 
                 pred_html = f'<span style="color:{COLORS["status_warning"]};">↘ {pred} ({delta})</span>'
             else:
                 pred_html = f'<span style="opacity:0.7;">→ {pred}</span>'
-            pred_line = f'<div style="font-size:0.7rem;opacity:0.8;margin-top:0.3rem;">H+30min : {pred_html}</div>'
+            pred_line = f'<div style="font-size:0.7rem;opacity:0.8;margin-top:0.3rem;">H+1h : {pred_html}</div>'
         else:
             pred_line = ""
 

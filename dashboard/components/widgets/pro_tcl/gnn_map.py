@@ -28,7 +28,10 @@ from src.models.stgcn_wrapper import STGCNWrapper
 
 logger = logging.getLogger(__name__)
 
-_DEFAULT_HORIZONS = (5, 15, 30, 60, 180, 360)
+# Sprint 8+ (2026-06-12) — focus H+1h strict. Le widget n'expose
+# que H+1h (60 min) dans l'interface. Les autres horizons restent
+# entraînés en arrière-plan mais l'utilisateur ne les voit plus.
+_DEFAULT_HORIZONS = (60,)
 
 
 # -----------------------------------------------------------------------------
@@ -169,16 +172,20 @@ def render_traffic_map(
 
     horizon = horizon_default
     if show_horizon_selector:
+        # Sprint 8+ (2026-06-12) — focus H+1h. Le selectbox propose
+        # uniquement H+1h (60 min) — cf. _DEFAULT_HORIZONS.
         try:
             default_idx = _DEFAULT_HORIZONS.index(horizon_default)
         except ValueError:
-            default_idx = 3
+            default_idx = 0
         horizon = st.selectbox(
-            "Horizon de prédiction",
+            "Horizon de prédiction (focus H+1h)",
             _DEFAULT_HORIZONS,
             index=default_idx,
             key=f"traffic_map_horizon_{key_suffix}",
             format_func=lambda x: f"H+{x}min",
+            help="Sprint 8+ : focus H+1h. Les autres horizons ne sont plus "
+                 "entraînés (1 modèle au lieu de 4 = -75% compute).",
         )
 
     merged = _load_merged(horizon, limit=500)

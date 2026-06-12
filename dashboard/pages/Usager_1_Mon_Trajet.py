@@ -161,7 +161,7 @@ if st.session_state.get("results_loaded"):
 
     # Carte trafic compacte — vitesses prédites par tronçon (Sprint 10)
     st.markdown("##### 🗺️ Carte du trafic — H+30min")
-    render_traffic_map_compact(height=320, horizon_minutes=30, key_suffix="usager")
+    render_traffic_map_compact(height=320, horizon_minutes=60, key_suffix="usager")  # Sprint 8+ : focus H+1h
 
     # === 2. Trajet Vélov + marche sur carte (calculé en live) ===
     st.markdown("---")
@@ -225,12 +225,17 @@ if st.session_state.get("results_loaded"):
             unsafe_allow_html=True,
         )
     with itin_col2:
+        # Sprint 8+ (2026-06-12) — focus H+1h strict. L'utilisateur n'a
+        # plus à choisir : tout est H+1h. L'option 0 (Maintenant)
+        # reste supportée en interne mais n'est plus exposée.
         horizon = st.selectbox(
-            "🕐 Trafic",
-            [0, 30, 60, 180, 360],
+            "🕐 Trafic (focus H+1h)",
+            [60],
             index=0,
-            format_func=lambda x: "Maintenant" if x == 0 else f"H+{x}min",
+            format_func=lambda x: f"H+{x}min",
             key="itin_horizon",
+            help="Sprint 8+ : focus H+1h. Les autres horizons sont entraînés "
+                 "mais l'interface n'expose que H+1h (cas d'usage principal).",
         )
 
     if st.button(

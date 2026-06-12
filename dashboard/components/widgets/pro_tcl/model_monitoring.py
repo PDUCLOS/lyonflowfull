@@ -279,8 +279,11 @@ def render_model_registry_status() -> None:
 
     # Detail table
     st.markdown("---")
-    st.markdown("**Status par horizon**")
-    horizons = [5, 15, 30, 60, 180, 360]
+    st.markdown("**Status par horizon (Sprint 8+ : focus H+1h)**")
+    # Sprint 8+ — seul H+1h (60 min) est entraîné. Les autres
+    # horizons sont conservés dans la liste pour le monitoring
+    # (compat ModelRegistry) mais marqués "non entraînés".
+    horizons = [60]
     for h in horizons:
         reg = ModelRegistry.get(h)
         s = reg.status()

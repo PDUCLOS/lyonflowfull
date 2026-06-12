@@ -71,14 +71,14 @@ def _sample_addresses(n: int = 5) -> list[str]:
 def render_itinerary_result(
     origin: str,
     destination: str,
-    horizon_minutes: int = 0,
+    horizon_minutes: int = 60,  # Sprint 8+ : focus H+1h (0 = maintenant)
 ) -> None:
     """Affiche l'itinéraire entre 2 adresses.
 
     Args:
         origin: adresse d'origine (texte)
         destination: adresse de destination (texte)
-        horizon_minutes: 0 = maintenant, sinon H+ (utilise vitesse prédite)
+        horizon_minutes: 60 = H+1h (défaut Sprint 8+), 0 = maintenant
     """
     try:
         origin_coords = _resolve_address(origin)
