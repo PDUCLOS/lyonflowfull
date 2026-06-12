@@ -1,0 +1,5 @@
+[allowlist]
+description = "False positives: test files with fake secrets"
+paths = [
+  "tests/security/test_scrub_secrets.py",
+]
