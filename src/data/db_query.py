@@ -6,14 +6,14 @@ Streamlit. Toutes les fonctions:
 
 * Utilisent du SQL paramétré (psycopg2 %s, JAMAIS de f-string)
 * Retournent des `pandas.DataFrame` (pratique pour Streamlit/Plotly)
-* Ont un fallback gracieux vers les widgets parents (DashboardDataError) si la DB est down (Sprint 8 — viré les mocks silencieux)
+* Levent ``DashboardDataError`` si la DB est down (politique zero mock Sprint 8)
 * Sont testables hors ligne (les tests monkeypatchent ``_is_db_available``)
 
 Pattern d'utilisation dans un widget::
 
-    from src.data.db_query import get_latest_traffic, get_traffic_aggregates
+    from src.data.db_query import get_latest_traffic
 
-    df = get_latest_traffic(limit=50)  # DataFrame ou mock fallback
+    df = get_latest_traffic(limit=50)  # DataFrame ou DashboardDataError
     st.dataframe(df)
 
 Pour les widgets, voir le pattern dans ``dashboard/components/widgets/usager/traffic_widget.py``.
@@ -48,7 +48,7 @@ def _is_db_available() -> bool:
         _db_available_cache = test_connection()
         if not _db_available_cache:
             logger.warning(
-                "DB non disponible — les widgets basculeront sur les données mock. "
+                "DB non disponible — les widgets afficheront une erreur. "
                 "Vérifiez POSTGRES_HOST/POSTGRES_PORT/POSTGRES_PASSWORD dans .env"
             )
     return _db_available_cache

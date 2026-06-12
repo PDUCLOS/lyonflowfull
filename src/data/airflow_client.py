@@ -1,11 +1,9 @@
 """Client Airflow REST API — recupere DAGs + dagRuns + trigger.
 
-Sprint VPS-6 (2026-06-11) — fail loud en prod :
+Sprint 8 (2026-06-12) — fail loud partout :
 
-* Mode prod (``LYONFLOW_DEMO_MODE!=1``) : Airflow indispo →
-  ``DashboardDataError``. Le widget appelant catch et affiche ``st.error``.
-* Mode démo (``LYONFLOW_DEMO_MODE=1``) : fallback ``MOCK_DAGS`` préservé
-  (dev local sans Airflow).
+* Airflow indispo → ``DashboardDataError``. Le widget appelant catch et
+  affiche ``st.error``. Aucun fallback mock.
 
 Usage::
 
