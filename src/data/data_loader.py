@@ -644,61 +644,47 @@ def load_kpis_12_months(force_mock: bool = False) -> pd.DataFrame:
     return get_kpis_12_months()
 
 
+def _derive_label_unit(kpi_key: str) -> tuple[str, str]:
+    """Dérive (label, unit) depuis le kpi_key — fallback générique."""
+    known = {
+        "part_modale_tc":     ("Part modale TC",     "%"),
+        "ponctualite":        ("Ponctualité",        "%"),
+        "co2_evite_tonnes":   ("CO₂ évité",          "t"),
+        "bottlenecks_actifs": ("Bottlenecks",         ""),
+        "satisfaction_pct":  ("Satisfaction",        "%"),
+        "total_trips":        ("Trajets totaux",      ""),
+        "avg_speed_kmh":     ("Vitesse moy.",        "km/h"),
+        "prediction_accuracy": ("Précision préd.",  "%"),
+        "congestion_index":   ("Indice congestion",  ""),
+    }
+    return known.get(kpi_key, (kpi_key.replace("_", " ").title(), ""))
+
+
 def load_elu_kpis_dict(force_mock: bool = False) -> dict:
     """KPIs 12 mois au format dict attendu par les widgets Élu.
 
     Reconstitue le format ``{kpi_key: {current, delta_ytd, target_2026, history, ...}}``
-    depuis le DataFrame plat. Compatible avec les widgets existants qui
-    utilisent le mock KPI_12_MONTHS.
+    depuis le DataFrame plat. Le kpi_key est libre — label/unit sont déduits
+    de la clé via ``_derive_label_unit()``.
 
     Returns:
-        Dict avec les 5 KPIs principaux (part_modale_tc, ponctualite,
-        co2_evite_tonnes, bottlenecks_actifs, satisfaction_pct).
+        Dict avec les KPIs trouvés dans la MV (ou mock). Si la MV est vide,
+        retourne un dict avec les 5 KPIs standards à zéro.
     """
     df = load_kpis_12_months(force_mock=force_mock)
+
+    # Fallback si MV absente ou vide
     if df.empty:
-        # Fallback structure vide
         return {
-            "part_modale_tc": {
-                "label": "Part modale TC",
-                "current": 0,
-                "unit": "%",
-                "delta_ytd": 0,
-                "target_2026": 0,
-                "history": [],
-            },
-            "ponctualite": {
-                "label": "Ponctualité",
-                "current": 0,
-                "unit": "%",
-                "delta_ytd": 0,
-                "target_2026": 0,
-                "history": [],
-            },
-            "co2_evite_tonnes": {
-                "label": "CO₂ évité",
-                "current": 0,
-                "unit": "t",
-                "delta_ytd": 0,
-                "target_2026": 0,
-                "history": [],
-            },
-            "bottlenecks_actifs": {
-                "label": "Bottlenecks",
-                "current": 0,
-                "unit": "",
-                "delta_ytd": 0,
-                "target_2026": 0,
-                "history": [],
-            },
-            "satisfaction_pct": {
-                "label": "Satisfaction",
-                "current": 0,
-                "unit": "%",
-                "delta_ytd": 0,
-                "target_2026": 0,
-                "history": [],
-            },
+            k: {"label": l, "current": 0, "unit": u, "delta_ytd": 0,
+                "target_2026": 0, "history": []}
+            for k, (l, u) in [
+                ("part_modale_tc",     ("Part modale TC",     "%")),
+                ("ponctualite",        ("Ponctualité",        "%")),
+                ("co2_evite_tonnes",   ("CO₂ évité",          "t")),
+                ("bottlenecks_actifs", ("Bottlenecks",         "")),
+                ("satisfaction_pct",  ("Satisfaction",        "%")),
+            ]
         }
 
     kpis = {}
@@ -706,18 +692,9 @@ def load_elu_kpis_dict(force_mock: bool = False) -> dict:
         sub = df[df["kpi_key"] == kpi_key].sort_values("month")
         values = sub["value"].tolist()
         target = float(sub["target_value"].iloc[0]) if not sub.empty else 0
-        # Map kpi_key → label + unit
-        label_map = {
-            "part_modale_tc": ("Part modale TC", "%"),
-            "ponctualite": ("Ponctualité", "%"),
-            "co2_evite_tonnes": ("CO₂ évité", "t"),
-            "bottlenecks_actifs": ("Bottlenecks", ""),
-            "satisfaction_pct": ("Satisfaction", "%"),
-        }
-        label, unit = label_map.get(kpi_key, (kpi_key, ""))
+        label, unit = _derive_label_unit(kpi_key)
         current = values[-1] if values else 0
-        delta_ytd = current - values[0] if len(values) > 1 else 0
-        # delta_ytd est un delta brut dans le dict mock. On adapte.
+        delta_ytd = float(current - values[0]) if len(values) > 1 else 0.0
         kpis[kpi_key] = {
             "label": label,
             "current": current,
@@ -727,7 +704,6 @@ def load_elu_kpis_dict(force_mock: bool = False) -> dict:
             "history": values,
         }
     return kpis
-
 
 def load_bottlenecks_top(force_mock: bool = False) -> list[dict]:
     """Liste des 10 bottlenecks Élu (format dict avec rank, zone, voyageurs, etc.).

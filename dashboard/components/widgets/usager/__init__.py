@@ -49,3 +49,5 @@ __all__ = [
     "render_why_explainer",
     "render_why_summary",
 ]
+
+_widget_map = {}
