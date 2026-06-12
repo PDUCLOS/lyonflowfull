@@ -2047,15 +2047,28 @@ CREATE INDEX idx_vitesse_limite_ref_code ON bronze.vitesse_limite_ref USING btre
 --
 -- Name: uq_air_quality_nodup; Type: INDEX; Schema: bronze; Owner: -
 --
+-- Sprint 8 (2026-06-12) — VIRE. Cette UNIQUE INDEX sur les colonnes
+-- extracted (pm10, pm2_5, etc.) plante en duplicate key quand le
+-- collecteur insère 2 cycles consécutifs avec colonnes=NULL (les
+-- vraies données sont dans raw_data JSONB, pas dans les colonnes).
+-- Le collecteur insère 1 ligne par cycle (fetched_at + raw_data) ;
+-- il n'y a pas de duplicate au niveau métier puisque fetched_at est
+-- déjà indexé.
+-- (Sprint 8+1) : on garde idx_bronze_air_quality_fetched_at pour
+-- la perf des queries de fraîcheur.
 
-CREATE UNIQUE INDEX uq_air_quality_nodup ON bronze.air_quality USING btree (measurement_time, pm10, pm2_5, nitrogen_dioxide, ozone, sulphur_dioxide, carbon_monoxide, european_aqi) NULLS NOT DISTINCT;
+-- CREATE UNIQUE INDEX uq_air_quality_nodup ON bronze.air_quality USING btree (measurement_time, pm10, pm2_5, nitrogen_dioxide, ozone, sulphur_dioxide, carbon_monoxide, european_aqi) NULLS NOT DISTINCT;
 
 
 --
 -- Name: uq_chantiers_nodup; Type: INDEX; Schema: bronze; Owner: -
 --
+-- Sprint 8 (2026-06-12) — VIRE (même raison que uq_air_quality_nodup).
+-- Les vraies données sont dans raw_data JSONB, pas dans les
+-- colonnes extracted. La UNIQUE INDEX plante en duplicate key
+-- quand on insère plusieurs cycles consécutifs avec colonnes=NULL.
 
-CREATE UNIQUE INDEX uq_chantiers_nodup ON bronze.chantiers USING btree (chantier_id, nom, type_perturbation, severite, date_debut, date_fin, commune) NULLS NOT DISTINCT;
+-- CREATE UNIQUE INDEX uq_chantiers_nodup ON bronze.chantiers USING btree (chantier_id, nom, type_perturbation, severite, date_debut, date_fin, commune) NULLS NOT DISTINCT;
 
 
 --

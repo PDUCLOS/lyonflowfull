@@ -1,16 +1,22 @@
-"""DAG — Collecte TomTom Traffic Flow (Sprint VPS-6, 2026-06-11).
+"""DAG — Collecte TomTom Traffic Flow (Sprint 8, 2026-06-12 — désactivé).
 
-Cycle : 15 min, 12 tuiles Lyon utiles (0.02 degres de cote, ~2 km).
-Budget : 12 x 4 x 24 = 1152 req/jour (free tier 2500, marge 1348).
+Sprint VPS-6 (2026-06-11) avait ajouté ce DAG, mais :
+- Le module ``src.ingestion.tomtom_traffic`` n'a JAMAIS eu la classe
+  ``TomTomTrafficFlow`` ni les fonctions ``collect_lyon_tiles()`` /
+  ``save_lyon_tiles_to_bronze()`` / ``health()`` (juste des helpers
+  cache/quota). Le DAG plantait à l'import (``ImportError``).
+- TomTom est marqué "redondant avec boucles" dans CLAUDE.md (Sprint
+  2). Les boucles Grand Lyon couvrent Lyon intra-muros.
+- Sprint 8 a viré tous les mocks — la dette TomTom est ressortie.
 
-Ecrit dans ``bronze.tomtom_traffic``, agrege en ``gold.v_tomtom_traffic_live``.
-Le dashboard lit via ``src.data.data_loader.load_traffic_combined_for_map()``.
+Sprint 8 — Décision : on désactive ce DAG (no-op) en attendant un
+refacto complet. Le DAG reste listé (pour traçabilité) mais ne fait
+rien. Réactivation Sprint 12+ si besoin (cf. backlog).
 
-Si ``TOMTOM_API_KEY`` absent, le DAG est en no-op + log warning. Le
-fallback ``gold.v_traffic_combined`` sert la derniere valeur cachee
-(DB) jusqu'a 24h.
+Migration : le code TomTom reste dans ``src.ingestion.tomtom_traffic``
+pour les widgets qui lisent ``bronze.tomtom_traffic`` (cf.
+``data_loader.load_traffic_combined_for_map``).
 """
-
 from __future__ import annotations
 
 import logging
@@ -19,54 +25,38 @@ from datetime import datetime, timedelta
 from airflow import DAG
 from airflow.operators.python import PythonOperator
 
-from src.ingestion import tomtom_traffic as tt
-
 logger = logging.getLogger(__name__)
 
 
-def _collect_tomtom(**context) -> int:
-    """Tâche : collect TomTom Flow sur 12 tuiles Lyon + persist bronze."""
-    if not tt.get_api_key():
-        logger.warning(
-            "TOMTOM_API_KEY non configuré — DAG collect_tomtom_traffic no-op. "
-            "Inscrivez-vous sur https://developer.tomtom.com/ (free tier) "
-            "et ajoutez TOMTOM_API_KEY=... dans .env + .deploy.env."
-        )
-        return 0
-
-    results = tt.collect_lyon_tiles()
-    if not results:
-        logger.info("TomTom: 0 résultats (quota épuisé ou API down)")
-        return 0
-
-    n_inserted = tt.save_lyon_tiles_to_bronze(results)
+def _collect_tomtom_disabled(**context) -> int:  # noqa: ARG001
+    """Sprint 8 — No-op. Voir docstring du module."""
     logger.info(
-        "TomTom: %d/%d tuiles insérées, health=%s",
-        n_inserted, len(results), tt.health(),
+        "DAG collect_tomtom_traffic DÉSACTIVÉ (Sprint 8 2026-06-12). "
+        "Le module src.ingestion.tomtom_traffic n'a jamais eu de "
+        "classe DataCollector conforme. Voir backlog Sprint 12+ "
+        "pour réactivation éventuelle."
     )
-    return n_inserted
+    return 0
 
 
 default_args = {
     "owner": "lyonflow",
     "depends_on_past": False,
-    "retries": 2,
-    "retry_delay": timedelta(minutes=2),
-    "execution_timeout": timedelta(minutes=5),
+    "retries": 0,
+    "execution_timeout": timedelta(minutes=1),
 }
 
 with DAG(
     dag_id="collect_tomtom_traffic",
     default_args=default_args,
-    description="Collecte TomTom Traffic Flow toutes les 15 min (Sprint VPS-6)",
-    schedule_interval="*/15 * * * *",  # toutes les 15 min
+    description="[DÉSACTIVÉ Sprint 8] Collecte TomTom — no-op en attendant refacto",
+    schedule_interval="*/15 * * * *",
     start_date=datetime(2026, 6, 11),
     catchup=False,
     max_active_runs=1,
-    tags=["bronze", "traffic", "tomtom", "sprint-vps-6"],
+    tags=["bronze", "traffic", "tomtom", "disabled", "sprint-8"],
 ) as dag:
     PythonOperator(
         task_id="collect_tomtom_flow",
-        python_callable=_collect_tomtom,
-        provide_context=True,
+        python_callable=_collect_tomtom_disabled,
     )

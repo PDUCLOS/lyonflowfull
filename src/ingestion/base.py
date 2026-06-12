@@ -162,8 +162,27 @@ class DataCollector(abc.ABC):
 
         - DB : bronze.<table> avec fetched_at + raw_data JSONB
         - Google Drive : backup objet dans dossier partagé
+
+        Sprint 8 (2026-06-12) — si n_records=0 (API down ou réponse
+        vide), on n'insère PAS. Sinon la UNIQUE constraint de
+        certaines tables (ex. bronze.air_quality avec colonnes NULLS
+        NOT DISTINCT) plante en duplicate key. Le `_save_raw` devient
+        idempotent : pas de données = pas d'insert.
         """
-        # DB Bronze
+        # DB Bronze : skip si pas de données
+        if result.n_records == 0 or not result.raw_data:
+            logger.warning(
+                f"Collector {self.source} : 0 records, skip INSERT Bronze "
+                "(Sprint 8 idempotence fix)."
+            )
+            # GDrive backup : on garde quand même pour archive
+            try:
+                raw_json = json.dumps(result.raw_data or {}, ensure_ascii=False, default=str)
+                self._save_to_gdrive(result, raw_json)
+            except Exception as e:
+                logger.warning(f"GDrive backup failed for {self.source}: {e}")
+            return
+
         query = f"""
             INSERT INTO bronze.{self.bronze_table} (fetched_at, raw_data)
             VALUES (%s, %s)
@@ -327,7 +346,9 @@ class DataCollector(abc.ABC):
     def _count_records(self, data: Any) -> int:
         """Helper : compte le nombre d'enregistrements dans une réponse API.
 
-        Formats courants : list, dict avec 'features', 'data', 'results'.
+        Formats courants : list, dict avec 'features', 'data', 'results',
+        ou dict imbriqué type Open-Meteo ``{"hourly": {"time": [...]}}``
+        où on compte la longueur de la 1re liste de la sous-dict.
         """
         if isinstance(data, list):
             return len(data)
@@ -335,6 +356,13 @@ class DataCollector(abc.ABC):
             for key in ("features", "data", "results", "records", "items", "stations"):
                 if key in data and isinstance(data[key], list):
                     return len(data[key])
+            # Format Open-Meteo : dict avec une sous-dict contenant des listes
+            # (ex. {"hourly": {"time": [..], "pm10": [..]}}).
+            for sub_key, sub_val in data.items():
+                if isinstance(sub_val, dict):
+                    for list_key, list_val in sub_val.items():
+                        if isinstance(list_val, list) and list_val:
+                            return len(list_val)
             return 1
         return 0
 
