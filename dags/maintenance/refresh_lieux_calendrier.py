@@ -67,14 +67,18 @@ def _refresh_lieux_calendrier(**context) -> None:
     try:
         result = subprocess.run(
             [sys.executable, "/opt/lyonflow/scripts/seed_lieux_calendrier.py"],
-            capture_output=True, text=True, timeout=300,
+            capture_output=True,
+            text=True,
+            timeout=300,
         )
         if result.returncode == 0:
             logger.info("lieux_calendrier re-popule OK:\n%s", result.stdout)
         else:
             logger.error(
                 "seed_lieux_calendrier a echoue (code=%d):\n%s\nstderr: %s",
-                result.returncode, result.stdout, result.stderr,
+                result.returncode,
+                result.stdout,
+                result.stderr,
             )
             raise RuntimeError(f"seed_lieux_calendrier failed: {result.stderr}")
     except subprocess.TimeoutExpired:

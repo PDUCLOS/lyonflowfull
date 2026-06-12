@@ -105,10 +105,7 @@ def _build_spatial_mapping() -> int:
 
     # 3. Build adjacency (arêtes graphe GNN) — K=2 grid
     n_edges = _build_adjacency()
-    logger.info(
-        f"dim_spatial_grid_mapping: {n_inserted} channels inserted/updated, "
-        f"{n_edges} adjacency edges"
-    )
+    logger.info(f"dim_spatial_grid_mapping: {n_inserted} channels inserted/updated, {n_edges} adjacency edges")
     return n_inserted
 
 
