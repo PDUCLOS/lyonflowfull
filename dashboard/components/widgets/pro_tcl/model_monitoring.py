@@ -102,21 +102,36 @@ def render_model_registry() -> None:
         cached_mlflow_experiment_summary,
         cached_mlflow_models,
     )
+    from dashboard.components.loading_state import (
+        data_error_to_message,
+        empty_state,
+        loading_wrapper,
+    )
     from src.data.data_loader import _is_demo_mode
     from src.data.exceptions import DashboardDataError
 
-    try:
-        summary = cached_mlflow_experiment_summary(force_mock=False)
-        models = cached_mlflow_models(force_mock=False)
-    except DashboardDataError as e:
-        st.error(f"⚠️ {e}")
-        return
-    except Exception:
-        if _is_demo_mode():
-            models = MOCK_MODELS
-            summary = {"available": False, "run_count": 0, "model_names": []}
-        else:
-            st.error("🔴 MLflow a échoué — registry modèles indisponible.")
+    with loading_wrapper("Chargement registry MLflow…", "📊"):
+        try:
+            summary = cached_mlflow_experiment_summary(force_mock=False)
+            models = cached_mlflow_models(force_mock=False)
+        except DashboardDataError as e:
+            empty_state(
+                icon="🟡",
+                title="MLflow indisponible",
+                message=data_error_to_message(e),
+            )
+            return
+        except Exception:
+            if _is_demo_mode():
+                models = MOCK_MODELS
+                summary = {"available": False, "run_count": 0, "model_names": []}
+            else:
+                empty_state(
+                    icon="🔴",
+                    title="MLflow a échoué",
+                    message="Registry modèles indisponible. Vérifie l'état du "
+                            "container `lyonflow-mlflow` (port 5000).",
+                )
             return
 
     # Bandeau source (transparence MLflow)

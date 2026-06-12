@@ -95,7 +95,8 @@ def render_itinerary_result(
         return
 
     # Calcul itinéraire
-    with st.spinner("🔍 Calcul itinéraire en cours..."):
+    from dashboard.components.loading_state import loading_wrapper, empty_state
+    with loading_wrapper("Calcul itinéraire en cours…", "🔍"):
         itinerary = compute_itinerary(
             origin_lon=origin_coords[0],
             origin_lat=origin_coords[1],
@@ -105,13 +106,19 @@ def render_itinerary_result(
         )
 
     if not itinerary or not itinerary.segments:
-        st.warning("⚠️ Aucun itinéraire trouvé. Le graphe routier n'est peut-être pas chargé.")
+        empty_state(
+            icon="🗺️",
+            title="Aucun itinéraire trouvé",
+            message="Le graphe routier n'est peut-être pas chargé. Vérifie "
+                    "que les données Gold sont à jour ou choisis un autre point "
+                    "d'arrivée.",
+        )
         return
 
     # Comparaison si horizon > 0
     comparison = None
     if horizon_minutes > 0:
-        with st.spinner(f"🔮 Comparaison avec H+{horizon_minutes}min..."):
+        with loading_wrapper(f"Comparaison avec H+{horizon_minutes}min…", "🔮"):
             current_itin = compute_itinerary(
                 origin_lon=origin_coords[0],
                 origin_lat=origin_coords[1],
