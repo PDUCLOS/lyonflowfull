@@ -20,6 +20,7 @@ import pytest
 # Permet l'import depuis la racine
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
+
 # Fixture pour forcer le mode démo dans les tests MLflow
 # (MLflow server non disponible en CI → utilise les mocks)
 @pytest.fixture(autouse=True)
