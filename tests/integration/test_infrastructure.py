@@ -114,7 +114,6 @@ def test_governance_module_importable():
     assert callable(auto_register_schema)
 
 
-@pytest.mark.integration
 def test_api_module_importable():
     """Le module FastAPI doit s'importer (sans démarrer l'app)."""
     from src.api.main import app
@@ -145,7 +144,6 @@ def test_dag_files_exist():
         assert path.exists(), f"DAG manquant: {path}"
 
 
-@pytest.mark.integration
 def test_init_db_sql_exists():
     """Le SQL d'init doit exister et contenir les schémas Medallion.
 
@@ -165,7 +163,6 @@ def test_init_db_sql_exists():
         assert re.search(pattern, content), f"Schema {schema} non trouve dans init-db.sql"
 
 
-@pytest.mark.integration
 def test_dockerfile_exists():
     """Le Dockerfile doit exister."""
     dockerfile = WORKSPACE / "Dockerfile"
@@ -175,7 +172,6 @@ def test_dockerfile_exists():
     assert "USER appuser" in content, "Doit utiliser un user non-root"
 
 
-@pytest.mark.integration
 def test_docker_compose_exists():
     """Le docker-compose doit exister avec tous les services."""
     compose = WORKSPACE / "docker-compose.yml"
@@ -186,7 +182,6 @@ def test_docker_compose_exists():
         assert svc in content, f"Service manquant dans docker-compose: {svc}"
 
 
-@pytest.mark.integration
 def test_nginx_config_exists():
     """Nginx doit être configuré."""
     nginx = WORKSPACE / "nginx" / "nginx.conf"
