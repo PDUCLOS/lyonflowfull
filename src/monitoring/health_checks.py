@@ -146,9 +146,7 @@ def check_silver_doublons() -> CheckResult:
 def check_predictions_presentes() -> CheckResult:
     """Vérifie qu'on a des prédictions récentes en Gold."""
     n = int(
-        execute_scalar(
-            "SELECT COUNT(*) FROM gold.trafic_predictions WHERE calculated_at > NOW() - INTERVAL '2 hours'"
-        )
+        execute_scalar("SELECT COUNT(*) FROM gold.trafic_predictions WHERE calculated_at > NOW() - INTERVAL '2 hours'")
         or 0
     )
     status = "ok" if n > 100 else "warning" if n > 0 else "critical"

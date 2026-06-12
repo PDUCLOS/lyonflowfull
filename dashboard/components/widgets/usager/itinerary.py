@@ -44,7 +44,7 @@ def _resolve_address(text: str) -> tuple[float, float] | None:
     if cleaned and ord(cleaned[0]) > 0x2700:
         sp = cleaned.find(" ")
         if sp > 0 and sp <= 3:
-            cleaned = cleaned[sp + 1:].strip()
+            cleaned = cleaned[sp + 1 :].strip()
     text_lower = cleaned.lower().strip()
     if not text_lower:
         return None
@@ -100,6 +100,7 @@ def render_itinerary_result(
 
     # Calcul itinéraire
     from dashboard.components.loading_state import loading_wrapper, empty_state
+
     with loading_wrapper("Calcul itinéraire en cours…", "🔍"):
         itinerary = compute_itinerary(
             origin_lon=origin_coords[0],
@@ -114,8 +115,8 @@ def render_itinerary_result(
             icon="🗺️",
             title="Aucun itinéraire trouvé",
             message="Le graphe routier n'est peut-être pas chargé. Vérifie "
-                    "que les données Gold sont à jour ou choisis un autre point "
-                    "d'arrivée.",
+            "que les données Gold sont à jour ou choisis un autre point "
+            "d'arrivée.",
         )
         return
 
@@ -220,6 +221,7 @@ def _render_map(
         # 30m). Si Overpass down, fallback gracieux sur le point original.
         try:
             from src.routing.snap_to_roads import snap_path_to_roads
+
             raw_points = [origin_coords[::-1]]  # (lon, lat) for snap_to_road
             for seg in itinerary.segments:
                 raw_points.append((seg.start_lon, seg.start_lat))

@@ -139,8 +139,7 @@ def main() -> None:
             cur.execute("SELECT COUNT(*) FROM referentiel.lieux_calendrier")
             total = cur.fetchone()[0]
             cur.execute(
-                "SELECT day_type, COUNT(*) FROM referentiel.lieux_calendrier "
-                "GROUP BY day_type ORDER BY day_type"
+                "SELECT day_type, COUNT(*) FROM referentiel.lieux_calendrier GROUP BY day_type ORDER BY day_type"
             )
             distribution = cur.fetchall()
         logger.info("Total en DB : %d", total)

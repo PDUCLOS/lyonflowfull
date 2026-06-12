@@ -17,6 +17,7 @@ Migration : le code TomTom reste dans ``src.ingestion.tomtom_traffic``
 pour les widgets qui lisent ``bronze.tomtom_traffic`` (cf.
 ``data_loader.load_traffic_combined_for_map``).
 """
+
 from __future__ import annotations
 
 import logging

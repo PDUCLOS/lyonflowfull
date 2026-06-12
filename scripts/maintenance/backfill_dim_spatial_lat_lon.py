@@ -10,7 +10,9 @@ Idempotent : ne touche que les rows où lat IS NULL OR lon IS NULL.
 Usage:
     docker compose exec -T streamlit python /app/scripts/maintenance/backfill_dim_spatial_lat_lon.py
 """
+
 import sys
+
 sys.path.insert(0, "/app")
 
 import h3
@@ -43,10 +45,9 @@ def main() -> None:
 
     # 3. UPDATE en batch via raw SQL (execute_query ne supporte pas multi-rows UPDATE)
     from src.db.connection import raw_connection
+
     with raw_connection() as conn, conn.cursor() as cur:
-        cur.execute(
-            "SET search_path TO public, gold, bronze, silver, referentiel, airflow_db, mlflow"
-        )
+        cur.execute("SET search_path TO public, gold, bronze, silver, referentiel, airflow_db, mlflow")
         cur.executemany(
             """
             UPDATE gold.dim_spatial_grid_mapping

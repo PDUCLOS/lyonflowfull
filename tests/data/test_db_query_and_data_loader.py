@@ -16,6 +16,7 @@ Note : pour tester avec une vraie DB, voir
 ``tests/integration/test_infrastructure.py`` qui démarre un
 PostgreSQL en container.
 """
+
 from __future__ import annotations
 
 import sys
@@ -31,10 +32,21 @@ from src.data.exceptions import DashboardDataError
 
 
 @pytest.fixture(autouse=True)
-def disable_db(monkeypatch):
-    """Force ``_is_db_available = False`` pour ces tests (pas de DB locale)."""
-    monkeypatch.setattr(db_query, "_is_db_available", lambda: False)
+def reset_db_cache(monkeypatch):
+    """Reset le cache DB + force _is_db_available=False pour exercer le fallback mock.
+
+    Ces tests valident le contrat des mocks. Pour les tests d'intégration avec
+    une vraie DB, voir tests/integration/test_infrastructure.py.
+    """
+    # CI a un PostgreSQL service container réel. Pour que les tests de contrat
+    # mock fonctionnent, on force le mode démo pour que _maybe_force_mock(True)
+    # utilise les mocks au lieu de lever DashboardDataError.
+    monkeypatch.setenv("LYONFLOW_DEMO_MODE", "1")
+    monkeypatch.setattr(data_loader, "_is_demo_mode", lambda: True)
+    monkeypatch.setattr(data_loader, "_demo_mode_cache", True)
     db_query.reset_db_cache()
+    monkeypatch.setattr(db_query, "_is_db_available", lambda: False)
+    monkeypatch.setattr(db_query, "_db_available_cache", False)
     yield
     db_query.reset_db_cache()
 

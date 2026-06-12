@@ -21,8 +21,7 @@ from src.db.connection import execute_query
 def main() -> int:
     try:
         rows = execute_query(
-            "SELECT speed_kmh, vitesse_limite_kmh "
-            "FROM gold.traffic_features_live LIMIT 20",
+            "SELECT speed_kmh, vitesse_limite_kmh FROM gold.traffic_features_live LIMIT 20",
             (),
         )
         df = pd.DataFrame(rows)

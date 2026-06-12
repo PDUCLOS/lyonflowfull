@@ -59,8 +59,7 @@ def _get_model():
     model.load()  # charge depuis disque ou MLflow Registry
     if 60 not in model.models:
         raise RuntimeError(
-            "Modèle XGBoost H+1h non disponible. "
-            "Le DAG 'dag_daily_speed_train' doit tourner pour entraîner le modèle."
+            "Modèle XGBoost H+1h non disponible. Le DAG 'dag_daily_speed_train' doit tourner pour entraîner le modèle."
         )
     return model
 
@@ -167,9 +166,7 @@ def _predict_and_persist() -> dict:
         VALUES %s
     """
     with raw_connection() as conn, conn.cursor() as cur:
-        psycopg2.extras.execute_values(
-            cur, insert_sql, rows_to_insert, template=None, page_size=200
-        )
+        psycopg2.extras.execute_values(cur, insert_sql, rows_to_insert, template=None, page_size=200)
 
     duration = (datetime.now() - started).total_seconds()
     logger.info(

@@ -60,9 +60,7 @@ def _get_s3_client():
     """Client boto3 pour MinIO. Sprint 10+ (2026-06-12)."""
     s = get_settings()
     if not s.minio.enabled:
-        raise RuntimeError(
-            "MINIO_ENABLED=false. Active MinIO dans .env pour archiver."
-        )
+        raise RuntimeError("MINIO_ENABLED=false. Active MinIO dans .env pour archiver.")
     return boto3.client(
         "s3",
         endpoint_url=f"http://{s.minio.endpoint}",
@@ -81,20 +79,22 @@ def _archive_one_table(table: str, cutoff: datetime) -> dict:
     logger.info("Archiving silver.%s older than %s", table, cutoff)
 
     # 1) Stats avant
-    stats = execute_query(f"""
+    stats = execute_query(
+        f"""
         SELECT
             count(*) AS n_rows,
             pg_size_pretty(pg_total_relation_size('silver.{table}')) AS total_size
         FROM silver.{table}
         WHERE transformed_at < %s
-    """, (cutoff,))
+    """,
+        (cutoff,),
+    )
     if not stats or stats[0]["n_rows"] == 0:
         logger.info("silver.%s — no rows to archive", table)
         return {"table": table, "rows_archived": 0}
 
     n_rows = int(stats[0]["n_rows"])
-    logger.info("silver.%s — %s rows to archive (size: %s)",
-                table, n_rows, stats[0]["total_size"])
+    logger.info("silver.%s — %s rows to archive (size: %s)", table, n_rows, stats[0]["total_size"])
 
     # 2) Export en Parquet via polars.read_database
     #    Note: on chunk par 50k rows pour éviter OOM sur gros volumes.
@@ -120,8 +120,7 @@ def _archive_one_table(table: str, cutoff: datetime) -> dict:
     )
     df.write_parquet(local_path, compression="snappy")
     bytes_parquet = local_path.stat().st_size
-    logger.info("Wrote %s (%.1f MB) — %d rows",
-                local_path, bytes_parquet / 1e6, df.height)
+    logger.info("Wrote %s (%.1f MB) — %d rows", local_path, bytes_parquet / 1e6, df.height)
 
     # 3) Push vers MinIO
     s3 = _get_s3_client()
@@ -132,7 +131,9 @@ def _archive_one_table(table: str, cutoff: datetime) -> dict:
         f"{table}_{cutoff.strftime('%Y%m%d')}.parquet"
     )
     s3.upload_file(
-        str(local_path), bucket, key,
+        str(local_path),
+        bucket,
+        key,
         ExtraArgs={"ContentType": "application/octet-stream"},
     )
     logger.info("Uploaded s3://%s/%s (%.1f MB)", bucket, key, bytes_parquet / 1e6)
@@ -167,7 +168,8 @@ def _archive_silver(**context) -> dict:
     cutoff = datetime.now() - timedelta(days=RETENTION_DAYS)
     logger.info(
         "=== Silver archive (cutoff=%s, retention=%d days) ===",
-        cutoff, RETENTION_DAYS,
+        cutoff,
+        RETENTION_DAYS,
     )
 
     results = []
@@ -183,7 +185,9 @@ def _archive_silver(**context) -> dict:
     total_bytes = sum(r.get("bytes_parquet", 0) for r in results)
     logger.info(
         "=== DONE: %d rows archived across %d tables (%.1f MB Parquet) ===",
-        total_rows, len(results), total_bytes / 1e6,
+        total_rows,
+        len(results),
+        total_bytes / 1e6,
     )
     return {"results": results, "total_rows": total_rows}
 

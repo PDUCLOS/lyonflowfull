@@ -57,9 +57,12 @@ def _haversine_m(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
 
 
 def _project_on_segment(
-    px: float, py: float,
-    ax: float, ay: float,
-    bx: float, by: float,
+    px: float,
+    py: float,
+    ax: float,
+    ay: float,
+    bx: float,
+    by: float,
 ) -> tuple[float, float, float]:
     """Projette un point P sur le segment AB. Retourne (proj_x, proj_y, dist_m).
 

@@ -41,8 +41,10 @@ def main() -> int:
 
     print("\n[2/3] Pathfinding Vélov (Part-Dieu → Tête d'Or)…")
     itin = plan_velov_trip(
-        origin_lat=45.7607, origin_lon=4.8589,
-        dest_lat=45.7745, dest_lon=4.8525,
+        origin_lat=45.7607,
+        origin_lon=4.8589,
+        dest_lat=45.7745,
+        dest_lon=4.8525,
         origin_label="Part-Dieu",
         dest_label="Tête d'Or",
     )
@@ -51,16 +53,20 @@ def main() -> int:
     print(f"  Faisable : {itin.feasible}")
     print(f"  Source : {itin.source}")
     for i, seg in enumerate(itin.segments, 1):
-        print(f"  Seg {i} [{seg.mode}]: {seg.from_label} → {seg.to_label} "
-              f"({seg.distance_m:.0f} m, {seg.duration_min} min)")
+        print(
+            f"  Seg {i} [{seg.mode}]: {seg.from_label} → {seg.to_label} "
+            f"({seg.distance_m:.0f} m, {seg.duration_min} min)"
+        )
 
     # 3. Pathfinding voiture
     from src.routing.pathfinder_multimodal import plan_car_trip
 
     print("\n[3/3] Pathfinding voiture (Part-Dieu → Tête d'Or)…")
     car = plan_car_trip(
-        origin_lat=45.7607, origin_lon=4.8589,
-        dest_lat=45.7745, dest_lon=4.8525,
+        origin_lat=45.7607,
+        origin_lon=4.8589,
+        dest_lat=45.7745,
+        dest_lon=4.8525,
     )
     print(f"  Durée : {car.get('total_duration_min', 0):.1f} min")
     print(f"  Distance : {car.get('total_length_m', 0):.0f} m")

@@ -27,6 +27,7 @@ _TYPE_ICON = {
     "banlieue": "🏙",
 }
 
+
 def render_search_bar() -> dict[str, typing.Any]:
     """Affiche la barre de recherche trajet, élégante et ergonomique."""
     addresses = cached_lyon_addresses_with_coords(force_mock=False)
@@ -34,7 +35,8 @@ def render_search_bar() -> dict[str, typing.Any]:
     addr_options = [f"{_TYPE_ICON.get(a['type'], '📍')} {a['name']}" for a in addresses]
 
     # Injection de CSS pour un style épuré
-    st.markdown("""
+    st.markdown(
+        """
     <style>
     /* Styling des selectbox pour un effet plus premium */
     div[data-baseweb="select"] > div {
@@ -56,7 +58,9 @@ def render_search_bar() -> dict[str, typing.Any]:
         margin-bottom: 1rem;
     }
     </style>
-    """, unsafe_allow_html=True)
+    """,
+        unsafe_allow_html=True,
+    )
 
     with st.container(border=True):
         st.markdown("#### 🗺️ Où allez-vous ?")
@@ -68,15 +72,17 @@ def render_search_bar() -> dict[str, typing.Any]:
                 options=addr_options,
                 index=addr_options.index("🏙 Villeurbanne") if "🏙 Villeurbanne" in addr_options else 0,
                 key="search_origin",
-                help="Tapez pour rechercher une adresse"
+                help="Tapez pour rechercher une adresse",
             )
         with col2:
             destination = st.selectbox(
                 "🔴 Destination",
                 options=addr_options,
-                index=addr_options.index("🚉 Part-Dieu") if "🚉 Part-Dieu" in addr_options else min(1, len(addr_options)-1),
+                index=addr_options.index("🚉 Part-Dieu")
+                if "🚉 Part-Dieu" in addr_options
+                else min(1, len(addr_options) - 1),
                 key="search_destination",
-                help="Tapez pour rechercher une adresse"
+                help="Tapez pour rechercher une adresse",
             )
 
         st.markdown("<br/>", unsafe_allow_html=True)
@@ -99,7 +105,7 @@ def render_search_bar() -> dict[str, typing.Any]:
                 "Modes de transport autorisés",
                 ["🚇 Métro", "🚊 Tram", "🚌 Bus", "🚲 Vélov", "🚗 Voiture", "🚶 Marche"],
                 default=["🚇 Métro", "🚊 Tram", "🚌 Bus", "🚲 Vélov", "🚶 Marche"],
-                key="search_modes"
+                key="search_modes",
             )
 
     return {

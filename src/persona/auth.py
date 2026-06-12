@@ -21,6 +21,7 @@ Sprint 8+ sécurité :
 - ``bcrypt`` côté API FastAPI
 - Aucune fuite du mot de passe dans les logs
 """
+
 from __future__ import annotations
 
 import hmac

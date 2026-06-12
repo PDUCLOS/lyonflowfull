@@ -10,6 +10,7 @@ nomenclature qui a été corrigée : module neutre `labels.py` qui
 regroupe tous les référentiels statiques. Les mocks (données
 générées) sont relégués dans `tests/fixtures/mock_data/`.
 """
+
 from __future__ import annotations
 
 # Codes diagnostic infrastructure / trafic (cf. scripts/sql)

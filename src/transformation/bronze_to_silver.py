@@ -235,20 +235,12 @@ def _transform_velov() -> int:
                 stations_info_list = raw_data.get("information", []) or []
                 # Index par station_id pour lookup O(1)
                 info_by_id: dict[str, dict] = {
-                    str(s.get("station_id")): s
-                    for s in stations_info_list
-                    if s.get("station_id") is not None
+                    str(s.get("station_id")): s for s in stations_info_list if s.get("station_id") is not None
                 }
-                stations_iter = (
-                    {**st, **info_by_id.get(str(st.get("station_id")), {})}
-                    for st in stations_status
-                )
+                stations_iter = ({**st, **info_by_id.get(str(st.get("station_id")), {})} for st in stations_status)
             else:
                 # Backward-compat : ancien format où name/lat/lon étaient dans status
-                stations_legacy = (
-                    raw_data.get("data", {}).get("stations", [])
-                    or raw_data.get("stations", [])
-                )
+                stations_legacy = raw_data.get("data", {}).get("stations", []) or raw_data.get("stations", [])
                 stations_iter = (st for st in stations_legacy)
 
             for st in stations_iter:
@@ -363,11 +355,7 @@ def _transform_tcl_vehicles() -> int:
         for _id, fetched_at, raw_data in rows:
             if not isinstance(raw_data, dict):
                 continue
-            delivery = (
-                raw_data.get("Siri", {})
-                .get("ServiceDelivery", {})
-                .get("VehicleMonitoringDelivery", [{}])[0]
-            )
+            delivery = raw_data.get("Siri", {}).get("ServiceDelivery", {}).get("VehicleMonitoringDelivery", [{}])[0]
             activities = delivery.get("VehicleActivity", [])
             if not activities:
                 continue
@@ -381,10 +369,10 @@ def _transform_tcl_vehicles() -> int:
 
                 fvj = mvj.get("FramedVehicleJourneyRef") or {}
                 journey_ref = (
-                    fvj.get("DatedVehicleJourneyRef")
-                    if isinstance(fvj, dict)
-                    else None
-                ) or _siri_ref(mvj.get("VehicleRef")) or "unknown"
+                    (fvj.get("DatedVehicleJourneyRef") if isinstance(fvj, dict) else None)
+                    or _siri_ref(mvj.get("VehicleRef"))
+                    or "unknown"
+                )
 
                 call = mvj.get("MonitoredCall") or {}
                 stop_ref = _siri_ref(call.get("StopPointRef")) or "unknown"

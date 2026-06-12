@@ -6,6 +6,7 @@ Couvre :
 * FEATURE_COLS aligné sur le schéma gold.traffic_features_live
 * Méthodes load/predict ne crash pas (hors DB)
 """
+
 from __future__ import annotations
 
 import sys
@@ -34,10 +35,17 @@ class TestXGBoostSpeedImports:
 
     def test_feature_cols_aligned_on_schema(self):
         expected = {
-            "speed_kmh", "lag_1", "lag_2", "lag_3",
-            "rolling_mean_3", "sin_hour", "cos_hour",
-            "temperature_2m", "precipitation",
-            "is_vacances", "is_ferie",
+            "speed_kmh",
+            "lag_1",
+            "lag_2",
+            "lag_3",
+            "rolling_mean_3",
+            "sin_hour",
+            "cos_hour",
+            "temperature_2m",
+            "precipitation",
+            "is_vacances",
+            "is_ferie",
         }
         assert set(FEATURE_COLS) == expected
 
@@ -60,6 +68,7 @@ class TestXGBoostSpeedInstantiation:
 
     def test_single_assignment_model_dir(self):
         import ast
+
         src = Path(__file__).resolve().parents[2] / "src" / "models" / "xgboost_speed.py"
         tree = ast.parse(src.read_text())
         for node in ast.walk(tree):
@@ -124,12 +133,10 @@ class TestXGBoostSpeedPredict:
 class TestXGBoostSpeedNoUndefinedVars:
     def test_train_one_no_undefined_params(self):
         import ast
+
         src = Path(__file__).resolve().parents[2] / "src" / "models" / "xgboost_speed.py"
         tree = ast.parse(src.read_text())
         for node in ast.walk(tree):
             if isinstance(node, ast.FunctionDef) and node.name == "train_one":
-                params_uses = [
-                    n.id for n in ast.walk(node)
-                    if isinstance(n, ast.Name) and n.id == "params"
-                ]
+                params_uses = [n.id for n in ast.walk(node) if isinstance(n, ast.Name) and n.id == "params"]
                 assert len(params_uses) == 0, f"train_one references undefined 'params': {params_uses}"

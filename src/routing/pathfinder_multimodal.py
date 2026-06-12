@@ -104,6 +104,7 @@ def _require_db_or_raise(source: str) -> None:
 def _haversine_m(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
     """Distance haversine (mètres) — calcul Python en fallback de la SQL fn."""
     import math
+
     r = 6_371_000  # m
     p1, p2 = math.radians(lat1), math.radians(lat2)
     dp = math.radians(lat2 - lat1)
@@ -136,8 +137,10 @@ def _nearest_velov_station(
 
 
 def _nearest_velov_stations_pair(
-    origin_lat: float, origin_lon: float,
-    dest_lat: float, dest_lon: float,
+    origin_lat: float,
+    origin_lon: float,
+    dest_lat: float,
+    dest_lon: float,
 ) -> dict[str, dict | None]:
     """Batch lookup : 1 round-trip DB pour les 2 stations Vélov (origine + dest).
 
@@ -180,9 +183,7 @@ def _nearest_velov_stations_pair(
     return out
 
 
-def _road_itinerary_between(
-    lon_a: float, lat_a: float, lon_b: float, lat_b: float
-) -> dict | None:
+def _road_itinerary_between(lon_a: float, lat_a: float, lon_b: float, lat_b: float) -> dict | None:
     """Itinéraire routier entre 2 points GPS via Dijkstra (src.routing.pathfinder).
 
     Returns:
@@ -293,6 +294,7 @@ def plan_velov_trip(
     # scoring. Si hors périmètre, fallback sur haversine direct.
     def _nearest_lieu_id(lat: float, lon: float) -> int | None:
         from src.data.db_query import execute_query
+
         rows = execute_query(
             """
             SELECT lieu_id FROM referentiel.lieux_lyon
@@ -395,33 +397,41 @@ def plan_velov_trip(
     if origin_station.get("status") == "VIDE":
         diagnostics.append(
             f"⚠️ Borne de départ {origin_station.get('velov_name')} est VIDE. "
-            f"Alternatives à pied : " + ", ".join(
+            f"Alternatives à pied : "
+            + ", ".join(
                 f"{a.get('velov_name')} ({int(a.get('distance_m', 0))}m, {a.get('num_bikes_available')} vélos)"
-                for a in origin_alts[:2] if a.get("velov_name")
+                for a in origin_alts[:2]
+                if a.get("velov_name")
             )
         )
     if origin_station.get("status") == "PLEINE":
         diagnostics.append(
             f"⚠️ Borne de départ {origin_station.get('velov_name')} est PLEINE. "
-            f"Alternatives à pied : " + ", ".join(
+            f"Alternatives à pied : "
+            + ", ".join(
                 f"{a.get('velov_name')} ({int(a.get('distance_m', 0))}m, {a.get('num_docks_available')} docks)"
-                for a in origin_alts[:2] if a.get("velov_name")
+                for a in origin_alts[:2]
+                if a.get("velov_name")
             )
         )
     if dest_station.get("status") == "VIDE":
         diagnostics.append(
             f"⚠️ Borne d'arrivée {dest_station.get('velov_name')} est VIDE (pas de vélos dispo). "
-            f"Alternatives à pied : " + ", ".join(
+            f"Alternatives à pied : "
+            + ", ".join(
                 f"{a.get('velov_name')} ({int(a.get('distance_m', 0))}m, {a.get('num_bikes_available')} vélos)"
-                for a in dest_alts[:2] if a.get("velov_name")
+                for a in dest_alts[:2]
+                if a.get("velov_name")
             )
         )
     if dest_station.get("status") == "PLEINE":
         diagnostics.append(
             f"⚠️ Borne d'arrivée {dest_station.get('velov_name')} est PLEINE (pas de dock dispo). "
-            f"Alternatives à pied : " + ", ".join(
+            f"Alternatives à pied : "
+            + ", ".join(
                 f"{a.get('velov_name')} ({int(a.get('distance_m', 0))}m, {a.get('num_docks_available')} docks)"
-                for a in dest_alts[:2] if a.get("velov_name")
+                for a in dest_alts[:2]
+                if a.get("velov_name")
             )
         )
     if not origin_alts and origin_station.get("status") in ("VIDE", "PLEINE"):
@@ -442,18 +452,23 @@ def plan_velov_trip(
         distance_m=walk_to,
         duration_min=round(walk_to / 1000.0 / walk_speed_kmh * 60.0, 1),
         n_bikes_depart=origin_station.get("num_bikes_available"),
-        notes="Marche vers la station Vélov" if walk_to <= MAX_WALK_TO_STATION_M
-              else f"⚠️ Marche longue ({int(walk_to)}m) — considérer bus/métro",
+        notes="Marche vers la station Vélov"
+        if walk_to <= MAX_WALK_TO_STATION_M
+        else f"⚠️ Marche longue ({int(walk_to)}m) — considérer bus/métro",
     )
 
     # Segment 2 : Vélov entre les 2 stations
     cycle_dist_m = _haversine_m(
-        float(origin_station["velov_lat"]), float(origin_station["velov_lon"]),
-        float(dest_station["velov_lat"]), float(dest_station["velov_lon"]),
+        float(origin_station["velov_lat"]),
+        float(origin_station["velov_lon"]),
+        float(dest_station["velov_lat"]),
+        float(dest_station["velov_lon"]),
     )
     road = _road_itinerary_between(
-        float(origin_station["velov_lon"]), float(origin_station["velov_lat"]),
-        float(dest_station["velov_lon"]), float(dest_station["velov_lat"]),
+        float(origin_station["velov_lon"]),
+        float(origin_station["velov_lat"]),
+        float(dest_station["velov_lon"]),
+        float(dest_station["velov_lat"]),
     )
     if road and road["total_length_m"] > 0:
         cycle_dist_m = road["total_length_m"]
@@ -490,8 +505,9 @@ def plan_velov_trip(
         distance_m=walk_from,
         duration_min=round(walk_from / 1000.0 / walk_speed_kmh * 60.0, 1),
         n_docks_arrive=dest_station.get("num_docks_available"),
-        notes="Marche vers la destination" if walk_from <= MAX_WALK_TO_STATION_M
-              else f"⚠️ Marche longue ({int(walk_from)}m)",
+        notes="Marche vers la destination"
+        if walk_from <= MAX_WALK_TO_STATION_M
+        else f"⚠️ Marche longue ({int(walk_from)}m)",
     )
 
     total_dist = walk_to + cycle_dist_m + walk_from
