@@ -1,6 +1,6 @@
 """DAG — Prédiction XGBoost Speed + persiste dans gold.trafic_predictions.
 
-Sprint 9+ (Optimisation) — L'entraînement a été déplacé dans un DAG quotidien 
+Sprint 9+ (Optimisation) — L'entraînement a été déplacé dans un DAG quotidien
 (`dag_daily_speed_train.py`). Ce DAG-ci ne gère plus que l'inférence temps réel.
 Il utilise le vrai modèle XGBoost au lieu de la baseline naïve.
 
@@ -29,7 +29,7 @@ logger = logging.getLogger(__name__)
 
 # Mapping horizon_minutes (modèle) -> horizon_h (schéma gold)
 HORIZON_MAP = {  # 2026-06-11: focus H+1h stable
-    60: 1,   # H+1h
+    60: 1,  # H+1h
 }
 
 # Vitesse limite par défaut (Lyon intra-muros : 50 km/h)
@@ -60,7 +60,6 @@ def _etat_for_speed(speed_kmh: float, limit_kmh: float) -> str:
     if ratio >= 0.25:
         return "D"
     return "B"
-
 
 
 def _predict_and_persist() -> dict:
@@ -211,4 +210,3 @@ with DAG(
     )
 
     predict >> cleanup
-
