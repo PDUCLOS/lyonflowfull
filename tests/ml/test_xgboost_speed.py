@@ -18,8 +18,8 @@ import pytest
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
 from src.models.xgboost_speed import (
-    FEATURE_COLS,
     DEFAULT_HORIZONS,
+    FEATURE_COLS,
     SAMPLE_STEP_MINUTES,
     XGBoostSpeedModel,
 )
@@ -123,7 +123,7 @@ class TestXGBoostSpeedPredict:
         model = XGBoostSpeedModel()
         model.models[60] = MagicMock()
         model.models[60].predict.return_value = [65.0]
-        features = {col: 50.0 for col in FEATURE_COLS}
+        features = dict.fromkeys(FEATURE_COLS, 50.0)
         features["speed_kmh"] = 50.0
         result = model.predict("LYO00007", horizon_minutes=60, features=features)
         mock_eq.assert_not_called()

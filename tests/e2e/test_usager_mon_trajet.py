@@ -16,7 +16,7 @@ def test_usager_mon_trajet_page_loads(page: Page, streamlit_server: str):
 
     # Sélectionne le persona Usager via la carte
     # Usager est accessible directement (pas d'auth requise)
-    usager_card = page.get_by_text("🌱 Usager")
+    page.get_by_text("🌱 Usager")
     adopt_usager = page.get_by_role("button", name="Adopter").first
 
     # Clique sur le bouton "Adopter" de la carte Usager

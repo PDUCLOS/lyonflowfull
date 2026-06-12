@@ -15,6 +15,7 @@ Si la DB est down, le script affiche l'erreur et sort avec code 1.
 """
 
 import pandas as pd
+
 from src.db.connection import execute_query
 
 

@@ -16,6 +16,7 @@ import sys
 sys.path.insert(0, "/app")
 
 import h3
+
 from src.db.connection import execute_query
 
 

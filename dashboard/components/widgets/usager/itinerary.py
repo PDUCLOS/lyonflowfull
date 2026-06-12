@@ -16,14 +16,14 @@ import logging
 
 import streamlit as st
 
-logger = logging.getLogger(__name__)
-
 from dashboard.components.colors import COLORS
 from src.data.data_loader import (
     load_lyon_addresses,
 )
 from src.data.exceptions import DashboardDataError
 from src.routing import Itinerary, compute_itinerary
+
+logger = logging.getLogger(__name__)
 
 
 def _resolve_address(text: str) -> tuple[float, float] | None:
@@ -99,7 +99,7 @@ def render_itinerary_result(
         return
 
     # Calcul itinéraire
-    from dashboard.components.loading_state import loading_wrapper, empty_state
+    from dashboard.components.loading_state import empty_state, loading_wrapper
 
     with loading_wrapper("Calcul itinéraire en cours…", "🔍"):
         itinerary = compute_itinerary(

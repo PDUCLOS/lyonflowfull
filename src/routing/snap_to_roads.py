@@ -27,7 +27,7 @@ import json
 import logging
 import math
 import time
-from typing import Iterable
+from collections.abc import Iterable
 
 import requests
 
@@ -96,7 +96,7 @@ def _project_on_segment(
 def _query_overpass(lat: float, lon: float, radius_m: float) -> list[tuple[float, float, float, float]]:
     """Query Overpass pour les ways dans un rayon donné. Retourne liste de segments [(lat1,lon1,lat2,lon2)]."""
     # Rayon en degrés (approx)
-    radius_deg = radius_m / 111_320
+    radius_m / 111_320
     query = f"""
     [out:json][timeout:8];
     way(
@@ -166,7 +166,7 @@ def snap_to_road(
     if best is None:
         return lat, lon
 
-    snapped_lat, snapped_lon, dist_m = best
+    snapped_lat, snapped_lon, _dist_m = best
     if use_cache:
         _cache[key] = (snapped_lat, snapped_lon, time.time())
     return snapped_lat, snapped_lon

@@ -355,9 +355,9 @@ class DataCollector(abc.ABC):
                     return len(data[key])
             # Format Open-Meteo : dict avec une sous-dict contenant des listes
             # (ex. {"hourly": {"time": [..], "pm10": [..]}}).
-            for sub_key, sub_val in data.items():
+            for _sub_key, sub_val in data.items():
                 if isinstance(sub_val, dict):
-                    for list_key, list_val in sub_val.items():
+                    for _list_key, list_val in sub_val.items():
                         if isinstance(list_val, list) and list_val:
                             return len(list_val)
             return 1
