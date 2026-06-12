@@ -15,10 +15,13 @@ Sprint 10 — Grand Lyon API change (juin 2026+) :
 
 from __future__ import annotations
 
+import logging
 import os
 from datetime import UTC, datetime
 
 from src.ingestion.base import CollectorError, DataCollector, FetchResult
+
+logger = logging.getLogger(__name__)
 
 
 class VelovCollector(DataCollector):
@@ -73,10 +76,8 @@ class VelovCollector(DataCollector):
                 r_info = self._http_get(self.station_information_url, auth=self._auth)
                 data_information = r_info.json()
             except Exception as e:
-                logger_msg = f"Vélov station_information indisponible (fallback): {e}"
+                logger.warning("Vélov station_information indisponible (fallback): %s", e)
                 # Pas critique — on stocke une liste vide, le transform survivra
-                import logging
-                logging.getLogger(__name__).warning(logger_msg)
                 data_information = {"data": {"stations": []}}
 
             # Extraction des stations (format GBFS : data.stations[])
