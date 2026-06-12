@@ -6,6 +6,7 @@ Couvre :
 * logger defini au niveau module (pas dans except)
 * Les URLs sont overridables via env vars
 """
+
 from __future__ import annotations
 
 import sys
@@ -44,6 +45,7 @@ class TestVelovCollectorLogger:
     def test_logger_defined_at_module_level(self):
         """logger est defini au niveau module, pas dans un bloc except."""
         import ast
+
         src = Path(__file__).resolve().parents[2] / "src" / "ingestion" / "velov.py"
         tree = ast.parse(src.read_text())
         # Cherche logging.getLogger(__name__) au niveau module
@@ -61,6 +63,7 @@ class TestVelovCollectorLogger:
     def test_no_import_inside_except_block(self):
         """Il n'y a pas d'import statement dans un bloc except."""
         import ast
+
         src = Path(__file__).resolve().parents[2] / "src" / "ingestion" / "velov.py"
         tree = ast.parse(src.read_text())
         for node in ast.walk(tree):

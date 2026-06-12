@@ -70,7 +70,7 @@ class Alternative:
     mode_label: str
     mode_icon: str
     temps_min: int
-    score_confiance: float  # 0.0 – 1.0
+    score_confiance: float  # 0.0 – 1.0  # noqa: RUF003
     raison: str
 
     def to_dict(self) -> dict:
@@ -100,13 +100,13 @@ def _haversine_m(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
 def _walk_duration_m(lat1: float, lon1: float, lat2: float, lon2: float) -> int:
     """Durée marche (min) à 4.5 km/h."""
     dist_m = _haversine_m(lat1, lon1, lat2, lon2)
-    return max(1, int(round(dist_m / 1000.0 / 4.5 * 60.0)))
+    return max(1, int(round(dist_m / 1000.0 / 4.5 * 60.0)))  # noqa: RUF046
 
 
 def _velov_duration_m(lat1: float, lon1: float, lat2: float, lon2: float) -> int:
     """Durée Vélov (min) à 15 km/h."""
     dist_m = _haversine_m(lat1, lon1, lat2, lon2)
-    return max(1, int(round(dist_m / 1000.0 / 15.0 * 60.0)))
+    return max(1, int(round(dist_m / 1000.0 / 15.0 * 60.0)))  # noqa: RUF046
 
 
 def _snap_to_lieu(lat: float, lon: float) -> dict | None:
@@ -228,8 +228,10 @@ def _build_velov_alternative(
 
     walk_to = _walk_duration_m(origin_lat, origin_lon, origin_v["velov_lat"], origin_v["velov_lon"])
     velov_ride = _velov_duration_m(
-        origin_v["velov_lat"], origin_v["velov_lon"],
-        dest_v["velov_lat"], dest_v["velov_lon"],
+        origin_v["velov_lat"],
+        origin_v["velov_lon"],
+        dest_v["velov_lat"],
+        dest_v["velov_lon"],
     )
     walk_from = _walk_duration_m(dest_v["velov_lat"], dest_v["velov_lon"], dest_lat, dest_lon)
     total = walk_to + velov_ride + walk_from
@@ -275,14 +277,16 @@ def _build_bus_alternative(
     stop = best["stop_name"]
     dist_stop = int(best.get("distance_m") or 0)
 
-    walk_to_stop = max(1, int(round(dist_stop / 1000.0 / 4.5 * 60.0)))
+    walk_to_stop = max(1, int(round(dist_stop / 1000.0 / 4.5 * 60.0)))  # noqa: RUF046
     cadence = _get_cadence_for_lieu_line(dest_lieu["lieu_id"], line)
     wait = cadence or 6
     dist_bus = _haversine_m(
-        origin_lieu["lat"], origin_lieu["lon"],
-        dest_lieu["lat"], dest_lieu["lon"],
+        origin_lieu["lat"],
+        origin_lieu["lon"],
+        dest_lieu["lat"],
+        dest_lieu["lon"],
     )
-    bus_dur = max(1, int(round(dist_bus / 1000.0 / 18.0 * 60.0)))
+    bus_dur = max(1, int(round(dist_bus / 1000.0 / 18.0 * 60.0)))  # noqa: RUF046
     total = walk_to_stop + wait + bus_dur
 
     congestion = _traffic_delay_factor(dest_lieu["lieu_id"])
@@ -342,7 +346,7 @@ def _build_vtc_alternative(
 ) -> Alternative | None:
     """Construit une alternative VTC/taxi (Uber, etc.) -- toujours disponible."""
     dist = _haversine_m(origin_lat, origin_lon, dest_lat, dest_lon)
-    direct_dur = max(1, int(round(dist / 1000.0 / 30.0 * 60.0)))
+    direct_dur = max(1, int(round(dist / 1000.0 / 30.0 * 60.0)))  # noqa: RUF046
     total = 5 + int(direct_dur * 1.2)
 
     congestion = _traffic_delay_factor(dest_lieu["lieu_id"])
@@ -402,17 +406,19 @@ def get_alternatives(favorite: dict) -> list[dict]:
     dest_lieu = _snap_to_lieu(dest_lat or 45.7600, dest_lon or 4.8500)
 
     if not origin_lieu or not dest_lieu:
-        logger.warning("Snap lieux failed for favorite %s -- using mock fallback",
-                       favorite.get("id"))
+        logger.warning("Snap lieux failed for favorite %s -- using mock fallback", favorite.get("id"))
         return _mock_alternatives(favorite)
 
     alternatives: list[Alternative] = []
 
     if current_mode not in ("velov", "walk"):
         velov_alt = _build_velov_alternative(
-            origin_lieu, dest_lieu,
-            origin_lat or origin_lieu["lat"], origin_lon or origin_lieu["lon"],
-            dest_lat or dest_lieu["lat"], dest_lon or dest_lieu["lon"],
+            origin_lieu,
+            dest_lieu,
+            origin_lat or origin_lieu["lat"],
+            origin_lon or origin_lieu["lon"],
+            dest_lat or dest_lieu["lat"],
+            dest_lon or dest_lieu["lon"],
             usual_duration,
         )
         if velov_alt:
@@ -425,16 +431,23 @@ def get_alternatives(favorite: dict) -> list[dict]:
 
     if origin_lat and origin_lon and dest_lat and dest_lon:
         walk_alt = _build_walk_alternative(
-            origin_lat, origin_lon, dest_lat, dest_lon, usual_duration,
+            origin_lat,
+            origin_lon,
+            dest_lat,
+            dest_lon,
+            usual_duration,
         )
         if walk_alt:
             alternatives.append(walk_alt)
 
     if dest_lieu:
         vtc_alt = _build_vtc_alternative(
-            origin_lat or origin_lieu["lat"], origin_lon or origin_lieu["lon"],
-            dest_lat or dest_lieu["lat"], dest_lon or dest_lieu["lon"],
-            usual_duration, dest_lieu,
+            origin_lat or origin_lieu["lat"],
+            origin_lon or origin_lieu["lon"],
+            dest_lat or dest_lieu["lat"],
+            dest_lon or dest_lieu["lon"],
+            usual_duration,
+            dest_lieu,
         )
         if vtc_alt:
             alternatives.append(vtc_alt)
@@ -476,13 +489,15 @@ def _mock_alternatives(favorite: dict) -> list[dict]:
     ]
 
     if current_mode != "walk":
-        mock_alts.append({
-            "mode": "walk",
-            "mode_label": "A pied",
-            "mode_icon": "walk",
-            "temps_min": usual_duration + 15,
-            "score_confiance": 0.35,
-            "raison": "2800m -- direct, bon pour la sante, pas de CO2",
-        })
+        mock_alts.append(
+            {
+                "mode": "walk",
+                "mode_label": "A pied",
+                "mode_icon": "walk",
+                "temps_min": usual_duration + 15,
+                "score_confiance": 0.35,
+                "raison": "2800m -- direct, bon pour la sante, pas de CO2",
+            }
+        )
 
     return mock_alts

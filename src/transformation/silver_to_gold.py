@@ -382,10 +382,7 @@ def _build_tcl_realtime() -> int:
         # Cleanup : on garde 1h d'historique. Le Pro_4 n'a besoin que de la
         # dernière position par véhicule, mais un peu d'historique est utile
         # pour les graphes "trajet des 5 dernières minutes".
-        cur.execute(
-            "DELETE FROM gold.tcl_vehicle_realtime "
-            "WHERE recorded_at < NOW() - INTERVAL '1 hour'"
-        )
+        cur.execute("DELETE FROM gold.tcl_vehicle_realtime WHERE recorded_at < NOW() - INTERVAL '1 hour'")
         cur.execute(_TCL_REALTIME_SQL)
         n = cur.rowcount
     logger.info("gold.tcl_vehicle_realtime: %d rows upserted", n)

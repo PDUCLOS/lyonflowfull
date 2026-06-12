@@ -129,8 +129,7 @@ def render_model_registry() -> None:
                 empty_state(
                     icon="🔴",
                     title="MLflow a échoué",
-                    message="Registry modèles indisponible. Vérifie l'état du "
-                            "container `lyonflow-mlflow` (port 5000).",
+                    message="Registry modèles indisponible. Vérifie l'état du container `lyonflow-mlflow` (port 5000).",
                 )
             return
 
@@ -157,6 +156,7 @@ def render_model_registry() -> None:
     # Sprint 10+ : drift réel depuis gold.model_drift_reports (PAS mock)
     # Lecture du dernier rapport de drift persisté par build_xgb_training_set.
     from src.data.db_query import get_latest_drift_report
+
     latest_drift = get_latest_drift_report()
     if latest_drift:
         n_drift = 1 if latest_drift.get("dataset_drift") else 0
@@ -182,12 +182,12 @@ def render_model_registry() -> None:
         with st.expander("📊 Dernier rapport de drift (PSI)", expanded=False):
             st.markdown(
                 f"""
-                - **Dataset drift** : `{latest_drift.get('dataset_drift')}`
+                - **Dataset drift** : `{latest_drift.get("dataset_drift")}`
                 - **Drift share** : `{drift_share_pct:.1f}%`
-                - **N ref / current** : `{latest_drift.get('n_ref')}` / `{latest_drift.get('n_current')}`
-                - **Période ref** : `{latest_drift.get('ref_from')}` → `{latest_drift.get('ref_to')}`
-                - **Période current** : `{latest_drift.get('current_from')}` → `{latest_drift.get('current_to')}`
-                - **Computed at** : `{latest_drift.get('computed_at')}`
+                - **N ref / current** : `{latest_drift.get("n_ref")}` / `{latest_drift.get("n_current")}`
+                - **Période ref** : `{latest_drift.get("ref_from")}` → `{latest_drift.get("ref_to")}`
+                - **Période current** : `{latest_drift.get("current_from")}` → `{latest_drift.get("current_to")}`
+                - **Computed at** : `{latest_drift.get("computed_at")}`
                 """
             )
             report = latest_drift.get("report", {})

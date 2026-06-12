@@ -209,44 +209,44 @@ def render_health_panel() -> None:
         if _is_demo_mode():
             # Fallback mock (mode démo uniquement)
             results = [
-            {
-                "name": "bronze_freshness",
-                "status": "ok",
-                "details": "Bronze trafic: 4 min",
-                "metric_value": 4.0,
-                "threshold": 30.0,
-                "timestamp": "2026-06-06T15:00:00",
-            },
-            {
-                "name": "bronze_volume",
-                "status": "ok",
-                "details": "522k records/24h",
-                "metric_value": 522000,
-                "threshold": 1000,
-            },
-            {
-                "name": "silver_nulls",
-                "status": "ok",
-                "details": "Nulls vitesse: 0.2%",
-                "metric_value": 0.2,
-                "threshold": 5.0,
-            },
-            {"name": "silver_doublons", "status": "ok", "details": "0 doublons", "metric_value": 0, "threshold": 0},
-            {
-                "name": "predictions_presentes",
-                "status": "ok",
-                "details": "124 prédictions/2h",
-                "metric_value": 124,
-                "threshold": 100,
-            },
-            {
-                "name": "drift_baseline",
-                "status": "warning",
-                "details": "1 rapport drift (à analyser)",
-                "metric_value": 1,
-                "threshold": 1,
-            },
-        ]
+                {
+                    "name": "bronze_freshness",
+                    "status": "ok",
+                    "details": "Bronze trafic: 4 min",
+                    "metric_value": 4.0,
+                    "threshold": 30.0,
+                    "timestamp": "2026-06-06T15:00:00",
+                },
+                {
+                    "name": "bronze_volume",
+                    "status": "ok",
+                    "details": "522k records/24h",
+                    "metric_value": 522000,
+                    "threshold": 1000,
+                },
+                {
+                    "name": "silver_nulls",
+                    "status": "ok",
+                    "details": "Nulls vitesse: 0.2%",
+                    "metric_value": 0.2,
+                    "threshold": 5.0,
+                },
+                {"name": "silver_doublons", "status": "ok", "details": "0 doublons", "metric_value": 0, "threshold": 0},
+                {
+                    "name": "predictions_presentes",
+                    "status": "ok",
+                    "details": "124 prédictions/2h",
+                    "metric_value": 124,
+                    "threshold": 100,
+                },
+                {
+                    "name": "drift_baseline",
+                    "status": "warning",
+                    "details": "1 rapport drift (à analyser)",
+                    "metric_value": 1,
+                    "threshold": 1,
+                },
+            ]
 
     # Normaliser: CheckResult dataclass OU dict mock
     def _as_dict(r):

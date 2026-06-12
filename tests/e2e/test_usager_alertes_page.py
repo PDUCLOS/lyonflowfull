@@ -1,4 +1,5 @@
 """E2E test: Usager Alertes."""
+
 from playwright.sync_api import Page, expect
 
 

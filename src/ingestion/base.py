@@ -171,10 +171,7 @@ class DataCollector(abc.ABC):
         """
         # DB Bronze : skip si pas de données
         if result.n_records == 0 or not result.raw_data:
-            logger.warning(
-                f"Collector {self.source} : 0 records, skip INSERT Bronze "
-                "(Sprint 8 idempotence fix)."
-            )
+            logger.warning(f"Collector {self.source} : 0 records, skip INSERT Bronze (Sprint 8 idempotence fix).")
             # GDrive backup : on garde quand même pour archive
             try:
                 raw_json = json.dumps(result.raw_data or {}, ensure_ascii=False, default=str)
@@ -358,9 +355,9 @@ class DataCollector(abc.ABC):
                     return len(data[key])
             # Format Open-Meteo : dict avec une sous-dict contenant des listes
             # (ex. {"hourly": {"time": [..], "pm10": [..]}}).
-            for sub_key, sub_val in data.items():
+            for _sub_key, sub_val in data.items():
                 if isinstance(sub_val, dict):
-                    for list_key, list_val in sub_val.items():
+                    for _list_key, list_val in sub_val.items():
                         if isinstance(list_val, list) and list_val:
                             return len(list_val)
             return 1

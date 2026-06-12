@@ -1,4 +1,5 @@
 """E2E test: Usager Favoris."""
+
 from playwright.sync_api import Page, expect
 
 

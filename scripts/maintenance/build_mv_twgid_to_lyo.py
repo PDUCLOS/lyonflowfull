@@ -72,9 +72,10 @@ def _load_lyo() -> pl.DataFrame:
         """)
         rows = cur.fetchall()
         cols = [d[0] for d in cur.description]
-    df = pl.DataFrame([dict(zip(cols, r)) for r in rows], schema_overrides={
-        "channel_id": pl.Utf8, "lat": pl.Float64, "lon": pl.Float64
-    })
+    df = pl.DataFrame(
+        [dict(zip(cols, r)) for r in rows],
+        schema_overrides={"channel_id": pl.Utf8, "lat": pl.Float64, "lon": pl.Float64},
+    )
     logger.info("Loaded %d distinct LYO channels (Polars)", df.height)
     return df
 
@@ -88,8 +89,7 @@ def _load_twgid() -> pl.DataFrame:
           AND lon IS NOT NULL
     """)
     df = pl.DataFrame(
-        [{"properties_twgid": r["properties_twgid"],
-          "lat": float(r["lat"]), "lon": float(r["lon"])} for r in rows],
+        [{"properties_twgid": r["properties_twgid"], "lat": float(r["lat"]), "lon": float(r["lon"])} for r in rows],
         schema_overrides={
             "properties_twgid": pl.Utf8,
             "lat": pl.Float64,
@@ -141,11 +141,13 @@ def _build_mapping(lyo: pl.DataFrame, twgid: pl.DataFrame) -> pl.DataFrame:
 
     # Hash join vectorisé (Polars) — O(N+M) sur les cellules
     # Polars ne supporte pas `suffix=` comme pandas, on rename manuellement.
-    lyo_h3_renamed = lyo_h3.rename({
-        "channel_id": "channel_id_lyo",
-        "lat": "lyo_lat",
-        "lon": "lyo_lon",
-    })
+    lyo_h3_renamed = lyo_h3.rename(
+        {
+            "channel_id": "channel_id_lyo",
+            "lat": "lyo_lat",
+            "lon": "lyo_lon",
+        }
+    )
     joined = twgid_expanded.join(lyo_h3_renamed, on="h3_cell", how="inner")
     # Dédup : 1 channel_id par properties_twgid (premier match)
     # On garde la distance minimale si dispo
@@ -156,34 +158,41 @@ def _build_mapping(lyo: pl.DataFrame, twgid: pl.DataFrame) -> pl.DataFrame:
     joined = joined.with_columns(
         # Distance haversine approx (suffit pour tie-break, pas critique)
         (
-            2 * 6371000
+            2
+            * 6371000
             * (
                 (pl.col("twgid_lat").radians() - pl.col("lyo_lat").radians()).sin() ** 2
                 + pl.col("twgid_lat").radians().cos()
-                  * pl.col("lyo_lat").radians().cos()
-                  * (pl.col("twgid_lon").radians() - pl.col("lyo_lon").radians()).sin() ** 2
-            ).sqrt().arcsin()
+                * pl.col("lyo_lat").radians().cos()
+                * (pl.col("twgid_lon").radians() - pl.col("lyo_lon").radians()).sin() ** 2
+            )
+            .sqrt()
+            .arcsin()
         ).alias("distance_m")
     )
 
     # Garder le match le plus proche par properties_twgid
     result = (
         joined.sort("distance_m")
-              .unique(subset=["properties_twgid"], keep="first")
-              .select([
-                  "properties_twgid",
-                  "twgid_lat",
-                  "twgid_lon",
-                  pl.col("channel_id_lyo").alias("channel_id"),
-                  "lyo_lat",
-                  "lyo_lon",
-                  "distance_m",
-              ])
+        .unique(subset=["properties_twgid"], keep="first")
+        .select(
+            [
+                "properties_twgid",
+                "twgid_lat",
+                "twgid_lon",
+                pl.col("channel_id_lyo").alias("channel_id"),
+                "lyo_lat",
+                "lyo_lon",
+                "distance_m",
+            ]
+        )
     )
-    logger.info("Mapping built: %d unique twgid ↔ lyo (mean dist %.1fm, max %.1fm)",
-                result.height,
-                result["distance_m"].mean() or 0,
-                result["distance_m"].max() or 0)
+    logger.info(
+        "Mapping built: %d unique twgid ↔ lyo (mean dist %.1fm, max %.1fm)",
+        result.height,
+        result["distance_m"].mean() or 0,
+        result["distance_m"].max() or 0,
+    )
     return result
 
 

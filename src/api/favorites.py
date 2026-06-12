@@ -197,10 +197,11 @@ async def toggle_alert(
         )
     return _row_to_favorite(result[0])
 
+
 # -----------------------------------------------------------------------------
 # Recommandation multimodale (Sprint 10)
 # -----------------------------------------------------------------------------
-from src.routing.recommendation import get_alternatives
+from src.routing.recommendation import get_alternatives  # noqa: E402
 
 
 class AlternativeItem(BaseModel):

@@ -33,16 +33,18 @@ def render_segment_table(line_id: str | None = None, height: int = 400) -> None:
         for _, row in df.iterrows():
             delay_s = row.get("bus_delay_seconds", 0) or 0
             speed = row.get("traffic_speed_kmh", 50) or 50
-            segments.append({
-                "line_id": row.get("line_ref", "?"),
-                "name": row.get("segment_id", "—"),
-                "bus_state": "delayed" if delay_s > _DELAY_THRESHOLD else "on_time",
-                "traffic_state": "jammed" if speed < _SPEED_THRESHOLD else "fluid",
-                "diagnosis": row.get("diagnosis", "ok"),
-                "delay_min": round(delay_s / 60, 1),
-                "lat": row.get("lat", 0) or 0,
-                "lon": row.get("lng", 0) or 0,
-            })
+            segments.append(
+                {
+                    "line_id": row.get("line_ref", "?"),
+                    "name": row.get("segment_id", "—"),
+                    "bus_state": "delayed" if delay_s > _DELAY_THRESHOLD else "on_time",
+                    "traffic_state": "jammed" if speed < _SPEED_THRESHOLD else "fluid",
+                    "diagnosis": row.get("diagnosis", "ok"),
+                    "delay_min": round(delay_s / 60, 1),
+                    "lat": row.get("lat", 0) or 0,
+                    "lon": row.get("lng", 0) or 0,
+                }
+            )
     else:
         # Sprint 8 (2026-06-12) — viré le fallback SEGMENTS (mock).
         st.info("Aucun segment瓶颈 — gold.infrastructure_bottlenecks est vide.")

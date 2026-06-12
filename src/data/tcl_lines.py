@@ -11,6 +11,7 @@ contient `referentiel.lieux_transports` (56 liaisons) et
 `gold.mv_line_kpis_live` (155 lignes) avec les vraies données
 observées.
 """
+
 from __future__ import annotations
 
 from src.data.labels import MODE_COLORS

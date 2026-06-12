@@ -142,15 +142,15 @@ def render_line_kpis(
         },
     )
 
-    st.caption(
-        f"📊 {len(df)} lignes au total · affichage des {len(df_view)} premières après tri"
-    )
+    st.caption(f"📊 {len(df)} lignes au total · affichage des {len(df_view)} premières après tri")
 
     # ---- Mode détails dépliables (optionnel) ----
     if show_details:
         st.markdown("##### 🔍 Détails par ligne")
         for _, row in df_view.iterrows():
-            with st.expander(f"**{row['line_id']}** — OTP {row['otp_pct']:.0f}% · retard {row['avg_delay_min']:.1f} min"):
+            with st.expander(
+                f"**{row['line_id']}** — OTP {row['otp_pct']:.0f}% · retard {row['avg_delay_min']:.1f} min"
+            ):
                 c1, c2, c3, c4 = st.columns(4)
                 c1.metric("OTP", f"{row['otp_pct']:.1f}%")
                 c2.metric("Retard moyen", f"{row['avg_delay_min']:.1f} min")
@@ -168,12 +168,20 @@ def render_line_kpis(
             kpis = kpis_dict.get(line_id, {})
             otp = row["otp_pct"]
             otp_color = (
-                COLORS["status_ok"] if otp >= 88 else COLORS["status_warning"] if otp >= 80 else COLORS["status_critical"]
+                COLORS["status_ok"]
+                if otp >= 88
+                else COLORS["status_warning"]
+                if otp >= 80
+                else COLORS["status_critical"]
             )
             delay = row["avg_delay_min"]
             load = row["load_pct"]
             load_color = (
-                COLORS["status_ok"] if load < 70 else COLORS["status_warning"] if load < 90 else COLORS["status_critical"]
+                COLORS["status_ok"]
+                if load < 70
+                else COLORS["status_warning"]
+                if load < 90
+                else COLORS["status_critical"]
             )
             trend_icon = {"up": "📈", "down": "📉", "stable": "➡️"}.get(row["trend"], "➡️")
 
@@ -184,7 +192,7 @@ def render_line_kpis(
                                 margin-bottom:6px;">
                         <div style="font-weight:600;font-size:0.95rem;">{line_id}</div>
                         <div style="font-size:0.75rem;opacity:0.7;">
-                            {trend_icon} {row['trend_delta']:+.1f}pts
+                            {trend_icon} {row["trend_delta"]:+.1f}pts
                         </div>
                     </div>
                     <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:0.5rem;
@@ -199,7 +207,7 @@ def render_line_kpis(
                         </div>
                         <div>
                             <div style="opacity:0.6;font-size:0.7rem;">Fréq.</div>
-                            <div style="font-weight:600;">{row['frequency_min']:.0f} min</div>
+                            <div style="font-weight:600;">{row["frequency_min"]:.0f} min</div>
                         </div>
                         <div>
                             <div style="opacity:0.6;font-size:0.7rem;">Charge</div>

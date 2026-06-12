@@ -140,7 +140,8 @@ if st.session_state.get("results_loaded"):
                     {
                         "station_id": str(r["station_id"]),
                         "name": r["station_name"],
-                        "lat": r["lat"], "lon": r["lon"],
+                        "lat": r["lat"],
+                        "lon": r["lon"],
                         "bikes_available": r["bikes_available"],
                         "stands_available": r["stands_available"],
                         "distance_m": int(r["distance_m"]),
@@ -236,7 +237,7 @@ if st.session_state.get("results_loaded"):
             format_func=lambda x: f"H+{x}min",
             key="itin_horizon",
             help="Sprint 8+ : focus H+1h. Les autres horizons sont entraînés "
-                 "mais l'interface n'expose que H+1h (cas d'usage principal).",
+            "mais l'interface n'expose que H+1h (cas d'usage principal).",
         )
 
     if st.button(
@@ -258,6 +259,5 @@ if st.session_state.get("results_loaded"):
     # la carte voiture. Sinon on l'invite à le faire.
 
     st.caption(
-        "LyonFlowFull · v0.6.x · Sprint VPS-6 (2026-06-11) — "
-        "Zéro mock : 100% pipeline (PostgreSQL, Airflow, MLflow)"
+        "LyonFlowFull · v0.6.x · Sprint VPS-6 (2026-06-11) — Zéro mock : 100% pipeline (PostgreSQL, Airflow, MLflow)"
     )

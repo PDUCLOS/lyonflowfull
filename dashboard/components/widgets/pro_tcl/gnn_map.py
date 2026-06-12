@@ -185,7 +185,7 @@ def render_traffic_map(
             key=f"traffic_map_horizon_{key_suffix}",
             format_func=lambda x: f"H+{x}min",
             help="Sprint 8+ : focus H+1h. Les autres horizons ne sont plus "
-                 "entraînés (1 modèle au lieu de 4 = -75% compute).",
+            "entraînés (1 modèle au lieu de 4 = -75% compute).",
         )
 
     merged = _load_merged(horizon, limit=500)

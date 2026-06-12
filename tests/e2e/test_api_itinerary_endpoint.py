@@ -15,7 +15,6 @@ import os
 import pytest
 import requests
 
-
 API_BASE = os.getenv("LYONFLOW_API_BASE_URL", "http://localhost:8000")
 API_KEY = os.getenv("LYONFLOW_API_KEY", "")
 
@@ -60,9 +59,7 @@ class TestApiItinerary:
             timeout=10,
         )
         # Accept 200 (fixed) or 500 (known bug with channel_id int vs string)
-        assert resp.status_code in (200, 500), (
-            f"Expected 200 or 500, got {resp.status_code}: {resp.text}"
-        )
+        assert resp.status_code in (200, 500), f"Expected 200 or 500, got {resp.status_code}: {resp.text}"
         if resp.status_code == 200:
             data = resp.json()
             assert "origin_node" in data, "Response must contain 'origin_node'"
@@ -105,6 +102,4 @@ class TestApiItinerary:
             timeout=10,
         )
         # Should return 404 when no route found, or 500 if the Pydantic bug is present
-        assert resp.status_code in (404, 500), (
-            f"Expected 404 or 500, got {resp.status_code}: {resp.text}"
-        )
+        assert resp.status_code in (404, 500), f"Expected 404 or 500, got {resp.status_code}: {resp.text}"
