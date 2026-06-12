@@ -11,12 +11,13 @@ Fonctions :
 
 from __future__ import annotations
 
+import time
 import logging
 from dataclasses import dataclass, field
 
 import networkx as nx
 
-from src.routing.graph import build_routing_graph, get_nearest_node, get_node_speed
+from src.routing.graph import build_routing_graph, get_nearest_node, get_node_speed, get_graph_type
 
 logger = logging.getLogger(__name__)
 
@@ -47,10 +48,43 @@ class Itinerary:
     total_duration_s: float = 0.0
     average_speed_kmh: float = 0.0
     confidence: float = 0.0  # 0..1, basé sur vitesse récente disponible
+    # Sprint 12 metrics
+    graph_type: str = "unknown"
+    graph_nodes_count: int = 0
+    compute_time_ms: float = 0.0
 
     @property
     def total_duration_min(self) -> float:
         return self.total_duration_s / 60.0
+
+    def to_dict(self) -> dict:
+        """Sérialise l'itinéraire pour l'API."""
+        return {
+            "origin_node": self.origin_node,
+            "destination_node": self.destination_node,
+            "horizon_minutes": self.horizon_minutes,
+            "total_length_m": self.total_length_m,
+            "total_duration_s": self.total_duration_s,
+            "total_duration_min": self.total_duration_min,
+            "average_speed_kmh": self.average_speed_kmh,
+            "confidence": self.confidence,
+            "graph_type": self.graph_type,
+            "graph_nodes_count": self.graph_nodes_count,
+            "compute_time_ms": self.compute_time_ms,
+            "segments": [
+                {
+                    "channel_id": s.channel_id,
+                    "length_m": s.length_m,
+                    "speed_kmh": s.speed_kmh,
+                    "duration_s": s.duration_s,
+                    "start_lon": s.start_lon,
+                    "start_lat": s.start_lat,
+                    "end_lon": s.end_lon,
+                    "end_lat": s.end_lat,
+                }
+                for s in self.segments
+            ],
+        }
 
 
 def shortest_path(
@@ -77,6 +111,8 @@ def shortest_path(
     Returns:
         Itinerary avec segments détaillés, ou None si pas de chemin.
     """
+    start_time = time.time()
+
     if origin_node not in graph:
         logger.warning(f"Origin node {origin_node} pas dans le graphe")
         return None
@@ -121,6 +157,7 @@ def shortest_path(
 
     avg_speed = (total_length / (total_duration / 3600 * 1000)) if total_duration > 0 else 0
 
+    compute_time_ms = (time.time() - start_time) * 1000
     return Itinerary(
         origin_node=origin_node,
         destination_node=destination_node,
@@ -130,6 +167,9 @@ def shortest_path(
         total_duration_s=total_duration,
         average_speed_kmh=avg_speed,
         confidence=_compute_confidence(graph, path_nodes),
+        graph_type=get_graph_type(),
+        graph_nodes_count=graph.number_of_nodes(),
+        compute_time_ms=compute_time_ms,
     )
 
 
