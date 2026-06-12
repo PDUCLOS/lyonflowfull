@@ -87,9 +87,7 @@ def get_dags_status() -> list[dict[str, Any]]:
             ou si la requête REST échoue.
     """
     if not is_airflow_available():
-        if _is_demo_mode():
-            from src.data.mock.pro_tcl_pipeline import MOCK_DAGS
-            return list(MOCK_DAGS)
+        # Sprint 8 — viré le fallback mock. Toujours DashboardDataError.
         raise DashboardDataError(
             source="airflow",
             detail=(
@@ -102,10 +100,7 @@ def get_dags_status() -> list[dict[str, Any]]:
     try:
         return _fetch_dags_from_airflow()
     except Exception as exc:
-        if _is_demo_mode():
-            from src.data.mock.pro_tcl_pipeline import MOCK_DAGS
-            logger.warning("Airflow REST failed, fallback mock (démo): %s", exc)
-            return list(MOCK_DAGS)
+        # Sprint 8 — viré le fallback mock. Toujours DashboardDataError.
         raise DashboardDataError(
             source="airflow",
             detail=f"Airflow REST API a échoué : {exc}",

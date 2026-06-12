@@ -416,16 +416,12 @@ def _segment_popup_html(seg: VelovSegment) -> str:
 def _resolve_lieu(text: str) -> tuple[float, float] | None:
     """Résout un nom de lieu → (lon, lat) depuis ``referentiel.lieux_lyon``.
 
-    En mode démo : utilise le mock ``lyon_addresses``.
+    Sprint 8 (2026-06-12) — viré le fallback mock lyon_addresses.
 
     Robuste aux labels préfixés par emoji (ex: ``"🌳 Parc de la Tête d'Or, Lyon"``
     retourné par ``search_bar.render_search_bar()``). L'emoji et l'espace
     initial sont strippés avant la query SQL.
     """
-    if _is_demo_mode():
-        from src.data.mock.lyon_addresses import resolve_address
-        return resolve_address(text)
-
     from src.data.db_query import _is_db_available, execute_query
     from src.data.exceptions import DashboardDataError
 

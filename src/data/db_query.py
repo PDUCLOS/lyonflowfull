@@ -6,7 +6,7 @@ Streamlit. Toutes les fonctions:
 
 * Utilisent du SQL paramétré (psycopg2 %s, JAMAIS de f-string)
 * Retournent des `pandas.DataFrame` (pratique pour Streamlit/Plotly)
-* Ont un fallback gracieux vers `src.data.mock` si la DB est down
+* Ont un fallback gracieux vers les widgets parents (DashboardDataError) si la DB est down (Sprint 8 — viré les mocks silencieux)
 * Sont testables hors ligne (les tests monkeypatchent ``_is_db_available``)
 
 Pattern d'utilisation dans un widget::
@@ -109,19 +109,13 @@ def get_latest_traffic(limit: int = 100) -> pd.DataFrame:
         LIMIT %s
     """
     df = _df_from_query(query, (limit,))
-    if df.empty and not _is_db_available():
-        from src.data.mock.usager import MOCK_TRAFFIC_FEATURES
-
-        return pd.DataFrame(MOCK_TRAFFIC_FEATURES[:limit])
+    return df
     return df
 
 
 def get_traffic_timeseries_for_node(node_idx: int, hours: int = 24) -> pd.DataFrame:
-    """Time series trafic pour un nœud (mock fallback)."""
-    # Pas de query SQL ici — c'est un alias utilisé par les widgets démo.
-    from src.data.mock.usager import MOCK_TRAFFIC_TIMESERIES
-
-    return pd.DataFrame(MOCK_TRAFFIC_TIMESERIES)
+    """Sprint 8 — viré le mock fallback. Stub : à implémenter Sprint 9."""
+    return pd.DataFrame()
 
 
 def get_traffic_for_node(node_idx: int, hours: int = 24) -> pd.DataFrame:
@@ -224,10 +218,7 @@ def get_traffic_bottlenecks(top: int = 20) -> pd.DataFrame:
         LIMIT %s
     """
     df = _df_from_query(query, (top,))
-    if df.empty and not _is_db_available():
-        from src.data.mock.usager import MOCK_TRAFFIC_BOTTLENECKS
-
-        return pd.DataFrame(MOCK_TRAFFIC_BOTTLENECKS[:top])
+    return df
     return df
 
 
@@ -246,10 +237,7 @@ def get_predictions_vs_actuals(limit: int = 1000) -> pd.DataFrame:
         LIMIT %s
     """
     df = _df_from_query(query, (limit,))
-    if df.empty and not _is_db_available():
-        from src.data.mock.usager import MOCK_PREDICTIONS_VS_ACTUALS
-
-        return pd.DataFrame(MOCK_PREDICTIONS_VS_ACTUALS[:limit])
+    return df
     return df
 
 
@@ -278,10 +266,7 @@ def get_velov_stations_geo() -> pd.DataFrame:
         ORDER BY station_id, measurement_time DESC
     """
     df = _df_from_query(query)
-    if df.empty and not _is_db_available():
-        from src.data.mock.usager import MOCK_VELOV_STATIONS_GEO
-
-        return pd.DataFrame(MOCK_VELOV_STATIONS_GEO)
+    return df
     return df
 
 
@@ -309,10 +294,7 @@ def get_velov_predictions(horizon_minutes: int = 30, limit: int = 500) -> pd.Dat
         LIMIT %s
     """
     df = _df_from_query(query, (horizon_minutes, limit))
-    if df.empty and not _is_db_available():
-        from src.data.mock.usager import MOCK_TRAFIC_PREDICTIONS
-
-        return pd.DataFrame([p for p in MOCK_TRAFIC_PREDICTIONS if p["horizon_minutes"] == horizon_minutes][:limit])
+    # Sprint 8 — viré le fallback mock. Si DB répond vide, retourne df vide.
     return df
 
 
@@ -363,10 +345,7 @@ def get_bus_delay_segments(line_ref: str | None = None, days: int = 7) -> pd.Dat
         ORDER BY date DESC, hour DESC
     """
     df = _df_from_query(query, (days,))
-    if df.empty and not _is_db_available():
-        from src.data.mock.usager import MOCK_BUS_DELAYS
-
-        return pd.DataFrame(MOCK_BUS_DELAYS)
+    return df
     return df
 
 
@@ -386,10 +365,7 @@ def get_infrastructure_bottlenecks(top: int = 30) -> pd.DataFrame:
         LIMIT %s
     """
     df = _df_from_query(query, (top,))
-    if df.empty and not _is_db_available():
-        from src.data.mock.usager import MOCK_INFRA_BOTTLENECKS
-
-        return pd.DataFrame(MOCK_INFRA_BOTTLENECKS[:top])
+    return df
     return df
 
 
@@ -411,10 +387,7 @@ def get_spatial_mapping() -> pd.DataFrame:
         ORDER BY node_idx
     """
     df = _df_from_query(query)
-    if df.empty and not _is_db_available():
-        from src.data.mock.usager import MOCK_SPATIAL_MAPPING
-
-        return pd.DataFrame(MOCK_SPATIAL_MAPPING)
+    return df
     return df
 
 
@@ -426,10 +399,7 @@ def get_gnn_adjacency() -> pd.DataFrame:
         WHERE is_connected = TRUE
     """
     df = _df_from_query(query)
-    if df.empty and not _is_db_available():
-        from src.data.mock.usager import MOCK_GNN_ADJACENCY
-
-        return pd.DataFrame(MOCK_GNN_ADJACENCY)
+    return df
     return df
 
 
@@ -453,10 +423,7 @@ def get_rgpd_audit_log(limit: int = 100) -> pd.DataFrame:
         LIMIT %s
     """
     df = _df_from_query(query, (limit,))
-    if df.empty and not _is_db_available():
-        from src.data.mock.usager import MOCK_RGPD_AUDIT
-
-        return pd.DataFrame(MOCK_RGPD_AUDIT[:limit])
+    return df
     return df
 
 
@@ -473,10 +440,7 @@ def get_rgpd_consents_summary() -> pd.DataFrame:
         ORDER BY consent_type
     """
     df = _df_from_query(query)
-    if df.empty and not _is_db_available():
-        from src.data.mock.usager import MOCK_RGPD_CONSENTS_SUMMARY
-
-        return pd.DataFrame(MOCK_RGPD_CONSENTS_SUMMARY)
+    return df
     return df
 
 
@@ -490,10 +454,7 @@ def get_rgpd_data_subject_requests(limit: int = 50) -> pd.DataFrame:
         LIMIT %s
     """
     df = _df_from_query(query, (limit,))
-    if df.empty and not _is_db_available():
-        from src.data.mock.usager import MOCK_RGPD_DSR
-
-        return pd.DataFrame(MOCK_RGPD_DSR[:limit])
+    return df
     return df
 
 
@@ -506,10 +467,7 @@ def get_rgpd_purge_history(limit: int = 50) -> pd.DataFrame:
         LIMIT %s
     """
     df = _df_from_query(query, (limit,))
-    if df.empty and not _is_db_available():
-        from src.data.mock.usager import MOCK_RGPD_PURGE
-
-        return pd.DataFrame(MOCK_RGPD_PURGE[:limit])
+    return df
     return df
 
 
@@ -573,10 +531,10 @@ def get_bronze_source_counts(hours: int = 1) -> pd.DataFrame:
         ("air_quality", "Open-Meteo air quality"),
         ("chantiers", "Grand Lyon chantiers"),
     ]
+    # Sprint 8 — viré le fallback mock. Si DB indispo, le caller doit catch.
     if not _is_db_available():
-        from src.data.mock.usager import MOCK_BRONZE_COUNTS
-
-        return pd.DataFrame(MOCK_BRONZE_COUNTS)
+        from src.data.exceptions import DashboardDataError
+        raise DashboardDataError(source="bronze_source_counts", detail="PostgreSQL indisponible")
 
     rows = []
     for table, label in sources:

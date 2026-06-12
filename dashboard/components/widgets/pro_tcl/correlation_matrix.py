@@ -20,9 +20,7 @@ from dashboard.components.colors import COLORS
 from dashboard.components.data_cache import cached_infra_bottlenecks
 from src.data.data_loader import _is_demo_mode
 from src.data.exceptions import DashboardDataError
-
-# DIAGNOSIS_LABELS = libellé FR d'un code SQL, pas une métrique inventée.
-from src.data.mock.pro_tcl import DIAGNOSIS_LABELS
+from src.data.labels import DIAGNOSIS_LABELS  # Sprint 8 : libellé FR d'un code SQL, pas du mock.
 
 _DELAY_THRESHOLD = 120
 _SPEED_THRESHOLD = 25
@@ -63,11 +61,12 @@ def render_correlation_matrix(line_id: str | None = None) -> None:
         st.error(f"⚠️ {e}")
         return
 
+    # Sprint 8 (2026-06-12) — viré le fallback mock. Si la DB renvoie
+    # un df vide, on affiche l'info. Pas de mock en prod, pas de mock
+    # en démo (les données viennent de la DB toujours, via les helpers
+    # db_query.py — eux peuvent avoir un fallback gracieux).
     if not df.empty:
         segments = _bottlenecks_to_segments(df)
-    elif _is_demo_mode():
-        from src.data.mock.pro_tcl import SEGMENTS
-        segments = SEGMENTS
     else:
         st.info("Aucun segment瓶颈 — gold.infrastructure_bottlenecks est vide.")
         return

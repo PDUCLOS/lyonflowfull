@@ -24,18 +24,11 @@ from src.routing import Itinerary, compute_itinerary
 
 
 def _resolve_address(text: str) -> tuple[float, float] | None:
-    """Résout une adresse texte → (lon, lat).
+    """Résout une adresse texte → (lon, lat) via la DB (referentiel.lieux_lyon).
 
-    En mode démo : utilise ``src.data.mock.lyon_addresses.resolve_address``.
-    En mode prod : query SQL fuzzy match sur ``referentiel.lieux_lyon``.
-
-    Robuste aux labels préfixés par emoji (cf. search_bar).
+    Sprint 8 (2026-06-12) — viré le fallback mock lyon_addresses.
+    La DB est l'unique source. Si DB indispo, DashboardDataError.
     """
-    if _is_demo_mode():
-        from src.data.mock.lyon_addresses import resolve_address
-        return resolve_address(text)
-
-    # Mode prod : DB
     from src.data.db_query import _is_db_available, execute_query
 
     if not _is_db_available():

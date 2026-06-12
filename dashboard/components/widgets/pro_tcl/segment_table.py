@@ -15,7 +15,7 @@ from src.data.exceptions import DashboardDataError
 
 # DIAGNOSIS_LABELS est un libellé FR d'un code SQL (cf. infra_bottlenecks.diagnosis),
 # pas une métrique inventée — on l'importe toujours.
-from src.data.mock.pro_tcl import DIAGNOSIS_LABELS
+from src.data.labels import DIAGNOSIS_LABELS  # Sprint 8 : référentiel statique, plus un mock.
 
 _DELAY_THRESHOLD = 120
 _SPEED_THRESHOLD = 25
@@ -44,10 +44,8 @@ def render_segment_table(line_id: str | None = None, height: int = 400) -> None:
                 "lat": row.get("lat", 0) or 0,
                 "lon": row.get("lng", 0) or 0,
             })
-    elif _is_demo_mode():
-        from src.data.mock.pro_tcl import SEGMENTS
-        segments = SEGMENTS
     else:
+        # Sprint 8 (2026-06-12) — viré le fallback SEGMENTS (mock).
         st.info("Aucun segment瓶颈 — gold.infrastructure_bottlenecks est vide.")
         return
 

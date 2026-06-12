@@ -46,9 +46,7 @@ def render_weather_widget(weather: dict | None = None) -> None:
                 "wind_kmh": current.get("wind_kmh", 0),
                 "next_3h": [],
             }
-        elif _is_demo_mode():
-            from src.data.mock.usager import MOCK_WEATHER
-            weather = MOCK_WEATHER
+        # Sprint 8 (2026-06-12) — viré le fallback MOCK_WEATHER.
         else:
             st.warning("⚠️ Météo indisponible — silver.meteo_hourly est vide.")
             return

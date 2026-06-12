@@ -1,7 +1,8 @@
 """Widget — Heatmap OTP Plotly (lignes × heures).
 
-Sprint 8 — Charge via data_loader.cached_otp_heatmap_data() (vue Gold.
-mv_otp_grid_7d ou équivalent). Fallback mock si DB down.
+Sprint 8 — Charge via data_loader.cached_otp_heatmap_data() (vue Gold
+mv_otp_heatmap, 4416 triplets). Pas de mock — la DB est la source
+unique de vérité (fail loud si DB down).
 """
 
 from __future__ import annotations
@@ -11,7 +12,6 @@ import streamlit as st
 
 from dashboard.components.colors import COLORS
 from dashboard.components.data_cache import cached_otp_heatmap_data
-from src.data.mock.pro_tcl import LINE_BASE_OTP, OTP_GRID
 
 
 def render_otp_heatmap(otp_data: dict | None = None, days: int = 1, height: int = 500) -> None:
@@ -38,10 +38,18 @@ def render_otp_heatmap(otp_data: dict | None = None, days: int = 1, height: int 
                     otp_data[line_id][date] = [0.0] * 24
                 otp_data[line_id][date][int(row["hour"])] = float(row["otp_pct"])
         else:
-            otp_data = OTP_GRID
+            # Sprint 8 (2026-06-12) — viré le fallback OTP_GRID (mock).
+            # Si la vue est vide, le widget affiche un message et return.
+            st.info("Aucune donnée OTP — gold.mv_otp_heatmap est vide.")
+            return
 
     # Calculer la moyenne
-    lines = sorted(otp_data.keys(), key=lambda lid: LINE_BASE_OTP.get(lid, 0), reverse=True)
+    # Sprint 8 — tri par nombre de dates observées (proxy activité),
+    # plus besoin de LINE_BASE_OTP (mock).
+    def _n_dates(lid: str) -> int:
+        return len(otp_data.get(lid, {}))
+
+    lines = sorted(otp_data.keys(), key=_n_dates, reverse=True)
     dates = sorted(otp_data[lines[0]].keys()) if lines else []
 
     if days == 1:

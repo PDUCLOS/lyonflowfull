@@ -15,7 +15,7 @@ sys.path.insert(0, str(WORKSPACE))
 
 def test_mock_data_usager_imports():
     """Le module mock data usager doit s'importer sans erreur."""
-    from src.data.mock import usager
+    from tests.fixtures.mock_data import usager
 
     assert hasattr(usager, "TCL_LINES")
     assert hasattr(usager, "MOCK_TRIP_RESULTS")
@@ -28,7 +28,7 @@ def test_mock_data_usager_imports():
 
 def test_tcl_lines_have_required_fields():
     """Chaque ligne TCL doit avoir id, name, mode, color, icon."""
-    from src.data.mock.usager import TCL_LINES
+    from tests.fixtures.mock_data.usager import TCL_LINES
 
     assert len(TCL_LINES) >= 10, f"Attendu ≥ 10 lignes, trouvé {len(TCL_LINES)}"
     for line in TCL_LINES:
@@ -38,7 +38,7 @@ def test_tcl_lines_have_required_fields():
 
 def test_velov_stations_have_lyon_coordinates():
     """Les stations Vélov doivent avoir des coordonnées réalistes Lyon."""
-    from src.data.mock.usager import VELOV_STATIONS
+    from tests.fixtures.mock_data.usager import VELOV_STATIONS
 
     assert len(VELOV_STATIONS) >= 3
     for s in VELOV_STATIONS:
@@ -51,7 +51,7 @@ def test_velov_stations_have_lyon_coordinates():
 
 def test_mock_alerts_have_required_fields():
     """Chaque alerte doit avoir line, title, description, action, severity."""
-    from src.data.mock.usager import MOCK_ALERTS
+    from tests.fixtures.mock_data.usager import MOCK_ALERTS
 
     assert len(MOCK_ALERTS) >= 3
     for a in MOCK_ALERTS:
@@ -61,7 +61,7 @@ def test_mock_alerts_have_required_fields():
 
 def test_mock_favorites_have_route_info():
     """Chaque favori doit avoir name, origin, destination, usual_mode."""
-    from src.data.mock.usager import MOCK_FAVORITES
+    from tests.fixtures.mock_data.usager import MOCK_FAVORITES
 
     assert len(MOCK_FAVORITES) >= 3
     for f in MOCK_FAVORITES:

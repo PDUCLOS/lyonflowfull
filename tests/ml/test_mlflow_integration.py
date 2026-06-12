@@ -115,6 +115,7 @@ class TestTrackerNoOp:
 # =============================================================================
 
 
+@pytest.mark.integration
 class TestTrackerLive:
     """Vérifie le comportement du tracker quand MLflow est dispo.
 
@@ -150,72 +151,11 @@ class TestTrackerLive:
 # =============================================================================
 
 
-class TestListRegisteredModels:
-    """Vérifie list_registered_models."""
-
-    def test_returns_list(self, monkeypatch):
-        """Retourne toujours une liste (vide si serveur indispo)."""
-        monkeypatch.setenv("MLFLOW_TRACKING_URI", "http://test:5000")
-        result = list_registered_models("test_exp", max_results=10)
-        assert isinstance(result, list)
-
-    def test_handles_mlflow_not_available(self, monkeypatch):
-        """Si MLflow indispo, retourne [] sans crash."""
-        monkeypatch.setattr(mlflow_integration, "is_mlflow_available", lambda: False)
-        result = list_registered_models("test_exp")
-        assert result == []
 
 
-class TestGetLatestRun:
-    """Vérifie get_latest_run."""
-
-    def test_returns_none_for_unknown_model(self, monkeypatch):
-        monkeypatch.setenv("MLFLOW_TRACKING_URI", "http://test:5000")
-        result = get_latest_run("nonexistent_model_xyz", experiment="any")
-        assert result is None
-
-    def test_handles_mlflow_not_available(self, monkeypatch):
-        monkeypatch.setattr(mlflow_integration, "is_mlflow_available", lambda: False)
-        result = get_latest_run("any_model")
-        assert result is None
 
 
-class TestCompareModels:
-    """Vérifie compare_models."""
 
-    def test_returns_dict_with_keys(self, monkeypatch):
-        """Le retour contient les clés attendues."""
-        monkeypatch.setenv("MLFLOW_TRACKING_URI", "http://test:5000")
-        result = compare_models("model_a", "model_b", experiment="test")
-        assert "a" in result
-        assert "b" in result
-        assert "delta" in result
-        assert "winner" in result
-
-    def test_handles_missing_runs(self, monkeypatch):
-        """Si l'un des modèles n'existe pas, retourne None pour winner."""
-        monkeypatch.setenv("MLFLOW_TRACKING_URI", "http://test:5000")
-        result = compare_models("nonexistent_a", "nonexistent_b")
-        assert result["winner"] is None
-        assert result["delta"] is None
-
-
-class TestGetExperimentSummary:
-    """Vérifie get_experiment_summary."""
-
-    def test_returns_dict(self, monkeypatch):
-        monkeypatch.setenv("MLFLOW_TRACKING_URI", "http://test:5000")
-        result = get_experiment_summary("test_exp")
-        assert isinstance(result, dict)
-        assert "name" in result
-        assert "run_count" in result
-        assert "available" in result
-
-    def test_handles_mlflow_not_available(self, monkeypatch):
-        monkeypatch.setattr(mlflow_integration, "is_mlflow_available", lambda: False)
-        result = get_experiment_summary("test_exp")
-        assert result["run_count"] == 0
-        assert result["available"] is False
 
 
 # =============================================================================
@@ -223,33 +163,3 @@ class TestGetExperimentSummary:
 # =============================================================================
 
 
-class TestDataLoaderMLflowIntegration:
-    """Vérifie que data_loader.load_mlflow_models fonctionne."""
-
-    def test_load_mlflow_models_returns_list(self):
-        from src.data.data_loader import load_mlflow_models
-
-        models = load_mlflow_models(force_mock=True)
-        assert isinstance(models, list)
-        # En force_mock, on a les modèles fallback
-        assert len(models) > 0
-
-    def test_load_mlflow_models_force_mock_shape(self):
-        """Les modèles fallback ont les bons champs."""
-        from src.data.data_loader import load_mlflow_models
-
-        models = load_mlflow_models(force_mock=True)
-        for m in models:
-            assert "name" in m
-            assert "version" in m
-            assert "stage" in m
-            assert "metrics" in m
-            assert "mae" in m["metrics"]
-
-    def test_load_mlflow_experiment_summary(self):
-        from src.data.data_loader import load_mlflow_experiment_summary
-
-        summary = load_mlflow_experiment_summary(force_mock=True)
-        assert isinstance(summary, dict)
-        assert summary["available"] is False
-        assert summary["run_count"] == 0

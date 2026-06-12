@@ -20,6 +20,7 @@ from dashboard.components.widgets.pro_tcl import render_traffic_map_compact
 from dashboard.components.widgets.usager import (
     render_itinerary_result,
     render_lieux_velov_map,
+    render_recommendation_card,
     render_search_bar,
     render_traffic_map_compact,
     render_velov_trip,

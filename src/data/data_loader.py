@@ -2,7 +2,7 @@
 
 Cette couche abstrait le binding widgets ↔ DB. Les widgets appellent
 ``load_traffic()``, ``load_velov()``, etc. sans savoir si la donnée vient
-de la DB Gold/Silver ou des mocks ``src.data.mock``.
+de la DB Gold/Silver uniquement (Sprint 8 — viré tous les mocks).
 
 Pattern d'utilisation dans un widget::
 
@@ -61,62 +61,47 @@ from src.data.db_query import (
     get_velov_stations_geo,
 )
 from src.data.exceptions import DashboardDataError
-from src.data.mock import elu as elu_mock
-from src.data.mock import pro_tcl as pro_tcl_mock
-from src.data.mock import usager as usager_mock
+# Sprint 8 (2026-06-12) — viré tous les imports src.data.mock.
+# La couche data_loader n'utilise plus aucun mock. Si DB indispo,
+# DashboardDataError (fail loud). Si DB vide, liste/df vide (info).
 from src.db.connection import execute_query
 
 logger = logging.getLogger(__name__)
 
 
 # -----------------------------------------------------------------------------
-# Mode démo (Sprint VPS-6, 2026-06-11)
+# Mode démo (Sprint 8, 2026-06-12) — DÉPRÉCIÉ
 # -----------------------------------------------------------------------------
-# Variable d'env : LYONFLOW_DEMO_MODE
-#   "1" → mode démo : fallback mock transparent si DB indisponible (dev local,
-#          screenshots, démos Jedha). Comportement historique préservé.
-#   "0" (ou absent) → mode production : aucune donnée mock, lève
-#                      DashboardDataError si la DB ne répond pas.
-# Sur le VPS, .env fixe LYONFLOW_DEMO_MODE=0 et check-deploy-env.sh valide
-# la présence de cette variable avant chaque déploiement.
-def _is_demo_mode() -> bool:
-    """Lit LYONFLOW_DEMO_MODE au boot. Cache process (immuable par session)."""
-    global _demo_mode_cache
-    if _demo_mode_cache is None:
-        val = os.getenv("LYONFLOW_DEMO_MODE", "0").strip()
-        _demo_mode_cache = val == "1"
-        logger.info(
-            "Dashboard data_loader initialisé en mode %s (LYONFLOW_DEMO_MODE=%s)",
-            "DÉMO" if _demo_mode_cache else "PRODUCTION",
-            val,
-        )
-    return _demo_mode_cache
+# Avant : _is_demo_mode() lisait LYONFLOW_DEMO_MODE. Sprint 8 : la
+# consigne "zéro mock dans le projet" invalide ce mode. _is_demo_mode
+# retourne toujours False maintenant. Les `if _is_demo_mode(): return
+# X_mock` qui restaient sont virés au fil du sprint. La DB est l'unique
+# source.
+# -----------------------------------------------------------------------------
 
-
+# Cache process (immuable par session)
 _demo_mode_cache: bool | None = None
 
 
-def _maybe_force_mock(force_mock: bool) -> bool:
-    """Retourne True si on doit utiliser le mock.
+def _is_demo_mode() -> bool:
+    """Retourne TOUJOURS False depuis Sprint 8 (zéro mock dans le projet).
 
-    Logique (Sprint VPS-6) :
+    Gardé pour ne pas casser d'anciens call sites. Sera supprimé
+    quand tous les call sites seront nettoyés.
 
-    * **Mode démo** (``LYONFLOW_DEMO_MODE=1``) : force_mock=True OU DB down
-      → utilise le mock. Comportement historique préservé pour le dev local.
-    * **Mode prod** (``LYONFLOW_DEMO_MODE=0`` ou absent, défaut sur VPS) :
-      ``force_mock=True`` est IGNORÉ. Si la DB ne répond pas, la fonction
-      appelante doit lever ``DashboardDataError`` au lieu de servir un mock.
-
-    Returns:
-        True si un mock doit être servi. False si la fonction doit lire la DB
-        (et lever ``DashboardDataError`` si elle échoue).
+    Note : la variable d'env LYONFLOW_DEMO_MODE est lue par
+    ``check-deploy-env.sh`` et .env (defense in depth), mais plus
+    par le code Python directement.
     """
-    if _is_demo_mode():
-        if force_mock:
-            return True
-        return not _is_db_available()
-    # Mode prod : force_mock est ignoré (pas de mock sur le VPS).
-    # Si DB down, la fonction appelante lèvera DashboardDataError.
+    return False
+
+
+def _maybe_force_mock(force_mock: bool) -> bool:
+    """Sprint 8 — retourne TOUJOURS False. Le mode mock est déprécié.
+
+    Gardé pour la signature. Sera supprimé en Sprint 9 quand tous
+    les call sites seront nettoyés.
+    """
     return False
 
 
@@ -186,19 +171,11 @@ def load_traffic(force_mock: bool = False) -> dict[str, Any]:
             la table ``gold.traffic_features_live`` est vide (aucun capteur
             n'a remonté de données).
     """
-    if _maybe_force_mock(force_mock):
-        return usager_mock.MOCK_TRAFFIC
-
     _require_db_or_raise("traffic_features_live")
     df = get_latest_traffic(limit=1000)
     if df.empty:
-        # DB répond mais vide : en mode démo on tolère (fallback mock),
-        # en prod on signale explicitement.
-        if _is_demo_mode():
-            logger.warning(
-                "gold.traffic_features_live vide — fallback mock (mode démo)"
-            )
-            return usager_mock.MOCK_TRAFFIC
+        # Sprint 8 — viré le mode démo. Si DB répond vide, on signale
+        # explicitement. Pas de mock fallback.
         raise DashboardDataError(
             source="gold.traffic_features_live",
             detail="Table vide — aucun capteur trafic n'a remonté de données. "
@@ -281,8 +258,6 @@ def load_traffic_timeseries(node_idx: int, hours: int = 4, force_mock: bool = Fa
             Retourne un DataFrame vide si la DB répond mais n'a pas de série
             pour ce nœud (cas légitime, widget affichera un message vide).
     """
-    if _maybe_force_mock(force_mock):
-        return pd.DataFrame(usager_mock.MOCK_TRAFFIC_TIMESERIES)
     # Si DB dispo, query (alias de get_traffic_for_node)
     from src.data.db_query import get_traffic_for_node
 
@@ -301,9 +276,6 @@ def load_velov_stations(force_mock: bool = False) -> list[dict]:
     Raises:
         DashboardDataError: en mode prod, si PostgreSQL ne répond pas.
     """
-    if _maybe_force_mock(force_mock):
-        return usager_mock.VELOV_STATIONS
-
     _require_db_or_raise("velov_features")
     df = get_velov_stations_geo()
     if df.empty:
@@ -331,8 +303,6 @@ def load_velov_predictions(horizon_minutes: int = 30, force_mock: bool = False) 
     Raises:
         DashboardDataError: en mode prod, si PostgreSQL ne répond pas.
     """
-    if _maybe_force_mock(force_mock):
-        return pd.DataFrame([p for p in usager_mock.MOCK_VELOV_PREDICTIONS if p["horizon_minutes"] == horizon_minutes])
     _require_db_or_raise("velov_predictions")
     return get_velov_predictions(horizon_minutes=horizon_minutes, limit=200)
 
@@ -348,11 +318,7 @@ def load_bus_delays(line_ref: str | None = None, days: int = 7, force_mock: bool
     Raises:
         DashboardDataError: en mode prod, si PostgreSQL ne répond pas.
     """
-    if _maybe_force_mock(force_mock):
-        df = pd.DataFrame(usager_mock.MOCK_BUS_DELAYS)
-        if line_ref:
-            df = df[df["line_ref"] == line_ref]
-        return df
+    # Sprint 8 — viré le fallback mock. Toujours DB.
     from src.data.db_query import get_bus_delay_segments
 
     _require_db_or_raise("bus_delay_segments")
@@ -365,8 +331,6 @@ def load_infra_bottlenecks(top: int = 15, force_mock: bool = False) -> pd.DataFr
     Raises:
         DashboardDataError: en mode prod, si PostgreSQL ne répond pas.
     """
-    if _maybe_force_mock(force_mock):
-        return pd.DataFrame(usager_mock.MOCK_INFRA_BOTTLENECKS[:top])
     _require_db_or_raise("infrastructure_bottlenecks")
     return get_infrastructure_bottlenecks(top=top)
 
@@ -382,8 +346,6 @@ def load_predictions_vs_actuals(limit: int = 200, force_mock: bool = False) -> p
     Raises:
         DashboardDataError: en mode prod, si PostgreSQL ne répond pas.
     """
-    if _maybe_force_mock(force_mock):
-        return pd.DataFrame(usager_mock.MOCK_PREDICTIONS_VS_ACTUALS[:limit])
     _require_db_or_raise("predictions_vs_actuals")
     return get_predictions_vs_actuals(limit=limit)
 
@@ -394,8 +356,6 @@ def load_rgpd_audit(limit: int = 50, force_mock: bool = False) -> pd.DataFrame:
     Raises:
         DashboardDataError: en mode prod, si PostgreSQL ne répond pas.
     """
-    if _maybe_force_mock(force_mock):
-        return pd.DataFrame(usager_mock.MOCK_RGPD_AUDIT[:limit])
     _require_db_or_raise("rgpd.audit_log")
     return get_rgpd_audit_log(limit=limit)
 
@@ -406,8 +366,6 @@ def load_rgpd_consents(force_mock: bool = False) -> pd.DataFrame:
     Raises:
         DashboardDataError: en mode prod, si PostgreSQL ne répond pas.
     """
-    if _maybe_force_mock(force_mock):
-        return pd.DataFrame(usager_mock.MOCK_RGPD_CONSENTS_SUMMARY)
     _require_db_or_raise("rgpd.consents")
     return get_rgpd_consents_summary()
 
@@ -430,8 +388,6 @@ def load_line_kpis(line_ids: list[str] | None = None, force_mock: bool = False) 
         DashboardDataError: en mode prod, si la vue Gold n'est pas peuplée
             ou si PostgreSQL ne répond pas.
     """
-    if _is_demo_mode():
-        return pro_tcl_mock.LINE_KPIS
     from src.data.db_query import get_line_kpis
 
     _require_db_or_raise("mv_line_kpis_live")
@@ -442,19 +398,11 @@ def load_otp_heatmap_data(force_mock: bool = False) -> pd.DataFrame:
     """Données heatmap OTP (ligne × heure).
 
     Mode prod : lit la vue Gold ``gold.mv_otp_heatmap`` (Sprint 10).
-    Mode démo : aplatit le mock ``OTP_GRID`` en DataFrame ``[line_id, date, hour, otp_pct]``.
+    Sprint 8 — viré le fallback mock. Toujours DB (gold.mv_otp_heatmap).
 
     Raises:
-        DashboardDataError: en mode prod, si la DB ne répond pas.
+        DashboardDataError: si la DB ne répond pas.
     """
-    if _is_demo_mode():
-        grid = pro_tcl_mock.OTP_GRID
-        rows = []
-        for line_id, by_date in grid.items():
-            for date_str, hourly in by_date.items():
-                for hour, otp in enumerate(hourly):
-                    rows.append({"line_id": line_id, "date": date_str, "hour": hour, "otp_pct": float(otp)})
-        return pd.DataFrame(rows)
     from src.data.db_query import get_otp_heatmap
 
     _require_db_or_raise("mv_otp_heatmap")
@@ -475,8 +423,6 @@ def load_city_synthesis(force_mock: bool = False) -> dict:
     Raises:
         DashboardDataError: en mode prod, car la vue n'est pas encore implémentée.
     """
-    if _is_demo_mode():
-        return elu_mock.SYNTHESIS_DATA
     raise DashboardDataError(
         source="gold.v_city_synthesis",
         detail="Vue matérialisée non créée. Sprint 10+ : créer gold.v_city_synthesis "
@@ -493,8 +439,6 @@ def load_bottlenecks_summary(force_mock: bool = False) -> pd.DataFrame:
     Raises:
         DashboardDataError: en mode prod, si la DB ne répond pas.
     """
-    if _is_demo_mode():
-        return pd.DataFrame(elu_mock.BOTTLENECKS_LIST)
     from src.data.db_query import get_bottlenecks_summary
 
     _require_db_or_raise("infrastructure_bottlenecks")
@@ -512,8 +456,6 @@ def load_weather_hourly(hours: int = 24, force_mock: bool = False) -> pd.DataFra
     Raises:
         DashboardDataError: en mode prod, si PostgreSQL ne répond pas.
     """
-    if _maybe_force_mock(force_mock):
-        return pd.DataFrame(usager_mock.MOCK_WEATHER_HOURLY)
     from src.data.db_query import get_weather_hourly
 
     _require_db_or_raise("silver.meteo_hourly")
@@ -526,8 +468,6 @@ def load_recent_alerts(hours: int = 24, limit: int = 50, force_mock: bool = Fals
     Raises:
         DashboardDataError: en mode prod, si PostgreSQL ne répond pas.
     """
-    if _maybe_force_mock(force_mock):
-        return pd.DataFrame(pro_tcl_mock.MOCK_RECENT_ALERTS[:limit])
     from src.data.db_query import get_recent_alerts
 
     _require_db_or_raise("gold.alerts")
@@ -540,8 +480,6 @@ def load_segments(limit: int = 200, force_mock: bool = False) -> pd.DataFrame:
     Raises:
         DashboardDataError: en mode prod, si PostgreSQL ne répond pas.
     """
-    if _maybe_force_mock(force_mock):
-        return pd.DataFrame(pro_tcl_mock.MOCK_SEGMENTS[:limit])
     from src.data.db_query import get_segments
 
     _require_db_or_raise("gold.segments")
@@ -554,8 +492,6 @@ def load_correlation_matrix(limit: int = 50, force_mock: bool = False) -> pd.Dat
     Raises:
         DashboardDataError: en mode prod, si PostgreSQL ne répond pas.
     """
-    if _maybe_force_mock(force_mock):
-        return pd.DataFrame(pro_tcl_mock.MOCK_CORRELATION_MATRIX[:limit])
     from src.data.db_query import get_correlation_matrix
 
     _require_db_or_raise("gold.correlation_matrix")
@@ -568,8 +504,6 @@ def load_buses_positions(limit: int = 200, force_mock: bool = False) -> pd.DataF
     Raises:
         DashboardDataError: en mode prod, si PostgreSQL ne répond pas.
     """
-    if _maybe_force_mock(force_mock):
-        return pd.DataFrame(pro_tcl_mock.MOCK_BUSES_POSITIONS[:limit])
     from src.data.db_query import get_buses_positions
 
     _require_db_or_raise("tcl_vehicles_clean")
@@ -582,8 +516,6 @@ def load_kpis_12_months(force_mock: bool = False) -> pd.DataFrame:
     Raises:
         DashboardDataError: en mode prod, si PostgreSQL ne répond pas.
     """
-    if _maybe_force_mock(force_mock):
-        return pd.DataFrame(elu_mock.MOCK_KPIS_12_MONTHS_FLAT)
     from src.data.db_query import get_kpis_12_months
 
     _require_db_or_raise("gold.kpis_12_months")
@@ -713,8 +645,6 @@ def load_amenagements_passes(limit: int = 50, force_mock: bool = False) -> pd.Da
     Raises:
         DashboardDataError: en mode prod, si PostgreSQL ne répond pas.
     """
-    if _maybe_force_mock(force_mock):
-        return pd.DataFrame(elu_mock.MOCK_AMENAGEMENTS_FLAT[:limit])
     from src.data.db_query import get_amenagements_passes
 
     _require_db_or_raise("gold.amenagements")
@@ -740,9 +670,6 @@ def load_tcl_lines(force_mock: bool = False) -> list[dict]:
     Raises:
         DashboardDataError: en mode prod, si PostgreSQL ne répond pas.
     """
-    if _maybe_force_mock(force_mock):
-        return pro_tcl_mock.MOCK_TCL_LINES
-
     _require_db_or_raise("gold.tcl_vehicle_realtime")
     # Query DB pour toutes les lignes distinctes
     try:
@@ -807,12 +734,9 @@ def load_lyon_addresses(force_mock: bool = False) -> list[str]:
     21 rows). Avec cache, <0.01s.
 
     Raises:
-        DashboardDataError: en mode prod, si PostgreSQL ne répond pas.
+        DashboardDataError: si PostgreSQL ne répond pas.
     """
-    if _is_demo_mode():
-        from src.data.mock.lyon_addresses import get_address_names
-
-        return get_address_names()
+    # Sprint 8 — viré le fallback mock lyon_addresses. Toujours DB.
     return _load_lyon_addresses_cached()
 
 
@@ -824,12 +748,9 @@ def load_lyon_addresses_with_coords(force_mock: bool = False) -> list[dict]:
     Cache process (lru_cache 60s) — cf. load_lyon_addresses.
 
     Raises:
-        DashboardDataError: en mode prod, si PostgreSQL ne répond pas.
+        DashboardDataError: si PostgreSQL ne répond pas.
     """
-    if _is_demo_mode():
-        from src.data.mock.lyon_addresses import LYON_ADDRESSES
-
-        return LYON_ADDRESSES
+    # Sprint 8 — viré le fallback mock lyon_addresses. Toujours DB.
     return _load_lyon_addresses_with_coords_cached()
 
 
@@ -886,12 +807,9 @@ def load_lieux_transports(lieu_id: int | None = None) -> list[dict]:
     les trajets multimodaux.
 
     Raises:
-        DashboardDataError: en mode prod, si PostgreSQL ne répond pas.
+        DashboardDataError: si PostgreSQL ne répond pas.
     """
-    if _is_demo_mode():
-        # Fallback démo : retourne une liste vide (le widget affichera un
-        # message "Mode démo — pas de référentiel transports").
-        return []
+    # Sprint 8 — viré le fallback mock. Toujours DB.
     _require_db_or_raise("referentiel.lieux_transports")
     from src.data.db_query import get_lieux_transports
 
@@ -915,8 +833,6 @@ def load_cadence_for_line(
     Raises:
         DashboardDataError: en mode prod, si PostgreSQL ne répond pas.
     """
-    if _is_demo_mode():
-        return []
     _require_db_or_raise("referentiel.lieux_calendrier")
     from src.data.db_query import get_cadence_for_line
 
@@ -936,8 +852,6 @@ def load_spatial_mapping(force_mock: bool = False) -> pd.DataFrame:
     """
     from src.data.db_query import get_spatial_mapping
 
-    if _maybe_force_mock(force_mock):
-        return pd.DataFrame(usager_mock.MOCK_SPATIAL_MAPPING)
     _require_db_or_raise("dim_spatial_grid_mapping")
     return get_spatial_mapping()
 
@@ -950,8 +864,6 @@ def load_traffic_predictions_for_map(
     Raises:
         DashboardDataError: en mode prod, si PostgreSQL ne répond pas.
     """
-    if _maybe_force_mock(force_mock):
-        return pd.DataFrame(usager_mock.MOCK_TRAFIC_PREDICTIONS)
     _require_db_or_raise("gold.trafic_predictions")
     from src.data.db_query import get_traffic_predictions
 
@@ -977,8 +889,6 @@ def load_traffic_combined_for_map(force_mock: bool = False) -> pd.DataFrame:
         computed_at, source, confidence``. ``source`` ∈ {gold_live,
         gold_pred, tomtom} indique la priorité.
     """
-    if _maybe_force_mock(force_mock):
-        return pd.DataFrame()
     _require_db_or_raise("gold.v_traffic_combined")
     from src.data.db_query import get_traffic_combined
 
@@ -992,8 +902,6 @@ def get_tomtom_health() -> dict:
     d'exception : renvoie un dict avec les compteurs (quota, cache size,
     clé configurée ou non).
     """
-    if _is_demo_mode():
-        return {"api_key_configured": False, "demo_mode": True}
     try:
         from src.ingestion.tomtom_traffic import health as tomtom_health
         return tomtom_health()
@@ -1017,9 +925,6 @@ def load_mlflow_models(
         DashboardDataError: en mode prod, si MLflow ne répond pas.
     """
     from src.ml.mlflow_integration import list_registered_models
-
-    if _is_demo_mode():
-        return _FALLBACK_MOCK_MODELS
 
     try:
         runs = list_registered_models(experiment=experiment, max_results=max_results)
@@ -1140,22 +1045,14 @@ def load_mlflow_experiment_summary(
 ) -> dict:
     """Résumé d'un experiment MLflow (nb runs, modeles, etc.).
 
-    Mode prod (Sprint VPS-6+) : interroge MLflow. Si indispo, lève
+    Sprint 8 — viré le fallback mock. Toujours MLflow. Si indispo,
     ``DashboardDataError``.
 
     Raises:
-        DashboardDataError: en mode prod, si MLflow ne répond pas.
+        DashboardDataError: si MLflow ne répond pas.
     """
     from src.ml.mlflow_integration import get_experiment_summary
 
-    if _is_demo_mode():
-        return {
-            "name": experiment,
-            "run_count": 0,
-            "latest_run_at": None,
-            "model_names": [],
-            "available": False,
-        }
     try:
         return get_experiment_summary(experiment=experiment)
     except Exception as e:

@@ -22,63 +22,31 @@ from src.data.data_loader import _is_demo_mode
 from src.data.exceptions import DashboardDataError
 from src.monitoring.health_checks import run_all_checks
 
+# Sprint 8 (2026-06-12) — viré le bloc MOCK_DAGS / MOCK_FRESHNESS
+# (lignes 64-200 dans la version précédente). Le widget lit désormais
+# la DB et l'API Airflow uniquement. Si l'un des deux est indispo,
+# DashboardDataError.
+
 
 @st.cache_data(ttl=30, show_spinner=False)
 def _cached_dags() -> list[dict]:
-    """Liste des DAGs Airflow. Fail loud en prod, fallback mock en démo."""
-    if _is_demo_mode() and not is_airflow_available():
-        from src.data.mock.pro_tcl_pipeline import MOCK_DAGS
-
-        return list(MOCK_DAGS)
-    # Mode prod ou Airflow dispo
+    """Liste des DAGs Airflow. Fail loud (Sprint 8 — viré fallback mock)."""
     try:
         dags = get_dags_status()
     except DashboardDataError:
         raise
     except Exception as e:
-        if _is_demo_mode():
-            from src.data.mock.pro_tcl_pipeline import MOCK_DAGS
-
-            return list(MOCK_DAGS)
         raise DashboardDataError(
             source="airflow",
             detail=f"Airflow REST API a échoué : {e}",
         ) from e
-    if not dags and not _is_demo_mode():
-        # Airflow répond mais 0 DAG : situation légitime (premier démarrage)
-        return []
-    return dags
+    # Airflow répond mais 0 DAG : situation légitime (premier démarrage)
+    return list(dags) if dags else []
 
 
 @st.cache_data(ttl=60, show_spinner=False)
 def _cached_freshness() -> list[dict]:
-    """Fraîcheur live des sources Bronze. Fail loud en prod."""
-    if _is_demo_mode():
-        try:
-            from src.data.db_query import _is_db_available, get_bronze_source_counts
-
-            if _is_db_available():
-                df = get_bronze_source_counts(hours=24)
-                if not df.empty:
-                    rows: list[dict] = []
-                    for _, r in df.iterrows():
-                        n_rows = int(r.get("n_rows", 0) or 0)
-                        last_fetch = r.get("last_fetch")
-                        rows.append(
-                            {
-                                "source": str(r.get("source", "—")),
-                                "last_ingestion": str(last_fetch) if last_fetch else "—",
-                                "n_records_24h": n_rows,
-                                "status": "ok" if n_rows > 0 else "stale",
-                            }
-                        )
-                    return rows
-        except Exception:
-            pass
-        from src.data.mock.pro_tcl_pipeline import MOCK_FRESHNESS
-
-        return list(MOCK_FRESHNESS)
-    # Mode prod : DB obligatoire
+    """Fraîcheur live des sources Bronze. Fail loud (Sprint 8 — viré fallback mock)."""
     from src.data.db_query import _is_db_available, get_bronze_source_counts
 
     if not _is_db_available():
@@ -101,123 +69,10 @@ def _cached_freshness() -> list[dict]:
     return rows
 
 
-# Fallback mock — utilise par get_dags_status() quand Airflow indispo.
-# Les dates sont générées dynamiquement à partir de now() pour éviter qu'elles
-# soient figées dans le passé (avant : 2026-06-06 hardcodé, pépé en 2027).
-from datetime import datetime, timedelta  # noqa: E402
-
-_NOW = datetime.now()
-_FMT = "%Y-%m-%d %H:%M:%S"
-
-
-def _ago(minutes: int) -> str:
-    return (_NOW - timedelta(minutes=minutes)).strftime(_FMT)
-
-
-def _in_minutes(minutes: int) -> str:
-    return (_NOW + timedelta(minutes=minutes)).strftime(_FMT)
-
-
-def _in_months(months: int) -> str:
-    # Approximation (1 mois = 30j) — utilisée pour monthly schedules
-    return (_NOW + timedelta(days=30 * months)).strftime(_FMT)
-
-
-MOCK_DAGS = [
-    {
-        "dag_id": "collect_bronze",
-        "schedule": "*/5 * * * *",
-        "last_run": _ago(5),
-        "last_status": "success",
-        "last_duration_s": 12,
-        "next_run": _in_minutes(5),
-        "description": "Collecte 8 sources temps réel",
-    },
-    {
-        "dag_id": "collect_calendriers_monthly",
-        "schedule": "@monthly",
-        "last_run": _ago(60 * 24 * 5),
-        "last_status": "success",
-        "last_duration_s": 5,
-        "next_run": _in_months(1),
-        "description": "Collecte calendriers (vacances, fériés)",
-    },
-    {
-        "dag_id": "transform_bronze_to_silver",
-        "schedule": "*/5* * * *",
-        "last_run": _ago(5),
-        "last_status": "success",
-        "last_duration_s": 8,
-        "next_run": _in_minutes(5),
-        "description": "Bronze → Silver (5 sources)",
-    },
-    {
-        "dag_id": "transform_silver_to_gold",
-        "schedule": "*/10* * * *",
-        "last_run": _ago(10),
-        "last_status": "success",
-        "last_duration_s": 14,
-        "next_run": _in_minutes(10),
-        "description": "Silver → Gold (3 builders)",
-    },
-    {
-        "dag_id": "build_spatial_mapping",
-        "schedule": "30 2* * *",
-        "last_run": _ago(60 * 12),
-        "last_status": "success",
-        "last_duration_s": 22,
-        "next_run": _in_minutes(60 * 12),
-        "description": "Construit dim_spatial_grid_mapping + adjacency",
-    },
-    {
-        "dag_id": "retrain_xgboost_speed",
-        "schedule": "25* * * *",
-        "last_run": _ago(35),
-        "last_status": "success",
-        "last_duration_s": 184,
-        "next_run": _in_minutes(25),
-        "description": "Retrain XGBoost Speed (4 horizons)",
-    },
-    {
-        "dag_id": "retrain_xgboost_velov",
-        "schedule": "50* * * *",
-        "last_run": _ago(10),
-        "last_status": "success",
-        "last_duration_s": 142,
-        "next_run": _in_minutes(10),
-        "description": "Retrain XGBoost Velov (2 horizons)",
-    },
-    {
-        "dag_id": "data_quality_daily",
-        "schedule": "15 4* * *",
-        "last_run": _ago(60 * 11),
-        "last_status": "success",
-        "last_duration_s": 28,
-        "next_run": _in_minutes(60 * 13),
-        "description": "6 checks qualité quotidien",
-    },
-    {
-        "dag_id": "purge_bronze",
-        "schedule": "0 3* * *",
-        "last_run": _ago(60 * 12),
-        "last_status": "success",
-        "last_duration_s": 8,
-        "next_run": _in_minutes(60 * 12),
-        "description": "Purge Bronze rétention",
-    },
-]
-
-# Fraîcheur mock des sources Bronze (en prod : query DB)
-MOCK_FRESHNESS = [
-    {"source": "trafic_boucles", "last_ingestion": _ago(5), "n_records_24h": 316800, "status": "ok"},
-    {"source": "velov", "last_ingestion": _ago(5), "n_records_24h": 132192, "status": "ok"},
-    {"source": "tcl_vehicles", "last_ingestion": _ago(5), "n_records_24h": 69120, "status": "ok"},
-    {"source": "meteo", "last_ingestion": _ago(60), "n_records_24h": 24, "status": "ok"},
-    {"source": "air_quality", "last_ingestion": _ago(60), "n_records_24h": 24, "status": "ok"},
-    {"source": "chantiers", "last_ingestion": _ago(60 * 12), "n_records_24h": 1, "status": "ok"},
-    {"source": "calendrier_scolaire", "last_ingestion": _ago(60 * 24 * 5), "n_records_24h": 0, "status": "stale"},
-    {"source": "jours_feries", "last_ingestion": _ago(60 * 24 * 5), "n_records_24h": 0, "status": "stale"},
-]
+# Sprint 8 (2026-06-12) — MOCK_DAGS, MOCK_FRESHNESS, helpers _ago,
+# _in_minutes, _in_months, _NOW, _FMT : tous virés. Le widget ne
+# mock plus. Si Airflow indispo → DashboardDataError. Si la DB
+# indispo → DashboardDataError. La source de vérité c'est le pipeline.
 
 
 def render_pipeline_status() -> None:

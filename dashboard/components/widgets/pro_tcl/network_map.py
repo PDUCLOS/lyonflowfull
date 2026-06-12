@@ -65,13 +65,9 @@ def render_network_map(buses: list | None = None, height: int = 400) -> None:
                 }
                 for _, row in df.iterrows()
             ]
-        elif _is_demo_mode():
-            # Mode démo uniquement : fallback mock
-            from src.data.mock.pro_tcl import ALL_BUSES
-
-            buses = ALL_BUSES
+        # Sprint 8 (2026-06-12) — viré le fallback ALL_BUSES (mock).
+        # Si la DB est vide, on affiche l'info.
         else:
-            # Prod : DB répond mais vide
             st.info("Aucun bus en circulation actuellement.")
             return
 
