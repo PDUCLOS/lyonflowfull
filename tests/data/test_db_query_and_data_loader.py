@@ -24,6 +24,7 @@ import pytest
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
 from src.data import data_loader, db_query
+from src.data.exceptions import DashboardDataError
 from src.data.mock import elu, pro_tcl, usager
 
 
@@ -34,11 +35,12 @@ def reset_db_cache(monkeypatch):
     Ces tests valident le contrat des mocks. Pour les tests d'intégration avec
     une vraie DB, voir tests/integration/test_infrastructure.py.
     """
-    # Force prod mode + DB unavailable pour que _maybe_force_mock(True) utilise le mock.
-    # CI a un PostgreSQL réel, donc on doit bypasser la detection automatique.
-    monkeypatch.setenv("LYONFLOW_DEMO_MODE", "0")
-    monkeypatch.setattr(data_loader, "_is_demo_mode", lambda: False)
-    monkeypatch.setattr(data_loader, "_demo_mode_cache", False)
+    # CI a un PostgreSQL service container réel. Pour que les tests de contrat
+    # mock fonctionnent, on force le mode démo pour que _maybe_force_mock(True)
+    # utilise les mocks au lieu de lever DashboardDataError.
+    monkeypatch.setenv("LYONFLOW_DEMO_MODE", "1")
+    monkeypatch.setattr(data_loader, "_is_demo_mode", lambda: True)
+    monkeypatch.setattr(data_loader, "_demo_mode_cache", True)
     db_query.reset_db_cache()
     monkeypatch.setattr(db_query, "_is_db_available", lambda: False)
     monkeypatch.setattr(db_query, "_db_available_cache", False)
@@ -61,29 +63,26 @@ class TestDbQueryFallback:
         assert "node_idx" in df.columns
         assert "speed_kmh" in df.columns
 
-    def test_operational_error_triggers_fallback_in_data_loader(self, monkeypatch):
-        """Vérifie que si psycopg2 lève une exception, data_loader retourne le mock."""
+    def test_operational_error_triggers_error_in_prod_mode(self, monkeypatch):
+        """Vérifie qu'en mode prod, si la DB retourne empty, data_loader lève DashboardDataError.
+
+        En mode prod (LYONFLOW_DEMO_MODE=0), les fonctions load_X ne retournent pas
+        de mock silencieusement — elles lèvent DashboardDataError.
+        """
         import psycopg2
 
-        # Simuler un crash DB au moment de la connexion
         def mock_execute_query(*args, **kwargs):
             raise psycopg2.OperationalError("Simulated DB crash mid-flight")
 
+        # Override fixture's demo mode for this specific test
+        monkeypatch.setattr(data_loader, "_is_demo_mode", lambda: False)
+        monkeypatch.setattr(data_loader, "_demo_mode_cache", False)
         monkeypatch.setattr(db_query, "execute_query", mock_execute_query)
-        # On force _is_db_available à True pour piéger data_loader
-        monkeypatch.setattr(data_loader, "_is_db_available", lambda: True)
-        # Et on le force aussi dans db_query pour éviter que db_query ne renvoie le dataframe mocké
         monkeypatch.setattr(db_query, "_is_db_available", lambda: True)
+        monkeypatch.setattr(db_query, "_db_available_cache", True)
 
-        # data_loader appelle db_query.get_latest_traffic
-        # db_query.get_latest_traffic appelle _df_from_query
-        # _df_from_query appelle execute_query qui CRASH.
-        # _df_from_query catche l'exception et retourne df.empty
-        # Ensuite data_loader.load_traffic fait `if df.empty: return usager_mock.MOCK_TRAFFIC`
-
-        traffic = data_loader.load_traffic(force_mock=False)
-        assert isinstance(traffic, dict)
-        assert traffic["data_source"] == "mock", "Doit basculer sur le mock car df est empty suite à l'erreur"
+        with pytest.raises(DashboardDataError):
+            data_loader.load_traffic(force_mock=False)
 
     def test_get_latest_traffic_respects_limit(self):
         df = db_query.get_latest_traffic(limit=5)

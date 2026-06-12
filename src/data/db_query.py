@@ -864,3 +864,26 @@ def get_lieux_transports(lieu_id: int | None = None) -> list[dict]:
         return df.to_dict("records") if not df.empty else []
     except Exception:
         return []
+
+
+def get_smart_velov_for_lieu(lieu_id: int, k: int = 3) -> list[dict]:
+    """Vélov stations proches d'un lieu (pour routing multimodal).
+
+    TODO Sprint 10+: câbler sur gold.velov_stations_near_lieu.
+    """
+    if not _is_db_available():
+        return []
+    query = """
+        SELECT station_id, station_name,
+               ST_Distance(geom::geography, ST_MakePoint(%s, %s)::geography) AS distance_m,
+               num_bikes_available AS bikes_available
+        FROM silver.velov_clean
+        WHERE measurement_time >= NOW() - INTERVAL '30 minutes'
+        ORDER BY distance_m ASC
+        LIMIT %s
+    """
+    try:
+        df = _df_from_query(query, (lieu_id, lieu_id, k))
+        return df.to_dict("records") if not df.empty else []
+    except Exception:
+        return []
