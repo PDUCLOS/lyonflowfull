@@ -85,7 +85,7 @@ class TestXGBoostSpeedLoad:
         model.load()
         assert 60 not in model.models
 
-    @patch("src.models.xgboost_speed.is_mlflow_available", return_value=False)
+    @patch("src.ml.mlflow_integration.is_mlflow_available", return_value=False)
     def test_load_skips_mlflow_when_unavailable(self, mock_mlflow):
         model = XGBoostSpeedModel()
         model.load()

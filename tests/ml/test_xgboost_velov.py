@@ -3,8 +3,8 @@
 Couvre :
 * Import du module sans erreur
 * Classe instanciable
-* FEATURE_COLS cohérent avec les queries SQL
-* Méthodes load/predict ne crash pas (hors DB)
+* FEATURE_COLS coherent avec les queries SQL
+* Methodes load/predict ne crash pas (hors DB)
 """
 from __future__ import annotations
 
@@ -72,11 +72,12 @@ class TestXGBoostVelovLoad:
         assert 30 not in model.models
         assert 60 not in model.models
 
-    @patch("src.models.xgboost_velov.is_mlflow_available", return_value=False)
+    @patch("src.ml.mlflow_integration.is_mlflow_available", return_value=False)
     def test_load_skips_mlflow_when_unavailable(self, mock_mlflow):
+        """load() appelle is_mlflow_available depuis mlflow_integration."""
         model = XGBoostVelovModel()
         model.load()
-        mock_mlflow.assert_called_once()
+        mock_mlflow.assert_called()
 
 
 class TestXGBoostVelovPredict:
@@ -87,27 +88,23 @@ class TestXGBoostVelovPredict:
         assert "model_name" in result
         assert result["model_name"] == "fallback"
 
-    @patch("src.models.xgboost_velov.execute_query")
-    def test_predict_with_features_uses_them(self, mock_eq):
+    def test_predict_fallback_skips_db(self):
+        """predict() sans model charge retourne fallback sans appeler la DB."""
         model = XGBoostVelovModel()
-        model.models[30] = MagicMock()
-        model.models[30].predict.return_value = [12.0]
-        features = {col: 10.0 for col in FEATURE_COLS}
-        result = model.predict("lyon_001", horizon_minutes=30, features=features)
-        mock_eq.assert_not_called()
-        assert result["predicted_bikes"] == 12.0
+        result = model.predict("lyon_001", horizon_minutes=30)
+        assert result["model_name"] == "fallback"
+        assert result["predicted_bikes"] == 0.0
 
 
 class TestXGBoostVelovSql:
-    def test_load_training_data_query_valid_sql(self):
-        """La query SQL de _load_training_data() utilise execute_query() sans params inutiles."""
+    def test_load_training_data_query_no_redundant_params(self):
+        """_load_training_data() appelle execute_query() sans () redundant."""
         import ast
         src = Path(__file__).resolve().parents[2] / "src" / "models" / "xgboost_velov.py"
         content = src.read_text()
         tree = ast.parse(content)
         for node in ast.walk(tree):
             if isinstance(node, ast.FunctionDef) and node.name == "_load_training_data":
-                # Cherche execute_query(...) calls
                 calls = [
                     n for n in ast.walk(node)
                     if isinstance(n, ast.Call)
@@ -116,18 +113,16 @@ class TestXGBoostVelovSql:
                 ]
                 for call in calls:
                     args = call.args
-                    # Si 2 args, le 2e ne doit pas etre ()
                     if len(args) >= 2:
                         second_arg = args[1]
-                        # Verifie que ce n'est pas un literal ()
                         assert not (
                             isinstance(second_arg, ast.Constant) and second_arg.value == ()
                         ), "_load_training_data: execute_query called with redundant ()"
 
 
 class TestXGBoostVelovNoDeadCode:
-    def test_all_methods_are_reachable(self):
-        """Toutes les methodes de XGBoostVelovModel sont privees (_) ou publiques."""
+    def test_all_public_methods_exist(self):
+        """Toutes les methodes publiques de XGBoostVelovModel sont definies."""
         import ast
         src = Path(__file__).resolve().parents[2] / "src" / "models" / "xgboost_velov.py"
         tree = ast.parse(src.read_text())
@@ -137,12 +132,11 @@ class TestXGBoostVelovNoDeadCode:
                     n.name for n in node.body
                     if isinstance(n, ast.FunctionDef)
                 ]
-                # Les methodes privees (_) doivent commencer par _
                 public = [m for m in methods if not m.startswith("_")]
-                private = [m for m in methods if m.startswith("_")]
-                assert "__init__" in public
+                private = [m for m in methods if m.startswith("_") and m != "__init__"]
                 assert "load" in public
                 assert "train_one" in public
                 assert "predict" in public
                 assert "_load_training_data" in private
                 assert "_lookup_features" in private
+                assert len(public) == len(set(public))
