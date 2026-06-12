@@ -1,8 +1,8 @@
-"""Banner statut source de donnees — transparence live vs demo.
+"""Banner statut source de donnees — transparence live.
 
 Affiche un bandeau discret en haut de chaque page indiquant si les widgets
-voient la DB live (Postgres + MLflow + Airflow) ou un fallback mock (mode
-demo). Garantit qu'aucun chiffre fictif n'est presente sans avertissement.
+voient la DB live (Postgres + MLflow + Airflow) ou si la DB est indisponible
+(fail loud, aucune donnee fictive affichee — politique zero mock Sprint 8).
 
 Usage::
 
@@ -29,7 +29,7 @@ def render_data_status_banner(compact: bool = True) -> None:
         bg = "rgba(76, 175, 80, 0.12)"
         border = "var(--status-ok)"
     else:
-        label = "🟡 Mode démo · DB non joignable — chiffres fictifs (mocks)"
+        label = "🔴 DB non joignable — données indisponibles"
         bg = "rgba(255, 152, 0, 0.12)"
         border = "var(--status-warning)"
 

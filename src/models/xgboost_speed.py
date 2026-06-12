@@ -1,16 +1,28 @@
 """XGBoost Speed Model — prédiction vitesse trafic.
 
-Multi-horizon : H+5min, H+1h, H+3h, H+6h
-Features : speed (current + lags), temporel (sin/cos), météo, is_vacances, is_ferie
+Sprint 9 — Focus H+1h (fiabilité VPS), aligné sur le schéma RÉEL
+v0.3.1 de `gold.traffic_features_live` (cf. audit 2026-06-12).
 
-IMPORTANT : target = speed au temps t + horizon, pas t.
-On utilise LEAD() window function (données échantillonnées toutes les 5 min).
+Schéma réel :
+    speed_kmh, channel_id, computed_at,
+    lag_1, lag_2, lag_3, delta_current, delta_1, rolling_mean_3,
+    sin_hour, cos_hour, sin_dow, cos_dow,
+    temperature_2m, precipitation, rain, is_raining,
+    is_vacances, is_ferie, lat, lon, ...
 
-Sprint 9 — Chaque train log dans MLflow (params + metrics + artifact)
-via src.ml.mlflow_integration. Le tracking est opt-out via la variable
-d'env ``MLFLOW_TRACKING_URI=""``.
+FEATURES (11 colonnes, strictes H+1h) :
+    speed_kmh (valeur courante)
+    lag_1, lag_2, lag_3 (lags 5/10/15 min)
+    rolling_mean_3 (moyenne 15 min de contexte)
+    sin_hour, cos_hour (saisonnalité intra-journalière)
+    temperature_2m, precipitation (météo)
+    is_vacances, is_ferie (calendrier)
+
+Target = LEAD(speed_kmh, 12) — la valeur 12 pas (60 min) plus tard,
+pour H+1h. Échantillonnage : 1 pas = 5 min (cf. computed_at).
+
+MLflow tracking opt-in via MLFLOW_TRACKING_URI non-vide.
 """
-
 from __future__ import annotations
 
 import logging
@@ -29,26 +41,17 @@ from src.ml.mlflow_integration import MLflowTracker
 logger = logging.getLogger(__name__)
 
 
-# Features utilisées (Sprint 9 — alignées sur schéma v0.3.1 de gold.traffic_features_live,
-# focus H+1h depuis Sprint VPS-6 2026-06-11).
-# Sprint 8+1 (2026-06-12) — Réduit au strict H+1h pour limiter le coût
-# compute sur le VPS (fiabilité > complétude). On garde :
-#   - speed_kmh : valeur courante
-#   - lag_h1 : valeur il y a 1h (= target décalé 1h)
-#   - rolling_mean_h1 : moyenne 3x5min (15 min de contexte ~ 1h)
-#   - sin_hour/cos_hour : saisonnalité intra-journalière
-#   - temperature_2m/precipitation : météo
-#   - is_vacances/is_ferie : calendrier
-# On vire : lag_h2/h3, delta_h1, sin_dow/cos_dow (inutile pour H+1h),
-#           precipitation_redundant (idem temperature_2m).
-# Avant : speed_lag_1/2/3, speed_delta_1, rolling_mean_5min, hour_sin/cos, day_sin/cos,
-#         temperature_c, rain_mm, node_idx
-# Après : lag_h1, rolling_mean_h1, sin_hour/cos_hour, temperature_2m, precipitation,
-#         is_vacances, is_ferie, channel_id (string LYO000xx, pas int node_idx)
+# Features (Sprint 9 — alignées sur le schéma RÉEL gold.traffic_features_live)
+# Convention de nommage : les colonnes de la DB sont déjà préfixées
+# (lag_1 = valeur 5 min avant, lag_2 = 10 min avant, etc.). Pour
+# H+1h, lag_1, lag_2, lag_3 couvrent 5/10/15 min de contexte court,
+# rolling_mean_3 = moyenne 15 min.
 FEATURE_COLS = [
     "speed_kmh",
-    "lag_h1",
-    "rolling_mean_h1",
+    "lag_1",
+    "lag_2",
+    "lag_3",
+    "rolling_mean_3",
     "sin_hour",
     "cos_hour",
     "temperature_2m",
@@ -57,8 +60,10 @@ FEATURE_COLS = [
     "is_ferie",
 ]
 
-# Pas d'échantillonnage Gold (5 min)
+# Pas d'échantillonnage Gold = 5 min
 SAMPLE_STEP_MINUTES = 5
+# H+1h uniquement (focus fiabilité)
+DEFAULT_HORIZONS = [60]
 
 
 class XGBoostSpeedModel:
@@ -268,55 +273,54 @@ class XGBoostSpeedModel:
         }
 
     def _load_training_data(self, horizon_minutes: int) -> pd.DataFrame:
-        """Charge les données d'entraînement depuis Gold.
+        """Charge les données d'entraînement depuis ``gold.xgb_training_set``.
 
-        Le target est la vitesse au temps t + horizon, calculée via LEAD()
-        sur les données échantillonnées toutes les SAMPLE_STEP_MINUTES minutes.
+        Sprint 9+ (2026-06-12) — La table ``gold.xgb_training_set`` est
+        materialisée quotidiennement par le DAG ``build_xgb_training_set``
+        (02h30) avec un self-join H+1h indexé. Le target_speed est
+        pré-calculé en base, donc plus de ``LEAD() OVER (...)`` sur 2.4M
+        rows à l'entraînement (qui timeout depuis Streamlit).
+
+        Note : ``horizon_minutes`` est conservé pour la signature
+        d'API, mais l'implémentation est H+1h uniquement (focus fiabilité
+        VPS, Sprint VPS-6). La table contient déjà le target à 60 min.
+
+        Returns:
+            DataFrame avec les colonnes de FEATURE_COLS + ``target_speed``.
         """
-        # Nombre de pas = horizon_minutes / step
-        lead_steps = max(1, horizon_minutes // SAMPLE_STEP_MINUTES)
-
         query = """
-            WITH ranked AS (
-                SELECT
-                    speed_kmh, lag_h1, rolling_mean_h1,
-                    sin_hour, cos_hour,
-                    temperature_2m, precipitation,
-                    COALESCE(is_vacances, FALSE) AS is_vacances,
-                    COALESCE(is_ferie, FALSE) AS is_ferie,
-                    -- Target : speed au temps t + horizon (LEAD window function)
-                    LEAD(speed_kmh, %s) OVER (
-                        PARTITION BY channel_id ORDER BY computed_at
-                    ) AS target_speed,
-                    channel_id
-                FROM gold.traffic_features_live
-                WHERE speed_kmh IS NOT NULL
-                  AND computed_at > NOW() - INTERVAL '7 days'
-            )
             SELECT
-                speed_kmh, lag_h1, rolling_mean_h1,
+                speed_kmh, lag_1, lag_2, lag_3,
+                rolling_mean_3,
                 sin_hour, cos_hour,
                 temperature_2m, precipitation,
                 is_vacances, is_ferie,
                 target_speed
-            FROM ranked
+            FROM gold.xgb_training_set
             WHERE target_speed IS NOT NULL
-            ORDER BY channel_id
+              AND computed_at > NOW() - INTERVAL '7 days'
+            ORDER BY channel_id, computed_at
         """
-        # Note: psycopg2 peut paramétrer un int dans LEAD()
-        rows = execute_query(query, (lead_steps,))
+        rows = execute_query(query)
+        if not rows:
+            raise RuntimeError(
+                "gold.xgb_training_set est vide. Le DAG "
+                "'build_xgb_training_set' doit tourner (02h30 quotidien) "
+                "pour matérialiser le training set H+1h."
+            )
         return pd.DataFrame(rows)
 
     def _lookup_features(self, channel_id: str) -> dict:
         """Récupère les dernières features pour un canal (string LYO000xx).
 
-        Sprint 9 : `channel_id` est maintenant un string (LYO000xx) au lieu
-        d'un int `node_idx`. Voir gold.dim_spatial_grid_mapping.
-        Sprint 8+1 : features réduites au strict H+1h.
+        Sprint 9 : `channel_id` est un string (LYO000xx) au lieu d'un int
+        `node_idx`. Voir gold.dim_spatial_grid_mapping.
+        Sprint 9+ : aligné sur le schéma RÉEL (lag_1, lag_2, lag_3, etc.).
         """
         query = """
             SELECT
-                speed_kmh, lag_h1, rolling_mean_h1,
+                speed_kmh, lag_1, lag_2, lag_3,
+                rolling_mean_3,
                 sin_hour, cos_hour,
                 temperature_2m, precipitation,
                 COALESCE(is_vacances, FALSE) AS is_vacances,

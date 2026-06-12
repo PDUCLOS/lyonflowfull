@@ -141,16 +141,23 @@ def _is_stgcn_dag_enabled() -> bool:
 
 
 def _train_local() -> dict:
-    """Mode local : entraîne directement dans l'environnement Airflow."""
+    """Mode local : entraîne directement dans l'environnement Airflow.
+
+    Sprint 9+ (2026-06-12) — Fallback ``synthetic()`` SUPPRIMÉ.
+    Si la DB ne répond pas ou si le dataset est vide, le DAG
+    doit fail loud (cf. politique "zéro mock"). Le training ne
+    se fait PAS sur des données synthétiques — c'est de la triche.
+
+    Raises:
+        RuntimeError: si la DB ne peut pas fournir le dataset.
+    """
     from training.stgcn.dataset import STGCNDataset
     from training.stgcn.model import STGCNConfig
     from training.stgcn.train import STGCNTrainer
 
-    try:
-        dataset = STGCNDataset.from_db(num_nodes_max=200, seq_len=12, horizon=360 // 5)
-    except Exception as e:
-        logger.warning("DB load failed (%s) — fallback synthetic", e)
-        dataset = STGCNDataset.synthetic(num_nodes=100, seq_len=12, horizon=360 // 5)
+    # Pas de try/except. Si la DB est down, l'exception remonte
+    # au DAG qui catch et fail loud.
+    dataset = STGCNDataset.from_db(num_nodes_max=200, seq_len=12, horizon=360 // 5)
 
     config = STGCNConfig(
         num_nodes=dataset.X.shape[2],

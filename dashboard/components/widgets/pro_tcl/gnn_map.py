@@ -219,14 +219,14 @@ def render_traffic_map(
 def render_traffic_map_compact(
     *,
     height: int = 280,
-    horizon_minutes: int = 30,
+    horizon_minutes: int = 60,
     key_suffix: str = "",
 ) -> None:
     """Carte trafic compacte sans sélecteur (Usager / Elu).
 
     Args:
         height: hauteur réduite.
-        horizon_minutes: horizon fixe (pas de sélecteur).
+        horizon_minutes: horizon fixe (pas de sélecteur). Sprint 8+ : 60 (H+1h).
         key_suffix: suffixe key Streamlit.
     """
     if not is_gnn_map_visible():

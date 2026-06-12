@@ -205,7 +205,28 @@ def _render_map(
             icon=folium.Icon(color="red", icon="stop"),
         ).add_to(m)
 
-        # Polyline par segment (couleur selon vitesse)
+        # Polyligne continue reliant tous les nœuds du chemin (Sprint 9+)
+        # Avant (Sprint 8) : 1 PolyLine par segment = traits dispersés
+        # (les nœuds H3 ne sont pas sur les vraies rues, donc les segments
+        # paraissent décousus). Maintenant : on relie start→end→start→end
+        # en une seule polyligne colorée par la vitesse dominante.
+        poly_locations: list[tuple[float, float]] = [tuple(origin_coords)]
+        for seg in itinerary.segments:
+            poly_locations.append((seg.start_lat, seg.start_lon))
+            poly_locations.append((seg.end_lat, seg.end_lon))
+        poly_locations.append(tuple(dest_coords))
+
+        # Polyligne principale (bleu par défaut, épaisseur 4)
+        folium.PolyLine(
+            locations=[[lat, lon] for lat, lon in poly_locations],
+            color="#1f77b4",
+            weight=4,
+            opacity=0.85,
+            dash_array="6 4",  # pointillé = "approximation H3, snap rue Sprint 10+"
+            popup=f"🛣️ {len(itinerary.segments)} tronçons H3 — Sprint 9+",
+        ).add_to(m)
+
+        # Polylines colorées par tronçon (overlay, opacité réduite)
         for seg in itinerary.segments:
             color = _speed_to_color(seg.speed_kmh)
             folium.PolyLine(
@@ -214,14 +235,25 @@ def _render_map(
                     [seg.end_lat, seg.end_lon],
                 ],
                 color=color,
-                weight=5,
-                opacity=0.8,
+                weight=6,
+                opacity=0.9,
                 popup=(
                     f"<b>{seg.channel_id}</b><br>"
                     f"📏 {seg.length_m:.0f} m<br>"
                     f"🚗 {seg.speed_kmh:.0f} km/h<br>"
                     f"🕐 {seg.duration_s / 60:.1f} min"
                 ),
+            ).add_to(m)
+
+        # Markers aux nœuds H3 (visualiser le maillage)
+        for i, seg in enumerate(itinerary.segments):
+            folium.CircleMarker(
+                location=[seg.start_lat, seg.start_lon],
+                radius=3,
+                color="#888",
+                fill=True,
+                fill_opacity=0.5,
+                tooltip=f"nœud H3 #{i} · {seg.channel_id}",
             ).add_to(m)
 
         st_folium(m, width=None, height=400, returned_objects=[])

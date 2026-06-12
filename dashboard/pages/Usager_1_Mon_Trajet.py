@@ -160,7 +160,7 @@ if st.session_state.get("results_loaded"):
     render_traffic_widget()
 
     # Carte trafic compacte — vitesses prédites par tronçon (Sprint 10)
-    st.markdown("##### 🗺️ Carte du trafic — H+30min")
+    st.markdown("##### 🗺️ Carte du trafic — H+1h")
     render_traffic_map_compact(height=320, horizon_minutes=60, key_suffix="usager")  # Sprint 8+ : focus H+1h
 
     # === 2. Trajet Vélov + marche sur carte (calculé en live) ===

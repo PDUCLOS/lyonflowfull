@@ -137,13 +137,20 @@ def _build_graph_from_db(
     G = nx.Graph()  # noqa: N806
 
     # 2. Charger la vitesse temps réel la plus récente par node H3
+    # Sprint 10+ (2026-06-12) — Le JOIN direct ``m.properties_twgid =
+    # t.channel_id`` ne matche JAMAIS (LYO0xxxx ≠ "537"). On passe par
+    # ``gold.mv_twgid_to_lyo`` qui mappe par proximité géographique
+    # (seuil 500m). Refresh manuel : REFRESH MATERIALIZED VIEW
+    # gold.mv_twgid_to_lyo;
     speed_query = """
         WITH latest AS (
             SELECT DISTINCT ON (m.node_idx)
                 m.node_idx, t.speed_kmh
             FROM gold.dim_spatial_grid_mapping m
+            JOIN gold.mv_twgid_to_lyo mv
+              ON mv.properties_twgid = m.properties_twgid
             JOIN gold.traffic_features_live t
-              ON t.channel_id::text = m.properties_twgid::text
+              ON t.channel_id = mv.channel_id
             WHERE t.computed_at >= NOW() - INTERVAL '1 hour'
               AND t.speed_kmh IS NOT NULL
             ORDER BY m.node_idx, t.computed_at DESC

@@ -90,15 +90,25 @@ def _normalize_speed(speed: pd.Series) -> pd.Series:
 
 
 def _load_gold_traffic_features(num_nodes_max: int = 2000) -> pd.DataFrame:
-    """Charge ``gold.traffic_features_live`` depuis la DB.
+    """Charge ``gold.fact_traffic_series`` depuis la DB.
+
+    Sprint 10+ (2026-06-12) — Aligné sur le repo source
+    ``caroheymes/Architect-IA-final-project/training/stgcn/dataset.py``.
+    Avant : on lisait ``gold.traffic_features_live`` qui n'a pas les
+    colonnes ``node_idx`` ni ``measurement_time`` (schéma v0.3.1 :
+    ``channel_id`` + ``computed_at``). La query plantait silencieusement.
+    Maintenant on lit ``gold.fact_traffic_series`` qui a le bon schéma
+    ``(timestamp, node_idx, properties_vitesse)`` et on dérive les
+    features temporelles cycliques en Python (même logique que le repo
+    source : hour_sin/cos + day_sin/cos).
 
     Args:
         num_nodes_max: Limite dure (sécurité) — on ne charge pas plus de
             N nœuds distincts.
 
     Returns:
-        DataFrame : measurement_time, node_idx, speed_norm, hour_sin,
-        hour_cos, day_sin, day_cos.
+        DataFrame : timestamp, node_idx, speed_kmh + 4 features
+        temporelles (hour_sin, hour_cos, day_sin, day_cos).
 
     Raises:
         RuntimeError: si la DB ne répond pas.
@@ -107,21 +117,26 @@ def _load_gold_traffic_features(num_nodes_max: int = 2000) -> pd.DataFrame:
 
     query = """
         SELECT
-            measurement_time,
+            "timestamp",
             node_idx,
-            speed_kmh,
-            hour_sin,
-            hour_cos,
-            day_sin,
-            day_cos
-        FROM gold.traffic_features_live
-        WHERE measurement_time >= NOW() - INTERVAL '7 days'
-        ORDER BY measurement_time, node_idx
+            properties_vitesse AS speed_kmh
+        FROM gold.fact_traffic_series
+        WHERE "timestamp" >= NOW() - INTERVAL '7 days'
+          AND properties_vitesse IS NOT NULL
+        ORDER BY "timestamp", node_idx
     """
     rows = execute_query(query)
     if not rows:
-        raise RuntimeError("gold.traffic_features_live vide ou DB down")
+        raise RuntimeError("gold.fact_traffic_series vide ou DB down")
     df = pd.DataFrame(rows)
+    # Features temporelles cycliques (alignement repo source)
+    ts = pd.to_datetime(df["timestamp"])
+    hours = ts.dt.hour + ts.dt.minute / 60.0
+    days = ts.dt.dayofweek
+    df["hour_sin"] = np.sin(2 * np.pi * hours / 24.0)
+    df["hour_cos"] = np.cos(2 * np.pi * hours / 24.0)
+    df["day_sin"] = np.sin(2 * np.pi * days / 7.0)
+    df["day_cos"] = np.cos(2 * np.pi * days / 7.0)
     df["speed_norm"] = _normalize_speed(df["speed_kmh"])
     return df
 
