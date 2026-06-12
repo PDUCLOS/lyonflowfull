@@ -80,7 +80,7 @@ def empty_state(
         unsafe_allow_html=True,
     )
     if action_label and action_callback and st.button(action_label, key=f"empty_action_{title[:20]}"):
-            action_callback()
+        action_callback()
 
 
 def skeleton_placeholder(n_lines: int = 4) -> None:
