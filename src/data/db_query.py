@@ -750,3 +750,117 @@ def get_amenagements_passes(limit: int = 50) -> pd.DataFrame:
         LIMIT %s
     """
     return _df_from_query(query, (limit,))
+
+
+# -----------------------------------------------------------------------------
+# Sprint 10+ — fonctions manquantes (stubs pour CI / compatibilité)
+# TODO (Sprint 10+): remplacer par vrai SQL + MV gold.mv_line_kpis_live
+# -----------------------------------------------------------------------------
+
+
+def get_line_kpis(line_ids: list[str] | None = None) -> dict:
+    """KPIs par ligne TCL (OTP, retards, fréquence).
+
+    En l'absence de DB, retourne un stub vide pour ne pas bloquer les tests.
+    TODO Sprint 10+: câbler sur gold.mv_line_kpis_live.
+    """
+    if not _is_db_available():
+        return {"lines": [], "timestamp": None}
+    query = """
+        SELECT line_id, line_name, otp_pct, avg_delay_min,
+               frequency_pph, occupancy_pct, date
+        FROM gold.mv_line_kpis_live
+        WHERE (%s IS NULL OR line_id = ANY(%s))
+        ORDER BY line_id
+        LIMIT 100
+    """
+    params = (line_ids, line_ids)
+    try:
+        df = _df_from_query(query, params)
+    except Exception:
+        return {"lines": [], "timestamp": None}
+    if df.empty:
+        return {"lines": [], "timestamp": None}
+    return {
+        "lines": df.to_dict("records"),
+        "timestamp": df["date"].max().isoformat() if "date" in df.columns else None,
+    }
+
+
+def get_otp_heatmap() -> pd.DataFrame:
+    """Heatmap OTP (ligne × heure).
+
+    TODO Sprint 10+: câbler sur gold.mv_otp_heatmap.
+    """
+    if not _is_db_available():
+        return pd.DataFrame(columns=["line_id", "date", "hour", "otp_pct"])
+    query = """
+        SELECT line_id, date, hour, otp_pct
+        FROM gold.mv_otp_heatmap
+        LIMIT 5000
+    """
+    try:
+        return _df_from_query(query)
+    except Exception:
+        return pd.DataFrame(columns=["line_id", "date", "hour", "otp_pct"])
+
+
+def get_bottlenecks_summary() -> pd.DataFrame:
+    """Résumé agrégé des bottlenecks d'infrastructure.
+
+    TODO Sprint 10+: câbler sur gold.infrastructure_bottlenecks.
+    """
+    if not _is_db_available():
+        return pd.DataFrame(
+            columns=[
+                "zone",
+                "line_id",
+                "voyageurs_jour",
+                "gain_min",
+                "cout_M_euros",
+                "roi_mois",
+                "priorite",
+            ]
+        )
+    query = """
+        SELECT zone, line_id, voyageurs_jour, gain_min,
+               cout_M_euros, roi_mois, priorite
+        FROM gold.infrastructure_bottlenecks
+        ORDER BY priorite DESC, gain_min DESC
+        LIMIT 50
+    """
+    try:
+        return _df_from_query(query)
+    except Exception:
+        return pd.DataFrame(
+            columns=[
+                "zone",
+                "line_id",
+                "voyageurs_jour",
+                "gain_min",
+                "cout_M_euros",
+                "roi_mois",
+                "priorite",
+            ]
+        )
+
+
+def get_lieux_transports(lieu_id: int | None = None) -> list[dict]:
+    """Référentiel lieux × transports (TCL, Vélov, parking).
+
+    TODO Sprint 10+: câbler sur gold.referentiel_lieux.
+    """
+    if not _is_db_available():
+        return []
+    query = """
+        SELECT lieu_id, nom, lat, lon, type_lieu,
+               lines_tcl, has_velov, has_parking, distance_gare
+        FROM gold.referentiel_lieux
+        WHERE (%s IS NULL OR lieu_id = %s)
+        LIMIT 100
+    """
+    try:
+        df = _df_from_query(query, (lieu_id, lieu_id))
+        return df.to_dict("records") if not df.empty else []
+    except Exception:
+        return []

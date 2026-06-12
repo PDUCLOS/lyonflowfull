@@ -34,8 +34,14 @@ def reset_db_cache(monkeypatch):
     Ces tests valident le contrat des mocks. Pour les tests d'intégration avec
     une vraie DB, voir tests/integration/test_infrastructure.py.
     """
+    # Force prod mode + DB unavailable pour que _maybe_force_mock(True) utilise le mock.
+    # CI a un PostgreSQL réel, donc on doit bypasser la detection automatique.
+    monkeypatch.setenv("LYONFLOW_DEMO_MODE", "0")
+    monkeypatch.setattr(data_loader, "_is_demo_mode", lambda: False)
+    monkeypatch.setattr(data_loader, "_demo_mode_cache", False)
     db_query.reset_db_cache()
     monkeypatch.setattr(db_query, "_is_db_available", lambda: False)
+    monkeypatch.setattr(db_query, "_db_available_cache", False)
     yield
     db_query.reset_db_cache()
 

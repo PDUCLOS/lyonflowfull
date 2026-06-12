@@ -389,6 +389,7 @@ def _gen_traffic_features(n: int = 100) -> list[dict]:
                 "node_idx": node_idx,
                 "channel_id": f"CH_{ch:04d}",
                 "speed_kmh": round(speed, 2),
+                "vitesse_limite_kmh": 50,
                 "importance_code": imp,
             }
         )
@@ -420,7 +421,7 @@ MOCK_TRAFFIC_TIMESERIES: list[dict] = [
 
 MOCK_VELOV_STATIONS_GEO: list[dict] = [
     {
-        "station_id": f"VELOV_{i:04d}",
+        "station_id": 1000 + i,
         "station_name": f"Station {i}",
         "bikes_available": 5 + (i * 3) % 18,
         "docks_available": 25 - (i * 3) % 18,

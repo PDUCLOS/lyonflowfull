@@ -47,7 +47,6 @@ import os
 from typing import Any
 
 import pandas as pd
-from src.data.exceptions import DashboardDataError
 
 from src.data.db_query import (
     _is_db_available,
@@ -61,6 +60,7 @@ from src.data.db_query import (
     get_velov_predictions,
     get_velov_stations_geo,
 )
+from src.data.exceptions import DashboardDataError
 from src.data.mock import elu as elu_mock
 from src.data.mock import pro_tcl as pro_tcl_mock
 from src.data.mock import usager as usager_mock
@@ -480,6 +480,8 @@ def load_line_kpis(line_ids: list[str] | None = None, force_mock: bool = False) 
         DashboardDataError: en mode prod, si la vue Gold n'est pas peuplée
             ou si PostgreSQL ne répond pas.
     """
+    if _maybe_force_mock(force_mock):
+        return pro_tcl_mock.LINE_KPIS
     if _is_demo_mode():
         return pro_tcl_mock.LINE_KPIS
     from src.data.db_query import get_line_kpis
@@ -497,7 +499,7 @@ def load_otp_heatmap_data(force_mock: bool = False) -> pd.DataFrame:
     Raises:
         DashboardDataError: en mode prod, si la DB ne répond pas.
     """
-    if _is_demo_mode():
+    if _maybe_force_mock(force_mock):
         grid = pro_tcl_mock.OTP_GRID
         rows = []
         for line_id, by_date in grid.items():
@@ -525,6 +527,8 @@ def load_city_synthesis(force_mock: bool = False) -> dict:
     Raises:
         DashboardDataError: en mode prod, car la vue n'est pas encore implémentée.
     """
+    if _maybe_force_mock(force_mock):
+        return elu_mock.SYNTHESIS_DATA
     if _is_demo_mode():
         return elu_mock.SYNTHESIS_DATA
     raise DashboardDataError(
@@ -543,6 +547,8 @@ def load_bottlenecks_summary(force_mock: bool = False) -> pd.DataFrame:
     Raises:
         DashboardDataError: en mode prod, si la DB ne répond pas.
     """
+    if _maybe_force_mock(force_mock):
+        return pd.DataFrame(elu_mock.BOTTLENECKS_LIST)
     if _is_demo_mode():
         return pd.DataFrame(elu_mock.BOTTLENECKS_LIST)
     from src.data.db_query import get_bottlenecks_summary
@@ -1001,6 +1007,8 @@ def load_mlflow_models(
     """
     from src.ml.mlflow_integration import list_registered_models
 
+    if _maybe_force_mock(force_mock):
+        return _FALLBACK_MOCK_MODELS
     if _is_demo_mode():
         return _FALLBACK_MOCK_MODELS
 

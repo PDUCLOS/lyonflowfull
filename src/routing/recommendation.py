@@ -28,8 +28,6 @@ import math
 from dataclasses import dataclass
 from typing import Literal
 
-from src.data.exceptions import DashboardDataError
-
 from src.data.data_loader import _is_demo_mode
 from src.data.db_query import (
     _is_db_available,
@@ -37,6 +35,7 @@ from src.data.db_query import (
     get_lieux_transports,
     get_smart_velov_for_lieu,
 )
+from src.data.exceptions import DashboardDataError
 
 logger = logging.getLogger(__name__)
 
