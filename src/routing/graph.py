@@ -145,7 +145,7 @@ def _build_graph_from_db(
             JOIN gold.traffic_features_live t
               ON t.channel_id::text = m.properties_twgid::text
             WHERE t.computed_at >= NOW() - INTERVAL '1 hour'
-              AND t.vitesse_kmh IS NOT NULL
+              AND t.speed_kmh IS NOT NULL
             ORDER BY m.node_idx, t.computed_at DESC
         )
         SELECT node_idx, speed_kmh FROM latest

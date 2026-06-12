@@ -353,15 +353,14 @@ def plan_velov_trip(
 
     _require_db_or_raise("silver.velov_clean")
 
-    # Sprint VPS-6 hotfix (2026-06-11) — les 2 lookups Vélov sont
-    # séquentiels et représentent 2x le temps d'une query haversine sur
-    # l'ensemble de silver.velov_clean. On batche en une seule query
-    # UNION ALL : 1 round-trip DB au lieu de 2.
-    stations = _nearest_velov_stations_pair(
-        origin_lat, origin_lon,
-        dest_lat, dest_lon,
-    )
-    origin_station = stations.get("origin")
+    # Sprint 8 hotfix 7 (2026-06-12) — On garde origin_station /
+    # dest_station du smart routing (ligne 336-337) qui intègrent
+    # status + alternatives + voisines. L'ancien hotfix perf qui
+    # réécrasait avec _nearest_velov_stations_pair cassait le smart
+    # routing (schéma incompatible : station_id/lat/lon vs
+    # velov_name/velov_lat/velov_lon) et provoquait KeyError.
+    # TODO Sprint 9 : si perf pose problème, batcher le smart lookup
+    # en 1 round-trip SQL (UNION ALL avec scoring intégré).
     if origin_station is None:
         return VelovItinerary(
             origin_label=origin_label,
@@ -369,7 +368,6 @@ def plan_velov_trip(
             segments=[],
             source="db",
         )
-    dest_station = stations.get("dest")
     if dest_station is None:
         return VelovItinerary(
             origin_label=origin_label,
@@ -515,10 +513,10 @@ def plan_velov_trip(
 
 
 def plan_car_trip(
-    origin_lat: float,
     origin_lon: float,
-    dest_lat: float,
+    origin_lat: float,
     dest_lon: float,
+    dest_lat: float,
     origin_label: str = "Origine",
     dest_label: str = "Destination",
     horizon_minutes: int = 0,
