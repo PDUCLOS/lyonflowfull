@@ -20,7 +20,7 @@ pour gérer les distributions non-uniformes (ex. vitesse trafic).
 from __future__ import annotations
 
 import logging
-from typing import Iterable
+from collections.abc import Iterable
 
 import numpy as np
 import pandas as pd
@@ -105,7 +105,7 @@ def compute_psi(
     # PSI
     psi = sum(
         _safe_psi_term(float(r), float(c))
-        for r, c in zip(ref_pcts, curr_pcts)
+        for r, c in zip(ref_pcts, curr_pcts, strict=True)
     )
 
     if psi < 0.1:

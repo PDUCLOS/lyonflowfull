@@ -18,7 +18,6 @@ from __future__ import annotations
 
 import streamlit as st
 
-from src.data.data_loader import _is_demo_mode
 from src.data.exceptions import DashboardDataError
 from src.routing.pathfinder_multimodal import (
     VelovItinerary,

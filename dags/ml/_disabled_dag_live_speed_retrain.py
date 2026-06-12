@@ -75,7 +75,7 @@ def _predict_and_persist() -> dict:
     from src.models.xgboost_speed import XGBoostSpeedModel
 
     started = datetime.now()
-    
+
     # Load model once for all predictions
     model = XGBoostSpeedModel()
     model.load(horizons=list(HORIZON_MAP.keys()))
@@ -104,12 +104,12 @@ def _predict_and_persist() -> dict:
         per_horizon_count[horizon_minutes] = 0
         for axis in axes:
             limit = float(axis.get("vitesse_limite_kmh") or DEFAULT_SPEED_LIMIT)
-            
+
             # Predict
             pred_result = model.predict(str(axis["channel_id"]), horizon_minutes=horizon_minutes, features=axis)
             speed = pred_result["predicted_speed_kmh"]
             model_version = pred_result["model_version"]
-            
+
             color = _color_for_speed(speed, limit)
             etat = _etat_for_speed(speed, limit)
             rows_to_insert.append(

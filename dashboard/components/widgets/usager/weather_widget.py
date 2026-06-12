@@ -16,7 +16,6 @@ import streamlit as st
 
 from dashboard.components.colors import COLORS
 from dashboard.components.data_cache import cached_weather_hourly
-from src.data.data_loader import _is_demo_mode
 from src.data.exceptions import DashboardDataError
 
 

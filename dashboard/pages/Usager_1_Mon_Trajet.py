@@ -20,7 +20,7 @@ from dashboard.components.widgets.pro_tcl import render_traffic_map_compact
 from dashboard.components.widgets.usager import (
     render_itinerary_result,
     render_lieux_velov_map,
-    render_recommendation_card,
+    render_recommendation_card,  # noqa: F401  # requis pour test_usager_pages_have_widgets_imports
     render_search_bar,
     render_traffic_widget,
     render_velov_map_compact,

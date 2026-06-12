@@ -1,6 +1,6 @@
 # CLAUDE.md — LyonFlowFull
 
-> Mémoire projet — **dernière mise à jour : 2026-06-12, Sprint 8** (zéro mock + ingestion Bronze + focus H+1h).
+> Mémoire projet — **dernière mise à jour : 2026-06-12, Sprint 9+/10+** (optimisation pipeline : découplage training/inf, GNN sur données réelles, MinIO sdb2, fix bugs latents Usager_1).
 
 ## Projet
 
@@ -15,15 +15,26 @@ LyonFlowFull est une plateforme MLOps end-to-end de prédiction et d'analyse du 
 
 ### État au 2026-06-12
 
-- 18 pages × 3 personas · 47 widgets · 8 collecteurs Bronze · **10 DAGs Airflow** (8 actifs + 1 cron backfill + 1 TomTom no-op)
-- 9 endpoints API · 3 modèles ML (2 XGBoost H+1h + SpatioTemporalGCN) · RGPD complet
-- 150 fichiers Python · ~19 500 lignes · **150 tests verts / 9 SKIP / 7 deselected (integration)** · ruff clean
-- Couche data complète (db_query + data_loader) — `gold.trafic_predictions` repeuplée toutes les 30 min
-- Sprint 8 (2026-06-12) — **3 dettes critiques résolues** :
+- 18 pages × 3 personas · 47 widgets · 8 collecteurs Bronze · **13 DAGs Airflow** (10 actifs + 1 cron backfill + 1 TomTom no-op + 1 archive silver-to-minio)
+- 9 endpoints API · 3 modèles ML (XGBoost H+1h focus + SpatioTemporalGCN sur données réelles) · RGPD complet
+- ~165 fichiers Python · ~21 000 lignes · **176 tests verts / 3 SKIP / 7 deselected (integration)** · ruff 54 erreurs cosmétiques (Sprint 9+ : cleanup `_is_demo_mode` + fix W291/I001 en cours)
+- Couche data complète (db_query + data_loader) — `gold.trafic_predictions` repeuplée toutes les 15 min par `dag_inference_xgboost`
+- **Sprint 8 (2026-06-12)** — **3 dettes critiques résolues** :
   - **ZÉRO MOCK DANS LE PROJET** : suppression complète de `src/data/mock/` (déplacé dans `tests/fixtures/mock_data/`). Tous les widgets, data_loader, db_query, airflow_client fail loud via `DashboardDataError`. 18 fallbacks mock virés.
-  - **Focus H+1h** (Sprint VPS-6) : features XGBoost réduites de 14 à 9 (1 modèle H+1h au lieu de 4), DAG `dag_live_speed_retrain` toutes les 30 min, scheduler backfill `*/5min` sur lat/lon.
+  - **Focus H+1h** (Sprint VPS-6) : features XGBoost alignées schéma v0.3.1 (11 features : `speed_kmh, lag_1, lag_2, lag_3, rolling_mean_3, sin_hour, cos_hour, temperature_2m, precipitation, is_vacances, is_ferie`). 1 modèle H+1h uniquement.
   - **Ingestion Bronze stable** : `air_quality` (72 records) et `chantiers` (428 records) débloqués (dette schéma UNIQUE INDEX sur colonnes extracted). Healthcheck `scripts/healthcheck-vps.sh` 20/20 OK.
-- Sprint 8+ : durcissement Prometheus/Grafana/Alertmanager (config YAML cassée depuis v2.54, restart-loop résolu). Backups offsite (Sprint VPS-2) toujours actifs.
+- **Sprint 8+** : durcissement Prometheus/Grafana/Alertmanager (config YAML cassée depuis v2.54, restart-loop résolu). Backups offsite (Sprint VPS-2) toujours actifs.
+- **Sprint 9+ (2026-06-12, commit `7947cb1` + `fc806d2`)** — **Optimisation pipeline** :
+  - **Découplage training/inf** : `dag_live_speed_retrain` (1x/30min, lourd) → `dag_daily_speed_train` (03h00, 1x/jour) + `dag_inference_xgboost` (15min, inférence pure, pas de fit()). **-98% CPU training**.
+  - **Bug critique baseline 30.0** : `XGBoostSpeedModel.predict()` renvoyait 30.0 km/h constant (fallback silencieux) quand modèle pas chargé. **Fail loud** désormais (RuntimeError).
+  - **Mapping LYO ↔ properties_twgid** : `gold.mv_twgid_to_lyo` (Polars + h3-py v4.5 vectorisé, H3 res 10 + k_ring(1)) — 1007 mappings, mean dist 103m. **speed_map graphe : 100% à 30.0 → 62% réel** (24 km/h mean).
+  - **GNN sur données réelles** : `training/stgcn/dataset.py` aligné sur `caroheymes/Architect-IA-final-project`, lit `gold.fact_traffic_series` (889 234 rows × 1544 nœuds × 7 jours, vitesses 1-130 km/h). Plus de fallback `synthetic()`. Volume bind `training/` ajouté à airflow-scheduler.
+  - **Materialised training set** : `gold.xgb_training_set` (quotidien 02h30, self-join H+1h indexé, 358 695 rows en 54s) + covering index `idx_gold_traffic_channel_computed`. XGBoost ne fait plus de `LEAD() OVER` 2.4M rows.
+  - **Carte itinéraire voiture** : polyligne continue pointillée (au lieu de 8 traits dispersés) + cercles H3. Sprint 10+ : snap-to-roads Overpass.
+  - **MinIO sdb2** : migré de `sda1` (80% plein) vers `/mnt/postgres-data/minio` (bind mount sdb2, 43 Go libres). DAG `silver_archive_to_minio` quotidien 04h00 (Parquet snappy + DELETE + VACUUM ANALYZE).
+  - **Fix bugs latents** : `Usager_1_Mon_Trajet.py` import conflict (F811) + undefined names (F821). `time` ajouté à `xgboost_speed.py`. MLflow tracking vérifié (URI propagé).
+  - **Tests** : 170 → 176 verts (Sprint 8+ → 9+), aucune régression.
+  - Voir [SPRINT_9_OPTIMISATIONS.md](SPRINT_9_OPTIMISATIONS.md) pour détails.
 
 ### Phases
 
@@ -55,7 +66,7 @@ Voir [AGENTS.md](AGENTS.md) pour les conventions et la mémoire projet.
 
 | Couche | Technologie |
 |--------|-------------|
-| Orchestration | Apache Airflow 2.9 (8 DAGs actifs + 1 cron backfill + 1 no-op TomTom) |
+| Orchestration | Apache Airflow 2.9 (**10 DAGs actifs** + 1 cron backfill + 1 archive silver + 1 no-op TomTom) |
 | Base de données | PostgreSQL 16 + PostGIS (3 schémas : bronze/silver/gold + referentiel) |
 | ML Tracking / Registry | MLflow 2.12 |
 | ML Trafic (spatial) | ST-GRU-GNN (PyTorch Geometric) — **daily 03h** |
@@ -269,13 +280,13 @@ Le widget `dashboard/components/widgets/pro_tcl/line_kpis.py` expose :
 | Composant | Raison |
 |-----------|--------|
 | Kafka | Jamais utilisé réellement |
-| MinIO | PostgreSQL suffit (sdb dédié) |
+| MinIO | **Réhabilité Sprint 10+** — bind mount sur sdb2, archive silver > 30j (Parquet snappy) via `dags/maintenance/silver_archive_to_minio.py` |
 | 458 one-hot vélov | 9GB RAM, remplacé par label encoding |
 | Orbit DLT challenger | Conflit schedule, complexité sans gain |
 | AR(1) predictor fallback | Dead code |
 | Ray cluster HPO | Optuna local suffit |
 | **TomTom API** | Module incomplet (helpers sans classe). **No-op Sprint 8**, réactivation Sprint 12+ (dette : coder `TomTomTrafficFlow(DataCollector)`) |
-| **Mode démo / mocks** | **VIRÉ Sprint 8**. Politique "zéro mock" — `src/data/mock/` → `tests/fixtures/mock_data/` |
+| **Mode démo / mocks** | **VIRÉ Sprint 8**. Politique "zéro mock" — `src/data/mock/` → `tests/fixtures/mock_data/`. Cleanup `_is_demo_mode` (7× F401) en cours Sprint 9+ |
 
 ---
 

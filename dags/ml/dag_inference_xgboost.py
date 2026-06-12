@@ -24,7 +24,7 @@ import psycopg2.extras
 from airflow import DAG
 from airflow.operators.python import PythonOperator
 
-from src.db.connection import raw_connection, execute_query
+from src.db.connection import execute_query, raw_connection
 
 logger = logging.getLogger(__name__)
 

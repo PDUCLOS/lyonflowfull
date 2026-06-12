@@ -5,7 +5,7 @@ fait 28 Go et continue à grossir (~500 Mo/jour). 80% de ces données ont
 > 30 jours et ne sont plus utilisées par les modèles (fenêtre Gold :
 2 jours). On les archive :
 
-1. Export en **Parquet snappy** (compression ~10× vs raw text/JSON)
+1. Export en **Parquet snappy** (compression ~10x vs raw text/JSON)
 2. Push dans ``s3://lyonflow-bronze/silver_archive/<table>/YYYY/MM/``
 3. DELETE Postgres (libère ~25 Go)
 

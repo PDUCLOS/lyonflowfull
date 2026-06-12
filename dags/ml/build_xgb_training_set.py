@@ -42,7 +42,7 @@ RETENTION_DAYS = 14
 # Lookback window for training set population (2 days — VPS-friendly)
 # Sprint 9+ Optimisation : avec 2 jours on a ~700k rows, le self-join
 # tourne en ~3 min au lieu de timeout sur 7 jours. Le XGBoost n'a
-# pas besoin de plus : 2 jours × 1100 channels × 288 pas/5min = ~600k
+# pas besoin de plus : 2 jours x 1100 channels x 288 pas/5min = ~600k
 # training samples, largement suffisant pour un modèle à 11 features.
 LOOKBACK_DAYS = 2
 

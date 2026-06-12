@@ -16,7 +16,6 @@ import streamlit as st
 
 from dashboard.components.colors import COLORS
 from src.data.data_loader import (
-    _is_demo_mode,
     load_lyon_addresses,
 )
 from src.data.exceptions import DashboardDataError

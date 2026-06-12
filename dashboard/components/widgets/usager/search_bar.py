@@ -32,7 +32,7 @@ def render_search_bar() -> dict[str, typing.Any]:
     addresses = cached_lyon_addresses_with_coords(force_mock=False)
     # Préparer les options pour la selectbox
     addr_options = [f"{_TYPE_ICON.get(a['type'], '📍')} {a['name']}" for a in addresses]
-    
+
     # Injection de CSS pour un style épuré
     st.markdown("""
     <style>
@@ -57,10 +57,10 @@ def render_search_bar() -> dict[str, typing.Any]:
     }
     </style>
     """, unsafe_allow_html=True)
-    
+
     with st.container(border=True):
         st.markdown("#### 🗺️ Où allez-vous ?")
-        
+
         col1, col2 = st.columns(2)
         with col1:
             origin = st.selectbox(
@@ -78,9 +78,9 @@ def render_search_bar() -> dict[str, typing.Any]:
                 key="search_destination",
                 help="Tapez pour rechercher une adresse"
             )
-            
+
         st.markdown("<br/>", unsafe_allow_html=True)
-        
+
         # Bloc départ et filtres
         col_time, col_modes = st.columns([1, 1])
         with col_time:
@@ -93,7 +93,7 @@ def render_search_bar() -> dict[str, typing.Any]:
             departure_time = None
             if departure_mode == "⏰ Arriver à l'heure":
                 departure_time = st.time_input("Heure prévue", key="search_dep_time")
-                
+
         with col_modes:
             modes = st.multiselect(
                 "Modes de transport autorisés",

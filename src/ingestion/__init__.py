@@ -12,12 +12,13 @@ from src.ingestion.chantiers import ChantiersGrandLyon
 from src.ingestion.jours_feries import JoursFeries
 from src.ingestion.meteo import MeteoOpenMeteo
 from src.ingestion.tcl_siri_lite import TclSiriLite
+
 # Sprint 8 (2026-06-12) — tomtom_traffic désactivé. Le module
 # n'a jamais eu la classe TomTomTrafficFlow ni les fonctions
 # collect_lyon_tiles() / save_lyon_tiles_to_bronze() / health().
 # Le DAG collect_tomtom_traffic est en no-op. Réactivation Sprint 12+.
-# import src.ingestion.tomtom_traffic as tomtom_traffic  # noqa: F401
-# from src.ingestion.tomtom_traffic import TomTomTrafficFlow  # noqa: F401
+# import src.ingestion.tomtom_traffic as tomtom_traffic
+# from src.ingestion.tomtom_traffic import TomTomTrafficFlow
 from src.ingestion.trafic_grandlyon import TraficGrandLyon
 from src.ingestion.velov import VelovCollector
 

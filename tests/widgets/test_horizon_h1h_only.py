@@ -73,9 +73,10 @@ def test_gnn_map_horizons_h1h_only():
 
 def test_model_monitoring_horizons_h1h_only():
     """model_monitoring.horizons = [60] uniquement (pas 6 horizons)."""
-    src_mm = open(
+    with open(
         "/Users/patriceduclos/Documents/Lyonfull/dashboard/components/widgets/pro_tcl/model_monitoring.py"
-    ).read()
+    ) as f:
+        src_mm = f.read()
     assert "horizons = [60]" in src_mm, "model_monitoring doit utiliser horizons = [60]"
     assert "horizons = [5, 15, 30, 60, 180, 360]" not in src_mm, (
         "model_monitoring expose encore 6 horizons — doit être H+1h only"
@@ -84,9 +85,10 @@ def test_model_monitoring_horizons_h1h_only():
 
 def test_usager_mon_trajet_selectbox_h1h():
     """Page Mon Trajet : selectbox horizon = [60] uniquement."""
-    src = open(
+    with open(
         "/Users/patriceduclos/Documents/Lyonfull/dashboard/pages/Usager_1_Mon_Trajet.py"
-    ).read()
+    ) as f:
+        src = f.read()
     assert "[0, 30, 60, 180, 360]" not in src, (
         "Usager_1_Mon_Trajet expose encore [0, 30, 60, 180, 360] — doit être [60]"
     )
@@ -95,18 +97,20 @@ def test_usager_mon_trajet_selectbox_h1h():
 
 def test_pro_pcc_live_selectbox_h1h():
     """Page Pro PCC Live : render_traffic_map horizon_default=60."""
-    src = open(
+    with open(
         "/Users/patriceduclos/Documents/Lyonfull/dashboard/pages/Pro_1_PCC_Live.py"
-    ).read()
+    ) as f:
+        src = f.read()
     assert "horizon_default=60" in src, "Pro PCC Live doit utiliser horizon_default=60"
     assert "horizon_default=30" not in src, "Pro PCC Live utilise encore horizon_default=30"
 
 
 def test_usager_files_h1h():
     """Page Usager_4_Files : load_traffic_predictions_for_map(horizon_minutes=60)."""
-    src = open(
+    with open(
         "/Users/patriceduclos/Documents/Lyonfull/dashboard/pages/Usager_4_Files.py"
-    ).read()
+    ) as f:
+        src = f.read()
     assert "horizon_minutes=60" in src, "Usager_4_Files doit utiliser horizon_minutes=60"
     assert "horizon_minutes=30" not in src or "# Sprint 8+" in src.split("horizon_minutes=30")[0][-200:], (
         "Usager_4_Files utilise encore horizon_minutes=30"

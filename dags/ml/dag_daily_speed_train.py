@@ -22,7 +22,6 @@ nocturne, n'entre pas en compétition avec l'inférence temps réel.
 from __future__ import annotations
 
 import logging
-import os
 from datetime import datetime, timedelta
 
 from airflow import DAG

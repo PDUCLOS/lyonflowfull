@@ -28,7 +28,7 @@ from airflow.operators.python import PythonOperator
 logger = logging.getLogger(__name__)
 
 
-def _collect_tomtom_disabled(**context) -> int:  # noqa: ARG001
+def _collect_tomtom_disabled(**context) -> int:
     """Sprint 8 — No-op. Voir docstring du module."""
     logger.info(
         "DAG collect_tomtom_traffic DÉSACTIVÉ (Sprint 8 2026-06-12). "

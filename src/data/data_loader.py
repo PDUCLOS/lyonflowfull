@@ -43,7 +43,6 @@ Avantages :
 from __future__ import annotations
 
 import logging
-import os
 from typing import Any
 
 import pandas as pd
@@ -61,6 +60,7 @@ from src.data.db_query import (
     get_velov_stations_geo,
 )
 from src.data.exceptions import DashboardDataError
+
 # Sprint 8 (2026-06-12) — viré tous les imports src.data.mock.
 # La couche data_loader n'utilise plus aucun mock. Si DB indispo,
 # DashboardDataError (fail loud). Si DB vide, liste/df vide (info).

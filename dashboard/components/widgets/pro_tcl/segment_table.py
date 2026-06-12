@@ -10,7 +10,6 @@ import pandas as pd
 import streamlit as st
 
 from dashboard.components.data_cache import cached_infra_bottlenecks
-from src.data.data_loader import _is_demo_mode
 from src.data.exceptions import DashboardDataError
 
 # DIAGNOSIS_LABELS est un libellé FR d'un code SQL (cf. infra_bottlenecks.diagnosis),

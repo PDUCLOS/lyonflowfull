@@ -26,7 +26,6 @@ from typing import Any
 
 import requests
 
-from src.data.data_loader import _is_demo_mode
 from src.data.exceptions import DashboardDataError
 
 logger = logging.getLogger(__name__)

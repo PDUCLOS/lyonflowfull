@@ -29,7 +29,7 @@ from airflow.operators.python import PythonOperator
 # Permet d'importer src.* depuis le DAG (Airflow worker)
 sys.path.insert(0, "/opt/airflow")
 
-from src.db.connection import execute_query, raw_connection  # noqa: E402
+from src.db.connection import execute_query, raw_connection
 
 logger = logging.getLogger(__name__)
 DAG_ID = "maintenance_backfill_dim_spatial_lat_lon"
@@ -60,7 +60,7 @@ def _backfill() -> int:
         try:
             lat, lon = h3.cell_to_latlng(r["h3_id"])
             updates.append((lat, lon, r["node_idx"]))
-        except Exception as e:  # noqa: BLE001
+        except Exception as e:
             logger.warning(
                 "[backfill] skip node_idx=%s h3_id=%s: %s",
                 r["node_idx"], r["h3_id"], e,
