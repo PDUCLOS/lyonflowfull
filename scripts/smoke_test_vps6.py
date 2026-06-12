@@ -30,7 +30,7 @@ def main() -> int:
 
     lieux = load_lyon_addresses_with_coords()
     print(f"\n[1/3] Lieux chargés : {len(lieux)}")
-    for l in lieux[:3]:
+    for l in lieux[:3]:  # noqa: E741
         print(f"  - {l['name']} ({l['lat']}, {l['lon']}) [{l['type']}]")
     if len(lieux) < 21:
         print(f"  ⚠️  Attendu: 21 lieux, trouvé: {len(lieux)}")

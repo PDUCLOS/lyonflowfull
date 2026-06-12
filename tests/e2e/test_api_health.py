@@ -10,7 +10,6 @@ import os
 import pytest
 import requests
 
-
 API_BASE = os.getenv("LYONFLOW_API_BASE_URL", "http://localhost:8000")
 API_KEY = os.getenv("LYONFLOW_API_KEY", "")
 

@@ -14,6 +14,7 @@ Ce module vérifie :
 3. Aucune référence à ``src.data.mock.*`` dans ``src/``.
 4. Le module ``src/data/mock/`` n'existe plus.
 """
+
 from __future__ import annotations
 
 import os
@@ -66,9 +67,7 @@ def test_no_mock_imports_in_src() -> None:
                 if '"""' in line or "'''" in line:
                     continue
                 # Sinon, c'est un import ou un appel → fail
-                raise AssertionError(
-                    f"{py_file}:{line_no} contient une référence non-doc à src.data.mock :\n  {line}"
-                )
+                raise AssertionError(f"{py_file}:{line_no} contient une référence non-doc à src.data.mock :\n  {line}")
 
 
 def test_widgets_have_no_mock_imports() -> None:
@@ -80,9 +79,7 @@ def test_widgets_have_no_mock_imports() -> None:
         if "__pycache__" in str(py_file):
             continue
         content = py_file.read_text()
-        assert "src.data.mock" not in content, (
-            f"{py_file} importe encore src.data.mock — c'est interdit (Sprint 8)"
-        )
+        assert "src.data.mock" not in content, f"{py_file} importe encore src.data.mock — c'est interdit (Sprint 8)"
 
 
 def test_data_loader_no_mock_returns_empty() -> None:

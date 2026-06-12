@@ -40,7 +40,7 @@ def _distance_color(distance_m: float) -> str:
         return "#4CAF50"  # vert
     if distance_m < 300:
         return "#FF9800"  # orange
-    return "#F44336"      # rouge
+    return "#F44336"  # rouge
 
 
 def render_lieux_velov_map(
@@ -55,13 +55,13 @@ def render_lieux_velov_map(
         height: hauteur de la carte en pixels.
     """
     if _is_demo_mode():
-        st.info("🟡 Mode démo — carte lieux × Vélov indisponible. "
-                "Connecter la DB pour voir le rendu réel.")
+        st.info("🟡 Mode démo — carte lieux × Vélov indisponible. Connecter la DB pour voir le rendu réel.")
         return
 
     if lieux_with_velov is None:
         try:
             from src.data.db_query import get_lieux_with_velov
+
             lieux_with_velov = get_lieux_with_velov(k=1)
         except DashboardDataError as e:
             st.error(f"⚠️ {e}")
@@ -114,11 +114,11 @@ def _lieu_popup_html(lieu: dict) -> str:
     return f"""
     <div style='font-family:sans-serif;'>
         <div style='font-size:1rem;font-weight:600;'>
-            {icon} {lieu['lieu_name']}
+            {icon} {lieu["lieu_name"]}
         </div>
         <div style='font-size:0.75rem;opacity:0.7;
                     text-transform:uppercase;letter-spacing:0.5px;'>
-            {lieu['lieu_type']}
+            {lieu["lieu_type"]}
         </div>
         {bornes_html}
     </div>
@@ -131,19 +131,19 @@ def _borne_popup_html(lieu: dict, b: dict) -> str:
     return f"""
     <div style='font-family:sans-serif;'>
         <div style='font-size:0.85rem;font-weight:600;'>
-            🚲 {b['velov_name']}
+            🚲 {b["velov_name"]}
         </div>
         <div style='font-size:0.7rem;opacity:0.7;margin-top:0.2rem;'>
-            Relié à <b>{lieu['lieu_name']}</b>
+            Relié à <b>{lieu["lieu_name"]}</b>
         </div>
         <div style='font-size:0.7rem;opacity:0.7;margin-top:0.2rem;'>
-            Relié à <b>{lieu['lieu_name']}</b>
+            Relié à <b>{lieu["lieu_name"]}</b>
         </div>
         <div style='margin-top:0.4rem;font-size:0.85rem;'>
-            📏 <b>{int(b['distance_m'])}m</b> · 🚶 {walk_min} min à pied
+            📏 <b>{int(b["distance_m"])}m</b> · 🚶 {walk_min} min à pied
         </div>
         <div style='margin-top:0.4rem;'>
-            🚴 {b['num_bikes_available']} vélos dispo · 🅿️ {b['num_docks_available']} docks
+            🚴 {b["num_bikes_available"]} vélos dispo · 🅿️ {b["num_docks_available"]} docks
         </div>
     </div>
     """

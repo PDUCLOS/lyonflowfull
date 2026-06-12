@@ -708,7 +708,7 @@ def load_tcl_lines(force_mock: bool = False) -> list[dict]:
         out.append(
             {
                 "id": line_id,
-                "name": f"{ 'Tram' if mode=='tram' else 'Métro' if mode=='metro' else 'Bus' } {line_id}",
+                "name": f"{'Tram' if mode == 'tram' else 'Métro' if mode == 'metro' else 'Bus'} {line_id}",
                 "mode": mode,
                 "color": color,
                 "icon": icon,
@@ -776,6 +776,7 @@ def _load_lyon_addresses_cached() -> list[str]:
         return cached[1]
     _require_db_or_raise("referentiel.lieux_lyon")
     from src.data.db_query import get_lieux_lyon_names
+
     result = get_lieux_lyon_names()
     _lieux_cache["names"] = (now, result)
     return result
@@ -789,6 +790,7 @@ def _load_lyon_addresses_with_coords_cached() -> list[dict]:
         return cached[1]
     _require_db_or_raise("referentiel.lieux_lyon")
     from src.data.db_query import get_lieux_lyon_with_coords
+
     result = get_lieux_lyon_with_coords()
     _lieux_cache["coords"] = (now, result)
     return result
@@ -816,9 +818,7 @@ def load_lieux_transports(lieu_id: int | None = None) -> list[dict]:
     return get_lieux_transports(lieu_id=lieu_id)
 
 
-def load_cadence_for_line(
-    line_ref: str, day_type: str | None = None, time_bucket: str | None = None
-) -> list[dict]:
+def load_cadence_for_line(line_ref: str, day_type: str | None = None, time_bucket: str | None = None) -> list[dict]:
     """Cadence observée pour une ligne TCL.
 
     Args:
@@ -904,6 +904,7 @@ def get_tomtom_health() -> dict:
     """
     try:
         from src.ingestion.tomtom_traffic import health as tomtom_health
+
         return tomtom_health()
     except Exception as e:  # pragma: no cover
         return {"error": str(e)}

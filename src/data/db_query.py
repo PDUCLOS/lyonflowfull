@@ -534,6 +534,7 @@ def get_bronze_source_counts(hours: int = 1) -> pd.DataFrame:
     # Sprint 8 — viré le fallback mock. Si DB indispo, le caller doit catch.
     if not _is_db_available():
         from src.data.exceptions import DashboardDataError
+
         raise DashboardDataError(source="bronze_source_counts", detail="PostgreSQL indisponible")
 
     rows = []
@@ -728,9 +729,7 @@ def get_lieux_lyon_names(active_only: bool = True) -> list[str]:
         Liste de strings ``['Part-Dieu, Lyon', 'Perrache, Lyon', ...]``.
     """
     where = "WHERE is_active = TRUE" if active_only else ""
-    rows = execute_query(
-        f"SELECT name FROM referentiel.lieux_lyon {where} ORDER BY name"
-    )
+    rows = execute_query(f"SELECT name FROM referentiel.lieux_lyon {where} ORDER BY name")
     return [r["name"] for r in rows]
 
 
@@ -823,7 +822,7 @@ def get_cadence_for_line(
         SELECT line_ref, day_type, time_bucket, cadence_min_per_vehicle,
                n_observations, confidence, computed_at
         FROM referentiel.lieux_calendrier
-        WHERE {' AND '.join(clauses)}
+        WHERE {" AND ".join(clauses)}
         ORDER BY
             CASE day_type
                 WHEN 'weekday' THEN 1

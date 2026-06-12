@@ -44,9 +44,7 @@ class VelovCollector(DataCollector):
         )
         # URLs (overridable via env pour les tests / changement d'API)
         self.station_status_url = os.getenv("VELOV_STATION_STATUS_URL", self.STATION_STATUS_URL_DEFAULT)
-        self.station_information_url = os.getenv(
-            "VELOV_STATION_INFORMATION_URL", self.STATION_INFORMATION_URL_DEFAULT
-        )
+        self.station_information_url = os.getenv("VELOV_STATION_INFORMATION_URL", self.STATION_INFORMATION_URL_DEFAULT)
         # Auth Basic Grand Lyon (requise depuis 2025)
         _user = os.getenv("GRANDLYON_USERNAME") or os.getenv("API_LOGIN", "")
         _pwd = os.getenv("GRANDLYON_PASSWORD") or os.getenv("API_PASSWORD", "")
@@ -81,14 +79,8 @@ class VelovCollector(DataCollector):
                 data_information = {"data": {"stations": []}}
 
             # Extraction des stations (format GBFS : data.stations[])
-            stations_status = (
-                data_status.get("data", {}).get("stations", [])
-                or data_status.get("stations", [])
-            )
-            stations_info = (
-                data_information.get("data", {}).get("stations", [])
-                or data_information.get("stations", [])
-            )
+            stations_status = data_status.get("data", {}).get("stations", []) or data_status.get("stations", [])
+            stations_info = data_information.get("data", {}).get("stations", []) or data_information.get("stations", [])
 
             # Structure unifiée — le transform fera le join
             raw_data = {

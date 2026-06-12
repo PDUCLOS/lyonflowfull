@@ -21,8 +21,8 @@ Tous compatibles avec le thème dark Sprint 8+ (bg-card, primary).
 
 from __future__ import annotations
 
+from collections.abc import Iterator
 from contextlib import contextmanager
-from typing import Iterator
 
 import streamlit as st
 
@@ -47,7 +47,7 @@ def empty_state(
     title: str,
     message: str,
     action_label: str | None = None,
-    action_callback: callable = None,  # type: ignore[valid-type]
+    action_callback: callable | None = None,  # type: ignore[valid-type]
 ) -> None:
     """Affiche un empty state centré avec icône, titre, message.
 
@@ -79,8 +79,7 @@ def empty_state(
         """,
         unsafe_allow_html=True,
     )
-    if action_label and action_callback:
-        if st.button(action_label, key=f"empty_action_{title[:20]}"):
+    if action_label and action_callback and st.button(action_label, key=f"empty_action_{title[:20]}"):
             action_callback()
 
 

@@ -21,6 +21,7 @@ Sprint 8+ sécurité :
 - ``bcrypt`` côté API FastAPI
 - Aucune fuite du mot de passe dans les logs
 """
+
 from __future__ import annotations
 
 import hmac
@@ -128,7 +129,7 @@ def require_password() -> None:
     st.info(f"🔐 **{label}** est un espace protégé. Saisis le mot de passe.")
     # Sprint 8+ démo : on affiche le mdp par défaut dans une info box
     # (à retirer en prod).
-    with st.expander("ℹ️ Aide démo (mots de passe par défaut)"):
+    with st.expander("ℹ️ Aide démo (mots de passe par défaut)"):  # noqa: RUF001
         st.markdown(f"**Mot de passe démo Jedha** : `{_DEMO_PASSWORD}`")
         st.caption(
             "Cette aide est affichée uniquement parce que c'est une démo Jedha. "

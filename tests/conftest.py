@@ -19,6 +19,7 @@ Usage::
         from src.foo import bar
         assert bar() == ...
 """
+
 from __future__ import annotations
 
 import os

@@ -16,6 +16,7 @@ Note : pour tester avec une vraie DB, voir
 ``tests/integration/test_infrastructure.py`` qui démarre un
 PostgreSQL en container.
 """
+
 from __future__ import annotations
 
 import sys
