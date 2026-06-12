@@ -1145,3 +1145,42 @@ def get_otp_heatmap(days: int = 7) -> pd.DataFrame:
         ORDER BY line_id, date, hour
     """
     return _df_from_query(query, (days,))
+
+
+def get_latest_drift_report() -> dict | None:
+    """Retourne le dernier rapport de drift persisté par build_xgb_training_set.
+
+    Sprint 10+ (2026-06-12) — Lecture live de gold.model_drift_reports
+    (schéma v0.3.1). Remplace le mock ``drift_status`` du widget
+    Pro_7_Model_Monitoring.
+
+    Returns:
+        Dict avec ``dataset_drift``, ``drift_share``, ``n_ref``,
+        ``n_current``, ``ref_from``, ``ref_to``, ``current_from``,
+        ``current_to``, ``report`` (JSONB), ``computed_at``. None si
+        la table est vide.
+    """
+    rows = execute_query("""
+        SELECT
+            computed_at,
+            dataset_drift,
+            drift_share,
+            n_ref,
+            n_current,
+            ref_from,
+            ref_to,
+            current_from,
+            current_to,
+            report
+        FROM gold.model_drift_reports
+        ORDER BY computed_at DESC
+        LIMIT 1
+    """)
+    if not rows:
+        return None
+    r = rows[0]
+    # Conversion des timestamps en string ISO (Streamlit-friendly)
+    for k in ("computed_at", "ref_from", "ref_to", "current_from", "current_to"):
+        if r.get(k) is not None and not isinstance(r[k], str):
+            r[k] = str(r[k])
+    return r

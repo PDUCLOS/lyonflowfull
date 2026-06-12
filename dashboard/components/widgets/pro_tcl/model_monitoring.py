@@ -153,7 +153,19 @@ def render_model_registry() -> None:
     # KPIs
     prod = sum(1 for m in models if m.get("stage") == "Production")
     staging = sum(1 for m in models if m.get("stage") == "Staging")
-    n_drift = sum(1 for m in models if m.get("drift_status") != "ok")
+
+    # Sprint 10+ : drift réel depuis gold.model_drift_reports (PAS mock)
+    # Lecture du dernier rapport de drift persisté par build_xgb_training_set.
+    from src.data.db_query import get_latest_drift_report
+    latest_drift = get_latest_drift_report()
+    if latest_drift:
+        n_drift = 1 if latest_drift.get("dataset_drift") else 0
+        drift_share_pct = float(latest_drift.get("drift_share", 0.0)) * 100
+        drift_status = "🔴 DRIFT" if latest_drift.get("dataset_drift") else "🟢 OK"
+    else:
+        n_drift = 0
+        drift_share_pct = 0.0
+        drift_status = "⚪ Pas de rapport"
 
     cols = st.columns(4)
     with cols[0]:
@@ -163,7 +175,29 @@ def render_model_registry() -> None:
     with cols[2]:
         st.metric("Total modèles", len(models))
     with cols[3]:
-        st.metric("🚨 Drift alertes", n_drift, delta_color="inverse")
+        st.metric(f"🚨 Drift {drift_status}", f"{drift_share_pct:.0f}%", delta_color="inverse")
+
+    # Détail drift (Sprint 10+ — affiche le dernier rapport PSI)
+    if latest_drift:
+        with st.expander("📊 Dernier rapport de drift (PSI)", expanded=False):
+            st.markdown(
+                f"""
+                - **Dataset drift** : `{latest_drift.get('dataset_drift')}`
+                - **Drift share** : `{drift_share_pct:.1f}%`
+                - **N ref / current** : `{latest_drift.get('n_ref')}` / `{latest_drift.get('n_current')}`
+                - **Période ref** : `{latest_drift.get('ref_from')}` → `{latest_drift.get('ref_to')}`
+                - **Période current** : `{latest_drift.get('current_from')}` → `{latest_drift.get('current_to')}`
+                - **Computed at** : `{latest_drift.get('computed_at')}`
+                """
+            )
+            report = latest_drift.get("report", {})
+            if report.get("per_column"):
+                st.markdown("**Per-column drift** :")
+                for col, stats in report["per_column"].items():
+                    psi = stats.get("psi", 0)
+                    status = stats.get("status", "?")
+                    icon = {"stable": "🟢", "moderate": "🟡", "significant": "🔴"}.get(status, "⚪")
+                    st.markdown(f"- {icon} **{col}** : PSI = {psi:.3f} ({status})")
 
     # Tableau (Sprint 9 — utilise la variable `models` MLflow ou mock)
     _render_model_registry_table(models)

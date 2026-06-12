@@ -199,6 +199,33 @@ class XGBoostSpeedModel:
             except Exception as e:  # pragma: no cover
                 logger.warning("MLflow tracking failed (non-bloquant): %s", e)
 
+        # Sprint 10+ MLOps — Génère et sauvegarde un Model Card (Markdown)
+        try:
+            from src.ml.model_card import generate_xgboost_card, save_card
+            from src.data.db_query import get_latest_drift_report
+            dataset_stats = {
+                "n_rows": len(df),
+                "n_channels": int(df["channel_id"].nunique()) if "channel_id" in df.columns else 0,
+            }
+            card_md = generate_xgboost_card(
+                model_version=str(params.get("model_version", "1.2.0")),
+                horizon_minutes=horizon_minutes,
+                metrics=metrics,
+                params=params,
+                dataset_stats=dataset_stats,
+                drift_report=get_latest_drift_report(),
+                feature_cols=FEATURE_COLS,
+            )
+            card_path = save_card(card_md, "xgboost_speed", str(params.get("model_version", "1.2.0")))
+            # Pousse le card comme artifact MLflow si tracking actif
+            if os.getenv("MLFLOW_TRACKING_URI", "") != "":
+                try:
+                    tracker.log_artifact(str(card_path))
+                except Exception as e:
+                    logger.debug("MLflow log_artifact(model_card) failed: %s", e)
+        except Exception as e:
+            logger.warning("Model Card generation failed (non-bloquant): %s", e)
+
         logger.info(f"XGBoost speed H+{horizon_minutes}min trained: MAE={metrics['mae']:.2f}, R²={metrics['r2']:.3f}")
         return metrics
 
