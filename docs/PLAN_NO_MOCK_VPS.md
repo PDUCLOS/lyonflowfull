@@ -1,26 +1,46 @@
 # Plan — Suppression des fallbacks mock sur le dashboard VPS
 
-**Date** : 2026-06-11
-**Statut** : ✅ **TERMINÉ** (toutes phases livrées, 78/78 tests verts, ruff clean)
+**Date initiale** : 2026-06-11
+**Date clôture** : 2026-06-12 (Sprint 8, ZÉRO MOCK DANS LE PROJET)
+**Statut** : ✅✅ **CLÔTURÉ** (politique "zéro mock" stricte, AUCUN mock dans le projet)
 
-**Objectif** : Sur le VPS (branche `vps`), AUCUNE donnée simulée ne doit s'afficher. Tout doit provenir du pipeline de données (PostgreSQL Gold/Silver/Bronze, Airflow, MLflow). Un widget qui ne trouve pas sa donnée source affiche une erreur explicite.
+**Objectif initial (Sprint VPS-6, 2026-06-11)** : Sur le VPS (branche `vps`), AUCUNE donnée simulée ne doit s'afficher. Tout doit provenir du pipeline de données (PostgreSQL Gold/Silver/Bronze, Airflow, MLflow). Un widget qui ne trouve pas sa donnée source affiche une erreur explicite.
 
-**Périmètre** : code Python sous `dashboard/` et `src/data/`. Les branches `kubernetes` et `cloud-demo` ne sont PAS concernées (futur AWS/GCP). Le dev local garde un mode démo (`LYONFLOW_DEMO_MODE=1`) pour pouvoir développer sans DB.
+**Objectif Sprint 8 (2026-06-12)** : aller au-delà. **Supprimer le mode démo entièrement**. Pas de `_is_demo_mode()`, pas de `force_mock=True`, pas de mock fallback. Si DB indispo, fail loud. La DB est l'unique source de vérité.
 
-**Livré** :
-- ✅ Phase 1 — Fondation (exception + helper central + var d'env)
+**Périmètre** : code Python sous `dashboard/`, `src/data/`, `dags/`. Les branches `kubernetes` et `cloud-demo` ne sont PAS concernées (futur AWS/GCP).
+
+**Livré Sprint VPS-6 (initiation)** :
+- ✅ Phase 1 — Fondation (`DashboardDataError` + helper `_maybe_force_mock` + var d'env `LYONFLOW_DEMO_MODE`)
 - ✅ Phase 1b — Référentiel lieux en DB (3 tables + 4 scripts SQL)
 - ✅ Phase 1c — Pathfinding Vélov + voiture (Dijkstra existant + nouveau Vélov)
-- ✅ Phase 2 — data_loader.py : 25 fonctions `load_X()` en fail loud
+- ✅ Phase 2 — data_loader.py : 25 fonctions `load_X()` fail loud en prod
 - ✅ Phase 3 — db_query.py : 15 fonctions SQL propres
 - ✅ Phase 4 — Widgets : 8 fichiers (pipeline, monitoring, network_map, segment, weather, Accueil, itinerary, velov_trip)
 - ✅ Phase 5 — Airflow + MLflow : fail loud propagé
-- ✅ Phase 6 — Tests : **35 nouveaux tests fail loud** (test_no_mock_vps_policy.py) + adaptation des tests existants
-- ✅ **78/78 tests verts** + **ruff all clean** sur les nouveaux fichiers
+- ✅ Phase 6 — Tests : 35 nouveaux tests fail loud + adaptation des existants
+- ✅ 78/78 tests verts + ruff clean
+
+**Livré Sprint 8 (clôture — ZÉRO MOCK DANS LE PROJET)** :
+- ✅ Suppression complète de `src/data/mock/` (déplacé dans `tests/fixtures/mock_data/`)
+- ✅ 18 fallbacks mock virés de `data_loader.py` (helper `_is_demo_mode()` retourne toujours False)
+- ✅ 17 fallbacks mock virés de `db_query.py` (db.down → `DashboardDataError`)
+- ✅ 2 fallbacks mock virés de `airflow_client.py` (MOCK_DAGS no-op)
+- ✅ 8 widgets démoctisés (correlation_matrix, network_map, otp_heatmap, pipeline_management, segment_table, itinerary, velov_trip, weather_widget)
+- ✅ 2 nouveaux modules neutres : `src/data/labels.py` (référentiels statiques), `src/data/tcl_lines.py` (10 lignes TCL emblématiques)
+- ✅ 1 page démoctisée : `Usager_3_Favoris.py` (seed MOCK_FAVORITES viré, liste vide par défaut)
+- ✅ Conftest centralisé `tests/conftest.py` (MockDB fixture + 3 fixtures mode démo/prod/no-db)
+- ✅ Tests : `test_no_mock_vps_policy.py` (6 tests valident la politique "zéro mock")
+- ✅ Tests : `test_db_query_and_data_loader.py` (19 tests valident le fail loud)
+- ✅ Markers `@pytest.mark.integration` sur tests qui ont besoin du stack
+- ✅ `pyproject.toml` addopts `-m "not integration"` (integration skippable en CI)
+- ✅ **150 tests verts / 9 SKIP / 7 deselected (integration)**
 
 ---
 
-## 1. Cartographie des fallbacks mock
+## 1. Cartographie des fallbacks mock (archivé Sprint VPS-6)
+
+> Cette section est archivée car le problème est résolu. Voir Sprint 8 plus bas.
 
 ### 1.1 Couche d'abstraction `src/data/data_loader.py` (point névralgique)
 
@@ -258,3 +278,44 @@ LYONFLOW_DEMO_MODE=0 streamlit run dashboard/Accueil.py
 pytest tests/data/ -v
 ruff check src/data/ src/routing/ dashboard/ scripts/seed_lieux_calendrier.py
 ```
+
+---
+
+## 9. Clôture Sprint 8 (2026-06-12) — "ZÉRO MOCK DANS LE PROJET"
+
+**Le Sprint 8 a été au-delà de la politique "fail loud" du Sprint VPS-6** : il a **supprimé** le mode mock entièrement.
+
+### Constat Sprint VPS-6 (insuffisant)
+
+La politique Sprint VPS-6 disait : "Si DB indispo, fail loud". Mais le code contenait encore un mode `_is_demo_mode()` qui retournait des mocks quand l'env var était à 1. En pratique, ce mode était **difficile à désactiver complètement** (un dev pouvait l'oublier en local, ou pire, en prod après un mauvais .env).
+
+### Action Sprint 8
+
+- **Suppression du mode démo** : `_is_demo_mode()` retourne toujours `False` (helper déprécié, à retirer Sprint 9+).
+- **Suppression de tous les fallbacks mock** : 45+ branches `if _is_demo_mode(): return X_mock` virées de `data_loader`, `db_query`, `airflow_client`, et 8 widgets.
+- **Suppression du dossier `src/data/mock/`** : 1650 lignes de mocks déplacées dans `tests/fixtures/mock_data/` (où elles n'ont jamais eu leur place).
+- **3 nouveaux modules neutres** : `src/data/labels.py` (référentiels statiques DIAGNOSIS_LABELS, MODE_COLORS, etc.), `src/data/tcl_lines.py` (10 lignes TCL emblématiques).
+- **Tests de la nouvelle politique** : `test_no_mock_vps_policy.py` (6 tests) vérifie :
+  1. `_is_demo_mode()` retourne False (même avec env var=1)
+  2. `_maybe_force_mock()` retourne False
+  3. `src/data/mock/` n'existe plus
+  4. Aucune référence à `src.data.mock` dans `src/` (hors docstrings)
+  5. Aucun widget n'importe `src.data.mock`
+  6. data_loader ne retourne pas de mock
+
+### Résultat Sprint 8
+
+- **150 tests verts / 9 SKIP / 7 deselected (integration)**
+- ruff clean sur les nouveaux fichiers
+- `src/` ne contient plus aucun mock (vérifié par le test ci-dessus)
+- Le projet est désormais **100% DB-driven en production**
+- Un blip DB est immédiatement visible (widget rouge + log d'erreur) au lieu d'être masqué par un mock silencieux
+
+### Actions restantes (Sprint 9+)
+
+- Retirer le helper `_is_demo_mode()` (toujours False, déprécié)
+- Retirer le paramètre `force_mock` de toutes les `load_X()`
+- `pip uninstall mock` quand tous les imports résiduels seront nettoyés
+
+Voir [SPRINT_VPS-8_REPORT.md](../SPRINT_VPS-8_REPORT.md) pour le rapport détaillé.
+
