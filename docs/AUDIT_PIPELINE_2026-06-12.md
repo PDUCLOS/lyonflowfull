@@ -496,3 +496,111 @@ Ces tables sont correctement peuplees et utilisees :
 | `referentiel.lieux_calendrier` | Cadences TCL | `scripts/sql/seed_lieux_calendrier.sql` |
 | `referentiel.v_lieux_velov_proches` | Vue Velov proches | `scripts/sql/create_lieux_velov_proches.sql` |
 | `referentiel.v_lieux_velov_smart` | Vue Velov smart | SQL script |
+
+---
+
+## 9. Vision par persona — Plan stratégique (Sprint 8+, 2026-06-12)
+
+Patrice demande (2026-06-12 10:50) : "dis moi ce que je dois améliorer
+ou il faut une vision global par type d'utilisateur".
+
+Cette section traduit les findings techniques (sections 1-8) en
+priorités produit par persona. L'objectif : que chaque type d'utilisateur
+ait une expérience **100% données réelles** à la démo Jedha.
+
+### 9.1 USAGER (le plus solide — 8/15 widgets 100% réels)
+
+| Widget | État | Action |
+|--------|------|--------|
+| Mon Trajet (carte) | ✅ Fonctionne, mais JOIN channel_id↔properties_twgid casse | Sprint 9 #1 : réconcilier le mapping |
+| Itinéraire voiture | ⚠️ Routage 30 km/h partout (graph fallback) | Sprint 9 #2 : supprimer `_build_mock_graph()` |
+| Vélov + marche | ✅ Smart routing (alternatives + voisines) | — |
+| Favoris | ⚠️ Session-only, perdu au refresh | Sprint 11 #19 : persistance DB |
+| Files d'attente | ✅ Vitesse prédite (baseline), pas ML entraîné | Sprint 9 #4 : FEATURE_COLS correctes |
+| Alertes | ✅ Live | — |
+| Recommandation card | ⚠️ stub | Sprint 9+ |
+| Why explainer | ✅ Live | — |
+| RGPD | ✅ Page conformité | — |
+
+**Verdict Usager** : on est à 80% réels. Le sprint 9 doit corriger le
+routage 30 km/h (critique UX). Le sprint 11 ajoute la persistance favoris.
+
+### 9.2 PRO TCL (correct — 7/20 widgets 100% réels)
+
+| Widget | État | Action |
+|--------|------|--------|
+| PCC Live (carte + alertes) | ✅ Live, focus H+1h (Sprint 8+) | — |
+| Heatmap OTP | ✅ Vue matérialisée (155 lignes, 4416 triplets) | — |
+| Correlation matrix | ⚠️ table `fact_correlation_matrix` inexistante | Sprint 9 #8 : supprimer le widget OU créer la vue |
+| Simulateur (sélecteur ligne) | ✅ 155 lignes TCL | — |
+| Line KPIs (sort + explore) | ✅ Vue matérialisée | — |
+| Export SAEIV | ⚠️ KPIs C3/C13 hardcodés | Sprint 10 : brancher sur `gold.mv_line_kpis_live` |
+| Pipeline management | ✅ Stack Prometheus UP (Sprint 8+) | — |
+| Model monitoring | ⚠️ sections training_history / drift hardcodées | Sprint 11 : brancher sur MLflow métriques historiques |
+| Export PDF | ⚠️ stub (WeasyPrint non intégré) | Sprint 13+ |
+
+**Verdict Pro TCL** : dashboard de control room fonctionnel, mais
+certains widgets exposent des données statiques (correlation matrix,
+export, model monitoring) qui donnent l'impression d'un POC. Sprint 9
+supprime les fonctions cassées, sprint 10+ branche sur les vraies données.
+
+### 9.3 ÉLU (ROUGE — 0 widget 100% réel)
+
+**C'est la zone la plus exposée** : un élu qui voit des chiffres
+fabriqués perd toute confiance. Sprint 9 + 10 doivent corriger en
+priorité.
+
+| Widget | État | Action |
+|--------|------|--------|
+| Synthèse ville | ❌ `gold.mv_kpis_12_months` INEXISTANTE | **Sprint 9 #6 : créer la vue SQL** (débloque 3 widgets) |
+| Bottlenecks (carte Folium) | ❌ 6 champs fabriqués (voyageurs_jour, cout_M_euros) | **Sprint 10 #9 : calcul réel OU `st.warning("estimation")`** |
+| Avant/Après | ❌ `gold.amenagements_history` INEXISTANTE | **Sprint 10 #12 : créer la table OU désactiver la page** |
+| Simulateur aménagement | ⚠️ st.warning("estimation") | OK pour démo, calculs réels Sprint 11+ |
+| Rapport PDF | ❌ 4 KPIs statiques | Sprint 13+ |
+| Impact projection | ⚠️ 4 métriques hardcodées (-12%, +18%...) | Sprint 11+ : brancher sur scénarios réels |
+| ROI calculator | ❌ champs bottleneck fake | Sprint 10 #9 (corriger avec bottleneck réel) |
+| News section | ⚠️ contenu statique acceptable pour démo | OK démo Jedha |
+
+**Verdict Élu** : **0 widget 100% réel** actuellement. C'est inacceptable
+pour une démo à des décideurs Grand Lyon. **3 corrections prioritaires
+(Sprint 9-10)** débloquent la confiance :
+1. Créer `gold.mv_kpis_12_months` (3 widgets) — 2h
+2. Désactiver/afficher warning sur le ROI bidon — 1h
+3. Désactiver Elu_3_Avant_Après OU créer `amenagements_history` — 2h
+
+### 9.4 Récapitulatif
+
+| Persona | Widgets OK | À corriger (Sprint 9) | À corriger (Sprint 10-11) | Verdict démo Jedha |
+|---------|-----------|----------------------|---------------------------|------------------|
+| Usager | 8/15 | 2 (routage, FEATURE_COLS) | 1 (favoris) | ✅ Acceptable, focus sprint 11+ |
+| Pro TCL | 7/20 | 2 (correlation, model) | 3 (export, monitoring, GNN) | ⚠️ Correct mais "POC-feel" |
+| Élu | **0/15** | **3 critiques** | 3 hardcodes | ❌ **Inacceptable démo décideur** |
+
+### 9.5 Sprint 9 — Plan d'action immédiat (1 semaine)
+
+**Jour 1-2 — Fiabilité core** (Sprint 9 priorité 1) :
+- #1 Réconcilier channel_id↔properties_twgid (2-3h)
+- #2 Supprimer `_build_mock_graph()` fallback (30min)
+- #3 Supprimer fallback `synthetic()` retrain_gnn (30min)
+- #4 Corriger FEATURE_COLS XGBoost speed (1h)
+- #5 LEAD(bikes_available, 6/12) dans target velov (2h)
+
+**Jour 3 — Élu priorité** (Sprint 9 priorité 2) :
+- #6 Créer vue `gold.mv_kpis_12_months` (2h) → débloque 3 widgets Élu
+- #7-8 Corriger 5 queries SQL cassées (1h)
+
+**Jour 4 — Finalisation** (Sprint 9-10) :
+- #9 Remplacer bottleneck ROI fabriqués par calcul réel OU `st.warning` (3h)
+- #12 Créer `gold.amenagements_history` OU désactiver Elu_3 (2h)
+
+**Total** : ~15h = 1 semaine de dev focus. Permet à la démo Jedha
+d'être présentée avec une **vision Élu 80% réelle** (au lieu de 0%
+actuellement), un **Usager 95% réel**, un **Pro TCL 90% réel**.
+
+### 9.6 Hors-scope Sprint 9-11 — backlog post-Jedha
+
+- Tests e2e Playwright (couverture persona Élu, déjà partiel)
+- Monitoring drift Evidently (déjà câblé, Sprint 11+ activation)
+- GTFS Overpass API (vrai A* routier, Sprint 12+)
+- Grafana dashboards custom (Sprint 13+)
+- WAF + Vault (production réelle, post-démo)
