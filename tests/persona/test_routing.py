@@ -125,6 +125,6 @@ def test_shortest_path_direct():
 
     itinerary = shortest_path(graph, u, v)
     assert itinerary is not None
-    assert len(itinerary.segments) == 2  # u + v
+    assert len(itinerary.segments) == 1  # 2 nodes → 1 edge → 1 segment
     assert itinerary.origin_node == u
     assert itinerary.destination_node == v

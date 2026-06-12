@@ -111,7 +111,9 @@ def _maybe_force_mock(force_mock: bool) -> bool:
         True si un mock doit être servi. False si la fonction doit lire la DB
         (et lever ``DashboardDataError`` si elle échoue).
     """
-    if _is_demo_mode():
+    # Lit l'env directement pour que les tests avec monkeypatch.setenv
+    # fonctionnent même si _is_demo_mode() a été importé ailleurs.
+    if os.getenv("LYONFLOW_DEMO_MODE", "0") == "1":
         if force_mock:
             return True
         return not _is_db_available()
