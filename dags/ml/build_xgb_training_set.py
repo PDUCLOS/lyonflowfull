@@ -20,6 +20,7 @@ from __future__ import annotations
 import logging
 from datetime import datetime, timedelta
 
+import pandas as pd
 from airflow import DAG
 from airflow.operators.python import PythonOperator
 
@@ -159,6 +160,11 @@ def _build_training_set(**context) -> dict:
     stats_row = stats[0] if stats else {}
     logger.info("Training set stats: %s", stats_row)
 
+    # Step 5 — Drift detection (Sprint 10+ PSI sur target_speed + 11 features)
+    # Compare la distribution semaine courante vs semaine précédente.
+    # Persiste dans gold.model_drift_reports (table Evidently-compatible).
+    _compute_and_persist_drift(stats_row)
+
     return {
         "n_rows": stats_row.get("n_rows", 0),
         "n_channels": stats_row.get("n_channels", 0),
@@ -167,6 +173,83 @@ def _build_training_set(**context) -> dict:
         "mean_target": float(stats_row.get("mean_target") or 0),
         "std_target": float(stats_row.get("std_target") or 0),
     }
+
+
+def _compute_and_persist_drift(stats_row: dict) -> None:
+    """Calcule le PSI sur les features clés et persiste dans gold.model_drift_reports.
+
+    Stratégie Sprint 10+ :
+    - Référence = distribution il y a 8-14 jours (semaine -2)
+    - Courante = distribution il y a 1-7 jours (semaine -1)
+    - Features analysées : target_speed, speed_kmh, temperature_2m, precipitation
+    - Score > 0.2 sur 50% des features → dataset_drift = True
+    """
+    from datetime import datetime, timezone
+    import json
+    from src.monitoring.psi import compute_dataset_drift
+
+    # Charge la distribution des 2 dernières semaines
+    ref_rows = execute_query("""
+        SELECT target_speed, speed_kmh, temperature_2m, precipitation
+        FROM gold.xgb_training_set
+        WHERE computed_at BETWEEN NOW() - INTERVAL '14 days' AND NOW() - INTERVAL '7 days'
+    """)
+    curr_rows = execute_query("""
+        SELECT target_speed, speed_kmh, temperature_2m, precipitation
+        FROM gold.xgb_training_set
+        WHERE computed_at BETWEEN NOW() - INTERVAL '7 days' AND NOW()
+    """)
+
+    if not ref_rows or not curr_rows:
+        logger.warning("Données insuffisantes pour drift detection (ref=%d, curr=%d)",
+                       len(ref_rows or []), len(curr_rows or []))
+        return
+
+    ref_df = pd.DataFrame(ref_rows)
+    curr_df = pd.DataFrame(curr_rows)
+    columns = ["target_speed", "speed_kmh", "temperature_2m", "precipitation"]
+    drift = compute_dataset_drift(ref_df, curr_df, columns)
+    summary = drift.pop("_summary", {})
+
+    # Persiste dans gold.model_drift_reports (schéma v0.3.1)
+    now = datetime.now(timezone.utc)
+    ref_from = (now - timedelta(days=14)).isoformat()
+    ref_to = (now - timedelta(days=7)).isoformat()
+    curr_from = (now - timedelta(days=7)).isoformat()
+    curr_to = now.isoformat()
+    n_ref_total = sum(c.get("n_ref", 0) for c in drift.values())
+    n_curr_total = sum(c.get("n_curr", 0) for c in drift.values())
+
+    execute_query(
+        """
+        INSERT INTO gold.model_drift_reports (
+            computed_at, dataset_drift, drift_share, n_ref, n_current,
+            ref_from, ref_to, current_from, current_to, report
+        ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s::jsonb)
+        """,
+        (
+            now,
+            summary.get("dataset_drift", False),
+            float(summary.get("drift_share", 0.0)),
+            n_ref_total // max(len(drift), 1),  # avg
+            n_curr_total // max(len(drift), 1),
+            ref_from, ref_to, curr_from, curr_to,
+            json.dumps({
+                "model_name": "xgboost_speed",
+                "horizon_min": 60,
+                "n_columns_drifted": summary.get("n_columns_drifted", 0),
+                "n_columns_analyzed": summary.get("n_columns_analyzed", 0),
+                "per_column": drift,
+            }, default=str),
+        ),
+    )
+    logger.info(
+        "Drift report persisted: dataset_drift=%s, drift_share=%.2f, %d/%d columns drifted",
+        summary.get("dataset_drift"),
+        summary.get("drift_share", 0.0),
+        summary.get("n_columns_drifted", 0),
+        summary.get("n_columns_analyzed", 0),
+    )
 
 
 with DAG(

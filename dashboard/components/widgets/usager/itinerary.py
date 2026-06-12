@@ -12,7 +12,11 @@ Sprint VPS-6 (2026-06-11) — démoctisé : résolution d'adresse via
 
 from __future__ import annotations
 
+import logging
+
 import streamlit as st
+
+logger = logging.getLogger(__name__)
 
 from dashboard.components.colors import COLORS
 from src.data.data_loader import (
@@ -211,6 +215,23 @@ def _render_map(
             icon=folium.Icon(color="red", icon="stop"),
         ).add_to(m)
 
+        # Sprint 10+ (2026-06-12) : snap-to-roads via Overpass API
+        # On projette chaque nœud H3 sur la rue OSM la plus proche (rayon
+        # 30m). Si Overpass down, fallback gracieux sur le point original.
+        try:
+            from src.routing.snap_to_roads import snap_path_to_roads
+            raw_points = [origin_coords[::-1]]  # (lon, lat) for snap_to_road
+            for seg in itinerary.segments:
+                raw_points.append((seg.start_lon, seg.start_lat))
+                raw_points.append((seg.end_lon, seg.end_lat))
+            raw_points.append(dest_coords[::-1])
+            snapped = snap_path_to_roads(raw_points, radius_m=30.0)
+            snap_label = " (Sprint 10+ snap-to-roads ✓)"
+        except Exception as e:
+            logger.warning(f"Snap-to-roads failed: {e} — fallback H3 brut")
+            snapped = None
+            snap_label = " (H3 brut, snap-to-roads indispo)"
+
         # Polyligne continue reliant tous les nœuds du chemin (Sprint 9+)
         # Avant (Sprint 8) : 1 PolyLine par segment = traits dispersés
         # (les nœuds H3 ne sont pas sur les vraies rues, donc les segments
@@ -222,13 +243,25 @@ def _render_map(
             poly_locations.append((seg.end_lat, seg.end_lon))
         poly_locations.append(tuple(dest_coords))
 
-        # Polyligne principale (bleu par défaut, épaisseur 4)
+        # Si snap-to-roads a réussi, on trace la polyligne snappée en BLEU continu
+        # et on garde les segments H3 par-dessus en couleurs.
+        if snapped:
+            snapped_locations = [(lat, lon) for lon, lat in snapped]
+            folium.PolyLine(
+                locations=snapped_locations,
+                color="#1f77b4",
+                weight=5,
+                opacity=0.9,
+                popup=f"🛣️ Tracé snappé sur rues OSM{snap_label}",
+            ).add_to(m)
+
+        # Polyligne principale (bleu par défaut, épaisseur 4) — fallback H3
         folium.PolyLine(
             locations=[[lat, lon] for lat, lon in poly_locations],
-            color="#1f77b4",
-            weight=4,
-            opacity=0.85,
-            dash_array="6 4",  # pointillé = "approximation H3, snap rue Sprint 10+"
+            color="#888",
+            weight=3,
+            opacity=0.5,
+            dash_array="2 4",  # pointillé fin = H3 brut
             popup=f"🛣️ {len(itinerary.segments)} tronçons H3 — Sprint 9+",
         ).add_to(m)
 
