@@ -90,6 +90,17 @@ def _is_cache_valid() -> bool:
     return _graph_cache["graph"] is not None and (time.time() - _graph_cache["built_at"]) < CACHE_TTL_SECONDS
 
 
+def reset_cache() -> None:
+    """Reset le cache module-level (utile pour les tests)."""
+    global _graph_cache
+    _graph_cache = {
+        "graph": None,
+        "node_to_idx": None,
+        "idx_to_node": None,
+        "built_at": 0.0,
+    }
+
+
 def _db_available() -> bool:
     from src.db import test_connection
 
@@ -100,81 +111,90 @@ def _build_graph_from_db(
     min_segment_length_m: float,
     endpoint_tolerance_deg: float,
 ) -> nx.Graph:
-    """Construit le graphe depuis la DB en SQL.
+    """Construit le graphe routier depuis la DB.
 
-    Requiert l'extension PostGIS (ST_StartPoint, ST_EndPoint, ST_Length).
+    Sprint 8 hotfix 2 (2026-06-12) — Le bon graphe routier n'est PAS
+    silver.trafic_boucles_clean (qui sont des Points isolés par
+    capteur) mais le graphe H3 déjà construit en Sprint 5 :
+    * gold.dim_spatial_grid_mapping : 1520 nœuds routiers H3 res 13
+    * gold.dim_gnn_adjacency : 4072 arêtes K=2 (chaque nœud relié à
+      ses voisins H3 les plus proches)
+
+    On croise avec gold.traffic_features_live pour récupérer la
+    vitesse temps réel du nœud H3 le plus proche du capteur
+    (mapping approximatif via lat/lon).
     """
-    query = """
-        WITH latest AS (
-            SELECT DISTINCT ON (channel_id)
-                channel_id,
-                ST_StartPoint(geom) AS start_pt,
-                ST_EndPoint(geom) AS end_pt,
-                ST_X(ST_StartPoint(geom)) AS start_lon,
-                ST_Y(ST_StartPoint(geom)) AS start_lat,
-                ST_X(ST_EndPoint(geom)) AS end_lon,
-                ST_Y(ST_EndPoint(geom)) AS end_lat,
-                ST_Length(geom::geography) AS length_m,
-                vitesse_kmh AS current_speed_kmh,
-                measurement_time
-            FROM silver.trafic_boucles_clean
-            WHERE geom IS NOT NULL
-              AND vitesse_kmh IS NOT NULL
-              AND measurement_time > NOW() - INTERVAL '1 hour'
-            ORDER BY channel_id, measurement_time DESC
-        )
-        SELECT
-            channel_id,
-            start_lon, start_lat, end_lon, end_lat,
-            length_m,
-            current_speed_kmh
-        FROM latest
-        WHERE length_m > %s
+    # 1. Charger les nœuds H3 (lat/lon par node_idx)
+    nodes_query = """
+        SELECT node_idx, properties_twgid AS channel_id, lat, lon
+        FROM gold.dim_spatial_grid_mapping
+        WHERE lat IS NOT NULL AND lon IS NOT NULL
     """
-    rows = execute_query(query, (min_segment_length_m,))
-    if not rows:
-        raise ValueError("Aucun segment dans silver.trafic_boucles_clean")
+    nodes_rows = execute_query(nodes_query)
+    if not nodes_rows:
+        raise ValueError("Aucun noeud dans gold.dim_spatial_grid_mapping")
 
     G = nx.Graph()  # noqa: N806
 
-    # 1. Ajouter les nœuds
-    for r in rows:
-        channel_id = r["channel_id"]
+    # 2. Charger la vitesse temps réel la plus récente par node H3
+    speed_query = """
+        WITH latest AS (
+            SELECT DISTINCT ON (m.node_idx)
+                m.node_idx, t.speed_kmh
+            FROM gold.dim_spatial_grid_mapping m
+            JOIN gold.traffic_features_live t
+              ON t.channel_id::text = m.properties_twgid::text
+            WHERE t.computed_at >= NOW() - INTERVAL '1 hour'
+              AND t.vitesse_kmh IS NOT NULL
+            ORDER BY m.node_idx, t.computed_at DESC
+        )
+        SELECT node_idx, speed_kmh FROM latest
+    """
+    speed_map = {r["node_idx"]: float(r["speed_kmh"]) for r in execute_query(speed_query)}
+
+    # 3. Construire les nœuds du graphe
+    for r in nodes_rows:
+        node_idx = int(r["node_idx"])
         G.add_node(
-            channel_id,
+            node_idx,
             **{
-                "length_m": float(r["length_m"]),
-                "current_speed_kmh": float(r["current_speed_kmh"]),
-                "start_lon": float(r["start_lon"]),
-                "start_lat": float(r["start_lat"]),
-                "end_lon": float(r["end_lon"]),
-                "end_lat": float(r["end_lat"]),
+                "length_m": 50.0,  # défaut H3 res 13 ≈ 30-50m
+                "current_speed_kmh": speed_map.get(node_idx, 30.0),
+                "start_lon": float(r["lon"]),
+                "start_lat": float(r["lat"]),
+                "end_lon": float(r["lon"]),
+                "end_lat": float(r["lat"]),
             },
         )
 
-    # 2. Construire les arêtes par matching d'endpoints
-    #    On indexe les endpoints (start + end) et on groupe
-    nodes_data = list(G.nodes(data=True))
-    endpoint_index: dict[tuple[float, float], list[str]] = {}
-    for cid, data in nodes_data:
-        for ep in [(data["start_lon"], data["start_lat"]), (data["end_lon"], data["end_lat"])]:
-            # Quantize for tolerance
-            key = (round(ep[0] / endpoint_tolerance_deg), round(ep[1] / endpoint_tolerance_deg))
-            endpoint_index.setdefault(key, []).append(cid)
-
-    # 3. Pour chaque endpoint partagé, créer les arêtes
-    edge_set: set[tuple[str, str]] = set()
-    for cid_list in endpoint_index.values():
-        if len(cid_list) < 2:
-            continue
-        for i, u in enumerate(cid_list):
-            for v in cid_list[i + 1 :]:
-                edge = tuple(sorted([u, v]))
-                if edge not in edge_set:
-                    edge_set.add(edge)
-                    G.add_edge(u, v, via="shared_endpoint")
+    # 4. Construire les arêtes via dim_gnn_adjacency (K=2 H3)
+    edges_query = """
+        SELECT node_u, node_v
+        FROM gold.dim_gnn_adjacency
+        WHERE is_connected = TRUE
+    """
+    edges_rows = execute_query(edges_query)
+    for r in edges_rows:
+        u, v = int(r["node_u"]), int(r["node_v"])
+        if u in G.nodes and v in G.nodes:
+            # Distance haversine pour l'arête (approx edge weight)
+            u_data, v_data = G.nodes[u], G.nodes[v]
+            d = _haversine_m_local(u_data["start_lat"], u_data["start_lon"],
+                                  v_data["start_lat"], v_data["start_lon"])
+            G.add_edge(u, v, via="h3_adjacency", length_m=d)
 
     return G
+
+
+def _haversine_m_local(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
+    """Distance haversine en mètres — version locale (évite round-trip DB)."""
+    import math
+    r = 6_371_000  # m
+    p1, p2 = math.radians(lat1), math.radians(lat2)
+    dp = math.radians(lat2 - lat1)
+    dl = math.radians(lon2 - lon1)
+    a = math.sin(dp / 2) ** 2 + math.cos(p1) * math.cos(p2) * math.sin(dl / 2) ** 2
+    return 2 * r * math.asin(math.sqrt(a))
 
 
 def _build_mock_graph() -> nx.Graph:
