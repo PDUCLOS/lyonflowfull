@@ -52,10 +52,7 @@ default_args = {
 
 with DAG(
     dag_id="transform_silver_to_gold",
-    description=(
-        "Silver → Gold (traffic + velov + tcl_realtime + bus_delay + bottleneck) — "
-        "toutes les 10 min"
-    ),
+    description=("Silver → Gold (traffic + velov + tcl_realtime + bus_delay + bottleneck) — toutes les 10 min"),
     default_args=default_args,
     schedule_interval="*/10 * * * *",
     start_date=datetime(2026, 1, 1),
