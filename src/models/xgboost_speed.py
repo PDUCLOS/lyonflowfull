@@ -31,24 +31,26 @@ logger = logging.getLogger(__name__)
 
 # Features utilisées (Sprint 9 — alignées sur schéma v0.3.1 de gold.traffic_features_live,
 # focus H+1h depuis Sprint VPS-6 2026-06-11).
-# Convention de nommage : `lag_h1` = valeur il y a 1h, `lag_h2` = 2h, `lag_h3` = 3h.
-# `delta_h1` = speed - lag_h1 (variation sur 1h).
-# `rolling_mean_h1` = moyenne sur les 3 derniers pas de 5 min (= 15 min de contexte ~ 1h).
+# Sprint 8+1 (2026-06-12) — Réduit au strict H+1h pour limiter le coût
+# compute sur le VPS (fiabilité > complétude). On garde :
+#   - speed_kmh : valeur courante
+#   - lag_h1 : valeur il y a 1h (= target décalé 1h)
+#   - rolling_mean_h1 : moyenne 3x5min (15 min de contexte ~ 1h)
+#   - sin_hour/cos_hour : saisonnalité intra-journalière
+#   - temperature_2m/precipitation : météo
+#   - is_vacances/is_ferie : calendrier
+# On vire : lag_h2/h3, delta_h1, sin_dow/cos_dow (inutile pour H+1h),
+#           precipitation_redundant (idem temperature_2m).
 # Avant : speed_lag_1/2/3, speed_delta_1, rolling_mean_5min, hour_sin/cos, day_sin/cos,
 #         temperature_c, rain_mm, node_idx
-# Après : lag_h1/h2/h3, delta_h1, rolling_mean_h1, sin_hour/cos_hour, sin_dow/cos_dow,
-#         temperature_2m, precipitation, channel_id (string LYO000xx, pas int node_idx)
+# Après : lag_h1, rolling_mean_h1, sin_hour/cos_hour, temperature_2m, precipitation,
+#         is_vacances, is_ferie, channel_id (string LYO000xx, pas int node_idx)
 FEATURE_COLS = [
     "speed_kmh",
     "lag_h1",
-    "lag_h2",
-    "lag_h3",
-    "delta_h1",
     "rolling_mean_h1",
     "sin_hour",
     "cos_hour",
-    "sin_dow",
-    "cos_dow",
     "temperature_2m",
     "precipitation",
     "is_vacances",
@@ -73,7 +75,12 @@ class XGBoostSpeedModel:
 
         from src.ml.mlflow_integration import is_mlflow_available
 
-        horizons = horizons or [5, 60, 180, 360]
+        # Sprint 8+2 (2026-06-12) — Focus H+1h uniquement (fiabilité VPS).
+        # Avant : [5, 60, 180, 360] — 4 modèles entraînés, 4x le coût
+        #          compute et la mémoire.
+        # Après : [60] — 1 seul modèle, horizon = 1h, conforme au focus
+        #          Sprint VPS-6 (gold.trafic_predictions.horizon_h=1).
+        horizons = horizons or [60]
         for h in horizons:
             model_name = f"xgb_speed_h{h}"
             model_path = self.model_dir / f"{model_name}.pkl"
@@ -193,19 +200,35 @@ class XGBoostSpeedModel:
     def predict(
         self,
         channel_id: str,
-        horizon_minutes: int,
+        horizon_minutes: int = 60,
         features: dict | None = None,
     ) -> dict:
-        """Prédit la vitesse pour un canal (string LYO000xx) et un horizon.
+        """Prédit la vitesse pour un canal (string LYO000xx) à H+1h.
 
         Args:
             channel_id: identifiant canal trafic (ex. "LYO00007")
-            horizon_minutes: 5, 60, 180, 360
+            horizon_minutes: doit être 60 (Sprint 8+2 — focus H+1h).
+                            Si autre valeur, fallback (30.0 km/h) et warning.
             features: dict de features. Si None, lookup gold.
 
         Returns:
             Dict avec predicted_speed, confidence_low/high.
         """
+        # Sprint 8+2 (2026-06-12) — Focus H+1h uniquement. Si un caller
+        # demande un autre horizon, fallback direct (pas de coût compute).
+        if horizon_minutes != 60:
+            logger.warning(
+                "xgb_speed: horizon %dmin demandé, fallback (focus H+1h)",
+                horizon_minutes,
+            )
+            return {
+                "predicted_speed_kmh": 30.0,
+                "confidence_low": 25.0,
+                "confidence_high": 35.0,
+                "model_name": "fallback_horizon_unsupported",
+                "model_version": "0.0.0",
+            }
+
         if horizon_minutes not in self.models:
             self.load()
         if horizon_minutes not in self.models:
@@ -256,9 +279,8 @@ class XGBoostSpeedModel:
         query = """
             WITH ranked AS (
                 SELECT
-                    speed_kmh, lag_h1, lag_h2, lag_h3,
-                    delta_h1, rolling_mean_h1,
-                    sin_hour, cos_hour, sin_dow, cos_dow,
+                    speed_kmh, lag_h1, rolling_mean_h1,
+                    sin_hour, cos_hour,
                     temperature_2m, precipitation,
                     COALESCE(is_vacances, FALSE) AS is_vacances,
                     COALESCE(is_ferie, FALSE) AS is_ferie,
@@ -272,9 +294,8 @@ class XGBoostSpeedModel:
                   AND computed_at > NOW() - INTERVAL '7 days'
             )
             SELECT
-                speed_kmh, lag_h1, lag_h2, lag_h3,
-                delta_h1, rolling_mean_h1,
-                sin_hour, cos_hour, sin_dow, cos_dow,
+                speed_kmh, lag_h1, rolling_mean_h1,
+                sin_hour, cos_hour,
                 temperature_2m, precipitation,
                 is_vacances, is_ferie,
                 target_speed
@@ -291,12 +312,12 @@ class XGBoostSpeedModel:
 
         Sprint 9 : `channel_id` est maintenant un string (LYO000xx) au lieu
         d'un int `node_idx`. Voir gold.dim_spatial_grid_mapping.
+        Sprint 8+1 : features réduites au strict H+1h.
         """
         query = """
             SELECT
-                speed_kmh, lag_h1, lag_h2, lag_h3,
-                delta_h1, rolling_mean_h1,
-                sin_hour, cos_hour, sin_dow, cos_dow,
+                speed_kmh, lag_h1, rolling_mean_h1,
+                sin_hour, cos_hour,
                 temperature_2m, precipitation,
                 COALESCE(is_vacances, FALSE) AS is_vacances,
                 COALESCE(is_ferie, FALSE) AS is_ferie

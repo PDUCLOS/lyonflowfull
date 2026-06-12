@@ -216,7 +216,10 @@ def _cleanup_old_predictions(retention_days: int = 7) -> int:
 
 default_args = {
     "owner": "lyonflow",
-    "retries": 1,
+    # Sprint 8+3 (2026-06-12) — Fiabilité VPS : retries=0 pour ne pas
+    # empiler des runs en cas d'échec (le DAG tourne déjà toutes les
+    # 30min, on attendra le prochain cycle).
+    "retries": 0,
     "retry_delay": timedelta(minutes=5),
 }
 

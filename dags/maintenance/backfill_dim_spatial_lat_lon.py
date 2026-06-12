@@ -112,7 +112,9 @@ with DAG(
     max_active_runs=1,  # pas de chevauchement
     default_args={
         "owner": "patrice",
-        "retries": 2,
+        # Sprint 8+3 (2026-06-12) — Fiabilité VPS : pas de retry.
+        # Le DAG tourne toutes les 5 min, on attend le prochain cycle.
+        "retries": 0,
         "retry_delay": timedelta(minutes=1),
     },
     tags=["maintenance", "sprint-8-hotfix-5", "dette-schema"],
