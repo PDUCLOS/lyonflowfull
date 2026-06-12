@@ -28,6 +28,8 @@ import math
 from dataclasses import dataclass
 from typing import Literal
 
+from src.data.exceptions import DashboardDataError
+
 from src.data.data_loader import _is_demo_mode
 from src.data.db_query import (
     _is_db_available,
@@ -35,7 +37,6 @@ from src.data.db_query import (
     get_lieux_transports,
     get_smart_velov_for_lieu,
 )
-from src.data.exceptions import DashboardDataError
 
 logger = logging.getLogger(__name__)
 
@@ -70,7 +71,7 @@ class Alternative:
     mode_label: str
     mode_icon: str
     temps_min: int
-    score_confiance: float  # 0.0 – 1.0
+    score_confiance: float  # 0.0 - 1.0
     raison: str
 
     def to_dict(self) -> dict:
@@ -100,13 +101,13 @@ def _haversine_m(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
 def _walk_duration_m(lat1: float, lon1: float, lat2: float, lon2: float) -> int:
     """Durée marche (min) à 4.5 km/h."""
     dist_m = _haversine_m(lat1, lon1, lat2, lon2)
-    return max(1, int(round(dist_m / 1000.0 / 4.5 * 60.0)))
+    return max(1, int(round(dist_m / 1000.0 / 4.5 * 60.0)))  # noqa: RUF046
 
 
 def _velov_duration_m(lat1: float, lon1: float, lat2: float, lon2: float) -> int:
     """Durée Vélov (min) à 15 km/h."""
     dist_m = _haversine_m(lat1, lon1, lat2, lon2)
-    return max(1, int(round(dist_m / 1000.0 / 15.0 * 60.0)))
+    return max(1, int(round(dist_m / 1000.0 / 15.0 * 60.0)))  # noqa: RUF046
 
 
 def _snap_to_lieu(lat: float, lon: float) -> dict | None:
@@ -275,14 +276,14 @@ def _build_bus_alternative(
     stop = best["stop_name"]
     dist_stop = int(best.get("distance_m") or 0)
 
-    walk_to_stop = max(1, int(round(dist_stop / 1000.0 / 4.5 * 60.0)))
+    walk_to_stop = max(1, int(round(dist_stop / 1000.0 / 4.5 * 60.0)))  # noqa: RUF046
     cadence = _get_cadence_for_lieu_line(dest_lieu["lieu_id"], line)
     wait = cadence or 6
     dist_bus = _haversine_m(
         origin_lieu["lat"], origin_lieu["lon"],
         dest_lieu["lat"], dest_lieu["lon"],
     )
-    bus_dur = max(1, int(round(dist_bus / 1000.0 / 18.0 * 60.0)))
+    bus_dur = max(1, int(round(dist_bus / 1000.0 / 18.0 * 60.0)))  # noqa: RUF046
     total = walk_to_stop + wait + bus_dur
 
     congestion = _traffic_delay_factor(dest_lieu["lieu_id"])
@@ -342,7 +343,7 @@ def _build_vtc_alternative(
 ) -> Alternative | None:
     """Construit une alternative VTC/taxi (Uber, etc.) -- toujours disponible."""
     dist = _haversine_m(origin_lat, origin_lon, dest_lat, dest_lon)
-    direct_dur = max(1, int(round(dist / 1000.0 / 30.0 * 60.0)))
+    direct_dur = max(1, int(round(dist / 1000.0 / 30.0 * 60.0)))  # noqa: RUF046
     total = 5 + int(direct_dur * 1.2)
 
     congestion = _traffic_delay_factor(dest_lieu["lieu_id"])

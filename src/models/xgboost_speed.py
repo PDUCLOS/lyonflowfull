@@ -23,6 +23,7 @@ pour H+1h. Échantillonnage : 1 pas = 5 min (cf. computed_at).
 
 MLflow tracking opt-in via MLFLOW_TRACKING_URI non-vide.
 """
+
 from __future__ import annotations
 
 import logging
@@ -202,7 +203,9 @@ class XGBoostSpeedModel:
         # Sprint 10+ MLOps — Génère et sauvegarde un Model Card (Markdown)
         try:
             from src.ml.model_card import generate_xgboost_card, save_card
+
             from src.data.db_query import get_latest_drift_report
+
             dataset_stats = {
                 "n_rows": len(df),
                 "n_channels": int(df["channel_id"].nunique()) if "channel_id" in df.columns else 0,

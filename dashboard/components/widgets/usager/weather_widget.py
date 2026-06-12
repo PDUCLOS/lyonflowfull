@@ -115,10 +115,10 @@ def _weather_icon(label: str) -> str:
 # 4xxx = brouillard, 5xxx = bruine, 6xxx = pluie, 7xxx = neige,
 # 8xxx = averses, 9xxx = orage).
 _WMO_CODE_MAP: dict[int, tuple[str, str]] = {
-    0:  ("Ensoleillé", "☀️"),
-    1:  ("Peu nuageux", "🌤️"),
-    2:  ("Partiellement nuageux", "⛅"),
-    3:  ("Couvert", "☁️"),
+    0: ("Ensoleillé", "☀️"),
+    1: ("Peu nuageux", "🌤️"),
+    2: ("Partiellement nuageux", "⛅"),
+    3: ("Couvert", "☁️"),
     45: ("Brouillard", "🌫️"),
     48: ("Brouillard givrant", "🌫️"),
     51: ("Bruine légère", "🌦️"),

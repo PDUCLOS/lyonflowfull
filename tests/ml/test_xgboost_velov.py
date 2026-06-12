@@ -6,6 +6,7 @@ Couvre :
 * FEATURE_COLS coherent avec les queries SQL
 * Methodes load/predict ne crash pas (hors DB)
 """
+
 from __future__ import annotations
 
 import sys
@@ -46,6 +47,7 @@ class TestXGBoostVelovInstantiation:
 
     def test_single_assignment_model_dir(self):
         import ast
+
         src = Path(__file__).resolve().parents[2] / "src" / "models" / "xgboost_velov.py"
         tree = ast.parse(src.read_text())
         for node in ast.walk(tree):
@@ -100,38 +102,36 @@ class TestXGBoostVelovSql:
     def test_load_training_data_query_no_redundant_params(self):
         """_load_training_data() appelle execute_query() sans () redundant."""
         import ast
+
         src = Path(__file__).resolve().parents[2] / "src" / "models" / "xgboost_velov.py"
         content = src.read_text()
         tree = ast.parse(content)
         for node in ast.walk(tree):
             if isinstance(node, ast.FunctionDef) and node.name == "_load_training_data":
                 calls = [
-                    n for n in ast.walk(node)
-                    if isinstance(n, ast.Call)
-                    and isinstance(n.func, ast.Name)
-                    and n.func.id == "execute_query"
+                    n
+                    for n in ast.walk(node)
+                    if isinstance(n, ast.Call) and isinstance(n.func, ast.Name) and n.func.id == "execute_query"
                 ]
                 for call in calls:
                     args = call.args
                     if len(args) >= 2:
                         second_arg = args[1]
-                        assert not (
-                            isinstance(second_arg, ast.Constant) and second_arg.value == ()
-                        ), "_load_training_data: execute_query called with redundant ()"
+                        assert not (isinstance(second_arg, ast.Constant) and second_arg.value == ()), (
+                            "_load_training_data: execute_query called with redundant ()"
+                        )
 
 
 class TestXGBoostVelovNoDeadCode:
     def test_all_public_methods_exist(self):
         """Toutes les methodes publiques de XGBoostVelovModel sont definies."""
         import ast
+
         src = Path(__file__).resolve().parents[2] / "src" / "models" / "xgboost_velov.py"
         tree = ast.parse(src.read_text())
         for node in ast.walk(tree):
             if isinstance(node, ast.ClassDef) and node.name == "XGBoostVelovModel":
-                methods = [
-                    n.name for n in node.body
-                    if isinstance(n, ast.FunctionDef)
-                ]
+                methods = [n.name for n in node.body if isinstance(n, ast.FunctionDef)]
                 public = [m for m in methods if not m.startswith("_")]
                 private = [m for m in methods if m.startswith("_") and m != "__init__"]
                 assert "load" in public

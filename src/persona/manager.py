@@ -87,6 +87,7 @@ def clear_current_persona_auth() -> None:
 def clear_current_persona() -> None:
     """Retire le persona actif de la session, permettant de revenir à l'accueil."""
     import streamlit as st
+
     st.session_state.pop(_SESSION_KEY, None)
     clear_current_persona_auth()
 

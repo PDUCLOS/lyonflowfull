@@ -27,14 +27,16 @@ _TYPE_ICON = {
     "banlieue": "🏙",
 }
 
+
 def render_search_bar() -> dict[str, typing.Any]:
     """Affiche la barre de recherche trajet, élégante et ergonomique."""
     addresses = cached_lyon_addresses_with_coords(force_mock=False)
     # Préparer les options pour la selectbox
     addr_options = [f"{_TYPE_ICON.get(a['type'], '📍')} {a['name']}" for a in addresses]
-    
+
     # Injection de CSS pour un style épuré
-    st.markdown("""
+    st.markdown(
+        """
     <style>
     /* Styling des selectbox pour un effet plus premium */
     div[data-baseweb="select"] > div {
@@ -56,11 +58,13 @@ def render_search_bar() -> dict[str, typing.Any]:
         margin-bottom: 1rem;
     }
     </style>
-    """, unsafe_allow_html=True)
-    
+    """,
+        unsafe_allow_html=True,
+    )
+
     with st.container(border=True):
         st.markdown("#### 🗺️ Où allez-vous ?")
-        
+
         col1, col2 = st.columns(2)
         with col1:
             origin = st.selectbox(
@@ -68,19 +72,21 @@ def render_search_bar() -> dict[str, typing.Any]:
                 options=addr_options,
                 index=addr_options.index("🏙 Villeurbanne") if "🏙 Villeurbanne" in addr_options else 0,
                 key="search_origin",
-                help="Tapez pour rechercher une adresse"
+                help="Tapez pour rechercher une adresse",
             )
         with col2:
             destination = st.selectbox(
                 "🔴 Destination",
                 options=addr_options,
-                index=addr_options.index("🚉 Part-Dieu") if "🚉 Part-Dieu" in addr_options else min(1, len(addr_options)-1),
+                index=addr_options.index("🚉 Part-Dieu")
+                if "🚉 Part-Dieu" in addr_options
+                else min(1, len(addr_options) - 1),
                 key="search_destination",
-                help="Tapez pour rechercher une adresse"
+                help="Tapez pour rechercher une adresse",
             )
-            
+
         st.markdown("<br/>", unsafe_allow_html=True)
-        
+
         # Bloc départ et filtres
         col_time, col_modes = st.columns([1, 1])
         with col_time:
@@ -93,13 +99,13 @@ def render_search_bar() -> dict[str, typing.Any]:
             departure_time = None
             if departure_mode == "⏰ Arriver à l'heure":
                 departure_time = st.time_input("Heure prévue", key="search_dep_time")
-                
+
         with col_modes:
             modes = st.multiselect(
                 "Modes de transport autorisés",
                 ["🚇 Métro", "🚊 Tram", "🚌 Bus", "🚲 Vélov", "🚗 Voiture", "🚶 Marche"],
                 default=["🚇 Métro", "🚊 Tram", "🚌 Bus", "🚲 Vélov", "🚶 Marche"],
-                key="search_modes"
+                key="search_modes",
             )
 
     return {

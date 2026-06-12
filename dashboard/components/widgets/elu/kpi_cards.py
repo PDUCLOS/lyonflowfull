@@ -24,25 +24,19 @@ def _build_sparkline(history: list, target: float = 0) -> alt.Chart | None:
 
     today = datetime.now()
     start = (today.replace(day=1) - timedelta(days=30 * 11)).replace(day=1)
-    month_labels = [
-        (start + timedelta(days=30 * i)).strftime("%b") for i in range(n)
-    ]
+    month_labels = [(start + timedelta(days=30 * i)).strftime("%b") for i in range(n)]
 
     df = pd.DataFrame({"month": month_labels, "value": history})
     if target and target > 0:
         df["target"] = target
 
-    base = alt.Chart(df).encode(
-        x=alt.X("month:N", title=None, axis=alt.Axis(labelAngle=-30))
-    )
+    base = alt.Chart(df).encode(x=alt.X("month:N", title=None, axis=alt.Axis(labelAngle=-30)))
 
     line = base.mark_line(
         color=COLORS["persona_elu_accent"],
         strokeWidth=2,
         point=alt.MarkPointConfig(color=COLORS["persona_elu_accent"], size=30),
-    ).encode(
-        y=alt.Y("value:Q", title=None, axis=alt.Axis(ticks=False, labels=False))
-    )
+    ).encode(y=alt.Y("value:Q", title=None, axis=alt.Axis(ticks=False, labels=False)))
 
     layers = [line]
 
@@ -58,12 +52,7 @@ def _build_sparkline(history: list, target: float = 0) -> alt.Chart | None:
         )
         layers.append(rule)
 
-    return (
-        alt.layer(*layers)
-        .properties(height=80)
-        .configure_view(stroke="transparent")
-        .configure_axis(domainOpacity=0)
-    )
+    return alt.layer(*layers).properties(height=80).configure_view(stroke="transparent").configure_axis(domainOpacity=0)
 
 
 def render_kpi_cards() -> None:

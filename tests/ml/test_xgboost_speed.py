@@ -6,6 +6,7 @@ Couvre :
 * FEATURE_COLS aligné sur le schéma gold.traffic_features_live
 * Méthodes load/predict ne crash pas (hors DB)
 """
+
 from __future__ import annotations
 
 import sys
@@ -17,8 +18,8 @@ import pytest
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
 from src.models.xgboost_speed import (
-    FEATURE_COLS,
     DEFAULT_HORIZONS,
+    FEATURE_COLS,
     SAMPLE_STEP_MINUTES,
     XGBoostSpeedModel,
 )
@@ -34,10 +35,17 @@ class TestXGBoostSpeedImports:
 
     def test_feature_cols_aligned_on_schema(self):
         expected = {
-            "speed_kmh", "lag_1", "lag_2", "lag_3",
-            "rolling_mean_3", "sin_hour", "cos_hour",
-            "temperature_2m", "precipitation",
-            "is_vacances", "is_ferie",
+            "speed_kmh",
+            "lag_1",
+            "lag_2",
+            "lag_3",
+            "rolling_mean_3",
+            "sin_hour",
+            "cos_hour",
+            "temperature_2m",
+            "precipitation",
+            "is_vacances",
+            "is_ferie",
         }
         assert set(FEATURE_COLS) == expected
 
@@ -60,6 +68,7 @@ class TestXGBoostSpeedInstantiation:
 
     def test_single_assignment_model_dir(self):
         import ast
+
         src = Path(__file__).resolve().parents[2] / "src" / "models" / "xgboost_speed.py"
         tree = ast.parse(src.read_text())
         for node in ast.walk(tree):
@@ -112,7 +121,7 @@ class TestXGBoostSpeedPredict:
         model = XGBoostSpeedModel()
         model.models[60] = MagicMock()
         model.models[60].predict.return_value = [65.0]
-        features = {col: 50.0 for col in FEATURE_COLS}
+        features = dict.fromkeys(FEATURE_COLS, 50.0)
         features["speed_kmh"] = 50.0
         result = model.predict("LYO00007", horizon_minutes=60, features=features)
         mock_eq.assert_not_called()
@@ -122,12 +131,10 @@ class TestXGBoostSpeedPredict:
 class TestXGBoostSpeedNoUndefinedVars:
     def test_train_one_no_undefined_params(self):
         import ast
+
         src = Path(__file__).resolve().parents[2] / "src" / "models" / "xgboost_speed.py"
         tree = ast.parse(src.read_text())
         for node in ast.walk(tree):
             if isinstance(node, ast.FunctionDef) and node.name == "train_one":
-                params_uses = [
-                    n.id for n in ast.walk(node)
-                    if isinstance(n, ast.Name) and n.id == "params"
-                ]
+                params_uses = [n.id for n in ast.walk(node) if isinstance(n, ast.Name) and n.id == "params"]
                 assert len(params_uses) == 0, f"train_one references undefined 'params': {params_uses}"

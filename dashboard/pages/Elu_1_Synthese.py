@@ -10,9 +10,9 @@ from dashboard.components.navigation import render_sidebar_navigation
 from dashboard.components.persona_guard import apply_persona_guard
 from dashboard.components.theme import inject_theme
 from dashboard.components.widgets.elu import (
-    render_monthly_evolution,
     render_executive_summary,
     render_kpi_cards,
+    render_monthly_evolution,
     render_news_section,
     render_pdf_generator,
     render_top_decisions,

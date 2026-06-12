@@ -122,7 +122,7 @@ def render_monthly_evolution() -> None:
         return
 
     rows = []
-    for idx, (kpi_key, kpi_data) in enumerate(kpis.items()):
+    for idx, (kpi_key, _kpi_data) in enumerate(kpis.items()):
         history = kpi_data.get("history", [])
         target = kpi_data.get("target_2026", 0) or 0
         label = kpi_data.get("label", _kpi_label(kpi_key))
@@ -149,7 +149,7 @@ def render_monthly_evolution() -> None:
     # Vue agrégée (expander) — tous les KPIs superposés, normalisés 0-100
     with st.expander("📊 Vue agrégée — tous les KPIs superposés", expanded=False):
         try:
-            from numpy import nanmin, nanmax
+            from numpy import nanmax, nanmin
 
             def norm(s: pd.Series) -> pd.Series:
                 mn, mx = nanmin(s), nanmax(s)
@@ -181,10 +181,10 @@ def render_monthly_evolution() -> None:
             st.warning("Impossible de générer la vue agrégée.")
 
     # Tabs : un onglet par KPI
-    tab_labels = [_kpi_label(k) for k in kpis.keys()]
+    tab_labels = [_kpi_label(k) for k in kpis]
     tabs = st.tabs(tab_labels)
 
-    for tab, (kpi_key, kpi_data) in zip(tabs, kpis.items()):
+    for tab, (kpi_key, _kpi_data) in zip(tabs, kpis.items()):
         with tab:
             sub = df[df["kpi_key"] == kpi_key].copy()
             sub["month_label"] = sub["month_idx"].map(

@@ -12,6 +12,7 @@ Les graphes sont :
 - Cache en mémoire pendant la session (rebuild toutes les 5 min en prod)
 - Fallback mock pour dev sans DB
 """
+
 from __future__ import annotations
 
 import logging
@@ -19,7 +20,6 @@ import time
 
 import networkx as nx
 
-from src.config import get_settings
 from src.db import execute_query
 
 logger = logging.getLogger(__name__)
@@ -58,7 +58,6 @@ def build_routing_graph(
     if use_cache and _is_cache_valid():
         return _graph_cache["graph"]
 
-    from src.data.db_query import _is_db_available
 
     if not _db_available():
         logger.info("DB indisponible — graphe mock")
@@ -76,7 +75,9 @@ def build_routing_graph(
         _graph_cache["built_at"] = time.time()
         logger.info(
             "Routing graph (%s): %d nodes, %d edges",
-            gtype, graph.number_of_nodes(), graph.number_of_edges(),
+            gtype,
+            graph.number_of_nodes(),
+            graph.number_of_edges(),
         )
         return graph
     except Exception as e:
@@ -90,7 +91,9 @@ def build_routing_graph(
         _graph_cache["built_at"] = time.time()
         logger.info(
             "Routing graph (%s): %d nodes, %d edges",
-            gtype, graph.number_of_nodes(), graph.number_of_edges(),
+            gtype,
+            graph.number_of_nodes(),
+            graph.number_of_edges(),
         )
         return graph
     except Exception as e:
@@ -109,10 +112,7 @@ def get_graph_type() -> str:
 
 
 def _is_cache_valid() -> bool:
-    return (
-        _graph_cache["graph"] is not None
-        and (time.time() - _graph_cache["built_at"]) < CACHE_TTL_SECONDS
-    )
+    return _graph_cache["graph"] is not None and (time.time() - _graph_cache["built_at"]) < CACHE_TTL_SECONDS
 
 
 def reset_cache() -> None:
@@ -129,10 +129,12 @@ def reset_cache() -> None:
 
 def _db_available() -> bool:
     from src.db import test_connection
+
     return test_connection()
 
 
 # ── Overpass/OSM graph ───────────────────────────────────────────────────────
+
 
 def build_road_network_graph(
     min_segment_length_m: float = 5.0,
@@ -177,7 +179,7 @@ def build_road_network_graph(
         )
         SELECT node_idx, speed_kmh FROM latest
     """
-    speed_map = {r["node_idx"]: float(r["speed_kmh"]) for r in execute_query(speed_query)}
+    speed_map = {r["node_idx"]: float(r["speed_kmh"]) for r in execute_query(speed_query)}  # noqa: F841
 
     G = nx.Graph()  # noqa: N806
 
@@ -216,7 +218,8 @@ def build_road_network_graph(
         travel_time_s = (length_m / (speed * 1000 / 3600)) if speed > 0 else 0
 
         G.add_edge(
-            from_id, to_id,
+            from_id,
+            to_id,
             length_m=length_m,
             via="overpass",
             road_gid=r.get("osm_way_id"),
@@ -252,6 +255,7 @@ def _speed_from_highway(highway: str | None) -> float:
 
 
 # ── H3 fallback graph ───────────────────────────────────────────────────────
+
 
 def build_h3_graph(
     min_segment_length_m: float = 5.0,
@@ -310,8 +314,10 @@ def build_h3_graph(
         if u in G.nodes and v in G.nodes:
             u_data, v_data = G.nodes[u], G.nodes[v]
             d = _haversine_m_local(
-                u_data["start_lat"], u_data["start_lon"],
-                v_data["start_lat"], v_data["start_lon"],
+                u_data["start_lat"],
+                u_data["start_lon"],
+                v_data["start_lat"],
+                v_data["start_lon"],
             )
             G.add_edge(u, v, via="h3_adjacency", length_m=d)
 
@@ -321,6 +327,7 @@ def build_h3_graph(
 def _haversine_m_local(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
     """Distance haversine en mètres."""
     import math
+
     r = 6_371_000
     p1, p2 = math.radians(lat1), math.radians(lat2)
     dp = math.radians(lat2 - lat1)
@@ -330,6 +337,7 @@ def _haversine_m_local(lat1: float, lon1: float, lat2: float, lon2: float) -> fl
 
 
 # ── Mock graph ────────────────────────────────────────────────────────────────
+
 
 def _build_mock_graph() -> nx.Graph:
     """Graphe mock pour dev sans DB."""
@@ -382,6 +390,7 @@ def _build_mock_graph() -> nx.Graph:
 
 
 # ── Helpers ──────────────────────────────────────────────────────────────────
+
 
 def get_node_speed(graph: nx.Graph, node_id, horizon_minutes: int = 0) -> float:
     """Récupère la vitesse d'un nœud (current ou prédite)."""

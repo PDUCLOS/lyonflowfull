@@ -33,8 +33,8 @@ logger = logging.getLogger(__name__)
 
 # Mapping horizon_minutes (modèle) -> horizon_h (schéma gold)
 HORIZON_MAP = {
-    5: 0,    # H+5min  → 0h
-    60: 1,   # H+1h
+    5: 0,  # H+5min  → 0h
+    60: 1,  # H+1h
     180: 3,  # H+3h
     360: 6,  # H+6h
 }

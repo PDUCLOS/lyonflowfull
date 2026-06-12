@@ -47,6 +47,7 @@ import os
 from typing import Any
 
 import pandas as pd
+from src.data.exceptions import DashboardDataError
 
 from src.data.db_query import (
     _is_db_available,
@@ -60,7 +61,6 @@ from src.data.db_query import (
     get_velov_predictions,
     get_velov_stations_geo,
 )
-from src.data.exceptions import DashboardDataError
 from src.data.mock import elu as elu_mock
 from src.data.mock import pro_tcl as pro_tcl_mock
 from src.data.mock import usager as usager_mock
@@ -678,7 +678,7 @@ def load_elu_kpis_dict(force_mock: bool = False) -> dict:
         return {
             k: {"label": l, "current": 0, "unit": u, "delta_ytd": 0,
                 "target_2026": 0, "history": []}
-            for k, (l, u) in [
+            for k, (l, u) in [  # noqa: E741
                 ("part_modale_tc",     ("Part modale TC",     "%")),
                 ("ponctualite",        ("Ponctualité",        "%")),
                 ("co2_evite_tonnes",   ("CO₂ évité",          "t")),

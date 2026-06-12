@@ -51,10 +51,7 @@ render_sidebar_navigation()
 st.title("📁 Files — Partage de fichiers")
 render_data_status_banner()
 
-st.caption(
-    "Espace de partage pour les documents, datasets, photos, etc. "
-    "Upload et download en quelques clics."
-)
+st.caption("Espace de partage pour les documents, datasets, photos, etc. Upload et download en quelques clics.")
 
 st.markdown("---")
 
@@ -226,16 +223,14 @@ try:
                 if pd.isna(s):
                     return [128, 128, 128, 180]
                 if s < 10:
-                    return [231, 76, 60, 220]   # red
+                    return [231, 76, 60, 220]  # red
                 if s < 20:
                     return [255, 152, 0, 220]  # orange
                 if s < 35:
                     return [255, 193, 7, 220]  # yellow
-                return [76, 175, 80, 220]      # green
+                return [76, 175, 80, 220]  # green
 
-            df_merged[["r", "g", "b", "a"]] = df_merged["speed_pred"].apply(
-                lambda s: pd.Series(_speed_to_rgba(s))
-            )
+            df_merged[["r", "g", "b", "a"]] = df_merged["speed_pred"].apply(lambda s: pd.Series(_speed_to_rgba(s)))
 
             # Centrage sur Lyon
             view_state = pdk.ViewState(
@@ -261,8 +256,7 @@ try:
                     initial_view_state=view_state,
                     map_style="https://basemaps.cartocdn.com/gl/positron-gl-style/style.json",
                     tooltip={
-                        "text": "{axis_label}\nVitesse: {speed_pred} km/h\n"
-                                "Horizon: H+{horizon_h}h\nÉtat: {etat_pred}"
+                        "text": "{axis_label}\nVitesse: {speed_pred} km/h\nHorizon: H+{horizon_h}h\nÉtat: {etat_pred}"
                     },
                 ),
                 use_container_width=True,

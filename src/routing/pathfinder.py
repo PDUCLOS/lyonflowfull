@@ -9,6 +9,7 @@ Fonctions :
 - shortest_path(graph, origin, destination, horizon_minutes) : chemin + détail
 - compute_itinerary(origin_lon, origin_lat, dest_lon, dest_lat, ...) : API haut-niveau
 """
+
 from __future__ import annotations
 
 import logging
@@ -122,7 +123,10 @@ def shortest_path(
 
     try:
         path_nodes = nx.shortest_path(
-            weighted, origin_node, destination_node, weight="travel_time_s",
+            weighted,
+            origin_node,
+            destination_node,
+            weight="travel_time_s",
         )
     except nx.NetworkXNoPath:
         logger.warning("Pas de chemin entre %s et %s", origin_node, destination_node)
@@ -144,8 +148,10 @@ def shortest_path(
         if length == 0:
             # Fallback: haversine
             length = _haversine_m(
-                u_data.get("start_lat", 0), u_data.get("start_lon", 0),
-                v_data.get("start_lat", 0), v_data.get("start_lon", 0),
+                u_data.get("start_lat", 0),
+                u_data.get("start_lon", 0),
+                v_data.get("start_lat", 0),
+                v_data.get("start_lon", 0),
             )
 
         speed = get_node_speed(graph, u, horizon_minutes)
@@ -167,14 +173,13 @@ def shortest_path(
             )
         )
 
-    avg_speed = (
-        (total_length / (total_duration / 3600 * 1000)) if total_duration > 0 else 0
-    )
+    avg_speed = (total_length / (total_duration / 3600 * 1000)) if total_duration > 0 else 0
 
     compute_time_ms = (time.time() - start_time) * 1000
     graph_type = "unknown"
     try:
         from src.routing.graph import get_graph_type
+
         graph_type = get_graph_type()
     except Exception:
         pass
@@ -195,7 +200,8 @@ def shortest_path(
 
 
 def _build_traffic_aware_graph(
-    graph: nx.Graph, horizon_minutes: int,
+    graph: nx.Graph,
+    horizon_minutes: int,
 ) -> nx.Graph:
     """Construit un graphe pondéré par le temps de trajet traffic-aware."""
     weighted = graph.copy()
@@ -218,6 +224,7 @@ def _compute_confidence(graph: nx.Graph, path_nodes: list) -> float:
 def _haversine_m(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
     """Distance haversine en mètres."""
     import math
+
     r = 6_371_000
     p1, p2 = math.radians(lat1), math.radians(lat2)
     dp = math.radians(lat2 - lat1)
@@ -267,6 +274,7 @@ def compute_itinerary(
         graph_type = "unknown"
         try:
             from src.routing.graph import get_graph_type
+
             graph_type = get_graph_type()
         except Exception:
             pass
