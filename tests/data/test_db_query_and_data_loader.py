@@ -33,8 +33,16 @@ from src.data.exceptions import DashboardDataError
 
 @pytest.fixture(autouse=True)
 def disable_db(monkeypatch):
-    """Force ``_is_db_available = False`` pour ces tests (pas de DB locale)."""
+    """Force ``_is_db_available = False`` pour ces tests (pas de DB locale).
+
+    CI a un PostgreSQL service container réel. Les tests de contrat mock
+    ont besoin du mode démo pour que _maybe_force_mock(True) serve les mocks.
+    """
+    monkeypatch.setenv("LYONFLOW_DEMO_MODE", "1")
+    monkeypatch.setattr(data_loader, "_is_demo_mode", lambda: True)
+    monkeypatch.setattr(data_loader, "_demo_mode_cache", True)
     monkeypatch.setattr(db_query, "_is_db_available", lambda: False)
+    monkeypatch.setattr(db_query, "_db_available_cache", False)
     db_query.reset_db_cache()
     yield
     db_query.reset_db_cache()
