@@ -1,6 +1,7 @@
 """Widgets Élu — module init."""
 
 from dashboard.components.widgets.elu.bottleneck_map import render_bottleneck_map
+from dashboard.components.widgets.elu.monthly_evolution_chart import render_monthly_evolution
 from dashboard.components.widgets.elu.bottleneck_ranking import render_bottleneck_ranking
 from dashboard.components.widgets.elu.cost_estimate import render_cost_estimate
 from dashboard.components.widgets.elu.delta_kpis import render_delta_kpis
