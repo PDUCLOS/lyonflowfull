@@ -1,13 +1,13 @@
 """Widget — Carte Folium des 10 bottlenecks.
 
-Sprint 8 — Bottlenecks chargés via data_loader.load_bottlenecks_top().
+Sprint 8 — Bottlenecks chargés via data_loader.cached_bottlenecks_top().
 """
 
 from __future__ import annotations
 
 import streamlit as st
 
-from src.data.data_loader import load_bottlenecks_top
+from dashboard.components.data_cache import cached_bottlenecks_top
 
 
 def render_bottleneck_map(height: int = 500) -> None:
@@ -30,7 +30,7 @@ def render_bottleneck_map(height: int = 500) -> None:
         "Gare de Vaise": (45.7798, 4.8058),
     }
 
-    bottlenecks = load_bottlenecks_top(force_mock=False)
+    bottlenecks = cached_bottlenecks_top(force_mock=False)
     if not bottlenecks:
         st.info("Aucun bottleneck disponible.")
         return
@@ -40,8 +40,7 @@ def render_bottleneck_map(height: int = 500) -> None:
         from streamlit_folium import st_folium
 
         # Centre Lyon
-        m = folium.Map(location=[45.76, 4.84], zoom_start=12,
-                       tiles="CartoDB positron")
+        m = folium.Map(location=[45.76, 4.84], zoom_start=12, tiles="CartoDB positron")
 
         for b in bottlenecks:
             zone = b.get("zone", "—")

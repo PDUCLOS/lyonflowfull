@@ -10,7 +10,7 @@ sys.path.insert(0, str(WORKSPACE))
 
 
 def test_mock_data_elu_imports():
-    from src.data.mock import elu  # noqa: F401
+    from tests.fixtures.mock_data import elu
 
     assert hasattr(elu, "KPI_12_MONTHS")
     assert hasattr(elu, "BOTTLENECKS_TOP_10")
@@ -19,11 +19,10 @@ def test_mock_data_elu_imports():
 
 
 def test_kpis_have_5_entries():
-    from src.data.mock.elu import KPI_12_MONTHS
+    from tests.fixtures.mock_data.elu import KPI_12_MONTHS
 
     assert len(KPI_12_MONTHS) == 5
-    required = ["part_modale_tc", "ponctualite_reseau", "co2_evite",
-                "bottlenecks_actifs", "satisfaction_usager"]
+    required = ["part_modale_tc", "ponctualite_reseau", "co2_evite", "bottlenecks_actifs", "satisfaction_usager"]
     for k in required:
         assert k in KPI_12_MONTHS
         kpi = KPI_12_MONTHS[k]
@@ -33,20 +32,28 @@ def test_kpis_have_5_entries():
 
 
 def test_bottlenecks_count():
-    from src.data.mock.elu import BOTTLENECKS_TOP_10
+    from tests.fixtures.mock_data.elu import BOTTLENECKS_TOP_10
 
     assert len(BOTTLENECKS_TOP_10) == 10
     for b in BOTTLENECKS_TOP_10:
-        for field in ("rank", "zone", "lines_impacted", "voyageurs_jour",
-                      "gain_min", "cout_M_euros", "roi_mois", "delai_mois"):
+        for field in (
+            "rank",
+            "zone",
+            "lines_impacted",
+            "voyageurs_jour",
+            "gain_min",
+            "cout_M_euros",
+            "roi_mois",
+            "delai_mois",
+        ):
             assert field in b, f"Bottleneck {b.get('rank')} manque {field}"
         # ROI doit être calculé (entier)
-        assert isinstance(b["roi_mois"], (int, float))
+        assert isinstance(b["roi_mois"], int | float)
         assert b["roi_mois"] > 0
 
 
 def test_amenagements_passes_have_avant_apres():
-    from src.data.mock.elu import AMENAGEMENTS_PASSES
+    from tests.fixtures.mock_data.elu import AMENAGEMENTS_PASSES
 
     assert len(AMENAGEMENTS_PASSES) >= 5
     for a in AMENAGEMENTS_PASSES:
@@ -57,7 +64,7 @@ def test_amenagements_passes_have_avant_apres():
 
 
 def test_widget_modules_elu_importable():
-    from dashboard.components.widgets import elu  # noqa: F401
+    from dashboard.components.widgets import elu
 
     assert hasattr(elu, "render_kpi_cards")
     assert hasattr(elu, "render_executive_summary")

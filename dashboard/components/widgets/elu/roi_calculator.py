@@ -1,13 +1,13 @@
 """Widget — Calculateur ROI (valeur du temps × voyageurs × gain).
 
-Sprint 8 — Bottlenecks via data_loader.load_bottlenecks_top().
+Sprint 8 — Bottlenecks via data_loader.cached_bottlenecks_top().
 """
 
 from __future__ import annotations
 
 import streamlit as st
 
-from src.data.data_loader import load_bottlenecks_top
+from dashboard.components.data_cache import cached_bottlenecks_top
 
 
 def render_roi_calculator(line_id: str | None = None) -> None:
@@ -18,13 +18,17 @@ def render_roi_calculator(line_id: str | None = None) -> None:
     """
     st.markdown("##### 🧮 Calculateur ROI")
 
-    bottlenecks = load_bottlenecks_top(force_mock=False)
+    bottlenecks = cached_bottlenecks_top(force_mock=False)
     if not bottlenecks:
         st.info("Aucun bottleneck disponible.")
         return
 
     # Sélection d'un bottleneck
-    options = [f"#{b.get('rank')} {b.get('zone')}" for b in bottlenecks]
+    options = []
+    for b in bottlenecks:
+        rank = b.get("rank", "—")
+        zone = b.get("zone") or "—"
+        options.append(f"#{rank} {zone}")
     selected = st.selectbox(
         "Sélectionner un aménagement",
         options,
@@ -34,21 +38,31 @@ def render_roi_calculator(line_id: str | None = None) -> None:
     if not selected:
         return
 
-    idx = options.index(selected)
-    b = bottlenecks[idx]
+    # Defensive : si la liste change entre 2 renders (mock vs DB), .index() peut
+    # lever ValueError. On filtre par label au lieu d'utiliser l'index.
+    matching = [b for b in bottlenecks if f"#{b.get('rank', '—')} {b.get('zone') or '—'}" == selected]
+    if not matching:
+        return
+    b = matching[0]
 
     # Inputs ajustables
     col1, col2 = st.columns(2)
     with col1:
         valeur_temps = st.slider(
             "Valeur du temps (€/h)",
-            min_value=8, max_value=30, value=15, step=1,
+            min_value=8,
+            max_value=30,
+            value=15,
+            step=1,
             key="roi_valeur_temps",
         )
     with col2:
         jours_an = st.slider(
             "Jours d'usage par an",
-            min_value=200, max_value=350, value=250, step=10,
+            min_value=200,
+            max_value=350,
+            value=250,
+            step=10,
             key="roi_jours_an",
         )
 
@@ -65,12 +79,18 @@ def render_roi_calculator(line_id: str | None = None) -> None:
     st.markdown("---")
     c1, c2, c3 = st.columns(3)
     with c1:
-        st.metric("Gain annuel estimé", f"{gain_annuel/1_000_000:.2f} M€")
+        st.metric("Gain annuel estimé", f"{gain_annuel / 1_000_000:.2f} M€")
     with c2:
-        st.metric("ROI", f"{int(roi_mois)} mois",
-                  delta=f"~{12/roi_mois:.1f}x en 1 an" if roi_mois > 0 else None,
-                  delta_color="normal")
+        st.metric(
+            "ROI",
+            f"{int(roi_mois)} mois",
+            delta=f"~{12 / roi_mois:.1f}x en 1 an" if roi_mois > 0 else None,
+            delta_color="normal",
+        )
     with c3:
-        st.metric("Bénéfice net 5 ans", f"{benefice_5ans/1_000_000:.1f} M€",
-                  delta="positif" if benefice_5ans > 0 else "négatif",
-                  delta_color="normal" if benefice_5ans > 0 else "inverse")
+        st.metric(
+            "Bénéfice net 5 ans",
+            f"{benefice_5ans / 1_000_000:.1f} M€",
+            delta="positif" if benefice_5ans > 0 else "négatif",
+            delta_color="normal" if benefice_5ans > 0 else "inverse",
+        )

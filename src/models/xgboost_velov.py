@@ -24,11 +24,16 @@ logger = logging.getLogger(__name__)
 
 FEATURE_COLS = [
     "station_id_encoded",
-    "bikes_lag_1", "bikes_lag_2", "bikes_lag_3",
+    "bikes_lag_1",
+    "bikes_lag_2",
+    "bikes_lag_3",
     "rolling_mean_3h",
-    "hour_sin", "hour_cos",
-    "temperature_c", "rain_mm",
-    "is_vacances", "is_ferie",
+    "hour_sin",
+    "hour_cos",
+    "temperature_c",
+    "rain_mm",
+    "is_vacances",
+    "is_ferie",
 ]
 
 
@@ -40,12 +45,33 @@ class XGBoostVelovModel:
         self.models: dict[int, xgb.Booster] = {}
 
     def load(self, horizons: list[int] | None = None) -> None:
-        horizons = horizons or [30, 60, 180]
+        """Charge les modèles depuis MLflow (si dispo) ou depuis le disque local."""
+        import mlflow
+
+        from src.ml.mlflow_integration import is_mlflow_available
+
+        horizons = horizons or [30, 60]
         for h in horizons:
-            model_path = self.model_dir / f"xgb_velov_h{h}.pkl"
-            if model_path.exists():
-                self.models[h] = joblib.load(model_path)
-                logger.info(f"Loaded XGBoost Velov H+{h}min")
+            model_name = f"xgb_velov_h{h}"
+            model_path = self.model_dir / f"{model_name}.pkl"
+
+            mlflow_success = False
+            if is_mlflow_available():
+                try:
+                    artifact_uri = f"models:/{model_name}/Production"
+                    local_path = mlflow.artifacts.download_artifacts(artifact_uri, dst_path=str(self.model_dir))
+                    self.models[h] = joblib.load(local_path)
+                    logger.info(f"Loaded XGBoost Velov horizon {h}min from MLflow Registry (Production)")
+                    mlflow_success = True
+                except Exception as e:
+                    logger.warning(f"Failed to load {model_name} from MLflow Registry: {e}")
+
+            if not mlflow_success:
+                if model_path.exists():
+                    self.models[h] = joblib.load(model_path)
+                    logger.info(f"Loaded XGBoost Velov horizon {h}min from local disk")
+                else:
+                    logger.warning(f"Model not found: {model_path}")
 
     def train_one(self, horizon_minutes: int, df: pd.DataFrame | None = None) -> dict:
         """Entraîne pour un horizon donné."""
@@ -65,8 +91,12 @@ class XGBoostVelovModel:
         y_test = test["target_bikes"]
 
         model = xgb.XGBRegressor(
-            n_estimators=150, max_depth=5, learning_rate=0.1,
-            objective="reg:squarederror", random_state=42, n_jobs=-1,
+            n_estimators=150,
+            max_depth=5,
+            learning_rate=0.1,
+            objective="reg:squarederror",
+            random_state=42,
+            n_jobs=-1,
         )
         model.fit(X_train, y_train, eval_set=[(X_test, y_test)], verbose=False)
 
@@ -104,6 +134,10 @@ class XGBoostVelovModel:
                     )
                     tracker.log_metrics(metrics)
                     tracker.log_artifact(str(model_path))
+                    # Register & transition to Production natively
+                    reg_model_name = f"xgb_velov_h{horizon_minutes}"
+                    tracker.register_model(reg_model_name)
+                    tracker.transition_to_production(reg_model_name)
             except Exception as e:  # pragma: no cover
                 logger.warning("MLflow tracking failed (non-bloquant): %s", e)
 

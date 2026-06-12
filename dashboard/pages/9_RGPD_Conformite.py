@@ -8,16 +8,15 @@ Sprint 6 — binding DB :
 
 from __future__ import annotations
 
-import pandas as pd
 import streamlit as st
 
+from dashboard.components.data_status import render_data_status_banner
 from dashboard.components.navigation import render_sidebar_navigation
 from dashboard.components.theme import inject_theme
 from src.data.data_loader import (
     load_rgpd_audit,
     load_rgpd_consents,
 )
-
 
 st.set_page_config(
     page_title="RGPD — LyonFlowFull",
@@ -29,6 +28,7 @@ inject_theme()
 render_sidebar_navigation()
 
 st.title("🔒 RGPD & Conformité")
+render_data_status_banner()
 
 st.markdown(
     """
@@ -101,7 +101,18 @@ if not audit_df.empty:
     # Cacher IP complete par défaut (RGPD)
     display_df = audit_df.copy()
     if "ip_address" in display_df.columns:
-        display_df["ip_address"] = display_df["ip_address"].astype(str).str.replace(r"\.\d+$", ".xxx", regex=True)
+        # IPv4 : 192.168.1.42 → 192.168.1.xxx
+        # IPv6 : 2001:0db8:85a3:0000:0000:8a2e:0370:7334 → 2001:0db8:85a3:0000:0000:8a2e:0370:xxxx
+        display_df["ip_address"] = (
+            display_df["ip_address"]
+            .astype(str)
+            .str.replace(r"(\d+\.\d+\.\d+\.)\d+", r"\1xxx", regex=True)  # IPv4
+            .str.replace(
+                r"([0-9a-fA-F]+:[0-9a-fA-F]+:[0-9a-fA-F]+:[0-9a-fA-F]+:[0-9a-fA-F]+:[0-9a-fA-F]+:)([0-9a-fA-F]+)(:[0-9a-fA-F]+)",
+                r"\1xxxx\3",
+                regex=True,
+            )  # IPv6 (7 premiers groupes + 4 derniers hex cachés)
+        )
     st.dataframe(display_df, use_container_width=True, hide_index=True)
 else:
     st.info("Aucun log d'audit disponible — DB non connectée ou table vide.")

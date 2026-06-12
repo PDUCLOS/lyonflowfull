@@ -1,0 +1,67 @@
+# =============================================================================
+# monitoring/prometheus/rules/api.yml — Alertes API FastAPI
+# =============================================================================
+# Sprint VPS-3 : détecte les incidents API avant qu'ils n'impactent les users.
+# =============================================================================
+
+groups:
+  - name: api-critical
+    interval: 30s
+    rules:
+      # API 5xx > 5% sur 5min
+      - alert: ApiHighErrorRate
+        expr: |
+          (
+            sum(rate(http_requests_total{job="fastapi",code=~"5.."}[5m]))
+            /
+            sum(rate(http_requests_total{job="fastapi"}[5m]))
+          ) > 0.05
+        for: 5m
+        labels:
+          severity: critical
+          component: api
+        annotations:
+          summary: "API 5xx > 5% (5min)"
+          description: "Taux d'erreur 5xx sur l'API FastAPI est {{ $value | humanizePercentage }} (seuil 5%)."
+          runbook: "https://github.com/PDUCLOS/lyonflowfull/blob/main/docs/RUNBOOK.md#api-5xx"
+
+      # API p95 latency > 1s sur 10min
+      - alert: ApiHighLatency
+        expr: |
+          histogram_quantile(0.95,
+            sum(rate(http_request_duration_seconds_bucket{job="fastapi"}[10m])) by (le)
+          ) > 1.0
+        for: 10m
+        labels:
+          severity: warning
+          component: api
+        annotations:
+          summary: "API p95 > 1s (10min)"
+          description: "Latence p95 sur l'API est {{ $value }}s (seuil 1s)."
+
+      # API down (zero requêtes sur 2min)
+      - alert: ApiDown
+        expr: |
+          up{job="fastapi"} == 0
+        for: 2m
+        labels:
+          severity: critical
+          component: api
+        annotations:
+          summary: "API FastAPI DOWN (2min)"
+          description: "L'API FastAPI ne répond pas depuis 2 minutes."
+
+  - name: api-info
+    interval: 1m
+    rules:
+      # Spike de requêtes (DDOS ou viralité)
+      - alert: ApiTrafficSpike
+        expr: |
+          sum(rate(http_requests_total{job="fastapi"}[1m])) > 100
+        for: 5m
+        labels:
+          severity: warning
+          component: api
+        annotations:
+          summary: "API traffic spike (>100 rps)"
+          description: "Trafic API en hausse: {{ $value }} rps."

@@ -14,6 +14,7 @@ sys.path.insert(0, str(WORKSPACE))
 def test_health_endpoint_if_api_up():
     """Test /health si l'API tourne. Skip sinon."""
     import httpx
+
     try:
         r = httpx.get("http://localhost:8000/health", timeout=2)
         assert r.status_code == 200
@@ -27,9 +28,9 @@ def test_health_endpoint_if_api_up():
 def test_models_endpoint_if_api_up():
     """Test /api/v1/models si l'API tourne."""
     import httpx
+
     try:
-        r = httpx.get("http://localhost:8000/api/v1/models",
-                      headers={"X-API-Key": "test"}, timeout=2)
+        r = httpx.get("http://localhost:8000/api/v1/models", headers={"X-API-Key": "test"}, timeout=2)
         # 200 OK ou 401 (no API key) — les deux prouvent que l'endpoint existe
         assert r.status_code in (200, 401)
     except Exception:
@@ -39,6 +40,7 @@ def test_models_endpoint_if_api_up():
 def test_streamlit_homepage_if_up():
     """Test page d'accueil Streamlit si elle tourne."""
     import httpx
+
     try:
         r = httpx.get("http://localhost:8501/", timeout=2)
         assert r.status_code == 200

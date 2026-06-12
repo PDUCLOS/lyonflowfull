@@ -1,13 +1,13 @@
 """Widget — Selecteur de ligne(s) TCL.
 
-Sprint 8 — Lignes chargées via data_loader.load_tcl_lines().
+Sprint 8 — Lignes chargées via data_loader.cached_tcl_lines().
 """
 
 from __future__ import annotations
 
 import streamlit as st
 
-from src.data.data_loader import load_tcl_lines
+from dashboard.components.data_cache import cached_tcl_lines
 
 
 def render_line_selector(multiselect: bool = True, key_suffix: str = "") -> list:
@@ -20,7 +20,7 @@ def render_line_selector(multiselect: bool = True, key_suffix: str = "") -> list
     Returns:
         Liste des line_id sélectionnés.
     """
-    tcl_lines = load_tcl_lines(force_mock=False)
+    tcl_lines = cached_tcl_lines(force_mock=False)
     options = [(line["id"], f"{line['icon']} {line['name']}") for line in tcl_lines]
 
     if multiselect:

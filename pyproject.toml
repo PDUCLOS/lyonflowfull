@@ -55,6 +55,11 @@ extend-exclude = [
     "dist",
     ".eggs",
     "*.egg-info",
+    # Non-Python files (Makefile, nginx, shell scripts, systemd units)
+    "Makefile",
+    "nginx",
+    "scripts/systemd",
+    "scripts/*.sh",
 ]
 
 [tool.ruff.lint]
@@ -82,6 +87,11 @@ ignore = [
     "N806",  # X_train, Y_train (math convention sklearn)
     "N803",  # X, Y en arg (math convention)
 ]
+"dags/legacy_github/*" = [
+    # Legacy DAG conservé pour compat ingestion historique. Pas refacto
+    # actif. Ignore les warnings de style non-bloquants.
+    "B905", "E712", "UP038", "F841",
+]
 "dashboard/components/widgets/*" = [
     "RUF001", "RUF002", "RUF003",  # emojis docstrings (intentional)
     "B905",  # zip without strict (Streamlit patterns)
@@ -89,11 +99,34 @@ ignore = [
     "F841",  # variables assignées non utilisées (souvent: current/target affichés par effet de bord)
     "C408",  # dict() vs {} (Plotly patterns)
 ]
+"dashboard/pages/*" = [
+    "N999",  # PascalCase filenames required by Streamlit multi-page routing
+    "RUF001", "RUF002", "RUF003",  # emojis UI (intentional: ×, ℹ, ➕)
+    "B905",  # zip without strict (Streamlit patterns)
+    "F841",  # variables affichées par effet de bord Streamlit
+]
+"dashboard/components/*.py" = [
+    "RUF001", "RUF002", "RUF003",  # emojis UI (intentional)
+    "B905",  # zip without strict
+    "F821",  # CSS dans string (theme.py), faux positif ruff
+    "F841",  # variables affichées par effet de bord
+    "UP017",  # datetime.UTC vs timezone.utc (cohérence avec Python 3.11+)
+]
+"dashboard/Accueil.py" = [
+    "N999",  # Streamlit convention — home page is Accueil.py (PascalCase)
+]
+"dashboard/A_Propos.py" = [
+    "N999",  # Streamlit convention — public info pages use PascalCase
+]
+"dashboard/9_RGPD_Conformite.py" = [
+    "N999",  # Streamlit convention — RGPD page
+]
 # Sprint 6/7 — conventions ML : X_train/Y_train, emojis UI, accents FR
 "src/data/db_query.py" = ["N806", "RUF001", "RUF002", "RUF003"]
 "src/data/data_loader.py" = ["N806", "RUF001", "RUF002", "RUF003"]
 "src/data/mock/*.py" = ["RUF001", "RUF002", "RUF003"]
 "src/models/stgcn_wrapper.py" = ["N806"]
+"src/ingestion/trafic_grandlyon.py" = ["RUF002"]  # × dans docstring (format rapport)
 "training/**/*.py" = [
     "N806",  # X_train/Y_train (math convention)
     "N803",  # X, Y, dt en arg (math convention)
@@ -140,6 +173,9 @@ addopts = [
     "--strict-config",
     "--showlocals",
     "--tb=short",
+    "-m",
+    "not integration",
+    "--ignore=tests/e2e",
 ]
 markers = [
     "slow: marks tests as slow (deselect with '-m \"not slow\"')",
@@ -161,6 +197,7 @@ omit = [
     "*/__pycache__/*",
     "*/migrations/*",
     "src/data/mock/*",
+    "dags/legacy_github/*",  # DAG legacy non couvert par tests
 ]
 
 [tool.coverage.report]

@@ -335,7 +335,7 @@ def main(argv: list[str] | None = None) -> int:
     # Slack
     if args.slack_webhook:
         msg = (
-            f"✅ STGCN training terminé en {elapsed/60:.1f}min\n"
+            f"✅ STGCN training terminé en {elapsed / 60:.1f}min\n"
             f"Horizons: {', '.join(str(h) for h in args.horizons)}\n"
             f"Modèle dir: {args.model_dir}\n"
             f"MAE moyen: {sum(m.get('mae', 0) for m in results.values() if 'mae' in m) / max(1, len(results)):.4f}"

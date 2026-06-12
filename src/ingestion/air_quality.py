@@ -8,7 +8,7 @@ Variables : PM10, PM2.5, NO2, O3, etc.
 from __future__ import annotations
 
 import os
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from src.ingestion.base import CollectorError, DataCollector, FetchResult
 
@@ -44,7 +44,7 @@ class AirQualityOpenMeteo(DataCollector):
         n_records = self._count_records(data)
         return FetchResult(
             source=self.source,
-            fetched_at=datetime.now(timezone.utc),
+            fetched_at=datetime.now(UTC),
             raw_data=data,
             n_records=n_records,
             bytes_fetched=len(r.content),

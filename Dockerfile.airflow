@@ -1,0 +1,44 @@
+# =============================================================================
+# LyonFlowFull — Dockerfile Airflow (image dédiée DAGs)
+# =============================================================================
+# Image optimisée pour les services Airflow (init/webserver/scheduler/worker)
+# basée sur l'image officielle apache/airflow:2.9.3-python3.12.
+#
+# Gain vs Dockerfile général :
+#   - Airflow pré-installé (pas de pip install apache-airflow → évite 1+ GB)
+#   - Pas de build-essential / libgdal-dev (1 GB d'apt)
+#   - Pas de torch / geopandas lourd
+#   - COPY minimal (dags, src, config) au lieu de tout le repo
+#
+# Tailles observées :
+#   - Dockerfile général (FROM python:3.12-slim) : ~14-19 GB ⚠️
+#   - Dockerfile.airflow (ce fichier)              : ~2-3 GB ✅
+#
+# IMPORTANT : l'image apache/airflow exige que pip soit exécuté en user
+# airflow (UID 50000) et REFUSE --user. On installe en USER airflow,
+# pip install direct dans le venv interne (méthode officielle Apache).
+# =============================================================================
+
+FROM apache/airflow:2.9.3-python3.12
+
+# Etape 1 — apt (nécessaire root pour libpq-dev/gcc)
+USER root
+RUN apt-get update && apt-get install -y --no-install-recommends \
+        gcc \
+        libpq-dev \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/*
+
+# Etape 2 — pip install en USER airflow (méthode officielle Apache)
+# Pas de --user, pas de PIP_USER : le pip est exécuté dans le venv de l'image.
+USER airflow
+COPY --chown=airflow:root requirements-airflow.txt /tmp/requirements-airflow.txt
+RUN pip install --no-cache-dir -r /tmp/requirements-airflow.txt \
+    && rm /tmp/requirements-airflow.txt
+
+# Etape 3 — code source minimal (dags, src, config)
+COPY --chown=airflow:root dags/ ${AIRFLOW_HOME}/dags/
+COPY --chown=airflow:root src/ ${AIRFLOW_HOME}/src/
+COPY --chown=airflow:root config/ ${AIRFLOW_HOME}/config/
+
+WORKDIR ${AIRFLOW_HOME}

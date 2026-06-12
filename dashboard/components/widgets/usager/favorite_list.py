@@ -16,16 +16,18 @@ def render_favorite_list(favorites: list) -> None:
         return
 
     for fav in favorites:
-        render_recurrent_trip_card(fav, expanded=False)
+        render_recurrent_trip_card(fav, expanded=False, key_prefix="")
 
 
-def render_recurrent_trip_card(fav: dict, expanded: bool = True) -> None:
+def render_recurrent_trip_card(fav: dict, expanded: bool = True, key_prefix: str = "") -> None:
     """Affiche une carte trajet récurrent avec prédiction.
 
     Args:
         fav: dict {id, name, origin, destination, usual_mode, usual_duration_min,
                    next_departure, alert_subscribed}
         expanded: True pour afficher les détails inline.
+        key_prefix: préfixe pour les clés Streamlit (évite les duplicate keys
+                    quand on render la même carte dans des contextes différents).
     """
     name = fav.get("name", "—")
     origin = fav.get("origin", "—")
@@ -34,6 +36,9 @@ def render_recurrent_trip_card(fav: dict, expanded: bool = True) -> None:
     duration = fav.get("usual_duration_min", 0)
     next_dep = fav.get("next_departure", "—")
     alert_on = fav.get("alert_subscribed", False)
+    # Compose la key unique : key_prefix + id (fallback name pour mock sans id)
+    fav_uid = fav.get("id") or fav.get("name", "unknown")
+    button_key = f"{key_prefix}fav_view_{fav_uid}"
 
     with st.container():
         st.markdown(
@@ -62,7 +67,7 @@ def render_recurrent_trip_card(fav: dict, expanded: bool = True) -> None:
         with c2:
             st.caption(f"{'🔔 Alertes activées' if alert_on else '🔕 Alertes désactivées'}")
         with c3:
-            if st.button("Voir", key=f"fav_view_{fav.get('id', '')}"):
+            if st.button("Voir", key=button_key):
                 st.info(f"Détails trajet {name}")
 
         if expanded:

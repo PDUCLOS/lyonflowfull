@@ -9,15 +9,10 @@ Implemente :
 from __future__ import annotations
 
 import hashlib
-import hmac  # constant-time comparison
 import logging
-import os
-from datetime import datetime, timezone
-from typing import Optional
+from datetime import UTC, datetime
 
-from src.config import get_settings
-from src.db import execute_query, execute_scalar
-
+from src.db import execute_query
 
 logger = logging.getLogger(__name__)
 
@@ -32,11 +27,11 @@ def _hash(value: str) -> str:
 def log_audit(
     actor: str,
     action: str,
-    resource_type: Optional[str] = None,
-    resource_id: Optional[str] = None,
-    ip_address: Optional[str] = None,
-    user_agent: Optional[str] = None,
-    details: Optional[dict] = None,
+    resource_type: str | None = None,
+    resource_id: str | None = None,
+    ip_address: str | None = None,
+    user_agent: str | None = None,
+    details: dict | None = None,
 ) -> None:
     """Enregistre une action dans le log d'audit.
 
@@ -50,6 +45,7 @@ def log_audit(
         details: dict de détails complémentaires (sera JSON-sérialisé).
     """
     import json
+
     query = """
         INSERT INTO rgpd.audit_log
             (event_time, actor, action, resource_type, resource_id,
@@ -57,16 +53,19 @@ def log_audit(
         VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
     """
     try:
-        execute_query(query, (
-            datetime.now(timezone.utc),
-            actor[:64],  # truncate
-            action[:64],
-            resource_type,
-            resource_id,
-            _hash(ip_address) if ip_address else None,  # hash IP
-            _hash(user_agent) if user_agent else None,   # hash UA
-            json.dumps(details, default=str) if details else None,
-        ))
+        execute_query(
+            query,
+            (
+                datetime.now(UTC),
+                actor[:64],  # truncate
+                action[:64],
+                resource_type,
+                resource_id,
+                _hash(ip_address) if ip_address else None,  # hash IP
+                _hash(user_agent) if user_agent else None,  # hash UA
+                json.dumps(details, default=str) if details else None,
+            ),
+        )
     except Exception as e:
         # Ne pas faire échouer l'action principale si l'audit log échoue
         logger.warning(f"Audit log failed: {e}")
@@ -75,7 +74,7 @@ def log_audit(
 def log_data_subject_request(
     user_identifier: str,
     request_type: str,
-    notes: Optional[str] = None,
+    notes: str | None = None,
 ) -> str:
     """Enregistre une demande RGPD (accès, suppression, portabilité, rectification).
 
@@ -88,6 +87,7 @@ def log_data_subject_request(
         request_id (UUID string).
     """
     import uuid
+
     request_id = str(uuid.uuid4())
     query = """
         INSERT INTO rgpd.data_subject_requests
@@ -95,10 +95,16 @@ def log_data_subject_request(
         VALUES (%s, %s, %s, 'pending', %s, %s)
     """
     try:
-        execute_query(query, (
-            request_id, _hash(user_identifier), request_type,
-            datetime.now(timezone.utc), notes,
-        ))
+        execute_query(
+            query,
+            (
+                request_id,
+                _hash(user_identifier),
+                request_type,
+                datetime.now(UTC),
+                notes,
+            ),
+        )
         logger.info(f"RGPD request {request_id} recorded: {request_type}")
     except Exception as e:
         logger.error(f"RGPD request failed: {e}")
@@ -115,10 +121,10 @@ def purge_old_audit_logs(days: int = 365) -> int:
         WHERE event_time < NOW() - make_interval(days => %s)
     """
     from src.db import raw_connection
-    with raw_connection() as conn:
-        with conn.cursor() as cur:
-            cur.execute(query, (days,))
-            return cur.rowcount
+
+    with raw_connection() as conn, conn.cursor() as cur:
+        cur.execute(query, (days,))
+        return cur.rowcount
 
 
 def get_user_consent(user_identifier: str) -> dict:
@@ -137,23 +143,28 @@ def set_user_consent(
     user_identifier: str,
     consent_type: str,
     granted: bool,
-    expires_at: Optional[datetime] = None,
-    ip_address: Optional[str] = None,
-    user_agent: Optional[str] = None,
+    expires_at: datetime | None = None,
+    ip_address: str | None = None,
+    user_agent: str | None = None,
 ) -> None:
     """Enregistre le consentement (ou refus) d'un utilisateur."""
-    import json
     query = """
         INSERT INTO rgpd.user_consents
             (user_identifier, consent_type, granted, expires_at,
              ip_hash, user_agent_hash)
         VALUES (%s, %s, %s, %s, %s, %s)
     """
-    execute_query(query, (
-        _hash(user_identifier), consent_type, granted, expires_at,
-        _hash(ip_address) if ip_address else None,
-        _hash(user_agent) if user_agent else None,
-    ))
+    execute_query(
+        query,
+        (
+            _hash(user_identifier),
+            consent_type,
+            granted,
+            expires_at,
+            _hash(ip_address) if ip_address else None,
+            _hash(user_agent) if user_agent else None,
+        ),
+    )
     log_audit(
         actor=user_identifier[:8],
         action=f"consent_{'granted' if granted else 'revoked'}",

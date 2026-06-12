@@ -10,7 +10,7 @@ sys.path.insert(0, str(WORKSPACE))
 
 
 def test_mock_data_pro_tcl_imports():
-    from src.data.mock import pro_tcl  # noqa: F401
+    from tests.fixtures.mock_data import pro_tcl
 
     assert hasattr(pro_tcl, "TCL_LINES_PRO")
     assert hasattr(pro_tcl, "SEGMENTS")
@@ -24,13 +24,13 @@ def test_mock_data_pro_tcl_imports():
 
 
 def test_tcl_lines_pro_count():
-    from src.data.mock.pro_tcl import TCL_LINES_PRO
+    from tests.fixtures.mock_data.pro_tcl import TCL_LINES_PRO
 
     assert len(TCL_LINES_PRO) >= 10, f"Attendu ≥ 10 lignes, trouvé {len(TCL_LINES_PRO)}"
 
 
 def test_segments_have_classification():
-    from src.data.mock.pro_tcl import SEGMENTS
+    from tests.fixtures.mock_data.pro_tcl import SEGMENTS
 
     assert len(SEGMENTS) >= 25  # 5 lignes × 5 segments (C3, C13, T1, T3, M_A)
     for s in SEGMENTS:
@@ -45,7 +45,7 @@ def test_segments_have_classification():
 
 
 def test_otp_grid_lyon_lines():
-    from src.data.mock.pro_tcl import LINE_BASE_OTP, OTP_GRID
+    from tests.fixtures.mock_data.pro_tcl import LINE_BASE_OTP, OTP_GRID
 
     assert len(OTP_GRID) >= 10
     for line_id, base in LINE_BASE_OTP.items():
@@ -62,16 +62,15 @@ def test_otp_grid_lyon_lines():
 
 
 def test_line_kpis_have_all_fields():
-    from src.data.mock.pro_tcl import LINE_KPIS
+    from tests.fixtures.mock_data.pro_tcl import LINE_KPIS
 
     for line_id, k in LINE_KPIS.items():
-        for field in ("otp_pct", "avg_delay_min", "frequency_min", "load_pct",
-                      "trend", "trend_delta"):
+        for field in ("otp_pct", "avg_delay_min", "frequency_min", "load_pct", "trend", "trend_delta"):
             assert field in k, f"{line_id} manque {field}"
 
 
 def test_widget_modules_pro_tcl_importable():
-    from dashboard.components.widgets import pro_tcl  # noqa: F401
+    from dashboard.components.widgets import pro_tcl
 
     # Vérifier que les fonctions principales sont exposées
     assert hasattr(pro_tcl, "render_network_map")

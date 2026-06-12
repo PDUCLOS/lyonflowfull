@@ -1,13 +1,14 @@
 """Widget — Courbe d'évolution sur 12 mois (Plotly).
 
-Sprint 8 — KPIs via data_loader.load_elu_kpis_dict().
+Sprint 8 — KPIs via data_loader.cached_elu_kpis_dict().
 """
 
 from __future__ import annotations
 
 import streamlit as st
 
-from src.data.data_loader import load_elu_kpis_dict
+from dashboard.components.colors import COLORS
+from dashboard.components.data_cache import cached_elu_kpis_dict
 
 
 def render_trend_chart(kpi_key: str = "part_modale_tc") -> None:
@@ -16,7 +17,7 @@ def render_trend_chart(kpi_key: str = "part_modale_tc") -> None:
     Args:
         kpi_key: clé du KPI dans KPI_12_MONTHS.
     """
-    kpis = load_elu_kpis_dict(force_mock=False)
+    kpis = cached_elu_kpis_dict(force_mock=False)
     kpi = kpis.get(kpi_key)
     if not kpi:
         st.warning(f"KPI '{kpi_key}' inconnu.")
@@ -32,8 +33,18 @@ def render_trend_chart(kpi_key: str = "part_modale_tc") -> None:
     unit = kpi.get("unit", "")
 
     months = [
-        "Juil", "Août", "Sept", "Oct", "Nov", "Déc",
-        "Jan", "Fév", "Mar", "Avr", "Mai", "Juin",
+        "Juil",
+        "Août",
+        "Sept",
+        "Oct",
+        "Nov",
+        "Déc",
+        "Jan",
+        "Fév",
+        "Mar",
+        "Avr",
+        "Mai",
+        "Juin",
     ]
 
     try:
@@ -42,20 +53,23 @@ def render_trend_chart(kpi_key: str = "part_modale_tc") -> None:
         fig = go.Figure()
 
         # Courbe historique
-        fig.add_trace(go.Scatter(
-            x=months, y=history,
-            mode="lines+markers",
-            name=kpi.get("label", ""),
-            line={"color": "#5C6BC0", "width": 3},
-            marker={"size": 8},
-        ))
+        fig.add_trace(
+            go.Scatter(
+                x=months,
+                y=history,
+                mode="lines+markers",
+                name=kpi.get("label", ""),
+                line={"color": COLORS["persona_elu_accent"], "width": 3},
+                marker={"size": 8},
+            )
+        )
 
         # Ligne target
         if target:
             fig.add_hline(
                 y=target,
                 line_dash="dash",
-                line_color="#4CAF50",
+                line_color=COLORS["status_ok"],
                 annotation_text=f"Cible 2026: {target}{unit}",
             )
 

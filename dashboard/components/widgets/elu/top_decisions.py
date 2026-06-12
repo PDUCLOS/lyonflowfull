@@ -1,13 +1,13 @@
 """Widget — Top décisions à arbitrer ce trimestre.
 
-Sprint 8 — Bottlenecks via data_loader.load_bottlenecks_top().
+Sprint 8 — Bottlenecks via data_loader.cached_bottlenecks_top().
 """
 
 from __future__ import annotations
 
 import streamlit as st
 
-from src.data.data_loader import load_bottlenecks_top
+from dashboard.components.data_cache import cached_bottlenecks_top
 
 
 def render_top_decisions(n: int = 5) -> None:
@@ -18,7 +18,7 @@ def render_top_decisions(n: int = 5) -> None:
     """
     st.markdown(f"##### 🎯 Top {n} décisions à arbitrer")
 
-    bottlenecks = load_bottlenecks_top(force_mock=False)
+    bottlenecks = cached_bottlenecks_top(force_mock=False)
     for i, b in enumerate(bottlenecks[:n], 1):
         zone = b.get("zone", "—")
         lignes = ", ".join(b.get("lines_impacted", []))
@@ -32,7 +32,7 @@ def render_top_decisions(n: int = 5) -> None:
             f"""
             <div class="lyonflow-card" style="margin:0.5rem 0;">
                 <div style="display:flex;align-items:start;gap:1rem;">
-                    <div style="background:#3F51B5;color:white;width:32px;height:32px;
+                    <div style="background:var(--persona-elu);color:white;width:32px;height:32px;
                                 border-radius:50%;display:flex;align-items:center;
                                 justify-content:center;font-weight:700;flex-shrink:0;">
                         {i}
@@ -43,14 +43,14 @@ def render_top_decisions(n: int = 5) -> None:
                             Lignes : {lignes} · {voyageurs:,} voyageurs/jour
                         </div>
                         <div style="font-size:0.9rem;margin-top:0.4rem;">
-                            💡 <b>{b.get('description', '—')}</b>
+                            💡 <b>{b.get("description", "—")}</b>
                         </div>
                         <div style="display:flex;gap:1.2rem;margin-top:0.5rem;
                                     font-size:0.85rem;">
                             <span>⏱ <b>{gain} min</b> gagnées</span>
                             <span>💰 <b>{cout} M€</b></span>
                             <span>📅 <b>{delai} mois</b> travaux</span>
-                            <span style="color:#4CAF50;">📈 ROI <b>{int(roi)} mois</b></span>
+                            <span style="color:var(--status-ok);">📈 ROI <b>{int(roi)} mois</b></span>
                         </div>
                     </div>
                 </div>

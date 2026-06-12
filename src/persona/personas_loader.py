@@ -10,13 +10,11 @@ vit dans manager.py et auth.py.
 
 from __future__ import annotations
 
-import os
 from functools import lru_cache
 from pathlib import Path
 from typing import Any
 
 import yaml
-
 
 _CONFIG_PATH = Path(__file__).resolve().parents[2] / "config" / "personas.yaml"
 
@@ -35,17 +33,14 @@ def load_personas_config() -> dict[str, Any]:
     """
     if not _CONFIG_PATH.exists():
         raise FileNotFoundError(
-            f"personas.yaml introuvable à {_CONFIG_PATH}. "
-            f"Crée config/personas.yaml avant de lancer le dashboard."
+            f"personas.yaml introuvable à {_CONFIG_PATH}. Crée config/personas.yaml avant de lancer le dashboard."
         )
 
     with _CONFIG_PATH.open("r", encoding="utf-8") as f:
         config = yaml.safe_load(f)
 
     if not config or "personas" not in config:
-        raise ValueError(
-            "personas.yaml mal formé : clé 'personas' manquante ou fichier vide."
-        )
+        raise ValueError("personas.yaml mal formé : clé 'personas' manquante ou fichier vide.")
 
     return config
 
@@ -65,9 +60,7 @@ def get_persona_config(persona_id: str) -> dict[str, Any]:
     config = load_personas_config()
     if persona_id not in config["personas"]:
         available = ", ".join(config["personas"].keys())
-        raise KeyError(
-            f"Persona '{persona_id}' inconnu. Disponibles : {available}"
-        )
+        raise KeyError(f"Persona '{persona_id}' inconnu. Disponibles : {available}")
     return config["personas"][persona_id]
 
 

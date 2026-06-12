@@ -5,8 +5,7 @@ from __future__ import annotations
 import streamlit as st
 
 
-def render_export_button(label: str = "📤 Exporter", key_suffix: str = "default",
-                        export_format: str = "excel") -> None:
+def render_export_button(label: str = "📤 Exporter", key_suffix: str = "default", export_format: str = "excel") -> None:
     """Affiche un bouton d'export générique.
 
     Args:
@@ -18,8 +17,7 @@ def render_export_button(label: str = "📤 Exporter", key_suffix: str = "defaul
         st.info(f"🚧 Export {export_format.upper()} — à brancher sur les données réelles.")
 
 
-def render_excel_export_button(df, filename: str = "export.xlsx",
-                                key_suffix: str = "default") -> None:
+def render_excel_export_button(df, filename: str = "export.xlsx", key_suffix: str = "default") -> None:
     """Bouton d'export Excel à partir d'un DataFrame.
 
     Args:

@@ -1,19 +1,19 @@
 """Data Governance — dictionnaire, lineage, PII audit."""
 
 from src.governance.data_dictionary import (
-    register_data_dictionary_entry,
-    register_lineage,
+    auto_register_schema,
+    export_table_schema_documentation,
     get_lineage_for_table,
     get_pii_columns,
-    export_table_schema_documentation,
-    auto_register_schema,
+    register_data_dictionary_entry,
+    register_lineage,
 )
 
 __all__ = [
-    "register_data_dictionary_entry",
-    "register_lineage",
+    "auto_register_schema",
+    "export_table_schema_documentation",
     "get_lineage_for_table",
     "get_pii_columns",
-    "export_table_schema_documentation",
-    "auto_register_schema",
+    "register_data_dictionary_entry",
+    "register_lineage",
 ]

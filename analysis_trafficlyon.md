@@ -63,7 +63,11 @@ Transformation: psycopg2 pur (pas Polars — container Airflow n'a pas Polars). 
 
 ## 3. Modèles ML
 
-### XGBoost Live Speed (4 horizons) — ACTIF
+### XGBoost Live Speed (focus H+1h) — ACTIF
+
+> **Mise à jour 2026-06-11 (Sprint VPS-6)** : focus H+1h stable uniquement.
+> Avant : 4 horizons (5/60/180/360 min). Maintenant : 1 horizon (60 min).
+> Schedule :20 hourly → `*/30 * * * *`.
 
 Source: gold.traffic_features_live. 23 features. Retrain horaire à :20.
 
@@ -103,7 +107,7 @@ Bayesian structural time series. Compare XGBoost MAE vs Orbit sMAPE pour H+1h et
 | collect_chantiers_daily | 0 6 * * * | Chantiers Grand Lyon |
 | dag_transform_bronze_to_silver | */5 * * * * | 4 transforms parallèles (boucles, velov, meteo, tcl) |
 | dag_transform_silver_to_gold | 15,30,45,55 * * * * | 2 parallèles (traffic, velov). **PAUSED sur VPS** |
-| dag_live_speed_retrain | 20 * * * * | Retrain 4 XGBoost speed + store predictions |
+| dag_live_speed_retrain | */30 * * * * | Retrain XGBoost H+1h + store predictions (Sprint VPS-6 : focus H+1h) |
 | dag_live_orbit_retrain | 20 * * * * | XGBoost vs Orbit comparison + winner |
 | dag_velov_availability_retrain | 40 * * * * | Retrain 3 Vélo'v models (30min timeout, 9GB) |
 | dag_data_quality_daily | 15 4 * * * | 6 checks: freshness, volume, NULLs, doublons, prédictions |

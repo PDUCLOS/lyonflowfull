@@ -6,14 +6,14 @@ Streamlit. Toutes les fonctions:
 
 * Utilisent du SQL paramétré (psycopg2 %s, JAMAIS de f-string)
 * Retournent des `pandas.DataFrame` (pratique pour Streamlit/Plotly)
-* Ont un fallback gracieux vers `src.data.mock` si la DB est down
+* Levent ``DashboardDataError`` si la DB est down (politique zero mock Sprint 8)
 * Sont testables hors ligne (les tests monkeypatchent ``_is_db_available``)
 
 Pattern d'utilisation dans un widget::
 
-    from src.data.db_query import get_latest_traffic, get_traffic_aggregates
+    from src.data.db_query import get_latest_traffic
 
-    df = get_latest_traffic(limit=50)  # DataFrame ou mock fallback
+    df = get_latest_traffic(limit=50)  # DataFrame ou DashboardDataError
     st.dataframe(df)
 
 Pour les widgets, voir le pattern dans ``dashboard/components/widgets/usager/traffic_widget.py``.
@@ -48,7 +48,7 @@ def _is_db_available() -> bool:
         _db_available_cache = test_connection()
         if not _db_available_cache:
             logger.warning(
-                "DB non disponible — les widgets basculeront sur les données mock. "
+                "DB non disponible — les widgets afficheront une erreur. "
                 "Vérifiez POSTGRES_HOST/POSTGRES_PORT/POSTGRES_PASSWORD dans .env"
             )
     return _db_available_cache
@@ -97,26 +97,25 @@ def get_latest_traffic(limit: int = 100) -> pd.DataFrame:
         DataFrame avec colonnes: measurement_time, node_idx, channel_id,
         speed_kmh, importance_code. Vide si DB down (mock fallback).
     """
+    # Schema réel : gold.traffic_features_live = computed_at, channel_id, speed_kmh
+    # (pas de node_idx ni importance_code dans la table effective)
     query = """
-        SELECT measurement_time, node_idx, channel_id, speed_kmh, importance_code
+        SELECT computed_at AS measurement_time, channel_id, speed_kmh,
+               vitesse_limite_kmh, lag_1, lag_2, lag_3,
+               hour_of_day, day_of_week
         FROM gold.traffic_features_live
-        ORDER BY measurement_time DESC
+        WHERE computed_at >= NOW() - INTERVAL '2 hours'
+        ORDER BY computed_at DESC
         LIMIT %s
     """
     df = _df_from_query(query, (limit,))
-    if df.empty and not _is_db_available():
-        from src.data.mock.usager import MOCK_TRAFFIC_FEATURES
-
-        return pd.DataFrame(MOCK_TRAFFIC_FEATURES[:limit])
+    return df
     return df
 
 
 def get_traffic_timeseries_for_node(node_idx: int, hours: int = 24) -> pd.DataFrame:
-    """Time series trafic pour un nœud (mock fallback)."""
-    # Pas de query SQL ici — c'est un alias utilisé par les widgets démo.
-    from src.data.mock.usager import MOCK_TRAFFIC_TIMESERIES
-
-    return pd.DataFrame(MOCK_TRAFFIC_TIMESERIES)
+    """Sprint 8 — viré le mock fallback. Stub : à implémenter Sprint 9."""
+    return pd.DataFrame()
 
 
 def get_traffic_for_node(node_idx: int, hours: int = 24) -> pd.DataFrame:
@@ -147,49 +146,79 @@ def get_traffic_predictions(horizon_minutes: int = 60, limit: int = 200) -> pd.D
 
     Args:
         horizon_minutes: Horizon de prédiction en minutes (5/15/30/60/180/360).
+            Mappé vers horizon_h en DB : 5min→0, 30min→0, 60min→1, 180min→3, 360min→6.
         limit: Nombre max de lignes.
 
     Returns:
-        DataFrame: prediction_timestamp, target_timestamp, node_idx, model_name,
-        model_version, predicted_speed, confidence_low, confidence_high, actual_speed.
+        DataFrame avec colonnes nouveau schéma (v0.3.1) ::
+            axis_key, horizon_h, calculated_at, speed_pred, etat_pred,
+            color, vitesse_limite_kmh, label, model_version, lat, lon.
+        Pour rétro-compat, expose aussi ``predicted_speed`` (= speed_pred)
+        et ``prediction_timestamp`` (= calculated_at).
     """
+    # Mapping horizon_minutes -> horizon_h
+    # Le schéma gold stocke en heures : 0=H+5min, 1=H+1h, 3=H+3h, 6=H+6h
+    horizon_h = _minutes_to_hours(horizon_minutes)
+    if horizon_h is None:
+        logger.warning("horizon_minutes=%s non mappable vers horizon_h", horizon_minutes)
+        return pd.DataFrame()
+
     query = """
-        SELECT prediction_timestamp, target_timestamp, horizon_minutes,
-               node_idx, model_name, model_version, predicted_speed,
-               confidence_low, confidence_high, actual_speed
+        SELECT axis_key, horizon_h, calculated_at, speed_pred, etat_pred,
+               color, vitesse_limite_kmh, label, model_version, lat, lon
         FROM gold.trafic_predictions
-        WHERE horizon_minutes = %s
-        ORDER BY prediction_timestamp DESC
+        WHERE horizon_h = %s
+          AND calculated_at >= NOW() - INTERVAL '2 hours'
+        ORDER BY calculated_at DESC
         LIMIT %s
     """
-    return _df_from_query(query, (horizon_minutes, limit))
+    df = _df_from_query(query, (horizon_h, limit))
+    if df.empty:
+        return df
+    # Colonnes rétro-compat pour les anciens callers
+    df["prediction_timestamp"] = df["calculated_at"]
+    df["predicted_speed"] = df["speed_pred"]
+    return df
+
+
+def _minutes_to_hours(horizon_minutes: int) -> int | None:
+    """Convertit un horizon en minutes vers l'unité heures du schéma gold.
+
+    Mapping convention (cf init-db.sql ligne 1244) ::
+        5min  -> 0  (H+5min)
+        30min -> 0  (H+30min — vu dans la même fenêtre que H+5min pour 1h-granularité)
+        60min -> 1
+        180min -> 3
+        360min -> 6
+    """
+    mapping = {5: 0, 15: 0, 30: 0, 60: 1, 180: 3, 360: 6}
+    return mapping.get(horizon_minutes)
 
 
 def get_traffic_bottlenecks(top: int = 20) -> pd.DataFrame:
-    """Top N nœuds avec la vitesse médiane la plus basse sur 1h.
+    """Top N axes avec la vitesse médiane la plus basse sur 1h.
 
-    Args:
-        top: Nombre de nœuds à retourner (défaut 20).
+    Sprint VPS-5 — v0.3.1 schema : ``gold.traffic_features_live`` n'a plus
+    ``node_idx`` ni ``measurement_time``. La clé d'agrégation est ``channel_id``
+    et la colonne temps est ``computed_at``.
 
     Returns:
-        DataFrame: node_idx, channel_id, avg_speed, min_speed, observations.
+        DataFrame: channel_id, avg_speed, min_speed, observations.
     """
     query = """
-        SELECT node_idx, channel_id,
+        SELECT channel_id,
                AVG(speed_kmh) AS avg_speed,
                MIN(speed_kmh) AS min_speed,
                COUNT(*) AS observations
         FROM gold.traffic_features_live
-        WHERE measurement_time >= NOW() - INTERVAL '1 hour'
-        GROUP BY node_idx, channel_id
+        WHERE computed_at >= NOW() - INTERVAL '1 hour'
+          AND speed_kmh IS NOT NULL
+        GROUP BY channel_id
         ORDER BY avg_speed ASC
         LIMIT %s
     """
     df = _df_from_query(query, (top,))
-    if df.empty and not _is_db_available():
-        from src.data.mock.usager import MOCK_TRAFFIC_BOTTLENECKS
-
-        return pd.DataFrame(MOCK_TRAFFIC_BOTTLENECKS[:top])
+    return df
     return df
 
 
@@ -208,10 +237,7 @@ def get_predictions_vs_actuals(limit: int = 1000) -> pd.DataFrame:
         LIMIT %s
     """
     df = _df_from_query(query, (limit,))
-    if df.empty and not _is_db_available():
-        from src.data.mock.usager import MOCK_PREDICTIONS_VS_ACTUALS
-
-        return pd.DataFrame(MOCK_PREDICTIONS_VS_ACTUALS[:limit])
+    return df
     return df
 
 
@@ -227,19 +253,20 @@ def get_velov_stations_geo() -> pd.DataFrame:
         DataFrame: station_id, station_name, bikes_available, docks_available,
         lat, lng, is_operational.
     """
+    # Schema réel silver.velov_clean : num_bikes_available, num_docks_available, lat, lon, is_active
     query = """
-        SELECT station_id, station_name, bikes_available, docks_available,
-               ST_Y(geom_wgs84) AS lat, ST_X(geom_wgs84) AS lng,
-               is_operational
+        SELECT DISTINCT ON (station_id)
+               station_id, station_name,
+               num_bikes_available AS bikes_available,
+               num_docks_available AS docks_available,
+               lat, lon AS lng,
+               is_active AS is_operational
         FROM silver.velov_clean
-        WHERE measurement_time >= NOW() - INTERVAL '15 minutes'
-        ORDER BY station_id
+        WHERE measurement_time >= NOW() - INTERVAL '30 minutes'
+        ORDER BY station_id, measurement_time DESC
     """
     df = _df_from_query(query)
-    if df.empty and not _is_db_available():
-        from src.data.mock.usager import MOCK_VELOV_STATIONS_GEO
-
-        return pd.DataFrame(MOCK_VELOV_STATIONS_GEO)
+    return df
     return df
 
 
@@ -254,20 +281,20 @@ def get_velov_predictions(horizon_minutes: int = 30, limit: int = 500) -> pd.Dat
         DataFrame: prediction_timestamp, target_timestamp, station_id,
         station_id_encoded, predicted_bikes, confidence_low, confidence_high.
     """
+    # Schema réel gold.velov_predictions : pas de station_id_encoded ni confidence_low/high.
+    # Colonnes : prediction_timestamp, target_timestamp, horizon_minutes, station_id,
+    # predicted_bikes, actual_bikes, model_name, model_version
     query = """
         SELECT prediction_timestamp, target_timestamp, horizon_minutes,
-               station_id, station_id_encoded, predicted_bikes,
-               confidence_low, confidence_high
+               station_id, predicted_bikes, actual_bikes,
+               model_name, model_version
         FROM gold.velov_predictions
         WHERE horizon_minutes = %s
         ORDER BY prediction_timestamp DESC
         LIMIT %s
     """
     df = _df_from_query(query, (horizon_minutes, limit))
-    if df.empty and not _is_db_available():
-        from src.data.mock.usager import MOCK_TRAFIC_PREDICTIONS
-
-        return pd.DataFrame([p for p in MOCK_TRAFIC_PREDICTIONS if p["horizon_minutes"] == horizon_minutes][:limit])
+    # Sprint 8 — viré le fallback mock. Si DB répond vide, retourne df vide.
     return df
 
 
@@ -318,10 +345,7 @@ def get_bus_delay_segments(line_ref: str | None = None, days: int = 7) -> pd.Dat
         ORDER BY date DESC, hour DESC
     """
     df = _df_from_query(query, (days,))
-    if df.empty and not _is_db_available():
-        from src.data.mock.usager import MOCK_BUS_DELAYS
-
-        return pd.DataFrame(MOCK_BUS_DELAYS)
+    return df
     return df
 
 
@@ -329,23 +353,19 @@ def get_infrastructure_bottlenecks(top: int = 30) -> pd.DataFrame:
     """Bottlenecks infrastructure (croisement bus × trafic).
 
     Returns:
-        DataFrame: segment_id, line_refs, diagnosis, impact_score,
-        voyageurs_jour, geom.
+        DataFrame: segment_id, line_ref, diagnosis, bus_delay_seconds,
+        traffic_speed_kmh, traffic_congestion, lat, lng, n_observations.
     """
     query = """
-        SELECT bottleneck_id, segment_id, line_refs, diagnosis, impact_score,
-               voyageurs_jour,
-               ST_Y(ST_Centroid(geom_wgs84)) AS lat,
-               ST_X(ST_Centroid(geom_wgs84)) AS lng
+        SELECT id, segment_id, line_ref, diagnosis,
+               bus_delay_seconds, traffic_speed_kmh, traffic_congestion,
+               lat, lon AS lng, n_observations, computed_at
         FROM gold.infrastructure_bottlenecks
-        ORDER BY impact_score DESC
+        ORDER BY bus_delay_seconds DESC NULLS LAST
         LIMIT %s
     """
     df = _df_from_query(query, (top,))
-    if df.empty and not _is_db_available():
-        from src.data.mock.usager import MOCK_INFRA_BOTTLENECKS
-
-        return pd.DataFrame(MOCK_INFRA_BOTTLENECKS[:top])
+    return df
     return df
 
 
@@ -361,16 +381,13 @@ def get_spatial_mapping() -> pd.DataFrame:
         DataFrame: node_idx, channel_id, matrix_i, matrix_j, h3_id, lat, lng.
     """
     query = """
-        SELECT node_idx, channel_id, matrix_i, matrix_j, h3_id,
-               ST_Y(geom_wgs84) AS lat, ST_X(geom_wgs84) AS lng
+        SELECT node_idx, properties_twgid AS channel_id, matrix_i, matrix_j, h3_id,
+               lat, lon AS lng
         FROM gold.dim_spatial_grid_mapping
         ORDER BY node_idx
     """
     df = _df_from_query(query)
-    if df.empty and not _is_db_available():
-        from src.data.mock.usager import MOCK_SPATIAL_MAPPING
-
-        return pd.DataFrame(MOCK_SPATIAL_MAPPING)
+    return df
     return df
 
 
@@ -382,10 +399,7 @@ def get_gnn_adjacency() -> pd.DataFrame:
         WHERE is_connected = TRUE
     """
     df = _df_from_query(query)
-    if df.empty and not _is_db_available():
-        from src.data.mock.usager import MOCK_GNN_ADJACENCY
-
-        return pd.DataFrame(MOCK_GNN_ADJACENCY)
+    return df
     return df
 
 
@@ -409,10 +423,7 @@ def get_rgpd_audit_log(limit: int = 100) -> pd.DataFrame:
         LIMIT %s
     """
     df = _df_from_query(query, (limit,))
-    if df.empty and not _is_db_available():
-        from src.data.mock.usager import MOCK_RGPD_AUDIT
-
-        return pd.DataFrame(MOCK_RGPD_AUDIT[:limit])
+    return df
     return df
 
 
@@ -429,10 +440,7 @@ def get_rgpd_consents_summary() -> pd.DataFrame:
         ORDER BY consent_type
     """
     df = _df_from_query(query)
-    if df.empty and not _is_db_available():
-        from src.data.mock.usager import MOCK_RGPD_CONSENTS_SUMMARY
-
-        return pd.DataFrame(MOCK_RGPD_CONSENTS_SUMMARY)
+    return df
     return df
 
 
@@ -446,10 +454,7 @@ def get_rgpd_data_subject_requests(limit: int = 50) -> pd.DataFrame:
         LIMIT %s
     """
     df = _df_from_query(query, (limit,))
-    if df.empty and not _is_db_available():
-        from src.data.mock.usager import MOCK_RGPD_DSR
-
-        return pd.DataFrame(MOCK_RGPD_DSR[:limit])
+    return df
     return df
 
 
@@ -462,10 +467,7 @@ def get_rgpd_purge_history(limit: int = 50) -> pd.DataFrame:
         LIMIT %s
     """
     df = _df_from_query(query, (limit,))
-    if df.empty and not _is_db_available():
-        from src.data.mock.usager import MOCK_RGPD_PURGE
-
-        return pd.DataFrame(MOCK_RGPD_PURGE[:limit])
+    return df
     return df
 
 
@@ -506,7 +508,7 @@ def get_data_freshness(schema: str = "bronze", table: str = "trafic_boucles") ->
         logger.warning("Schema/table (%s.%s) not whitelisted in db_query", schema, table)
         return None
 
-    query = f"SELECT MAX(fetched_at) FROM {schema}.{table}"  # safe: identifiants whitelistés
+    query = f"SELECT MAX(fetched_at) FROM {schema}.{table}"  # nosec B608 (safe: identifiants whitelistés)
     try:
         result = execute_scalar(query)
         return pd.Timestamp(result) if result else None
@@ -529,21 +531,20 @@ def get_bronze_source_counts(hours: int = 1) -> pd.DataFrame:
         ("air_quality", "Open-Meteo air quality"),
         ("chantiers", "Grand Lyon chantiers"),
     ]
+    # Sprint 8 — viré le fallback mock. Si DB indispo, le caller doit catch.
     if not _is_db_available():
-        from src.data.mock.usager import MOCK_BRONZE_COUNTS
-
-        return pd.DataFrame(MOCK_BRONZE_COUNTS)
+        from src.data.exceptions import DashboardDataError
+        raise DashboardDataError(source="bronze_source_counts", detail="PostgreSQL indisponible")
 
     rows = []
     for table, label in sources:
         # Une requête par table (pas de UNION sur des tables hétérogènes)
         try:
             count = execute_scalar(
-                f"SELECT COUNT(*) FROM bronze.{table} "
-                f"WHERE fetched_at >= NOW() - make_interval(hours => %s)",
+                f"SELECT COUNT(*) FROM bronze.{table} WHERE fetched_at >= NOW() - make_interval(hours => %s)",  # nosec B608
                 (hours,),
             )
-            last = execute_scalar(f"SELECT MAX(fetched_at) FROM bronze.{table}")
+            last = execute_scalar(f"SELECT MAX(fetched_at) FROM bronze.{table}")  # nosec B608
             rows.append(
                 {
                     "source": label,
@@ -590,9 +591,9 @@ def get_weather_hourly(hours: int = 24) -> pd.DataFrame:
             measurement_time,
             temperature_c,
             rain_mm,
-            wind_kmh,
-            humidity_pct,
-            condition_label
+            wind_speed_10m AS wind_kmh,
+            humidity AS humidity_pct,
+            weather_code::text AS condition_label
         FROM silver.meteo_hourly
         WHERE measurement_time >= NOW() - make_interval(hours => %s)
         ORDER BY measurement_time DESC
@@ -609,15 +610,15 @@ def get_recent_alerts(hours: int = 24, limit: int = 50) -> pd.DataFrame:
     """
     query = """
         SELECT
-            alert_id,
-            alert_time,
-            severity,
-            line_ref,
-            title,
+            chantier_id AS alert_id,
+            COALESCE(date_debut::timestamp with time zone, fetched_at) AS alert_time,
+            'Warning' AS severity,
+            'Toutes' AS line_ref,
+            titre AS title,
             description,
-            action
-        FROM gold.v_recent_alerts
-        WHERE alert_time >= NOW() - make_interval(hours => %s)
+            'Déviation potentielle' AS action
+        FROM silver.chantiers_actifs
+        WHERE is_active = true
         ORDER BY alert_time DESC
         LIMIT %s
     """
@@ -658,15 +659,15 @@ def get_buses_positions(limit: int = 200) -> pd.DataFrame:
     """Positions temps réel des bus TCL."""
     query = """
         SELECT
-            vehicle_ref,
+            journey_ref AS vehicle_ref,
             line_ref,
-            ST_Y(geom_wgs84) AS lat,
-            ST_X(geom_wgs84) AS lng,
-            bearing,
+            lat,
+            lon AS lng,
+            0 AS bearing,
             delay_seconds,
-            recorded_at
+            measurement_time AS recorded_at
         FROM silver.tcl_vehicles_clean
-        WHERE recorded_at >= NOW() - INTERVAL '5 minutes'
+        WHERE measurement_time >= NOW() - INTERVAL '5 minutes'
         LIMIT %s
     """
     return _df_from_query(query, (limit,))
@@ -708,3 +709,478 @@ def get_amenagements_passes(limit: int = 50) -> pd.DataFrame:
     """
     return _df_from_query(query, (limit,))
 
+
+# =============================================================================
+# Référentiel lieux × transports × calendrier (Sprint VPS-6, 2026-06-11)
+# =============================================================================
+# Ces 3 tables sont créées par :
+#   scripts/sql/create_referentiel_lieux.sql
+#   scripts/sql/create_referentiel_transports.sql
+#   scripts/sql/create_lieux_calendrier.sql
+# Le seed des cadences est fait par scripts/seed_lieux_calendrier.py.
+# =============================================================================
+
+
+def get_lieux_lyon_names(active_only: bool = True) -> list[str]:
+    """Liste des noms de lieux Lyon (pour autocomplete).
+
+    Returns:
+        Liste de strings ``['Part-Dieu, Lyon', 'Perrache, Lyon', ...]``.
+    """
+    where = "WHERE is_active = TRUE" if active_only else ""
+    rows = execute_query(
+        f"SELECT name FROM referentiel.lieux_lyon {where} ORDER BY name"
+    )
+    return [r["name"] for r in rows]
+
+
+def get_lieux_lyon_with_coords(active_only: bool = True) -> list[dict]:
+    """Lieux Lyon avec coordonnées GPS complètes.
+
+    Format identique à l'ancien mock ``LYON_ADDRESSES`` : ``{name, lon, lat, type}``.
+
+    Returns:
+        Liste de dicts ``[{name, lon, lat, type}, ...]``.
+    """
+    where = "WHERE is_active = TRUE" if active_only else ""
+    rows = execute_query(
+        f"""
+        SELECT name, lon, lat, type
+        FROM referentiel.lieux_lyon
+        {where}
+        ORDER BY name
+        """
+    )
+    return [dict(r) for r in rows]
+
+
+def get_lieux_transports(lieu_id: int | None = None) -> list[dict]:
+    """Dessertes TCL par lieu (référentiel N-N lieu ↔ ligne).
+
+    Args:
+        lieu_id: si fourni, filtre sur ce lieu. Sinon, tous les lieux actifs.
+
+    Returns:
+        Liste de dicts ``{lieu_id, lieu_name, line_ref, line_mode, stop_name,
+        distance_m, rank}`` triés par ``(lieu_name, rank)``.
+    """
+    if lieu_id is not None:
+        query = """
+            SELECT lt.lieu_id, ll.name AS lieu_name, lt.line_ref, lt.line_mode,
+                   lt.stop_name, lt.distance_m, lt.rank
+            FROM referentiel.lieux_transports lt
+            JOIN referentiel.lieux_lyon ll ON ll.lieu_id = lt.lieu_id
+            WHERE lt.is_active = TRUE AND lt.lieu_id = %s
+            ORDER BY ll.name, lt.rank
+        """
+        params: tuple = (lieu_id,)
+    else:
+        query = """
+            SELECT lt.lieu_id, ll.name AS lieu_name, lt.line_ref, lt.line_mode,
+                   lt.stop_name, lt.distance_m, lt.rank
+            FROM referentiel.lieux_transports lt
+            JOIN referentiel.lieux_lyon ll ON ll.lieu_id = lt.lieu_id
+            WHERE lt.is_active = TRUE
+            ORDER BY ll.name, lt.rank
+        """
+        params = ()
+    rows = execute_query(query, params)
+    return [dict(r) for r in rows]
+
+
+def get_cadence_for_line(
+    line_ref: str,
+    day_type: str | None = None,
+    time_bucket: str | None = None,
+) -> list[dict]:
+    """Cadence observée pour une ligne TCL (référentiel lieux_calendrier).
+
+    Args:
+        line_ref: identifiant TCL (ex. ``'M_A'``). NOT NULL.
+        day_type: filtre optionnel sur le type de jour.
+        time_bucket: filtre optionnel sur la tranche horaire (ex. ``'08:00'``).
+
+    Returns:
+        Liste de dicts ``{line_ref, day_type, time_bucket,
+        cadence_min_per_vehicle, n_observations, confidence}``.
+
+    Raises:
+        ValueError: si ``line_ref`` est vide.
+    """
+    if not line_ref:
+        raise ValueError("line_ref is required")
+
+    clauses = ["line_ref = %s"]
+    params: list = [line_ref]
+    if day_type is not None:
+        clauses.append("day_type = %s")
+        params.append(day_type)
+    if time_bucket is not None:
+        clauses.append("time_bucket = %s")
+        params.append(time_bucket)
+
+    query = f"""
+        SELECT line_ref, day_type, time_bucket, cadence_min_per_vehicle,
+               n_observations, confidence, computed_at
+        FROM referentiel.lieux_calendrier
+        WHERE {' AND '.join(clauses)}
+        ORDER BY
+            CASE day_type
+                WHEN 'weekday' THEN 1
+                WHEN 'saturday' THEN 2
+                WHEN 'sunday_holiday' THEN 3
+                WHEN 'vacation' THEN 4
+                ELSE 5
+            END,
+            time_bucket
+    """
+    rows = execute_query(query, tuple(params))
+    return [dict(r) for r in rows]
+
+
+# =============================================================================
+# TomTom + vue unifiée trafic (Sprint VPS-6, 2026-06-11)
+# =============================================================================
+# Table bronze.tomtom_traffic : snapshots TomTom Flow (cf. scripts/sql/create_tomtom_traffic.sql)
+# Vue gold.v_tomtom_traffic_live : dernier snapshot par tuile (24h)
+# Vue gold.v_traffic_combined : fusion Gold live > Gold pred > TomTom
+# =============================================================================
+
+
+def get_traffic_combined(limit: int = 5000) -> pd.DataFrame:
+    """Vue unifiée trafic temps réel (Gold live + Gold pred + TomTom).
+
+    Sprint VPS-6 — permet au dashboard carte d'afficher du trafic
+    partout à Lyon, y compris hors couverture des boucles Grand Lyon.
+
+    Args:
+        limit: nb max de lignes retournées (défaut 5000).
+
+    Returns:
+        DataFrame avec colonnes ``channel_id, lat, lon, speed_kmh,
+        computed_at, source, confidence``. ``source`` ∈ {gold_live,
+        gold_pred, tomtom}.
+    """
+    query = """
+        SELECT channel_id, lat, lon, speed_kmh, computed_at, source, confidence
+        FROM gold.v_traffic_combined
+        LIMIT %s
+    """
+    return _df_from_query(query, (limit,))
+
+
+def get_tomtom_latest(limit: int = 100) -> pd.DataFrame:
+    """Dernier snapshot TomTom par tuile (vue ``gold.v_tomtom_traffic_live``).
+
+    Returns:
+        DataFrame avec colonnes ``tile_key, lat, lon, current_speed_kmh,
+        free_flow_speed_kmh, ratio, confidence, etat, color, fetched_at``.
+    """
+    query = """
+        SELECT tile_key, lat, lon, current_speed_kmh, free_flow_speed_kmh,
+               ratio, confidence, current_travel_time_s, free_flow_travel_time_s,
+               etat, color, fetched_at
+        FROM gold.v_tomtom_traffic_live
+        ORDER BY tile_key
+        LIMIT %s
+    """
+    return _df_from_query(query, (limit,))
+
+
+# =============================================================================
+# Lieux × Vélov proches (Sprint VPS-6, 2026-06-11)
+# =============================================================================
+# Vue referentiel.v_lieux_velov_proches : 1 lieu × top 3 bornes Vélov
+# Vue referentiel.v_lieux_velov_plus_proche : 1 lieu × 1 borne la + proche
+# Vue materialisée créée par scripts/sql/create_lieux_velov_proches.sql
+# =============================================================================
+
+
+def get_lieux_with_velov(k: int = 3, only_operational: bool = True) -> list[dict]:
+    """Renvoie la liste des lieux du référentiel avec leurs K bornes Vélov
+    les plus proches (par distance haversine).
+
+    Args:
+        k: nombre de bornes Vélov par lieu (défaut 3, max 10).
+        only_operational: si True, filtre les bornes Vélov inactives.
+
+    Returns:
+        Liste de dicts par lieu :
+        ``{lieu_id, lieu_name, lieu_lon, lieu_lat, lieu_type,
+        bornes: [{station_id, velov_name, velov_lon, velov_lat,
+                  num_bikes_available, num_docks_available, distance_m}]}``
+    """
+    query = """
+        SELECT
+            lieu_id, lieu_name, lieu_lon, lieu_lat, lieu_type,
+            station_id, velov_name, velov_lon, velov_lat,
+            num_bikes_available, num_docks_available, distance_m
+        FROM referentiel.v_lieux_velov_proches
+        WHERE rank <= %s
+        {extra_filter}
+        ORDER BY lieu_id, distance_m
+    """.format(extra_filter="AND num_bikes_available >= 0" if only_operational else "")
+    rows = execute_query(query, (k,))
+    # Regroupement par lieu
+    out: dict[int, dict] = {}
+    for r in rows:
+        lid = r["lieu_id"]
+        if lid not in out:
+            out[lid] = {
+                "lieu_id": lid,
+                "lieu_name": r["lieu_name"],
+                "lieu_lon": r["lieu_lon"],
+                "lieu_lat": r["lieu_lat"],
+                "lieu_type": r["lieu_type"],
+                "bornes": [],
+            }
+        out[lid]["bornes"].append(
+            {
+                "station_id": r["station_id"],
+                "velov_name": r["velov_name"],
+                "velov_lon": r["velov_lon"],
+                "velov_lat": r["velov_lat"],
+                "num_bikes_available": r["num_bikes_available"],
+                "num_docks_available": r["num_docks_available"],
+                "distance_m": float(r["distance_m"]),
+            }
+        )
+    return list(out.values())
+
+
+def get_velov_proche_for_lieu(lieu_id: int) -> dict | None:
+    """Renvoie la borne Vélov la plus proche d'un lieu (top 1).
+
+    Args:
+        lieu_id: identifiant du lieu (referentiel.lieux_lyon.lieu_id).
+
+    Returns:
+        Dict {station_id, velov_name, velov_lon, velov_lat,
+        num_bikes_available, num_docks_available, distance_m} ou None.
+    """
+    query = """
+        SELECT station_id, velov_name, velov_lon, velov_lat,
+               num_bikes_available, num_docks_available, distance_m
+        FROM referentiel.v_lieux_velov_plus_proche
+        WHERE lieu_id = %s
+    """
+    rows = execute_query(query, (lieu_id,))
+    return dict(rows[0]) if rows else None
+
+
+# =============================================================================
+# Vélov smart routing + maillage (Sprint VPS-6, 2026-06-11)
+# =============================================================================
+# Vues referentiel.v_lieux_velov_smart et v_velov_neighbors
+# Cf. scripts/sql/create_velov_maillage.sql
+# =============================================================================
+
+
+def get_smart_velov_for_lieu(lieu_id: int, k: int = 3) -> list[dict]:
+    """Top K bornes Vélov scorées pour un lieu, avec statut dispo.
+
+    Args:
+        lieu_id: identifiant du lieu (referentiel.lieux_lyon.lieu_id).
+        k: nombre de bornes à retourner (max 3 dans la vue, défaut 3).
+
+    Returns:
+        Liste de dicts triées par rank (1 = meilleur choix) :
+        ``{station_id, velov_name, velov_lon, velov_lat,
+        num_bikes_available, num_docks_available, distance_m,
+        score, status, rank}`` où status ∈ {VIDE, PLEINE, FAIBLE, OK}.
+    """
+    query = """
+        SELECT station_id, velov_name, velov_lon, velov_lat,
+               num_bikes_available, num_docks_available,
+               distance_m, score, status, rank
+        FROM referentiel.v_lieux_velov_smart
+        WHERE lieu_id = %s AND rank <= %s
+        ORDER BY rank
+    """
+    rows = execute_query(query, (lieu_id, k))
+    return [dict(r) for r in rows]
+
+
+def get_smart_velov_for_lieux(lieu_ids: list[int], k: int = 3) -> dict[int, list[dict]]:
+    """Top K bornes Vélov scorées pour plusieurs lieux (1 query).
+
+    Args:
+        lieu_ids: liste de lieu_id.
+        k: nb bornes par lieu (max 3).
+
+    Returns:
+        Dict {lieu_id: [bornes...]} avec bornes triées par rank.
+    """
+    if not lieu_ids:
+        return {}
+    query = """
+        SELECT lieu_id, station_id, velov_name, velov_lon, velov_lat,
+               num_bikes_available, num_docks_available,
+               distance_m, score, status, rank
+        FROM referentiel.v_lieux_velov_smart
+        WHERE lieu_id = ANY(%s) AND rank <= %s
+        ORDER BY lieu_id, rank
+    """
+    rows = execute_query(query, (lieu_ids, k))
+    out: dict[int, list[dict]] = {lid: [] for lid in lieu_ids}
+    for r in rows:
+        out[r["lieu_id"]].append(dict(r))
+    return out
+
+
+def get_velov_neighbors(station_id: str, k: int = 5) -> list[dict]:
+    """Top K voisines d'une borne Vélov (distance < 200m).
+
+    Args:
+        station_id: identifiant de la borne (silver.velov_clean.station_id).
+        k: nb de voisines à retourner (défaut 5).
+
+    Returns:
+        Liste de dicts triées par distance ASC :
+        ``{station_id_b, name_b, bikes_b, docks_b, lon_b, lat_b, distance_m}``.
+    """
+    query = """
+        SELECT station_id_b, name_b, bikes_b, docks_b, lon_b, lat_b, distance_m
+        FROM referentiel.v_velov_neighbors
+        WHERE station_id_a = %s
+        ORDER BY distance_m
+        LIMIT %s
+    """
+    rows = execute_query(query, (station_id, k))
+    return [dict(r) for r in rows]
+
+
+def get_velov_neighbors_batch(station_ids: list[str], k: int = 3) -> dict[str, list[dict]]:
+    """Voisines de plusieurs bornes (1 query).
+
+    Args:
+        station_ids: liste de station_id.
+        k: nb voisines par borne.
+
+    Returns:
+        Dict {station_id: [voisines...]} avec voisines triées par distance.
+    """
+    if not station_ids:
+        return {}
+    query = """
+        SELECT station_id_a, station_id_b, name_b, bikes_b, docks_b,
+               lon_b, lat_b, distance_m
+        FROM referentiel.v_velov_neighbors
+        WHERE station_id_a = ANY(%s)
+        ORDER BY station_id_a, distance_m
+    """
+    rows = execute_query(query, (station_ids,))
+    out: dict[str, list[dict]] = {sid: [] for sid in station_ids}
+    for r in rows:
+        d = dict(r)
+        if len(out[r["station_id_a"]]) < k:
+            out[r["station_id_a"]].append(d)
+    return out
+
+
+# =============================================================================
+# Sprint 7 (post-VPS-6) — Vues matérialisées KPIs TCL + Heatmap OTP
+# =============================================================================
+# Vues gold.mv_line_kpis_live + gold.mv_otp_heatmap
+# Cf. scripts/sql/create_mv_line_kpis_otp.sql
+# Débloque Pro_2_Heatmap_OTP.py et Pro_4_Simulateur.py
+# =============================================================================
+
+
+def get_line_kpis(line_ids: list[str] | None = None) -> dict:
+    """KPIs par ligne TCL depuis la vue matérialisée mv_line_kpis_live.
+
+    Args:
+        line_ids: filtre optionnel sur les lignes. None = toutes.
+
+    Returns:
+        Dict au format ``{line_id: {otp_pct, retard_moyen_s,
+        freq_vehicules_par_h, charge_pct, mode, otp_status, n_obs_total,
+        n_days}}`` — rétro-compatible avec le mock ``pro_tcl.LINE_KPIS``.
+    """
+    where_clause = ""
+    params: tuple = ()
+    if line_ids:
+        where_clause = "WHERE line_ref = ANY(%s)"
+        params = (line_ids,)
+
+    query = f"""
+        SELECT line_ref, otp_pct, retard_moyen_s, freq_vehicules_par_h,
+               charge_pct, mode, otp_status, n_obs_total, n_days
+        FROM gold.mv_line_kpis_live
+        {where_clause}
+        ORDER BY line_ref
+    """
+    rows = execute_query(query, params)
+    out: dict = {}
+    for r in rows:
+        out[r["line_ref"]] = {
+            "otp_pct": float(r["otp_pct"]) if r["otp_pct"] is not None else 0.0,
+            "retard_moyen_s": float(r["retard_moyen_s"]) if r["retard_moyen_s"] is not None else 0.0,
+            "freq_vehicules_par_h": float(r["freq_vehicules_par_h"]) if r["freq_vehicules_par_h"] is not None else 0.0,
+            "charge_pct": float(r["charge_pct"]) if r["charge_pct"] is not None else 0.0,
+            "mode": r["mode"],
+            "otp_status": r["otp_status"],
+            "n_obs_total": int(r["n_obs_total"]),
+            "n_days": int(r["n_days"]),
+        }
+    return out
+
+
+def get_otp_heatmap(days: int = 7) -> pd.DataFrame:
+    """Heatmap OTP (ligne × date × heure) sur les N derniers jours.
+
+    Args:
+        days: fenêtre temporelle en jours (défaut 7).
+
+    Returns:
+        DataFrame avec colonnes ``line_id, date, hour, otp_pct,
+        avg_delay_s, n_obs`` (rétro-compatible avec le mock aplati
+        ``OTP_GRID`` → ``[line_id, date, hour, otp_pct]``).
+    """
+    query = """
+        SELECT line_id, date, hour, otp_pct, avg_delay_s, n_obs
+        FROM gold.mv_otp_heatmap
+        WHERE date >= CURRENT_DATE - %s
+        ORDER BY line_id, date, hour
+    """
+    return _df_from_query(query, (days,))
+
+
+def get_latest_drift_report() -> dict | None:
+    """Retourne le dernier rapport de drift persisté par build_xgb_training_set.
+
+    Sprint 10+ (2026-06-12) — Lecture live de gold.model_drift_reports
+    (schéma v0.3.1). Remplace le mock ``drift_status`` du widget
+    Pro_7_Model_Monitoring.
+
+    Returns:
+        Dict avec ``dataset_drift``, ``drift_share``, ``n_ref``,
+        ``n_current``, ``ref_from``, ``ref_to``, ``current_from``,
+        ``current_to``, ``report`` (JSONB), ``computed_at``. None si
+        la table est vide.
+    """
+    rows = execute_query("""
+        SELECT
+            computed_at,
+            dataset_drift,
+            drift_share,
+            n_ref,
+            n_current,
+            ref_from,
+            ref_to,
+            current_from,
+            current_to,
+            report
+        FROM gold.model_drift_reports
+        ORDER BY computed_at DESC
+        LIMIT 1
+    """)
+    if not rows:
+        return None
+    r = rows[0]
+    # Conversion des timestamps en string ISO (Streamlit-friendly)
+    for k in ("computed_at", "ref_from", "ref_to", "current_from", "current_to"):
+        if r.get(k) is not None and not isinstance(r[k], str):
+            r[k] = str(r[k])
+    return r

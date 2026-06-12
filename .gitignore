@@ -60,8 +60,15 @@ postgres-data/
 minio-data/
 
 # Backups
+# Regle : JAMAIS de backup persistant sur le VPS ni dans le repo.
+# Tous les backups vont offsite via scripts/backup-offsite.sh.
+# Mais on ignore le dossier entier par securite (le dump 2.9 Go local doit
+# aussi etre protege contre un git add accidentel).
+backups/
 backups/*.sql
 backups/*.dump
+backups/*.dump.gz
+backups/*.dump.gz.gpg
 backups/*.tar.gz
 
 # Models (gros fichiers)
@@ -91,3 +98,8 @@ site/
 
 # Local orchestration plans
 .mavis/
+.claude/
+
+# TLS certs (generated, never committed)
+nginx/certs/*.pem
+.opencode/

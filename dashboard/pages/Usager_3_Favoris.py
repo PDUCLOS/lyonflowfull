@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import streamlit as st
 
+from dashboard.components.data_status import render_data_status_banner
 from dashboard.components.navigation import render_sidebar_navigation
 from dashboard.components.persona_guard import apply_persona_guard
 from dashboard.components.theme import inject_theme
@@ -11,24 +12,37 @@ from dashboard.components.widgets.usager import (
     render_favorite_list,
     render_recurrent_trip_card,
 )
-from src.data.mock.usager import MOCK_FAVORITES
 
-
+# IMPORTANT: set_page_config() doit être la PREMIÈRE commande Streamlit de la page.
+# Sinon StreamlitAPIException au runtime.
 st.set_page_config(
     page_title="Mes favoris — LyonFlowFull",
     page_icon="⭐",
     layout="wide",
 )
 
+# Sprint 8 (2026-06-12) — viré le seed MOCK_FAVORITES. Les favoris
+# commencent vides ; l'utilisateur les ajoute via la page Mes trajets
+# (bouton ⭐). Persistance : session_state pour l'instant, futur
+# Sprint 10 = table user_favorites en DB.
+if "user_favorites" not in st.session_state:
+    st.session_state["user_favorites"] = []
+favorites = st.session_state["user_favorites"]
+
 apply_persona_guard(expected_persona="usager")
 inject_theme()
 render_sidebar_navigation()
 
 st.title("⭐ Mes favoris")
+render_data_status_banner()
+st.caption(
+    "ℹ️ Demo session — les favoris sont stockés dans la session Streamlit. "
+    "Backend persistant (table user_favorites) prévu apres release auth."
+)
 
 # Compteurs
-n_total = len(MOCK_FAVORITES)
-n_alerts_on = sum(1 for f in MOCK_FAVORITES if f.get("alert_subscribed"))
+n_total = len(favorites)
+n_alerts_on = sum(1 for f in favorites if f.get("alert_subscribed"))
 
 cols = st.columns(3)
 with cols[0]:
@@ -41,7 +55,7 @@ with cols[2]:
 st.markdown("---")
 
 # Liste des favoris
-render_favorite_list(MOCK_FAVORITES)
+render_favorite_list(favorites)
 
 st.markdown("---")
 
@@ -49,13 +63,15 @@ st.markdown("---")
 st.markdown("##### 🔍 Détails d'un trajet favori")
 selected = st.selectbox(
     "Choisir un trajet",
-    [f.get("name", "—") for f in MOCK_FAVORITES],
+    [f.get("name", "—") for f in favorites],
     key="fav_detail_select",
 )
 if selected:
-    fav = next((f for f in MOCK_FAVORITES if f.get("name") == selected), None)
+    fav = next((f for f in favorites if f.get("name") == selected), None)
     if fav:
-        render_recurrent_trip_card(fav, expanded=True)
+        # Préfixe "detail_" pour éviter le duplicate Streamlit key avec la liste
+        # (render_favorite_list utilise déjà fav_view_{id} pour chaque favori).
+        render_recurrent_trip_card(fav, expanded=True, key_prefix="detail_")
 
 st.markdown("---")
 

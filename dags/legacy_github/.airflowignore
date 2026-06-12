@@ -1,0 +1,12 @@
+# Sprint 8+ audit (2026-06-12) — Dossier legacy_github/ contient un DAG
+# (dag_pipeline.py) qui pollue gold.dim_spatial_grid_mapping avec des
+# INSERTs sans lat/lon. Le DAG est actuellement paused, mais il suffit
+# d'un raté de pause (re-démarrage scheduler) pour que la dette
+# réapparaisse silencieusement.
+#
+# Solution palliative : on empêche Airflow de charger le DAG legacy.
+# Solution durable Sprint 9+ : supprimer le dossier legacy_github/
+# (code mort, plus utilisé depuis Sprint 5) OU migrer le DAG vers
+# le format moderne (gold.* + Airflow SDK 2.9).
+
+dag_pipeline.py

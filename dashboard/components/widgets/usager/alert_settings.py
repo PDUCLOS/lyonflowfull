@@ -23,7 +23,10 @@ def render_alert_settings() -> None:
     st.markdown("**Fenêtre d'alerte**")
     st.slider(
         "Recevoir les alertes dans la fenêtre suivante (min)",
-        0, 60, (5, 30), key="alert_setting_window",
+        0,
+        60,
+        (5, 30),
+        key="alert_setting_window",
     )
 
     st.markdown("**Mode**")

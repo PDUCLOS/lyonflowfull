@@ -13,7 +13,6 @@ from datetime import datetime, timedelta
 from airflow import DAG
 from airflow.operators.python import PythonOperator
 
-
 logger = logging.getLogger(__name__)
 
 # Whitelist des schémas/tables pour la purge (sécurité anti-injection)
@@ -44,10 +43,7 @@ def _validate_table(table: str) -> tuple[str, str]:
         ValueError: si la table n'est pas whitelistée.
     """
     if table not in PURGE_WHITELIST:
-        raise ValueError(
-            f"Table non autorisée pour purge : {table}. "
-            f"Whitelist : {sorted(PURGE_WHITELIST)}"
-        )
+        raise ValueError(f"Table non autorisée pour purge : {table}. Whitelist : {sorted(PURGE_WHITELIST)}")
     schema, table_name = table.split(".", 1)
     # Valide que schema et table_name sont des identifiers SQL safe
     if not schema.replace("_", "").isalnum() or not table_name.replace("_", "").isalnum():
@@ -80,18 +76,21 @@ def _purge_bronze(table: str, days: int) -> int:
     # Note: schema/table_name sont validés par _validate_table, pas user-controlled
 
     from src.db import raw_connection
-    with raw_connection() as conn:
-        with conn.cursor() as cur:
-            cur.execute(query, (days,))
-            deleted = cur.rowcount
-            # Log la purge (RGPD audit)
-            cur.execute("""
+
+    with raw_connection() as conn, conn.cursor() as cur:
+        cur.execute(query, (days,))
+        deleted = cur.rowcount
+        # Log la purge (RGPD audit)
+        cur.execute(
+            """
                 INSERT INTO rgpd.purge_log
                     (schema_name, table_name, rows_purged, retention_days)
                 VALUES (%s, %s, %s, %s)
-            """, (schema, table_name, deleted, days))
-            logger.info(f"Purged {deleted} rows from {table} (> {days}j)")
-            return deleted
+            """,
+            (schema, table_name, deleted, days),
+        )
+        logger.info(f"Purged {deleted} rows from {table} (> {days}j)")
+        return deleted
 
 
 def _data_quality_check(check_name: str) -> dict:
@@ -101,6 +100,7 @@ def _data_quality_check(check_name: str) -> dict:
         Dict avec 'check', 'status', 'details'.
     """
     from src.monitoring.health_checks import run_dag_health_check
+
     results = run_dag_health_check()
     status = results.get(check_name, "unknown")
     return {
@@ -122,7 +122,6 @@ with DAG(
     max_active_runs=1,
     tags=["maintenance", "quality"],
 ) as dag_dq:
-
     checks = [
         "bronze_freshness",
         "bronze_volume",
@@ -152,14 +151,13 @@ with DAG(
     max_active_runs=1,
     tags=["maintenance", "purge"],
 ) as dag_purge:
-
     retentions = [
-        ("bronze.trafic_boucles", 45),
-        ("bronze.velov", 14),
+        ("bronze.trafic_boucles", 7),
+        ("bronze.velov", 7),
         ("bronze.tcl_vehicles", 7),
-        ("bronze.meteo", 365),
-        ("bronze.air_quality", 365),
-        ("bronze.chantiers", 365),
+        ("bronze.meteo", 7),
+        ("bronze.air_quality", 7),
+        ("bronze.chantiers", 7),
     ]
     for table, days in retentions:
         PythonOperator(
