@@ -195,9 +195,7 @@ def load_traffic(force_mock: bool = False) -> dict[str, Any]:
         # DB répond mais vide : en mode démo on tolère (fallback mock),
         # en prod on signale explicitement.
         if _is_demo_mode():
-            logger.warning(
-                "gold.traffic_features_live vide — fallback mock (mode démo)"
-            )
+            logger.warning("gold.traffic_features_live vide — fallback mock (mode démo)")
             return usager_mock.MOCK_TRAFFIC
         raise DashboardDataError(
             source="gold.traffic_features_live",
@@ -372,9 +370,7 @@ def load_favorites(force_mock: bool = False) -> list[dict]:
     )
     if not rows:
         # DB répond mais vide : fallback mock pour ne pas casser le dashboard.
-        logger.warning(
-            "user_favorites vide — fallback mock (mode démo implicite)"
-        )
+        logger.warning("user_favorites vide — fallback mock (mode démo implicite)")
         return usager_mock.MOCK_FAVORITES
 
     return [
@@ -647,15 +643,15 @@ def load_kpis_12_months(force_mock: bool = False) -> pd.DataFrame:
 def _derive_label_unit(kpi_key: str) -> tuple[str, str]:
     """Dérive (label, unit) depuis le kpi_key — fallback générique."""
     known = {
-        "part_modale_tc":     ("Part modale TC",     "%"),
-        "ponctualite":        ("Ponctualité",        "%"),
-        "co2_evite_tonnes":   ("CO₂ évité",          "t"),
-        "bottlenecks_actifs": ("Bottlenecks",         ""),
-        "satisfaction_pct":  ("Satisfaction",        "%"),
-        "total_trips":        ("Trajets totaux",      ""),
-        "avg_speed_kmh":     ("Vitesse moy.",        "km/h"),
-        "prediction_accuracy": ("Précision préd.",  "%"),
-        "congestion_index":   ("Indice congestion",  ""),
+        "part_modale_tc": ("Part modale TC", "%"),
+        "ponctualite": ("Ponctualité", "%"),
+        "co2_evite_tonnes": ("CO₂ évité", "t"),
+        "bottlenecks_actifs": ("Bottlenecks", ""),
+        "satisfaction_pct": ("Satisfaction", "%"),
+        "total_trips": ("Trajets totaux", ""),
+        "avg_speed_kmh": ("Vitesse moy.", "km/h"),
+        "prediction_accuracy": ("Précision préd.", "%"),
+        "congestion_index": ("Indice congestion", ""),
     }
     return known.get(kpi_key, (kpi_key.replace("_", " ").title(), ""))
 
@@ -676,14 +672,13 @@ def load_elu_kpis_dict(force_mock: bool = False) -> dict:
     # Fallback si MV absente ou vide
     if df.empty:
         return {
-            k: {"label": l, "current": 0, "unit": u, "delta_ytd": 0,
-                "target_2026": 0, "history": []}
+            k: {"label": l, "current": 0, "unit": u, "delta_ytd": 0, "target_2026": 0, "history": []}
             for k, (l, u) in [  # noqa: E741
-                ("part_modale_tc",     ("Part modale TC",     "%")),
-                ("ponctualite",        ("Ponctualité",        "%")),
-                ("co2_evite_tonnes",   ("CO₂ évité",          "t")),
-                ("bottlenecks_actifs", ("Bottlenecks",         "")),
-                ("satisfaction_pct",  ("Satisfaction",        "%")),
+                ("part_modale_tc", ("Part modale TC", "%")),
+                ("ponctualite", ("Ponctualité", "%")),
+                ("co2_evite_tonnes", ("CO₂ évité", "t")),
+                ("bottlenecks_actifs", ("Bottlenecks", "")),
+                ("satisfaction_pct", ("Satisfaction", "%")),
             ]
         }
 
@@ -704,6 +699,7 @@ def load_elu_kpis_dict(force_mock: bool = False) -> dict:
             "history": values,
         }
     return kpis
+
 
 def load_bottlenecks_top(force_mock: bool = False) -> list[dict]:
     """Liste des 10 bottlenecks Élu (format dict avec rank, zone, voyageurs, etc.).
@@ -811,7 +807,7 @@ def load_tcl_lines(force_mock: bool = False) -> list[dict]:
         out.append(
             {
                 "id": line_id,
-                "name": f"{ 'Tram' if mode=='tram' else 'Métro' if mode=='metro' else 'Bus' } {line_id}",
+                "name": f"{'Tram' if mode == 'tram' else 'Métro' if mode == 'metro' else 'Bus'} {line_id}",
                 "mode": mode,
                 "color": color,
                 "icon": icon,
@@ -885,6 +881,7 @@ def _load_lyon_addresses_cached() -> list[str]:
         return cached[1]
     _require_db_or_raise("referentiel.lieux_lyon")
     from src.data.db_query import get_lieux_lyon_names
+
     result = get_lieux_lyon_names()
     _lieux_cache["names"] = (now, result)
     return result
@@ -898,6 +895,7 @@ def _load_lyon_addresses_with_coords_cached() -> list[dict]:
         return cached[1]
     _require_db_or_raise("referentiel.lieux_lyon")
     from src.data.db_query import get_lieux_lyon_with_coords
+
     result = get_lieux_lyon_with_coords()
     _lieux_cache["coords"] = (now, result)
     return result
@@ -928,9 +926,7 @@ def load_lieux_transports(lieu_id: int | None = None) -> list[dict]:
     return get_lieux_transports(lieu_id=lieu_id)
 
 
-def load_cadence_for_line(
-    line_ref: str, day_type: str | None = None, time_bucket: str | None = None
-) -> list[dict]:
+def load_cadence_for_line(line_ref: str, day_type: str | None = None, time_bucket: str | None = None) -> list[dict]:
     """Cadence observée pour une ligne TCL.
 
     Args:

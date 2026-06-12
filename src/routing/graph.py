@@ -58,7 +58,6 @@ def build_routing_graph(
     if use_cache and _is_cache_valid():
         return _graph_cache["graph"]
 
-
     if not _db_available():
         logger.info("DB indisponible — graphe mock")
         graph = _build_mock_graph()
