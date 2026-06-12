@@ -1,7 +1,7 @@
 """Widget — Trafic routier résumé (vitesse moyenne, bouchons).
 
 Sprint 6 — binding DB Gold via data_loader :
-* Si ``traffic=None`` → ``data_loader.load_traffic()`` tente la DB
+* Si ``traffic=None`` → ``data_loader.cached_traffic()`` tente la DB
   Gold, fallback mock si DB down.
 * Le widget reste 100% compatible avec l'ancien contrat (accepte toujours
   un dict ``traffic`` en arg, utilisé en tests / mode démo forcé).
@@ -11,7 +11,8 @@ from __future__ import annotations
 
 import streamlit as st
 
-from src.data.data_loader import load_traffic
+from dashboard.components.colors import COLORS
+from dashboard.components.data_cache import cached_traffic
 
 
 def render_traffic_widget(traffic: dict | None = None) -> None:
@@ -21,11 +22,11 @@ def render_traffic_widget(traffic: dict | None = None) -> None:
         traffic: dict de données. Si None, tente DB → fallback mock.
     """
     if traffic is None:
-        traffic = load_traffic(force_mock=False)
+        traffic = cached_traffic(force_mock=False)
 
     avg = traffic.get("average_speed_kmh", 0)
     level = traffic.get("congestion_level", "—")
-    level_color = traffic.get("congestion_color", "#666")
+    level_color = traffic.get("congestion_color", COLORS["text_muted"])
     n_bottlenecks = traffic.get("bottlenecks_count", 0)
     data_source = traffic.get("data_source", "unknown")
 
@@ -53,28 +54,23 @@ def render_traffic_widget(traffic: dict | None = None) -> None:
     with col3:
         st.metric("Bouchons actifs", n_bottlenecks)
 
-    # Prédictions
-    st.markdown("##### 🔮 Prédictions")
+    # Prédictions (Sprint 8+ : focus H+1h, les autres horizons masqués)
+    st.markdown("##### 🔮 Prédiction H+1h")
     preds = traffic.get("predictions", {})
-    pred_cols = st.columns(3)
-    pred_data = [
-        ("H+30min", preds.get("h_plus_30min", {})),
-        ("H+1h", preds.get("h_plus_1h", {})),
-        ("H+3h", preds.get("h_plus_3h", {})),
-    ]
-    for col, (label, p) in zip(pred_cols, pred_data):
-        if p:
-            with col:
-                st.markdown(
-                    f"""
-                    <div class="lyonflow-card" style="text-align:center;padding:0.6rem;">
-                        <div style="font-size:0.75rem;opacity:0.6;">{label}</div>
-                        <div style="font-size:1.3rem;font-weight:600;">{p.get('average_speed_kmh', 0)} km/h</div>
-                        <div style="font-size:0.85rem;">{p.get('congestion_level', '—')}</div>
-                    </div>
-                    """,
-                    unsafe_allow_html=True,
-                )
+    p = preds.get("h_plus_1h", {})
+    if p:
+        st.markdown(
+            f"""
+            <div class="lyonflow-card" style="text-align:center;padding:1rem;">
+                <div style="font-size:0.85rem;opacity:0.6;">H+1h</div>
+                <div style="font-size:1.6rem;font-weight:600;">{p.get("average_speed_kmh", 0)} km/h</div>
+                <div style="font-size:0.95rem;">{p.get("congestion_level", "—")}</div>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
+    else:
+        st.info("🔮 Pas de prédiction H+1h disponible (DB vide ou DAG en retard).")
 
     # Top bouchons
     main_jams = traffic.get("main_jams", [])
@@ -82,7 +78,11 @@ def render_traffic_widget(traffic: dict | None = None) -> None:
         with st.expander(f"🚧 Top {len(main_jams)} bouchons", expanded=False):
             for jam in main_jams:
                 sev = jam.get("severity", "low")
-                color = {"high": "#E74C3C", "medium": "#FF9800", "low": "#4CAF50"}.get(sev, "#666")
+                color = {
+                    "high": COLORS["status_critical"],
+                    "medium": COLORS["status_warning"],
+                    "low": COLORS["status_ok"],
+                }.get(sev, COLORS["text_muted"])
                 st.markdown(
                     f"<div style='border-left:3px solid {color};padding-left:8px;margin:4px 0;'>"
                     f"<b>{jam.get('road', '—')}</b> · {jam.get('speed_kmh', 0)} km/h · "

@@ -1,13 +1,13 @@
 """Widget — Sélecteur d'un aménagement passé.
 
-Sprint 8 — Aménagements via data_loader.load_amenagements_passes().
+Sprint 8 — Aménagements via data_loader.cached_amenagements_passes().
 """
 
 from __future__ import annotations
 
 import streamlit as st
 
-from src.data.data_loader import load_amenagements_passes
+from dashboard.components.data_cache import cached_amenagements_passes
 
 
 def render_project_selector(key_suffix: str = "default") -> dict | None:
@@ -19,7 +19,7 @@ def render_project_selector(key_suffix: str = "default") -> dict | None:
     Returns:
         Dict aménagement sélectionné ou None.
     """
-    df = load_amenagements_passes(force_mock=False)
+    df = cached_amenagements_passes(force_mock=False)
     amenagements = df.to_dict("records") if not df.empty else []
     if not amenagements:
         st.info("Aucun aménagement passé disponible.")
@@ -28,9 +28,19 @@ def render_project_selector(key_suffix: str = "default") -> dict | None:
     # Adapt DB format → expected nom/description keys
     options = []
     options_to_record = {}
-    for a in amenagements:
-        # DB format utilise "name", mock utilise "nom"
-        label = a.get("name") or a.get("nom", "—")
+    for idx, a in enumerate(amenagements):
+        # DB format utilise "name", mock utilise "nom". Si les 2 sont None,
+        # on ajoute un suffixe pour distinguer les options (sinon N entrées "—"
+        # indistinguables dans le selectbox).
+        raw_label = a.get("name") or a.get("nom")
+        if not raw_label:
+            raw_label = f"Aménagement #{idx + 1}"
+        # Si doublon, suffixe
+        label = raw_label
+        suffix = 2
+        while label in options_to_record:
+            label = f"{raw_label} ({suffix})"
+            suffix += 1
         options.append(label)
         options_to_record[label] = a
 

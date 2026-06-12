@@ -13,13 +13,42 @@ from __future__ import annotations
 
 import streamlit as st
 
-from src.persona.auth import is_authenticated
 from src.persona.manager import (
     get_current_persona,
     is_current_persona_authenticated,
     set_current_persona,
 )
-from src.persona.personas_loader import list_personas
+from src.persona.personas_loader import get_persona_config, list_personas
+
+
+def _route_after_switch(persona_id: str) -> None:
+    """Route vers la landing du persona, ou Accueil si auth requise non faite.
+
+    Évite le bazar où switcher depuis une page d'un autre persona reste sur
+    la même URL et déclenche le guard (warning + bouton).
+    """
+    set_current_persona(persona_id)
+    config = get_persona_config(persona_id)
+    auth_required = config.get("access", {}).get("auth_required", False)
+    landing = config.get("landing_page", "")
+
+    # Auth requise et pas encore faite → Accueil pour saisir le mot de passe
+    if auth_required and not is_current_persona_authenticated():
+        try:
+            st.switch_page("Accueil.py")
+            return
+        except Exception:
+            st.rerun()
+            return
+
+    # Route directe vers la landing
+    if landing:
+        try:
+            st.switch_page(f"pages/{landing}.py")
+            return
+        except Exception:
+            pass
+    st.rerun()
 
 
 def render_persona_switcher(layout: str = "cards") -> None:
@@ -53,20 +82,20 @@ def _render_cards(personas: list[dict], current: str) -> None:
                             border-radius:12px;padding:20px;height:200px;
                             display:flex;flex-direction:column;justify-content:space-between;">
                     <div>
-                        <div style="font-size:2.5rem;">{p['icon']}</div>
+                        <div style="font-size:2.5rem;">{p["icon"]}</div>
                         <div style="font-size:1.3rem;font-weight:600;
-                                    margin-top:8px;color:{p['color_primary']};">
-                            {p['label']}
+                                    margin-top:8px;color:{p["color_primary"]};">
+                            {p["label"]}
                         </div>
                         <div style="font-size:0.85rem;opacity:0.7;
-                                    margin-top:4px;">{p['short_label']}</div>
+                                    margin-top:4px;">{p["short_label"]}</div>
                         <div style="font-size:0.9rem;margin-top:12px;opacity:0.85;">
-                            {p['description']}
+                            {p["description"]}
                         </div>
                     </div>
                     <div style="font-size:0.75rem;opacity:0.6;">
-                        {('🔒 Protégé' if p['auth_required'] else '🔓 Accès libre')}
-                        {'  •  ✅ Actif' if is_active else ''}
+                        {("🔒 Protégé" if p["auth_required"] else "🔓 Accès libre")}
+                        {"  •  ✅ Actif" if is_active else ""}
                     </div>
                 </div>
                 """,
@@ -79,8 +108,7 @@ def _render_cards(personas: list[dict], current: str) -> None:
                 disabled=is_active,
                 use_container_width=True,
             ):
-                set_current_persona(p["id"])
-                st.rerun()
+                _route_after_switch(p["id"])
             if is_locked:
                 st.caption("⚠️ Mot de passe requis après adoption")
 
@@ -98,8 +126,7 @@ def _render_pills(personas: list[dict], current: str) -> None:
                 disabled=is_active,
                 use_container_width=True,
             ):
-                set_current_persona(p["id"])
-                st.rerun()
+                _route_after_switch(p["id"])
 
 
 def is_authenticated_for(persona_id: str) -> bool:

@@ -1,7 +1,8 @@
 """Widget — Heatmap OTP Plotly (lignes × heures).
 
-Sprint 8 — Charge via data_loader.load_otp_heatmap_data() (vue Gold.
-mv_otp_grid_7d ou équivalent). Fallback mock si DB down.
+Sprint 8 — Charge via data_loader.cached_otp_heatmap_data() (vue Gold
+mv_otp_heatmap, 4416 triplets). Pas de mock — la DB est la source
+unique de vérité (fail loud si DB down).
 """
 
 from __future__ import annotations
@@ -9,8 +10,8 @@ from __future__ import annotations
 import pandas as pd
 import streamlit as st
 
-from src.data.data_loader import load_otp_heatmap_data
-from src.data.mock.pro_tcl import LINE_BASE_OTP, OTP_GRID
+from dashboard.components.colors import COLORS
+from dashboard.components.data_cache import cached_otp_heatmap_data
 
 
 def render_otp_heatmap(otp_data: dict | None = None, days: int = 1, height: int = 500) -> None:
@@ -23,7 +24,7 @@ def render_otp_heatmap(otp_data: dict | None = None, days: int = 1, height: int 
     """
     if otp_data is None:
         # Tente DB d'abord (Gold mv_otp_grid), fallback mock
-        df = load_otp_heatmap_data(force_mock=False)
+        df = cached_otp_heatmap_data(force_mock=False)
         if not df.empty:
             # Reconstruit le format {line_id: {date: [otp_per_hour]}}
             otp_data = {}
@@ -37,10 +38,18 @@ def render_otp_heatmap(otp_data: dict | None = None, days: int = 1, height: int 
                     otp_data[line_id][date] = [0.0] * 24
                 otp_data[line_id][date][int(row["hour"])] = float(row["otp_pct"])
         else:
-            otp_data = OTP_GRID
+            # Sprint 8 (2026-06-12) — viré le fallback OTP_GRID (mock).
+            # Si la vue est vide, le widget affiche un message et return.
+            st.info("Aucune donnée OTP — gold.mv_otp_heatmap est vide.")
+            return
 
     # Calculer la moyenne
-    lines = sorted(otp_data.keys(), key=lambda lid: LINE_BASE_OTP.get(lid, 0), reverse=True)
+    # Sprint 8 — tri par nombre de dates observées (proxy activité),
+    # plus besoin de LINE_BASE_OTP (mock).
+    def _n_dates(lid: str) -> int:
+        return len(otp_data.get(lid, {}))
+
+    lines = sorted(otp_data.keys(), key=_n_dates, reverse=True)
     dates = sorted(otp_data[lines[0]].keys()) if lines else []
 
     if days == 1:
@@ -71,12 +80,13 @@ def render_otp_heatmap(otp_data: dict | None = None, days: int = 1, height: int 
                 x=[f"{h}h" for h in range(24)],
                 y=lines,
                 colorscale=[
-                    [0.0, "#E74C3C"],   # rouge si <70
-                    [0.3, "#FF9800"],   # orange 70-80
-                    [0.6, "#FFCD00"],   # jaune 80-90
-                    [1.0, "#4CAF50"],   # vert >90
+                    [0.0, COLORS["status_critical"]],  # rouge si <70
+                    [0.3, COLORS["status_warning"]],  # orange 70-80
+                    [0.6, COLORS["chart_yellow"]],  # jaune 80-90
+                    [1.0, COLORS["status_ok"]],  # vert >90
                 ],
-                zmin=60, zmax=98,
+                zmin=60,
+                zmax=98,
                 text=text_data,
                 texttemplate="%{text}",
                 textfont={"size": 10},
@@ -85,7 +95,7 @@ def render_otp_heatmap(otp_data: dict | None = None, days: int = 1, height: int 
             )
         )
         fig.update_layout(
-            title=f"OTP par ligne × heure ({'aujourd\'hui' if days == 1 else f'moyenne {days}j'})",
+            title=f"OTP par ligne × heure ({"aujourd'hui" if days == 1 else f'moyenne {days}j'})",
             xaxis_title="Heure",
             yaxis_title="Ligne",
             height=height,
@@ -96,8 +106,7 @@ def render_otp_heatmap(otp_data: dict | None = None, days: int = 1, height: int 
     except ImportError:
         # Fallback
         df = pd.DataFrame(z_data, index=lines, columns=[f"{h}h" for h in range(24)])
-        st.dataframe(df.style.background_gradient(cmap="RdYlGn", vmin=60, vmax=98),
-                     height=height)
+        st.dataframe(df.style.background_gradient(cmap="RdYlGn", vmin=60, vmax=98), height=height)
 
 
 def render_otp_heatmap_mini(otp_data: dict | None = None, height: int = 200) -> None:

@@ -1,0 +1,21 @@
+# =============================================================================
+# .mailmap — LyonFlowFull
+# =============================================================================
+# Force tous les commits vers l'identité canonique "PDUCLOS" pour éviter
+# qu'un agent (Mavis, Claude Code, etc.) commit avec son propre user/email
+# et apparaisse comme contributeur séparé sur GitHub.
+#
+# Format : "Canonical Name <canonical@email>" <alias1@email>...
+# Git utilise le PREMIER match pour le nom + email.
+# =============================================================================
+
+PDUCLOS <patrice.noel.duclos@gmail.com> <patrice.noel.duclos@gmail.com>
+PDUCLOS <patrice.noel.duclos@gmail.com> <noreply@anthropic.com>
+PDUCLOS <patrice.noel.duclos@gmail.com> <noreply@lyonflowfull.fr>
+PDUCLOS <patrice.noel.duclos@gmail.com> <claude@anthropic.com>
+PDUCLOS <patrice.noel.duclos@gmail.com> Claude <noreply@anthropic.com>
+PDUCLOS <patrice.noel.duclos@gmail.com> claude <noreply@anthropic.com>
+PDUCLOS <patrice.noel.duclos@gmail.com> Claude Code <noreply@anthropic.com>
+PDUCLOS <patrice.noel.duclos@gmail.com> Mavis <noreply@mavis.ai>
+PDUCLOS <patrice.noel.duclos@gmail.com> Mavis <mavis@anthropic.com>
+PDUCLOS <patrice.noel.duclos@gmail.com> mavis <noreply@anthropic.com>

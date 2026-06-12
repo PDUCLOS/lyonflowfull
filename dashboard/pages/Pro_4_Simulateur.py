@@ -4,18 +4,17 @@ from __future__ import annotations
 
 import streamlit as st
 
+from dashboard.components.data_cache import cached_line_kpis
+from dashboard.components.data_status import render_data_status_banner
 from dashboard.components.navigation import render_sidebar_navigation
 from dashboard.components.persona_guard import apply_persona_guard
 from dashboard.components.theme import inject_theme
 from dashboard.components.widgets.pro_tcl import (
     render_before_after_chart,
     render_frequency_slider,
-    render_line_kpis,
     render_line_selector,
     render_otp_projection,
 )
-from src.data.mock.pro_tcl import LINE_KPIS
-
 
 st.set_page_config(
     page_title="Simulateur fréquences — Pro TCL · LyonFlowFull",
@@ -28,18 +27,20 @@ inject_theme()
 render_sidebar_navigation()
 
 st.title("🎚 Simulateur de fréquences")
+render_data_status_banner()
 
 st.caption("Simule l'impact d'ajout/retrait de bus sur l'OTP d'une ligne.")
 
 st.markdown("---")
 
-# Choix de la ligne
+# Choix de la ligne (render_line_selector retourne TOUJOURS une list)
 selected = render_line_selector(multiselect=False, key_suffix="simul")
-target_line = selected if selected else "C3"
+target_line = selected[0] if selected else "C3"
 
-# KPIs de la ligne sélectionnée
+# KPIs de la ligne sélectionnée (live via data_loader)
 st.markdown(f"##### 📊 État actuel — {target_line}")
-kpis = LINE_KPIS.get(target_line, {})
+all_line_kpis = cached_line_kpis()
+kpis = all_line_kpis.get(target_line, {})
 c1, c2, c3, c4 = st.columns(4)
 with c1:
     st.metric("OTP actuel", f"{kpis.get('otp_pct', 0)}%")

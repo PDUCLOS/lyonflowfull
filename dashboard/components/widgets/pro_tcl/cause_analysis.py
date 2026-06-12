@@ -4,6 +4,8 @@ from __future__ import annotations
 
 import streamlit as st
 
+from dashboard.components.colors import COLORS
+
 
 def render_cause_analysis(segment: dict | None = None) -> None:
     """Affiche l'analyse causale d'un retard.
@@ -36,7 +38,7 @@ def render_cause_analysis(segment: dict | None = None) -> None:
             "- Coordination feux tricolores en faveur des bus\n"
             "- Plan de délestage VP sur axe parallèle"
         )
-        color = "#E74C3C"
+        color = COLORS["status_critical"]
     elif diagnosis == "operations":
         cause = "⏱ Le bus accumule du retard sans congestion — problème de fréquence ou de charge"
         recommendation = (
@@ -45,7 +47,7 @@ def render_cause_analysis(segment: dict | None = None) -> None:
             "- Vérifier rotation des chauffeurs\n"
             "- Ajuster temps de battement aux terminus"
         )
-        color = "#FF9800"
+        color = COLORS["status_warning"]
     elif diagnosis == "bus_lane_ok":
         cause = "🚌 Couloir bus fonctionnel — trafic VP bouché mais bus protégé"
         recommendation = (
@@ -53,11 +55,11 @@ def render_cause_analysis(segment: dict | None = None) -> None:
             "- Étendre le couloir bus aux tronçons adjacents\n"
             "- Documenter comme cas d'école pour d'autres lignes"
         )
-        color = "#2196F3"
+        color = COLORS["status_info"]
     else:
         cause = "✅ Aucune anomalie détectée"
         recommendation = "RAS — fonctionnement normal."
-        color = "#4CAF50"
+        color = COLORS["status_ok"]
 
     st.markdown(
         f"""

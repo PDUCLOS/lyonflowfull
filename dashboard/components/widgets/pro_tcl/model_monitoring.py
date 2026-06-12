@@ -14,6 +14,8 @@ from __future__ import annotations
 
 import streamlit as st
 
+from dashboard.components.colors import COLORS
+
 # Mock des modèles (en prod : mlflow.search_registered_models + search_runs)
 MOCK_MODELS = [
     {
@@ -94,26 +96,53 @@ def render_model_registry() -> None:
     """Affiche la liste des modèles dans le registry."""
     st.markdown("##### 📚 Model Registry")
 
-    # Sprint 9 — charge les modèles depuis MLflow live (fallback mock si down)
-    try:
-        from src.data.data_loader import load_mlflow_experiment_summary, load_mlflow_models
+    # Sprint 9 — charge les modèles depuis MLflow live.
+    # Sprint VPS-6 — fail loud en prod, fallback mock en démo uniquement.
+    from dashboard.components.data_cache import (
+        cached_mlflow_experiment_summary,
+        cached_mlflow_models,
+    )
+    from dashboard.components.loading_state import (
+        data_error_to_message,
+        empty_state,
+        loading_wrapper,
+    )
+    from src.data.data_loader import _is_demo_mode
+    from src.data.exceptions import DashboardDataError
 
-        summary = load_mlflow_experiment_summary(force_mock=False)
-        models = load_mlflow_models(force_mock=False)
-    except Exception:
-        models = MOCK_MODELS
-        summary = {"available": False, "run_count": 0, "model_names": []}
+    with loading_wrapper("Chargement registry MLflow…", "📊"):
+        try:
+            summary = cached_mlflow_experiment_summary(force_mock=False)
+            models = cached_mlflow_models(force_mock=False)
+        except DashboardDataError as e:
+            empty_state(
+                icon="🟡",
+                title="MLflow indisponible",
+                message=data_error_to_message(e),
+            )
+            return
+        except Exception:
+            if _is_demo_mode():
+                models = MOCK_MODELS
+                summary = {"available": False, "run_count": 0, "model_names": []}
+            else:
+                empty_state(
+                    icon="🔴",
+                    title="MLflow a échoué",
+                    message="Registry modèles indisponible. Vérifie l'état du "
+                            "container `lyonflow-mlflow` (port 5000).",
+                )
+            return
 
     # Bandeau source (transparence MLflow)
     if summary.get("available"):
         st.success(
-            f"🟢 **MLflow live** · {summary.get('run_count', 0)} runs · "
-            f"{len(summary.get('model_names', []))} modèles"
+            f"🟢 **MLflow live** · {summary.get('run_count', 0)} runs · {len(summary.get('model_names', []))} modèles"
         )
     else:
         st.warning(
-            "🟡 **MLflow non accessible** — affichage fallback mock. "
-            "Pour activer : démarrer le service `mlflow` (docker compose) "
+            "🟡 **MLflow non accessible** — affichage fallback mock (mode démo). "
+            "Pour activer en prod : démarrer le service `mlflow` (docker compose) "
             "et recharger cette page."
         )
 
@@ -124,7 +153,19 @@ def render_model_registry() -> None:
     # KPIs
     prod = sum(1 for m in models if m.get("stage") == "Production")
     staging = sum(1 for m in models if m.get("stage") == "Staging")
-    n_drift = sum(1 for m in models if m.get("drift_status") != "ok")
+
+    # Sprint 10+ : drift réel depuis gold.model_drift_reports (PAS mock)
+    # Lecture du dernier rapport de drift persisté par build_xgb_training_set.
+    from src.data.db_query import get_latest_drift_report
+    latest_drift = get_latest_drift_report()
+    if latest_drift:
+        n_drift = 1 if latest_drift.get("dataset_drift") else 0
+        drift_share_pct = float(latest_drift.get("drift_share", 0.0)) * 100
+        drift_status = "🔴 DRIFT" if latest_drift.get("dataset_drift") else "🟢 OK"
+    else:
+        n_drift = 0
+        drift_share_pct = 0.0
+        drift_status = "⚪ Pas de rapport"
 
     cols = st.columns(4)
     with cols[0]:
@@ -134,7 +175,29 @@ def render_model_registry() -> None:
     with cols[2]:
         st.metric("Total modèles", len(models))
     with cols[3]:
-        st.metric("🚨 Drift alertes", n_drift, delta_color="inverse")
+        st.metric(f"🚨 Drift {drift_status}", f"{drift_share_pct:.0f}%", delta_color="inverse")
+
+    # Détail drift (Sprint 10+ — affiche le dernier rapport PSI)
+    if latest_drift:
+        with st.expander("📊 Dernier rapport de drift (PSI)", expanded=False):
+            st.markdown(
+                f"""
+                - **Dataset drift** : `{latest_drift.get('dataset_drift')}`
+                - **Drift share** : `{drift_share_pct:.1f}%`
+                - **N ref / current** : `{latest_drift.get('n_ref')}` / `{latest_drift.get('n_current')}`
+                - **Période ref** : `{latest_drift.get('ref_from')}` → `{latest_drift.get('ref_to')}`
+                - **Période current** : `{latest_drift.get('current_from')}` → `{latest_drift.get('current_to')}`
+                - **Computed at** : `{latest_drift.get('computed_at')}`
+                """
+            )
+            report = latest_drift.get("report", {})
+            if report.get("per_column"):
+                st.markdown("**Per-column drift** :")
+                for col, stats in report["per_column"].items():
+                    psi = stats.get("psi", 0)
+                    status = stats.get("status", "?")
+                    icon = {"stable": "🟢", "moderate": "🟡", "significant": "🔴"}.get(status, "⚪")
+                    st.markdown(f"- {icon} **{col}** : PSI = {psi:.3f} ({status})")
 
     # Tableau (Sprint 9 — utilise la variable `models` MLflow ou mock)
     _render_model_registry_table(models)
@@ -168,8 +231,8 @@ def _render_model_registry_table(models: list[dict]) -> None:
         with cols[1]:
             st.code(m.get("version", "—"))
         with cols[2]:
-            stage_color = {"Production": "#4CAF50", "Staging": "#FF9800"}.get(
-                m.get("stage", ""), "#666"
+            stage_color = {"Production": COLORS["status_ok"], "Staging": COLORS["status_warning"]}.get(
+                m.get("stage", ""), COLORS["text_muted"]
             )
             st.markdown(
                 f'<span style="background:{stage_color};color:white;padding:2px 8px;'
@@ -177,13 +240,22 @@ def _render_model_registry_table(models: list[dict]) -> None:
                 unsafe_allow_html=True,
             )
         with cols[3]:
-            mae = m.get("metrics", {}).get("mae", 0.0)
-            st.markdown(f"**{mae:.2f}**")
+            # mae None-safe (m["metrics"] peut être absent ou metrics.mae peut être None)
+            mae_raw = m.get("metrics", {}).get("mae") if m.get("metrics") else None
+            try:
+                mae_str = f"{float(mae_raw):.2f}"
+            except (TypeError, ValueError):
+                mae_str = "—"
+            st.markdown(f"**{mae_str}**")
         with cols[4]:
             trained = str(m.get("trained_at", "—"))[:19]  # tronque
             st.markdown(trained)
         with cols[5]:
-            st.markdown(f"{m.get('n_training_samples', 0):,}")
+            try:
+                samples = int(m.get("n_training_samples", 0) or 0)
+            except (TypeError, ValueError):
+                samples = 0
+            st.markdown(f"{samples:,}")
         with cols[6]:
             drift = m.get("drift_status", "ok")
             drift_emoji = {"ok": "✅", "warning": "⚠️", "critical": "🚨"}.get(drift, "—")
@@ -212,16 +284,16 @@ def render_model_registry_status() -> None:
 
     active = get_active_models().value
     if active == "both":
-        badge_color = "#FF9800"
+        badge_color = COLORS["status_warning"]
         badge_text = "🟡 COEXISTENCE (XGBoost=Champion, GNN=Challenger)"
     elif active == "xgboost":
-        badge_color = "#4CAF50"
+        badge_color = COLORS["status_ok"]
         badge_text = "🟢 XGBOOST SEUL (prod)"
     elif active == "stgcn":
-        badge_color = "#9C27B0"
+        badge_color = COLORS["chart_purple"]
         badge_text = "🟣 STGCN SEUL (GNN a pris le relais)"
     else:
-        badge_color = "#666"
+        badge_color = COLORS["text_muted"]
         badge_text = f"⚪ {active}"
 
     st.markdown(
@@ -256,8 +328,11 @@ def render_model_registry_status() -> None:
 
     # Detail table
     st.markdown("---")
-    st.markdown("**Status par horizon**")
-    horizons = [5, 15, 30, 60, 180, 360]
+    st.markdown("**Status par horizon (Sprint 8+ : focus H+1h)**")
+    # Sprint 8+ — seul H+1h (60 min) est entraîné. Les autres
+    # horizons sont conservés dans la liste pour le monitoring
+    # (compat ModelRegistry) mais marqués "non entraînés".
+    horizons = [60]
     for h in horizons:
         reg = ModelRegistry.get(h)
         s = reg.status()
@@ -265,13 +340,13 @@ def render_model_registry_status() -> None:
         with col1:
             st.markdown(f"**H+{h}min**")
         with col2:
-            color = "#4CAF50" if s["xgboost_available"] else "#999"
+            color = COLORS["status_ok"] if s["xgboost_available"] else COLORS["text_disabled"]
             st.markdown(
                 f'<span style="color:{color};">●</span> XGBoost',
                 unsafe_allow_html=True,
             )
         with col3:
-            color = "#9C27B0" if s["stgcn_available"] else "#999"
+            color = COLORS["chart_purple"] if s["stgcn_available"] else COLORS["text_disabled"]
             st.markdown(
                 f'<span style="color:{color};">●</span> STGCN',
                 unsafe_allow_html=True,
@@ -318,32 +393,82 @@ def render_metrics_comparison() -> None:
     """Affiche la comparaison des métriques entre modèles."""
     st.markdown("##### 📊 Comparaison métriques (XGBoost vs GNN)")
 
-    # Filtrer modèles avec MAE comparable
-    xgb_h60 = next((m for m in MOCK_MODELS if m["name"] == "xgboost_speed_h60"), None)
-    gnn_h60 = next((m for m in MOCK_MODELS if m["name"] == "stgcn_gnn_h60"), None)
+    # Sources live MLflow (fail loud en prod, fallback mock en démo)
+    from dashboard.components.data_cache import cached_mlflow_models
+    from src.data.data_loader import _is_demo_mode
+    from src.data.exceptions import DashboardDataError
+
+    try:
+        models = cached_mlflow_models(force_mock=False)
+    except DashboardDataError as e:
+        st.error(f"⚠️ {e}")
+        return
+    except Exception:
+        if _is_demo_mode():
+            models = MOCK_MODELS
+        else:
+            st.error("🔴 MLflow a échoué — métriques modèles indisponibles.")
+            return
+
+    if not models:
+        st.info("Aucun modèle tracké dans MLflow pour le moment.")
+        return
+
+    xgb_h60 = next((m for m in models if m.get("name") == "xgboost_speed_h60"), None)
+    gnn_h60 = next((m for m in models if m.get("name") == "stgcn_gnn_h60"), None)
 
     if not xgb_h60 or not gnn_h60:
+        st.info("Modèles XGBoost H+60min ou GNN H+60min non trouvés dans le registry.")
         return
+
+    # Defensive : valeurs None-safe pour éviter crash si MLflow renvoie un dict partiel
+    def _mae(m):
+        try:
+            return float(m.get("metrics", {}).get("mae", 0.0))
+        except (TypeError, ValueError):
+            return 0.0
+
+    def _r2(m):
+        try:
+            return float(m.get("metrics", {}).get("r2", 0.0))
+        except (TypeError, ValueError):
+            return 0.0
+
+    def _samples(m):
+        try:
+            return int(m.get("n_training_samples", 0) or 0)
+        except (TypeError, ValueError):
+            return 0
+
+    def _features(m):
+        try:
+            return int(m.get("feature_count", 0) or 0)
+        except (TypeError, ValueError):
+            return 0
 
     cols = st.columns(2)
     with cols[0]:
         st.markdown("**XGBoost Speed H+60min**")
-        st.metric("MAE", f"{xgb_h60['metrics']['mae']:.2f} km/h")
-        st.metric("R²", f"{xgb_h60['metrics']['r2']:.3f}")
-        st.metric("Samples", f"{xgb_h60['n_training_samples']:,}")
-        st.metric("Features", xgb_h60['feature_count'])
+        st.metric("MAE", f"{_mae(xgb_h60):.2f} km/h")
+        st.metric("R²", f"{_r2(xgb_h60):.3f}")
+        st.metric("Samples", f"{_samples(xgb_h60):,}")
+        st.metric("Features", _features(xgb_h60))
 
     with cols[1]:
         st.markdown("**ST-GCN GNN H+60min (Staging)**")
         st.metric(
-            "MAE", f"{gnn_h60['metrics']['mae']:.2f} km/h",
-            delta=f"{gnn_h60['metrics']['mae'] - xgb_h60['metrics']['mae']:+.2f} vs XGBoost",
+            "MAE",
+            f"{_mae(gnn_h60):.2f} km/h",
+            delta=f"{_mae(gnn_h60) - _mae(xgb_h60):+.2f} vs XGBoost",
             delta_color="inverse",
         )
-        st.metric("R²", f"{gnn_h60['metrics']['r2']:.3f}",
-                  delta=f"{gnn_h60['metrics']['r2'] - xgb_h60['metrics']['r2']:+.3f} vs XGBoost")
-        st.metric("Samples", f"{gnn_h60['n_training_samples']:,}")
-        st.metric("Features", gnn_h60['feature_count'])
+        st.metric(
+            "R²",
+            f"{_r2(gnn_h60):.3f}",
+            delta=f"{_r2(gnn_h60) - _r2(xgb_h60):+.3f} vs XGBoost",
+        )
+        st.metric("Samples", f"{_samples(gnn_h60):,}")
+        st.metric("Features", _features(gnn_h60))
 
     st.caption(
         "💡 Le GNN capture les dépendances spatiales entre segments. "
@@ -364,15 +489,25 @@ def render_training_history() -> None:
         import plotly.graph_objects as go
 
         fig = go.Figure()
-        fig.add_trace(go.Scatter(
-            x=days, y=mae_speed_h60, mode="lines+markers",
-            name="XGBoost Speed H+60min", line={"color": "#4CAF50", "width": 3},
-        ))
-        fig.add_trace(go.Scatter(
-            x=days, y=mae_velov_h30, mode="lines+markers",
-            name="XGBoost Velov H+30min", line={"color": "#FF9800", "width": 3},
-            yaxis="y2",
-        ))
+        fig.add_trace(
+            go.Scatter(
+                x=days,
+                y=mae_speed_h60,
+                mode="lines+markers",
+                name="XGBoost Speed H+60min",
+                line={"color": COLORS["status_ok"], "width": 3},
+            )
+        )
+        fig.add_trace(
+            go.Scatter(
+                x=days,
+                y=mae_velov_h30,
+                mode="lines+markers",
+                name="XGBoost Velov H+30min",
+                line={"color": COLORS["status_warning"], "width": 3},
+                yaxis="y2",
+            )
+        )
         fig.update_layout(
             title="MAE evolution",
             xaxis_title="Jour",
@@ -414,28 +549,231 @@ def render_drift_panel() -> None:
 
     for d in drifts:
         status = d["status"]
-        color = {"ok": "#4CAF50", "warning": "#FF9800", "critical": "#E74C3C"}.get(status, "#666")
+        color = {
+            "ok": COLORS["status_ok"],
+            "warning": COLORS["status_warning"],
+            "critical": COLORS["status_critical"],
+        }.get(status, COLORS["text_muted"])
         icon = {"ok": "🟢", "warning": "🟡", "critical": "🔴"}.get(status, "⚪")
 
         st.markdown(
             f"""
-            <div style="background:#1A1D24;border:1px solid #2A2D34;border-left:4px solid {color};
+            <div style="background:var(--bg-card);border:1px solid var(--border-card);border-left:4px solid {color};
                         border-radius:6px;padding:0.7rem;margin:0.4rem 0;">
                 <div style="display:flex;align-items:center;gap:0.6rem;">
                     <div style="font-size:1.3rem;">{icon}</div>
                     <div style="flex:1;">
-                        <div style="font-weight:600;">{d['model']}</div>
+                        <div style="font-weight:600;">{d["model"]}</div>
                         <div style="font-size:0.8rem;opacity:0.7;">
-                            Drift score: {d['drift_score']:.2f} / seuil {d['threshold']} · {d['detected_at']}
+                            Drift score: {d["drift_score"]:.2f} / seuil {d["threshold"]} · {d["detected_at"]}
                         </div>
-                        {('<div style="font-size:0.8rem;color:#FF9800;margin-top:0.2rem;">⚠️ ' + ', '.join(d.get('features_drifted', [])) + '</div>') if d.get('features_drifted') else ''}
-                        {('<div style="font-size:0.8rem;margin-top:0.2rem;">→ ' + d.get('action', '') + '</div>') if d.get('action') else ''}
+                        {('<div style="font-size:0.8rem;color:var(--status-warning);margin-top:0.2rem;">⚠️ ' + ", ".join(str(feat) for feat in d.get("features_drifted", [])) + "</div>") if d.get("features_drifted") else ""}
+                        {('<div style="font-size:0.8rem;margin-top:0.2rem;">→ ' + str(d.get("action", "")) + "</div>") if d.get("action") else ""}
                     </div>
                 </div>
             </div>
             """,
             unsafe_allow_html=True,
         )
+
+
+def render_velov_model_analysis() -> None:
+    """Sprint 10 — Analyse modèle Vélo'v (freshness + distribution + backtest).
+
+    Lit ``gold.velov_predictions`` directement et calcule :
+    * Freshness (timestamp dernière prédiction)
+    * Coverage (nb stations couvertes / total)
+    * Distribution predicted_bikes par horizon
+    * Confidence interval moyen (largeur)
+    * Backtest MAE si ``gold.predictions_vs_actuals`` contient des vélov rows.
+    """
+    st.markdown("##### 🚲 Analyse modèle Vélo'v (XGBoost)")
+    try:
+        from dashboard.components.data_cache import cached_velov_predictions
+        from src.data.db_query import get_velov_stations_geo
+    except Exception as e:
+        st.warning(f"Imports indisponibles : {e}")
+        return
+
+    pred_30 = cached_velov_predictions(horizon_minutes=30, force_mock=False)
+    pred_60 = cached_velov_predictions(horizon_minutes=60, force_mock=False)
+    stations = get_velov_stations_geo()
+    n_stations_total = len(stations) if not stations.empty else 0
+
+    if pred_30.empty and pred_60.empty:
+        st.info(
+            "Aucune prédiction Vélo'v dans `gold.velov_predictions`. "
+            "Lancer le DAG `retrain_velov` puis `predict_velov`."
+        )
+        return
+
+    cols = st.columns(4)
+    last_30 = (
+        pred_30["prediction_timestamp"].max()
+        if not pred_30.empty and "prediction_timestamp" in pred_30.columns
+        else None
+    )
+    coverage_30 = pred_30["station_id"].nunique() if "station_id" in pred_30.columns else 0
+    coverage_pct = f"{coverage_30}/{n_stations_total}" if n_stations_total else f"{coverage_30}"
+
+    cols[0].metric(
+        "Dernière prédiction H+30",
+        str(last_30)[:16] if last_30 is not None else "—",
+    )
+    cols[1].metric("Stations couvertes", coverage_pct)
+    cols[2].metric("Lignes H+30", f"{len(pred_30):,}")
+    cols[3].metric("Lignes H+1h", f"{len(pred_60):,}")
+
+    # Distribution + confidence
+    if not pred_30.empty and "predicted_bikes" in pred_30.columns:
+        col_a, col_b = st.columns(2)
+        with col_a:
+            st.markdown("**Distribution predicted_bikes (H+30)**")
+            try:
+                import plotly.express as px
+
+                fig = px.histogram(
+                    pred_30,
+                    x="predicted_bikes",
+                    nbins=20,
+                    template="plotly_dark",
+                    height=240,
+                )
+                fig.update_layout(margin={"l": 0, "r": 0, "t": 10, "b": 0})
+                st.plotly_chart(fig, use_container_width=True)
+            except ImportError:
+                st.bar_chart(pred_30["predicted_bikes"].value_counts().sort_index())
+
+        with col_b:
+            if {"confidence_low", "confidence_high"}.issubset(pred_30.columns):
+                width = (pred_30["confidence_high"] - pred_30["confidence_low"]).dropna()
+                st.markdown("**Confidence interval width (H+30)**")
+                if not width.empty:
+                    st.metric("Moy", f"{width.mean():.2f} vélos")
+                    st.metric("Médiane", f"{width.median():.2f} vélos")
+                    st.metric("p95", f"{width.quantile(0.95):.2f} vélos")
+                else:
+                    st.caption("Pas d'intervalles de confiance disponibles.")
+            else:
+                st.caption("Colonnes confidence_* absentes — modèle sans CI.")
+
+    # Backtest MAE si gold.predictions_vs_actuals existe avec vélov
+    try:
+        from src.data.db_query import _df_from_query  # type: ignore
+
+        backtest = _df_from_query(
+            """
+            SELECT model_name, horizon_minutes,
+                   AVG(ABS(predicted - actual)) AS mae,
+                   COUNT(*) AS n_obs,
+                   MAX(target_timestamp) AS last_obs
+            FROM gold.predictions_vs_actuals
+            WHERE model_name LIKE 'xgboost_velov%%'
+              AND target_timestamp >= NOW() - INTERVAL '7 days'
+            GROUP BY model_name, horizon_minutes
+            ORDER BY model_name, horizon_minutes
+            """
+        )
+        if not backtest.empty:
+            st.markdown("**Backtest MAE 7j (Elementary-style)**")
+            st.dataframe(backtest, use_container_width=True, hide_index=True)
+        else:
+            st.caption("Backtest vide — alimenter `gold.predictions_vs_actuals` (DAG `evaluate_velov`).")
+    except Exception as e:
+        st.caption(f"Backtest indisponible : {e}")
+
+
+def render_data_quality_panel() -> None:
+    """Sprint 10 — Panel data quality style Elementary.
+
+    Lit health checks + freshness pour chaque table Gold/Silver clé.
+    """
+    st.markdown("##### 🩺 Data Quality — freshness + volume (Elementary-style)")
+    try:
+        from psycopg2 import sql
+
+        from src.data.db_query import _df_from_query  # type: ignore
+    except Exception as e:
+        st.caption(f"Imports indisponibles : {e}")
+        return
+
+    tables = [
+        ("silver", "trafic_boucles_clean", "measurement_time", "5 min"),
+        ("silver", "velov_clean", "measurement_time", "5 min"),
+        ("silver", "tcl_vehicles_clean", "recorded_at", "5 min"),
+        ("silver", "meteo_hourly", "measurement_time", "1h"),
+        ("gold", "traffic_features_live", "measurement_time", "5 min"),
+        ("gold", "trafic_predictions", "calculated_at", "1h"),
+        ("gold", "velov_features", "measurement_time", "5 min"),
+        ("gold", "velov_predictions", "prediction_timestamp", "1h"),
+        ("gold", "bus_delay_segments", "computed_at", "1h"),
+    ]
+
+    rows = []
+    for schema, table, ts_col, expected in tables:
+        try:
+            # psycopg2.sql.Identifier pour identifier (schema/table/colonne) — SQL injection-proof.
+            # ts_col est hardcodé dans la liste ci-dessus, mais on utilise Identifier par cohérence
+            # avec la règle "SQL paramétré partout" du AGENTS.md.
+            query = sql.SQL(
+                """
+                SELECT COUNT(*) AS n_rows,
+                       MAX({ts_col}) AS last_ts,
+                       NOW() - MAX({ts_col}) AS lag
+                FROM {schema}.{table}
+                """
+            ).format(
+                ts_col=sql.Identifier(ts_col),
+                schema=sql.Identifier(schema),
+                table=sql.Identifier(table),
+            )
+            df = _df_from_query(query)
+            if df.empty:
+                rows.append(
+                    {
+                        "Table": f"{schema}.{table}",
+                        "Rows": 0,
+                        "Last": "—",
+                        "Lag": "—",
+                        "Expected": expected,
+                        "Status": "🔴",
+                    }
+                )
+                continue
+            r = df.iloc[0]
+            n_rows = int(r.get("n_rows") or 0)
+            last_ts = r.get("last_ts")
+            lag = r.get("lag")
+            lag_str = str(lag).split(".")[0] if lag is not None else "—"
+            status = "🟢" if n_rows > 0 and last_ts is not None else "🔴"
+            rows.append(
+                {
+                    "Table": f"{schema}.{table}",
+                    "Rows": f"{n_rows:,}",
+                    "Last": str(last_ts)[:16] if last_ts else "—",
+                    "Lag": lag_str,
+                    "Expected": expected,
+                    "Status": status,
+                }
+            )
+        except Exception as e:
+            rows.append(
+                {
+                    "Table": f"{schema}.{table}",
+                    "Rows": "—",
+                    "Last": "—",
+                    "Lag": "—",
+                    "Expected": expected,
+                    "Status": f"⚠️ {str(e)[:40]}",
+                }
+            )
+
+    st.dataframe(rows, use_container_width=True, hide_index=True)
+    st.caption(
+        "🟢 = données présentes · 🔴 = table vide · ⚠️ = erreur SQL. "
+        "Lag = ⌚ écart entre NOW() et dernière insertion. "
+        "Source : queries directes sur PostgreSQL Gold/Silver."
+    )
 
 
 def render_model_monitoring_page() -> None:
@@ -450,3 +788,8 @@ def render_model_monitoring_page() -> None:
     render_training_history()
     st.markdown("---")
     render_drift_panel()
+    # Sprint 10 — Sections complémentaires
+    st.markdown("---")
+    render_velov_model_analysis()
+    st.markdown("---")
+    render_data_quality_panel()

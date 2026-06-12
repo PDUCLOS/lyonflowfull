@@ -1,81 +1,106 @@
-"""Widget — Barre de recherche trajet (géocodage simulé).
+"""Widget — Barre de recherche trajet (géocodage simulé + sélection cliquable).
 
-Affiche 2 champs (départ + destination) avec auto-complétion simple
-basée sur des adresses Lyon (mock statique — pas de DB query).
+Affiche 2 champs (départ + destination) avec auto-complétion **cliquable** :
+- Liste de 21 adresses Lyon (mock) avec icône par type (gare/place/quartier…)
+- Bouton par adresse : au clic, remplit départ OU destination selon le toggle actif
+- Plus de tape à la main, l'utilisateur clique
 
-Sprint 8 — Adresses chargées via data_loader.load_lyon_addresses().
+Sprint 8 — Adresses chargées via
+data_loader.cached_lyon_addresses_with_coords().
 """
 
 from __future__ import annotations
 
+import typing
+
 import streamlit as st
 
-from src.data.data_loader import load_lyon_addresses
+from dashboard.components.data_cache import cached_lyon_addresses_with_coords
 
+_TYPE_ICON = {
+    "gare": "🚉",
+    "place": "📍",
+    "monument": "🏛",
+    "quartier": "🏘",
+    "parc": "🌳",
+    "universite": "🎓",
+    "banlieue": "🏙",
+}
 
-def render_search_bar() -> dict:
-    """Affiche la barre de recherche trajet.
+def render_search_bar() -> dict[str, typing.Any]:
+    """Affiche la barre de recherche trajet, élégante et ergonomique."""
+    addresses = cached_lyon_addresses_with_coords(force_mock=False)
+    # Préparer les options pour la selectbox
+    addr_options = [f"{_TYPE_ICON.get(a['type'], '📍')} {a['name']}" for a in addresses]
 
-    Returns:
-        Dict avec clés 'origin', 'destination', 'departure_mode', 'departure_time'
+    # Injection de CSS pour un style épuré
+    st.markdown("""
+    <style>
+    /* Styling des selectbox pour un effet plus premium */
+    div[data-baseweb="select"] > div {
+        border-radius: 8px;
+        background-color: var(--secondary-background-color);
+        border: 1px solid var(--border-color);
+        transition: all 0.3s ease;
+    }
+    div[data-baseweb="select"] > div:hover {
+        border-color: var(--primary-color);
+    }
+    /* Stylisation du container principal de recherche */
+    .search-container {
+        padding: 1.5rem;
+        border-radius: 12px;
+        background: linear-gradient(145deg, rgba(255,255,255,0.05) 0%, rgba(255,255,255,0.02) 100%);
+        box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+        border: 1px solid rgba(255,255,255,0.1);
+        margin-bottom: 1rem;
+    }
+    </style>
+    """, unsafe_allow_html=True)
 
-    Note : pas de responsive Streamlit — `st.columns(2)` reste 2 colonnes
-    même sur mobile. La docstring antérieure mentionnait "1 colonne mobile"
-    qui n'était pas implémentée.
-    """
-    col1, col2 = st.columns([1, 1])
+    with st.container(border=True):
+        st.markdown("#### 🗺️ Où allez-vous ?")
 
-    with col1:
-        origin = st.text_input(
-            "🟢 Départ",
-            placeholder="Adresse, arrêt, station…",
-            value="Villeurbanne",
-            key="search_origin",
-        )
-    with col2:
-        destination = st.text_input(
-            "🔴 Destination",
-            placeholder="Adresse, arrêt, station…",
-            value="Part-Dieu",
-            key="search_destination",
-        )
+        col1, col2 = st.columns(2)
+        with col1:
+            origin = st.selectbox(
+                "🟢 Point de départ",
+                options=addr_options,
+                index=addr_options.index("🏙 Villeurbanne") if "🏙 Villeurbanne" in addr_options else 0,
+                key="search_origin",
+                help="Tapez pour rechercher une adresse"
+            )
+        with col2:
+            destination = st.selectbox(
+                "🔴 Destination",
+                options=addr_options,
+                index=addr_options.index("🚉 Part-Dieu") if "🚉 Part-Dieu" in addr_options else min(1, len(addr_options)-1),
+                key="search_destination",
+                help="Tapez pour rechercher une adresse"
+            )
 
-    # Auto-complétion simple (adresses Lyon, statiques)
-    addresses = load_lyon_addresses(force_mock=False)
-    with st.expander("📍 Adresses suggérées", expanded=False):
-        for addr in addresses[:5]:
-            st.caption(f"• {addr}")
+        st.markdown("<br/>", unsafe_allow_html=True)
 
-    st.markdown("##### 🕐 Départ")
-    dep_col1, dep_col2 = st.columns(2)
-    with dep_col1:
-        departure_mode = st.radio(
-            "Mode",
-            ["🚶 Partir maintenant", "⏰ Arriver à l'heure"],
-            horizontal=True,
-            key="search_dep_mode",
-        )
-    with dep_col2:
-        departure_time = st.time_input(
-            "Heure",
-            value=None,
-            key="search_dep_time",
-        )
+        # Bloc départ et filtres
+        col_time, col_modes = st.columns([1, 1])
+        with col_time:
+            departure_mode = st.radio(
+                "Quand ?",
+                ["🚶 Partir maintenant", "⏰ Arriver à l'heure"],
+                horizontal=True,
+                key="search_dep_mode",
+            )
+            departure_time = None
+            if departure_mode == "⏰ Arriver à l'heure":
+                departure_time = st.time_input("Heure prévue", key="search_dep_time")
 
-    st.markdown("##### 🚦 Modes autorisés")
-    modes = st.multiselect(
-        "Filtrer",
-        [
-            "🚇 Métro",
-            "🚊 Tram",
-            "🚌 Bus",
-            "🚲 Vélov",
-            "🚗 Voiture",
-            "🚶 Marche",
-        ],
-        default=["🚇 Métro", "🚊 Tram", "🚌 Bus", "🚲 Vélov", "🚶 Marche"],
-        key="search_modes",
-    )
+        with col_modes:
+            modes = st.multiselect(
+                "Modes de transport autorisés",
+                ["🚇 Métro", "🚊 Tram", "🚌 Bus", "🚲 Vélov", "🚗 Voiture", "🚶 Marche"],
+                default=["🚇 Métro", "🚊 Tram", "🚌 Bus", "🚲 Vélov", "🚶 Marche"],
+                key="search_modes"
+            )
 
     return {
         "origin": origin,

@@ -10,6 +10,11 @@ from dashboard.components.widgets.pro_tcl.export_button import (
 )
 from dashboard.components.widgets.pro_tcl.format_selector import render_format_selector
 from dashboard.components.widgets.pro_tcl.frequency_slider import render_frequency_slider
+from dashboard.components.widgets.pro_tcl.gnn_map import (
+    render_gnn_map_section,
+    render_traffic_map,
+    render_traffic_map_compact,
+)
 from dashboard.components.widgets.pro_tcl.line_comparison import render_line_comparison
 from dashboard.components.widgets.pro_tcl.line_kpis import render_line_kpis
 from dashboard.components.widgets.pro_tcl.line_selector import render_line_selector
@@ -35,6 +40,7 @@ __all__ = [
     "render_export_button",
     "render_format_selector",
     "render_frequency_slider",
+    "render_gnn_map_section",
     "render_line_comparison",
     "render_line_kpis",
     "render_line_selector",
@@ -48,4 +54,6 @@ __all__ = [
     "render_report_builder",
     "render_saeiv_export",
     "render_segment_table",
+    "render_traffic_map",
+    "render_traffic_map_compact",
 ]

@@ -1,0 +1,48 @@
+# =============================================================================
+# monitoring/alertmanager/alertmanager.yml — Config Alertmanager
+# =============================================================================
+# Sprint VPS-3 : route les alertes critiques vers Discord (ou Slack).
+# Sprint 8+4 (2026-06-12) : receivers webhook désactivés (pas de
+# ALERT_WEBHOOK_URL dans .env, sinon container restart-loop).
+# =============================================================================
+
+global:
+  resolve_timeout: 5m
+
+templates:
+  - '/etc/alertmanager/templates/*.tmpl'
+
+route:
+  group_by: ['alertname', 'component', 'severity']
+  group_wait: 30s
+  group_interval: 5m
+  repeat_interval: 4h
+  receiver: 'null-receiver'
+  routes:
+    - match:
+        severity: critical
+      receiver: 'null-receiver'
+      repeat_interval: 1h
+      continue: true
+    - match:
+        severity: warning
+      receiver: 'null-receiver'
+      repeat_interval: 6h
+
+receivers:
+  - name: 'null-receiver'
+
+inhibit_rules:
+  - source_match:
+      severity: 'critical'
+      alertname: 'DatabaseDown'
+    target_match:
+      component: 'database'
+    equal: ['cluster']
+
+  - source_match:
+      severity: 'critical'
+      alertname: 'NodeDown'
+    target_match:
+      component: 'vps-host'
+    equal: ['cluster']

@@ -52,7 +52,7 @@ Réponse 200 :
   "user_id": "uuid-here",
   "persona_id": "pro_tcl",
   "username": "pro_tcl",
-  "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+  "token": "<JWT_TOKEN_RETORNE_PAR_LOGIN>"
 }
 ```
 

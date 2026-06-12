@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import streamlit as st
 
+from dashboard.components.data_status import render_data_status_banner
 from dashboard.components.navigation import render_sidebar_navigation
 from dashboard.components.persona_guard import apply_persona_guard
 from dashboard.components.theme import inject_theme
@@ -13,7 +14,6 @@ from dashboard.components.widgets.pro_tcl import (
     render_line_selector,
     render_segment_table,
 )
-
 
 st.set_page_config(
     page_title="Corrélation bus × trafic — Pro TCL · LyonFlowFull",
@@ -25,7 +25,8 @@ apply_persona_guard(expected_persona="pro_tcl")
 inject_theme()
 render_sidebar_navigation()
 
-st.title("🔗 Corrélation bus × trafic routier")
+st.title("Corrélation bus × trafic routier")
+render_data_status_banner()
 
 st.caption("L'USP technique de LyonFlowFull — croise retards bus et congestion routière par segment.")
 
@@ -45,18 +46,30 @@ st.markdown("---")
 # Détail par segment
 col1, col2 = st.columns([3, 2])
 with col1:
-    st.markdown("##### 📋 Table des segments")
+    st.markdown("##### Table des segments")
     render_segment_table(line_id=target_line, height=350)
 with col2:
-    st.markdown("##### 🧠 Analyse causale (1er segment problématique)")
-    # Trouver le 1er segment infra
-    from src.data.mock.pro_tcl import SEGMENTS
-    segments = SEGMENTS
-    if target_line:
-        segments = [s for s in segments if s["line_id"] == target_line]
-    infra_seg = next((s for s in segments if s.get("diagnosis") == "infra"), None)
-    if infra_seg:
-        render_cause_analysis(infra_seg)
+    st.markdown("##### Analyse causale (1er segment problématique)")
+    from dashboard.components.data_cache import cached_infra_bottlenecks
+
+    bn_df = cached_infra_bottlenecks(top=500)
+    if not bn_df.empty:
+        if target_line:
+            bn_df = bn_df[bn_df["line_ref"] == target_line]
+        infra_rows = bn_df[bn_df["diagnosis"] == "infra"] if "diagnosis" in bn_df.columns else bn_df.iloc[:0]
+        if not infra_rows.empty:
+            row = infra_rows.iloc[0]
+            delay_s = row.get("bus_delay_seconds", 0) or 0
+            render_cause_analysis({
+                "line_id": row.get("line_ref", "?"),
+                "name": row.get("segment_id", "—"),
+                "bus_state": "delayed" if delay_s > 120 else "on_time",
+                "traffic_state": "jammed" if (row.get("traffic_speed_kmh", 50) or 50) < 25 else "fluid",
+                "diagnosis": row.get("diagnosis", "ok"),
+                "delay_min": round(delay_s / 60, 1),
+            })
+        else:
+            render_cause_analysis(None)
     else:
         render_cause_analysis(None)
 

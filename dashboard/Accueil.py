@@ -21,7 +21,6 @@ from src.persona.manager import (
     get_current_persona_config,
 )
 
-
 st.set_page_config(
     page_title="LyonFlowFull",
     page_icon="🚦",
@@ -38,11 +37,35 @@ render_sidebar_navigation()
 # -----------------------------------------------------------------------------
 st.markdown(
     """
-    <div style="text-align:center;padding:2rem 0 1rem 0;">
-        <div style="font-size:3rem;font-weight:700;color:#4CAF50;">
+    <style>
+    @keyframes gradientFlow {
+        0% { background-position: 0% 50%; }
+        50% { background-position: 100% 50%; }
+        100% { background-position: 0% 50%; }
+    }
+    .animated-title {
+        font-size: 3.5rem;
+        font-weight: 800;
+        background: linear-gradient(to right, var(--primary), var(--accent), var(--primary));
+        background-size: 200% auto;
+        color: transparent;
+        -webkit-background-clip: text;
+        background-clip: text;
+        animation: gradientFlow 4s ease infinite;
+        letter-spacing: -1px;
+    }
+    .subtitle {
+        font-size: 1.15rem;
+        opacity: 0.85;
+        margin-top: 0.5rem;
+        font-weight: 500;
+    }
+    </style>
+    <div style="text-align:center;padding:3rem 0 2rem 0;">
+        <div class="animated-title">
             🚦 LyonFlowFull
         </div>
-        <div style="font-size:1.1rem;opacity:0.8;margin-top:0.5rem;">
+        <div class="subtitle">
             La plateforme MLOps qui prédit le trafic et les retards bus sur la Métropole de Lyon
         </div>
     </div>
@@ -54,50 +77,46 @@ st.markdown("---")
 
 
 # -----------------------------------------------------------------------------
-# Qui es-tu ?
+# Auto-redirection ou Splash Screen (Onboarding)
 # -----------------------------------------------------------------------------
-st.markdown("### 👋 Qui es-tu ?")
-st.caption("Choisis ton profil pour voir la version de LyonFlowFull adaptée à ton usage.")
+# Si l'utilisateur a explicitement un persona actif en session, on le redirige.
+# L'Accueil devient uniquement une page d'Onboarding / Splash Screen.
+from src.persona.manager import _SESSION_KEY  # noqa: E402
 
-render_persona_switcher(layout="cards")
+has_explicit_persona = _SESSION_KEY in st.session_state
 
-st.markdown("---")
+if has_explicit_persona:
+    persona_id = get_current_persona()
+    persona_config = get_current_persona_config()
+    landing_page = persona_config.get("landing_page", "")
+    auth_required = persona_config.get("access", {}).get("auth_required", False)
 
+    # Check auth before redirecting
+    if auth_required and not is_authenticated():
+        st.markdown("### 🔐 Authentification requise")
+        st.caption(
+            f"Le profil **{persona_config.get('icon', '')} {persona_config.get('label', persona_id)}** "
+            f"est protégé. Saisis le mot de passe fourni par l'administrateur."
+        )
+        require_password()
+        st.stop()
 
-# -----------------------------------------------------------------------------
-# Authentification si persona protégé
-# -----------------------------------------------------------------------------
-persona_id = get_current_persona()
-persona_config = get_current_persona_config()
-auth_required = persona_config.get("access", {}).get("auth_required", False)
-
-if auth_required and not is_authenticated():
-    st.markdown("### 🔐 Authentification requise")
-    st.caption(
-        f"Le profil **{persona_config.get('icon', '')} {persona_config.get('label', persona_id)}** "
-        f"est protégé. Saisis le mot de passe fourni par l'administrateur."
-    )
-    require_password()
+    # Si auth OK ou non requise, on redirige
+    st.info(f"Redirection vers l'espace {persona_config.get('label', persona_id)}...")
+    if landing_page:
+        st.switch_page(f"pages/{landing_page}.py")
+    else:
+        st.warning("Landing page non configurée pour ce persona.")
     st.stop()
 
 
 # -----------------------------------------------------------------------------
-# Accès à l'app
+# Qui es-tu ? (Onboarding / Premier accès)
 # -----------------------------------------------------------------------------
-st.markdown("### 🚀 Prêt à démarrer ?")
-landing_page = persona_config.get("landing_page", "")
+st.markdown("### 👋 Bienvenue sur LyonFlowFull")
+st.caption("Choisis ton profil pour voir la version de l'application adaptée à ton usage.")
 
-col1, col2, col3 = st.columns([1, 2, 1])
-with col2:
-    if st.button(
-        f"➡️ Entrer en mode {persona_config.get('label', persona_id)}",
-        type="primary",
-        use_container_width=True,
-    ):
-        if landing_page:
-            st.switch_page(f"pages/{landing_page}.py")
-        else:
-            st.warning("Landing page non configurée pour ce persona.")
+render_persona_switcher(layout="cards")
 
 # -----------------------------------------------------------------------------
 # Footer : stats globales (lisibles par tous)
@@ -106,15 +125,44 @@ st.markdown("---")
 st.markdown("##### 📊 Lyon en ce moment (aperçu — valeurs de référence, mode démo)")
 
 stat_cols = st.columns(4)
-# TODO Sprint 6+ : query DB pour vraies valeurs
-# SELECT COUNT(*) FROM bronze.velov, etc.
+# Sprint 7+ : query live DB pour vraies valeurs (fallback mock si DB indispo).
+# Avant ce fix : "1 100", "118", "458" hardcodés en dur — incohérent avec le
+# bandeau "🟢 Live" en haut de page.
+# Sprint VPS-6 (2026-06-11) — fail loud en prod : on lit la DB, pas de
+# fallback hardcodé. Les chiffres du mock historique (118, 458) sont
+# conservés comme référence dans le caption.
+
+# Imports en bas du bloc : nécessaire car Accueil.py a du code Streamlit avant.
+from dashboard.components.data_cache import (  # noqa: E402
+    cached_tcl_lines,
+    cached_velov_stations,
+)
+from src.data.exceptions import DashboardDataError  # noqa: E402
+
+n_lines = "—"
+n_stations_velov = "—"
+try:
+    n_lines_raw = cached_tcl_lines(force_mock=False)
+    n_lines = len(n_lines_raw) if n_lines_raw else 0
+except DashboardDataError as e:
+    st.error(f"⚠️ Lignes TCL : {e}")
+
+try:
+    n_stations_velov_raw = cached_velov_stations(force_mock=False)
+    n_stations_velov = len(n_stations_velov_raw) if n_stations_velov_raw else 0
+except DashboardDataError as e:
+    st.error(f"⚠️ Stations Vélov : {e}")
+
 with stat_cols[0]:
-    st.metric("Capteurs trafic", "1 100", delta="📊 référence")
+    st.metric("Capteurs trafic", "1 100", delta="référence Grand Lyon")
 with stat_cols[1]:
-    st.metric("Lignes TCL", "118", delta="📊 référence")
+    st.metric("Lignes TCL", f"{n_lines}", delta="live")
 with stat_cols[2]:
-    st.metric("Stations Vélov", "458", delta="📊 référence")
+    st.metric("Stations Vélov", f"{n_stations_velov}", delta="live")
 with stat_cols[3]:
     st.metric("Prédictions/jour", "~26k", delta="GNN + XGBoost")
 
-st.caption("Données mises à jour toutes les 5 min · Source : Grand Lyon Open Data + Open-Meteo")
+st.caption(
+    "Données mises à jour toutes les 5 min · Source : Grand Lyon Open Data + Open-Meteo. "
+    "Référence : ~118 lignes TCL historiques, ~458 stations Vélov."
+)

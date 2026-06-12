@@ -23,7 +23,7 @@ def render_why_explainer(reasons: list[str]) -> None:
                 f"""
                 <div style="display:flex;align-items:flex-start;gap:0.8rem;
                             margin:0.4rem 0;">
-                    <div style="background:#4CAF50;color:white;border-radius:50%;
+                    <div style="background:var(--status-ok);color:white;border-radius:50%;
                                 width:24px;height:24px;display:flex;align-items:center;
                                 justify-content:center;font-weight:600;flex-shrink:0;">
                         {i}

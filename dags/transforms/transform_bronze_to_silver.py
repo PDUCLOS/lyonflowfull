@@ -13,7 +13,6 @@ from airflow.operators.python import PythonOperator
 
 from src.transformation import transform_to_silver
 
-
 logger = logging.getLogger(__name__)
 
 
@@ -37,7 +36,6 @@ with DAG(
     max_active_runs=1,
     tags=["transform", "silver"],
 ) as dag:
-
     for source in ["trafic_boucles", "velov", "tcl_vehicles", "meteo", "chantiers"]:
         PythonOperator(
             task_id=f"transform_{source}",

@@ -4,9 +4,9 @@ from __future__ import annotations
 
 import streamlit as st
 
+from dashboard.components.data_status import render_data_status_banner
 from dashboard.components.navigation import render_sidebar_navigation
 from dashboard.components.theme import inject_theme
-
 
 st.set_page_config(
     page_title="À propos — LyonFlowFull",
@@ -18,6 +18,7 @@ inject_theme()
 render_sidebar_navigation()
 
 st.title("ℹ️ À propos de LyonFlowFull")
+render_data_status_banner()
 
 st.markdown(
     """

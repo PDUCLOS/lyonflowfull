@@ -13,11 +13,9 @@ from __future__ import annotations
 
 import logging
 from dataclasses import dataclass
-from datetime import datetime, timedelta, timezone
-from typing import Optional
+from datetime import UTC, datetime
 
 from src.db import execute_query, execute_scalar
-
 
 logger = logging.getLogger(__name__)
 
@@ -25,16 +23,17 @@ logger = logging.getLogger(__name__)
 @dataclass
 class CheckResult:
     """Résultat d'un health check."""
+
     name: str
     status: str  # 'ok' | 'warning' | 'critical'
     details: str
-    metric_value: Optional[float] = None
-    threshold: Optional[float] = None
+    metric_value: float | None = None
+    threshold: float | None = None
     timestamp: str = ""
 
 
 def _now_iso() -> str:
-    return datetime.now(timezone.utc).isoformat()
+    return datetime.now(UTC).isoformat()
 
 
 def check_bronze_freshness(max_age_minutes: int = 30) -> CheckResult:
@@ -46,11 +45,9 @@ def check_bronze_freshness(max_age_minutes: int = 30) -> CheckResult:
         FROM bronze.trafic_boucles, bronze.velov, bronze.tcl_vehicles, bronze.meteo
         WHERE 1=1
         GROUP BY schemaname, tablename
-    """
+    """  # noqa: F841
     # En pratique, on ferait une UNION par table
-    age = execute_scalar(
-        "SELECT EXTRACT(EPOCH FROM (NOW() - MAX(fetched_at)))/60 FROM bronze.trafic_boucles"
-    )
+    age = execute_scalar("SELECT EXTRACT(EPOCH FROM (NOW() - MAX(fetched_at)))/60 FROM bronze.trafic_boucles")
     age = float(age or 999)
     status = "ok" if age < max_age_minutes else "warning" if age < max_age_minutes * 2 else "critical"
     return CheckResult(
@@ -75,8 +72,10 @@ def check_bronze_volume() -> CheckResult:
     rows = execute_query(query, ())
     if not rows:
         return CheckResult(
-            name="bronze_volume", status="critical",
-            details="Aucune donnée Bronze sur 1h", timestamp=_now_iso(),
+            name="bronze_volume",
+            status="critical",
+            details="Aucune donnée Bronze sur 1h",
+            timestamp=_now_iso(),
         )
     r = rows[0]
     n_total = sum(int(v or 0) for v in r.values())
@@ -106,7 +105,8 @@ def check_silver_nulls(max_null_pct: float = 5.0) -> CheckResult:
     rows = execute_query(query, ())
     if not rows or rows[0].get("vitesse_null_pct") is None:
         return CheckResult(
-            name="silver_nulls", status="warning",
+            name="silver_nulls",
+            status="warning",
             details="Pas de données Silver 1h pour vérification",
             timestamp=_now_iso(),
         )
@@ -145,9 +145,12 @@ def check_silver_doublons() -> CheckResult:
 
 def check_predictions_presentes() -> CheckResult:
     """Vérifie qu'on a des prédictions récentes en Gold."""
-    n = int(execute_scalar(
-        "SELECT COUNT(*) FROM gold.trafic_predictions WHERE prediction_timestamp > NOW() - INTERVAL '2 hours'"
-    ) or 0)
+    n = int(
+        execute_scalar(
+            "SELECT COUNT(*) FROM gold.trafic_predictions WHERE calculated_at > NOW() - INTERVAL '2 hours'"
+        )
+        or 0
+    )
     status = "ok" if n > 100 else "warning" if n > 0 else "critical"
     return CheckResult(
         name="predictions_presentes",

@@ -1,75 +1,140 @@
 """Navigation sidebar adaptée au persona courant.
 
-Remplace la navigation native Streamlit par une navigation custom qui :
-- N'affiche que les pages du persona actif
+Remplace la navigation native Streamlit (cachée via `.streamlit/config.toml`,
+`hideSidebarNav = true`) par une navigation custom qui :
+
+- Affiche un badge persona en haut (icône + label + courte description)
+- Propose un bouton "← Accueil" pour changer de persona (UX : pas d'expander
+  caché, retour à l'accueil = point d'entrée unique pour switcher)
+- N'affiche que les pages du persona actif (filtrage strict via
+  `get_navigation(persona_id)` depuis `config/personas.yaml`)
+- Groupe les pages en sous-sections (champ `group:` dans le YAML)
 - Ajoute les pages communes (RGPD, À propos) en bas
-- Affiche un badge persona en haut
-- Propose le switcher de persona en haut
-- Filtre via pm.is_widget_visible() (câblage du feature `hidden_widgets`)
+- Met en évidence la page active
+
+L'auto-switch de persona est géré par `persona_guard.py` (si l'URL d'une page
+Usager est appelée avec persona=pro_tcl, le guard force le switch vers usager
+ou renvoie vers Accueil si auth requise).
 """
 
 from __future__ import annotations
+
+from collections import OrderedDict
+from typing import Any
 
 import streamlit as st
 
 from src.persona.manager import PersonaManager, get_current_persona
 from src.persona.personas_loader import get_common_pages, get_navigation
 
+# Chemin de la page d'accueil (utilisé par le bouton "← Accueil")
+_HOME_PAGE = "Accueil.py"
+
+
+def _group_entries(entries: list[dict[str, Any]]) -> OrderedDict[str, dict[str, Any]]:
+    """Regroupe les entries par champ `group:` (ordre = première apparition)."""
+    groups: OrderedDict[str, dict[str, Any]] = OrderedDict()
+    for e in entries:
+        gname = e.get("group", "Général")
+        gicon = e.get("group_icon", "")
+        if gname not in groups:
+            groups[gname] = {"icon": gicon, "entries": []}
+        groups[gname]["entries"].append(e)
+    return groups
+
+
+def _current_page_file() -> str:
+    """Retourne le nom de fichier (sans extension) de la page courante, ou ''.
+
+    Stratégie : la valeur est stockée par chaque page dans
+    `st.session_state["_nav_current_page"]` au tout début. Fallback vide
+    si pas set → aucun bouton mis en évidence (cosmétique, pas bloquant).
+    """
+    return str(st.session_state.get("_nav_current_page", ""))
+
+
+def _render_nav_entry(entry: dict[str, Any]) -> None:
+    """Affiche un lien de navigation stylisé vers une page du persona."""
+    file = entry.get("file", "")
+    label = entry.get("label", "")
+    icon = entry.get("icon", "")
+
+    if file:
+        # Calcul du highlight : match exact sur le nom de fichier (sans .py)
+        # Avant : `_current_page_file() in file` matchait par substring → faux positifs
+        # (ex: "Pro_4" matchait dans "Pro_4_Simulateur" ET dans "Pro_4_Correlation" si current="Pro_4")
+        current = _current_page_file()
+        is_active = bool(current) and (file == current or file == f"{current}.py")
+        try:
+            if is_active:
+                # Marqueur visuel pour la page active
+                st.page_link(
+                    f"pages/{file}",
+                    label=f"▶ {label}",
+                    icon=icon,
+                )
+            else:
+                st.page_link(
+                    f"pages/{file}",
+                    label=label,
+                    icon=icon,
+                )
+        except Exception:
+            # Fallback si la page n'existe pas encore
+            st.button(f"{icon} {label} (à créer)", key=f"nav_{file}", disabled=True, use_container_width=True)
+
 
 def render_sidebar_navigation() -> None:
-    """Affiche la navigation custom dans la sidebar Streamlit."""
+    """Affiche la navigation custom dans la sidebar Streamlit.
+
+    Ordre d'affichage :
+    1. En-tête du persona actif (nom + icône)
+    2. Groupes de pages du persona avec st.page_link
+    3. Pages communes
+    4. Footer avec bouton de retour à l'accueil
+    """
+    from src.persona.personas_loader import list_personas
+
     pm = PersonaManager()
     persona_id = get_current_persona()
 
+    # Trouver les infos du persona courant
+    personas = list_personas()
+    current_p = next((p for p in personas if p["id"] == persona_id), None)
+    p_label = current_p.get("label", persona_id) if current_p else persona_id
+    p_icon = current_p.get("icon", "👤") if current_p else "👤"
+
     with st.sidebar:
-        # Header persona
-        pm.render_sidebar_header()
-
-        # Switcher compact (pills)
+        # 1. Header du persona
+        st.markdown(f"### {p_icon} {p_label}")
         st.markdown("---")
-        from dashboard.components.persona_switcher import render_persona_switcher
 
-        with st.expander("🔄 Changer de persona", expanded=False):
-            render_persona_switcher(layout="pills")
-
-        # Pages du persona (filtrées par is_widget_visible — câblage effectif)
-        st.markdown("---")
-        st.markdown("##### Navigation")
-
+        # 2. Pages du persona
         nav_entries = get_navigation(persona_id)
-        for entry in nav_entries:
-            # Câblage : la nav entry est visible si son widget/page est autorisé
-            # On utilise le label comme clé de visibilité (ex: "mon_trajet" → widget)
-            widget_key = entry.get("label", "").lower().replace(" ", "_")
-            if not pm.is_widget_visible(widget_key):
-                continue  # Filtré : invisible pour ce persona
+        if not nav_entries:
+            st.warning("Aucune page configurée pour ce profil.")
+        else:
+            grouped = _group_entries(nav_entries)
+            for gname, gdata in grouped.items():
+                st.markdown(f"**{gdata['icon']} {gname.upper()}**")
+                for entry in gdata["entries"]:
+                    _render_nav_entry(entry)
+                st.write("")  # Espacement
 
-            label = f"{entry.get('icon', '')} {entry.get('label', '')}"
-            if st.button(
-                label,
-                key=f"nav_{entry.get('file', '')}",
-                use_container_width=True,
-            ):
-                try:
-                    st.switch_page(f"pages/{entry.get('file', '')}")
-                except Exception:
-                    st.info(f"Page : {entry.get('file', '')} (à créer)")
+        # 3. Pages communes
+        common = get_common_pages()
+        if common:
+            st.markdown("---")
+            st.markdown("**🛠️ COMMUN**")
+            for entry in common:
+                _render_nav_entry(entry)
 
-        # Pages communes
+        # 4. Footer & Quitter
         st.markdown("---")
-        st.markdown("##### Commun")
-        for entry in get_common_pages():
-            label = f"{entry.get('icon', '')} {entry.get('label', '')}"
-            if st.button(
-                label,
-                key=f"nav_{entry.get('file', '')}",
-                use_container_width=True,
-            ):
-                try:
-                    st.switch_page(f"pages/{entry.get('file', '')}")
-                except Exception:
-                    st.info(f"Page : {entry.get('file', '')} (à créer)")
+        if st.button("🚪 Changer de profil", use_container_width=True, type="secondary"):
+            from src.persona.manager import clear_current_persona_auth
 
-        # Footer
-        st.markdown("---")
-        st.caption("LyonFlowFull v0.1.0 — MLOps mobilité Lyon")
+            clear_current_persona_auth()
+            st.switch_page("Accueil.py")
+
+        st.caption("LyonFlowFull v0.3.0")

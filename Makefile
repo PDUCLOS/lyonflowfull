@@ -6,7 +6,10 @@
 
 .PHONY: help install lint format typecheck test test-unit test-integration \
         test-smoke coverage build up down restart logs ps shell-db shell-api \
-        shell-streamlit backup restore clean seed-users docs
+        shell-streamlit backup restore clean seed-users docs \
+        deploy-vps rollback-vps tag-vps certbot-init certbot-renew \
+        healthcheck-vps check-deploy-env tls-status \
+        monitoring-up monitoring-down monitoring-status monitoring-logs
 
 # Variables
 PYTHON := python3
@@ -59,6 +62,9 @@ security:  ## Bandit + pip-audit
 # -----------------------------------------------------------------------------
 test:  ## Tous les tests
 	$(PYTHON) -m pytest tests/ -v
+
+test-docker:  ## Lance tous les tests dans un container éphémère (isole les dépendances C complexes)
+	docker compose run --rm api pytest tests/ -v
 
 test-unit:  ## Tests persona (UI)
 	$(PYTHON) -m pytest tests/persona/ -v
@@ -134,8 +140,8 @@ shell-streamlit:  ## Ouvre un shell dans le container Streamlit
 # -----------------------------------------------------------------------------
 # Maintenance
 # -----------------------------------------------------------------------------
-backup:  ## Backup PostgreSQL + MinIO
-	./scripts/backup.sh
+backup:  ## Backup PostgreSQL OFFSITE (gdrive ou ssh) — JAMAIS local
+	./scripts/backup-offsite.sh
 
 restore:  ## Restore depuis backup (BACKUP_FILE=path requis)
 	./scripts/restore.sh $${BACKUP_FILE}
@@ -156,13 +162,126 @@ clean-docker:  ## ⚠️ Nettoie volumes Docker (data perte !)
 	$(COMPOSE) down -v
 
 # -----------------------------------------------------------------------------
-# Deploy VPS
+# Deploy VPS (Sprint VPS-1 + VPS-2)
 # -----------------------------------------------------------------------------
-deploy-vps:  ## Déploie sur le VPS (synchronise + restart)
-	rsync -avz --exclude='.git' --exclude='.env' --exclude='uploads/' \
+check-deploy-env:  ## Vérifie .deploy.env (perms 600, vars critiques) avant deploy
+	./scripts/check-deploy-env.sh .deploy.env
+
+healthcheck-vps:  ## Healthcheck post-deploy (HTTP + DB + nginx)
+	@echo "==[ HTTP /api/health ]=="
+	@curl -fsS --max-time 10 http://localhost/api/health || (echo "❌ API health failed" && exit 1)
+	@echo "==[ HTTP /nginx-health ]=="
+	@curl -fsS --max-time 5 http://localhost/nginx-health || (echo "❌ nginx health failed" && exit 1)
+	@echo "==[ DB ping ]=="
+	@$(COMPOSE) exec -T postgres pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB} || (echo "❌ DB not ready" && exit 1)
+	@echo "==[ TLS status (si actif) ]=="
+	@if [ -f /etc/letsencrypt/live/lyonflow/fullchain.pem ]; then \
+	    openssl x509 -in /etc/letsencrypt/live/lyonflow/fullchain.pem -noout -subject -dates; \
+	else \
+	    echo "Pas de cert Let's Encrypt (HTTP-only). Run: make certbot-init"; \
+	fi
+	@echo "✅ All healthchecks passed"
+
+deploy-vps: check-deploy-env  ## Déploie sur le VPS (Sprint VPS-1+VPS-2 : tag + rsync + healthcheck)
+	@echo "==[ Tag version deploy ]=="
+	@$(MAKE) tag-vps
+	@echo "==[ Rsync code (exclude data dirs pour preserver state VPS) ]=="
+	rsync -avz \
+	      --exclude='.git' \
+	      --exclude='.env' \
+	      --exclude='.deploy.env' \
+	      --exclude='uploads/' \
+	      --exclude='backups/' \
+	      --exclude='postgres_data/' \
+	      --exclude='minio_data/' \
+	      --exclude='airflow_data/' \
+	      --exclude='mlflow_data/' \
+	      --exclude='grafana_data/' \
+	      --exclude='prometheus_data/' \
 	      -e "ssh -i $(SSH_KEY)" \
 	      ./ $(VPS_HOST):/opt/lyonflow/
+	@echo "==[ Restart stack ]=="
 	ssh -i $(SSH_KEY) $(VPS_HOST) "cd /opt/lyonflow && docker compose up -d --build"
+	@echo "==[ Healthcheck post-deploy ]=="
+	ssh -i $(SSH_KEY) $(VPS_HOST) "cd /opt/lyonflow && make healthcheck-vps"
+	@echo "✅ Deploy OK : $$(git describe --tags --abbrev=0)"
+
+rollback-vps:  ## Rollback deploy VPS vers tag précédent (Sprint VPS-2)
+	@PREV=$$(git tag --list 'vps-*' --sort=-version:refname | sed -n '2p'); \
+	if [ -z "$$PREV" ]; then echo "❌ Pas de tag vps-* précédent"; exit 1; fi; \
+	echo "Rollback vers $$PREV"; \
+	git checkout $$PREV && \
+	ssh -i $(SSH_KEY) $(VPS_HOST) "cd /opt/lyonflow && git fetch && git checkout $$PREV && docker compose up -d --build" && \
+	git checkout -
+	@echo "✅ Rollback OK"
+
+tag-vps:  ## Tag le commit actuel avec la date (Sprint VPS-2)
+	@TAG="vps-$$(date +%Y%m%d-%H%M%S)"; \
+	git tag -a $$TAG -m "VPS deploy $$TAG" && \
+	echo "✅ Tag créé : $$TAG"
+
+# -----------------------------------------------------------------------------
+# TLS Let's Encrypt (Sprint VPS-1)
+# -----------------------------------------------------------------------------
+certbot-init:  ## Init certbot Let's Encrypt (1ere fois, interactif)
+	@echo "==[ Install certbot si manquant ]=="
+	@if ! command -v certbot >/dev/null 2>&1; then \
+	    sudo apt update && sudo apt install -y certbot python3-certbot-nginx; \
+	fi
+	@echo "==[ Génère cert pour ton domaine ]=="
+	@read -p "Domaine (ex: lyonflow.fr) : " DOMAIN; \
+	if [ -z "$$DOMAIN" ]; then echo "❌ Domaine requis"; exit 1; fi; \
+	sudo certbot --nginx -d $$DOMAIN --non-interactive --agree-tos -m admin@$$DOMAIN
+	@echo "✅ Cert généré. Test : https://$$DOMAIN"
+
+certbot-renew:  ## Renouvelle les certs Let's Encrypt (cron systemd certbot.timer)
+	sudo certbot renew --nginx --quiet
+	@echo "✅ Certs vérifiés. Voir status : make tls-status"
+
+tls-status:  ## Status des certs TLS
+	@sudo certbot certificates 2>/dev/null | head -30 || echo "Certbot non installé"
+
+# -----------------------------------------------------------------------------
+# Backup VPS offsite (Sprint VPS-2)
+# -----------------------------------------------------------------------------
+backup-offsite:  ## Push backup vers serveur distant (rsync over SSH)
+	@if [ -z "$$OFFSITE_HOST" ]; then \
+	    echo "❌ OFFSITE_HOST non défini. Ajouter à .deploy.env : OFFSITE_HOST=user@backup.example.com"; \
+	    exit 1; \
+	fi
+	@rsync -avz --delete -e "ssh -i $(SSH_KEY)" \
+	    backups/ $$OFFSITE_HOST:~/lyonflow-backups/
+	@echo "✅ Backup offsite synced"
+
+# -----------------------------------------------------------------------------
+# Monitoring (Sprint VPS-3) — Prometheus + Alertmanager + Grafana
+# -----------------------------------------------------------------------------
+MONITORING_COMPOSE := docker compose -f docker-compose.yml -f docker-compose.monitoring.yml
+
+monitoring-up:  ## Démarre la stack monitoring (Prometheus + Grafana + Alertmanager)
+	$(MONITORING_COMPOSE) up -d prometheus alertmanager grafana node-exporter postgres-exporter nginx-exporter redis-exporter
+	@echo ""
+	@echo "✅ Stack monitoring démarrée :"
+	@echo "  - Prometheus    : http://localhost:9090"
+	@echo "  - Alertmanager  : http://localhost:9093"
+	@echo "  - Grafana       : http://localhost:3000 (admin / \$$GRAFANA_ADMIN_PASSWORD)"
+	@echo ""
+	@echo "⚠️  Expose via Nginx sur /grafana/, /prometheus/, /alertmanager/"
+
+monitoring-down:  ## Stoppe la stack monitoring
+	$(MONITORING_COMPOSE) stop prometheus alertmanager grafana node-exporter postgres-exporter nginx-exporter redis-exporter
+
+monitoring-status:  ## Status des services monitoring
+	@$(MONITORING_COMPOSE) ps prometheus alertmanager grafana node-exporter postgres-exporter nginx-exporter redis-exporter 2>/dev/null || echo "Stack monitoring pas démarrée"
+	@echo ""
+	@echo "==[ Targets Prometheus ]=="
+	@curl -fsS http://localhost:9090/api/v1/targets 2>/dev/null | python3 -c "import json,sys; d=json.load(sys.stdin); [print(f\"  {t['labels']['job']:20s} {t['health']:10s} {t['lastScrape'][:19]}\") for t in d.get('data',{}).get('activeTargets',[])]" 2>/dev/null || echo "  (Prometheus pas accessible)"
+	@echo ""
+	@echo "==[ Alertes actives ]=="
+	@curl -fsS http://localhost:9090/api/v1/alerts 2>/dev/null | python3 -c "import json,sys; d=json.load(sys.stdin); [print(f\"  [{a['labels']['severity']}] {a['labels']['alertname']}: {a['annotations']['summary']}\") for a in d.get('data',{}).get('alerts',[])]" 2>/dev/null || echo "  (Prometheus pas accessible)"
+
+monitoring-logs:  ## Logs monitoring
+	$(MONITORING_COMPOSE) logs -f prometheus alertmanager grafana
 
 # -----------------------------------------------------------------------------
 # Docs

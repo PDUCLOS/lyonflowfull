@@ -4,14 +4,15 @@ En Sprint 4 : sélection manuelle d'une zone sur la carte.
 En Sprint 5 : component React custom (deck.gl + MapboxDraw) pour dessiner
 librement le tracé d'un aménagement.
 
-Sprint 8 — Bottlenecks via data_loader.load_bottlenecks_top() (fallback).
+Sprint 8 — Bottlenecks via data_loader.cached_bottlenecks_top() (fallback).
 """
 
 from __future__ import annotations
 
 import streamlit as st
 
-from src.data.data_loader import load_bottlenecks_top
+from dashboard.components.colors import COLORS
+from dashboard.components.data_cache import cached_bottlenecks_top
 
 
 def render_map_painter(height: int = 400) -> dict:
@@ -35,8 +36,7 @@ def render_map_painter(height: int = 400) -> dict:
         from streamlit_folium import st_folium
 
         # Carte avec marqueurs des bottlenecks existants
-        m = folium.Map(location=[45.76, 4.84], zoom_start=12,
-                       tiles="CartoDB positron")
+        m = folium.Map(location=[45.76, 4.84], zoom_start=12, tiles="CartoDB positron")
 
         coords = {
             "Rue Garibaldi": (45.7575, 4.8461),
@@ -55,7 +55,7 @@ def render_map_painter(height: int = 400) -> dict:
             folium.CircleMarker(
                 location=[lat, lon],
                 radius=8,
-                color="#3F51B5",
+                color=COLORS["persona_elu"],
                 fill=True,
                 fill_opacity=0.5,
                 tooltip=zone,
@@ -84,7 +84,7 @@ def render_map_painter(height: int = 400) -> dict:
 
     except ImportError:
         st.warning("⚠️ Folium non disponible — fallback selectbox")
-        bottlenecks = load_bottlenecks_top(force_mock=False)
+        bottlenecks = cached_bottlenecks_top(force_mock=False)
         zones = [b.get("zone", "—") for b in bottlenecks]
         if not zones:
             return {"selected_zone": None}

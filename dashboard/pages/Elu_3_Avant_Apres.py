@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import streamlit as st
 
+from dashboard.components.data_status import render_data_status_banner
 from dashboard.components.navigation import render_sidebar_navigation
 from dashboard.components.persona_guard import apply_persona_guard
 from dashboard.components.theme import inject_theme
@@ -11,7 +12,6 @@ from dashboard.components.widgets.elu import (
     render_delta_kpis,
     render_project_selector,
 )
-
 
 st.set_page_config(
     page_title="Avant / Après — Élu · LyonFlowFull",
@@ -24,6 +24,7 @@ inject_theme()
 render_sidebar_navigation()
 
 st.title("⏪ Avant / Après aménagement")
+render_data_status_banner()
 
 st.caption(
     "Analyse comparative des aménagements passés — preuve par les données "
@@ -49,21 +50,24 @@ if amgt:
     # AVANT
     st.markdown("##### 🔴 AVANT aménagement")
     if avant:
-        # Présenter en 4 colonnes de cards
-        c1, c2, c3, c4 = st.columns(4)
+        # Adapter le nb de colonnes au nb de clés (sinon clés 5+ silencieusement perdues)
         keys = list(avant.keys())
-        for col, k in zip([c1, c2, c3, c4], keys):
+        cols = st.columns(len(keys))
+        for col, k in zip(cols, keys):
             with col:
                 v = avant.get(k, "—")
-                if isinstance(v, (int, float)):
-                    v_str = f"{v:,}" if isinstance(v, int) and v > 1000 else f"{v}"
+                # Exclure bool (sous-classe de int → serait formaté comme un nombre)
+                if isinstance(v, bool):
+                    v_str = "✅" if v else "❌"
+                elif isinstance(v, (int, float)):
+                    v_str = f"{v:,}" if isinstance(v, int) and not isinstance(v, bool) and v > 1000 else f"{v}"
                 else:
-                    v_str = str(v)
+                    v_str = str(v) if v is not None else "—"
                 st.markdown(
                     f"""
                     <div style="background:#1A1D24;border:1px solid #E74C3C;border-left:4px solid #E74C3C;
                                 border-radius:6px;padding:0.6rem;text-align:center;">
-                        <div style="font-size:0.7rem;opacity:0.6;">{k.replace('_', ' ').title()}</div>
+                        <div style="font-size:0.7rem;opacity:0.6;">{k.replace("_", " ").title()}</div>
                         <div style="font-size:1.4rem;font-weight:700;color:#E74C3C;margin-top:0.3rem;">
                             {v_str}
                         </div>
@@ -77,20 +81,22 @@ if amgt:
     # APRÈS
     st.markdown("##### 🟢 APRÈS aménagement")
     if apres:
-        c1, c2, c3, c4 = st.columns(4)
         keys = list(apres.keys())
-        for col, k in zip([c1, c2, c3, c4], keys):
+        cols = st.columns(len(keys))
+        for col, k in zip(cols, keys):
             with col:
                 v = apres.get(k, "—")
-                if isinstance(v, (int, float)):
-                    v_str = f"{v:,}" if isinstance(v, int) and v > 1000 else f"{v}"
+                if isinstance(v, bool):
+                    v_str = "✅" if v else "❌"
+                elif isinstance(v, (int, float)):
+                    v_str = f"{v:,}" if isinstance(v, int) and not isinstance(v, bool) and v > 1000 else f"{v}"
                 else:
-                    v_str = str(v)
+                    v_str = str(v) if v is not None else "—"
                 st.markdown(
                     f"""
                     <div style="background:#1A1D24;border:1px solid #4CAF50;border-left:4px solid #4CAF50;
                                 border-radius:6px;padding:0.6rem;text-align:center;">
-                        <div style="font-size:0.7rem;opacity:0.6;">{k.replace('_', ' ').title()}</div>
+                        <div style="font-size:0.7rem;opacity:0.6;">{k.replace("_", " ").title()}</div>
                         <div style="font-size:1.4rem;font-weight:700;color:#4CAF50;margin-top:0.3rem;">
                             {v_str}
                         </div>

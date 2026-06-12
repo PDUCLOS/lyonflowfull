@@ -4,6 +4,8 @@ from __future__ import annotations
 
 import streamlit as st
 
+from dashboard.components.colors import STATUS_COLORS
+
 
 def render_alert_card(alert: dict) -> None:
     """Affiche une carte d'alerte (titre, description, action).
@@ -13,22 +15,27 @@ def render_alert_card(alert: dict) -> None:
                action, severity
     """
     sev = alert.get("severity", "info")
-    color = {"warning": "#FF9800", "info": "#2196F3", "critical": "#E74C3C"}.get(sev, "#666")
+    color = STATUS_COLORS.get(sev, STATUS_COLORS["info"])
     icon = alert.get("line_icon", "⚠️")
 
     st.markdown(
         f"""
-        <div class="lyonflow-card" style="border-left:4px solid {color};">
-            <div style="display:flex;align-items:center;gap:0.6rem;">
-                <div style="font-size:1.4rem;">{icon}</div>
+        <div class="lyonflow-card" style="border-left-color:{color};">
+            <div style="display:flex;align-items:center;gap:0.7rem;">
+                <div style="font-size:1.5rem;line-height:1;">{icon}</div>
                 <div style="flex:1;">
-                    <div style="font-weight:600;">{alert.get('title', '—')}</div>
-                    <div style="font-size:0.85rem;opacity:0.7;">{alert.get('description', '')}</div>
+                    <div style="font-weight:600;font-size:0.98rem;">
+                        {alert.get("title", "—")}
+                    </div>
+                    <div style="font-size:0.85rem;opacity:0.7;margin-top:2px;">
+                        {alert.get("description", "")}
+                    </div>
                 </div>
             </div>
-            <div style="margin-top:0.5rem;padding:0.5rem 0.7rem;background:{color}22;
-                        border-radius:4px;font-size:0.85rem;">
-                💡 <b>Action :</b> {alert.get('action', '')}
+            <div style="margin-top:0.7rem;padding:0.55rem 0.8rem;background:{color}22;
+                        border-left:3px solid {color};border-radius:6px;
+                        font-size:0.86rem;">
+                💡 <b>Action :</b> {alert.get("action", "")}
             </div>
         </div>
         """,

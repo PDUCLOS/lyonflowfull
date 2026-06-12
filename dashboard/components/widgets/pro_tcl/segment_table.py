@@ -1,7 +1,7 @@
 """Widget — Table des segments interactive.
 
-Sprint 8 — Segments chargés via data_loader.load_segments() (silver.
-trafic_segments_clean). Fallback mock si DB down.
+Segments chargés depuis gold.infrastructure_bottlenecks (croisement bus × trafic).
+Sprint VPS-6 — fail loud en prod, fallback mock SEGMENTS uniquement en démo.
 """
 
 from __future__ import annotations
@@ -9,36 +9,45 @@ from __future__ import annotations
 import pandas as pd
 import streamlit as st
 
-from src.data.data_loader import load_segments
-from src.data.mock.pro_tcl import DIAGNOSIS_LABELS, SEGMENTS
+from dashboard.components.data_cache import cached_infra_bottlenecks
+from src.data.exceptions import DashboardDataError
+
+# DIAGNOSIS_LABELS est un libellé FR d'un code SQL (cf. infra_bottlenecks.diagnosis),
+# pas une métrique inventée — on l'importe toujours.
+from src.data.labels import DIAGNOSIS_LABELS  # Sprint 8 : référentiel statique, plus un mock.
+
+_DELAY_THRESHOLD = 120
+_SPEED_THRESHOLD = 25
 
 
 def render_segment_table(line_id: str | None = None, height: int = 400) -> None:
-    """Affiche la table interactive des segments.
+    """Affiche la table interactive des segments."""
+    try:
+        df = cached_infra_bottlenecks(top=500)
+    except DashboardDataError as e:
+        st.error(f"⚠️ {e}")
+        return
 
-    Args:
-        line_id: si fourni, filtre. Sinon, tous.
-        height: hauteur de la table.
-    """
-    # Tente DB d'abord
-    df_seg = load_segments(force_mock=False)
-    if not df_seg.empty:
-        # Adapte au format attendu (mock)
-        segments = [
-            {
-                "line_id": row.get("channel_id", "?").split("_")[0] if row.get("channel_id") else "?",
-                "name": row["segment_id"],
-                "bus_state": "—",  # pas dans la table segments de base
-                "traffic_state": "—",
-                "diagnosis": "ok",  # sera enrichi par jointure dans Sprint 9
-                "delay_min": 0,
-                "lat": row.get("lat_start", 0),
-                "lon": row.get("lng_start", 0),
-            }
-            for _, row in df_seg.iterrows()
-        ]
+    if not df.empty:
+        segments = []
+        for _, row in df.iterrows():
+            delay_s = row.get("bus_delay_seconds", 0) or 0
+            speed = row.get("traffic_speed_kmh", 50) or 50
+            segments.append({
+                "line_id": row.get("line_ref", "?"),
+                "name": row.get("segment_id", "—"),
+                "bus_state": "delayed" if delay_s > _DELAY_THRESHOLD else "on_time",
+                "traffic_state": "jammed" if speed < _SPEED_THRESHOLD else "fluid",
+                "diagnosis": row.get("diagnosis", "ok"),
+                "delay_min": round(delay_s / 60, 1),
+                "lat": row.get("lat", 0) or 0,
+                "lon": row.get("lng", 0) or 0,
+            })
     else:
-        segments = SEGMENTS
+        # Sprint 8 (2026-06-12) — viré le fallback SEGMENTS (mock).
+        st.info("Aucun segment瓶颈 — gold.infrastructure_bottlenecks est vide.")
+        return
+
     if line_id:
         segments = [s for s in segments if s["line_id"] == line_id]
 
@@ -46,21 +55,22 @@ def render_segment_table(line_id: str | None = None, height: int = 400) -> None:
         st.info("Aucun segment.")
         return
 
-    df = pd.DataFrame([
-        {
-            "Ligne": s["line_id"],
-            "Segment": s["name"],
-            "Bus": s["bus_state"],
-            "Trafic": s["traffic_state"],
-            "Diagnostic": s["diagnosis"],
-            "Retard": s.get("delay_min", 0),
-            "Lat": s["lat"],
-            "Lon": s["lon"],
-        }
-        for s in segments
-    ])
+    df_display = pd.DataFrame(
+        [
+            {
+                "Ligne": s["line_id"],
+                "Segment": s["name"],
+                "Bus": s["bus_state"],
+                "Trafic": s["traffic_state"],
+                "Diagnostic": s["diagnosis"],
+                "Retard": s.get("delay_min", 0),
+                "Lat": s["lat"],
+                "Lon": s["lon"],
+            }
+            for s in segments
+        ]
+    )
 
-    # Filtre par diagnostic
     diagnostic_filter = st.multiselect(
         "Filtrer par diagnostic",
         list(DIAGNOSIS_LABELS.keys()),
@@ -68,10 +78,10 @@ def render_segment_table(line_id: str | None = None, height: int = 400) -> None:
         format_func=lambda x: DIAGNOSIS_LABELS.get(x, x),
         key="seg_filter_diag",
     )
-    df = df[df["Diagnostic"].isin(diagnostic_filter)]
+    df_display = df_display[df_display["Diagnostic"].isin(diagnostic_filter)]
 
     st.dataframe(
-        df[["Ligne", "Segment", "Bus", "Trafic", "Diagnostic", "Retard"]],
+        df_display[["Ligne", "Segment", "Bus", "Trafic", "Diagnostic", "Retard"]],
         use_container_width=True,
         height=height,
         hide_index=True,

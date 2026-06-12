@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import streamlit as st
 
+from dashboard.components.data_status import render_data_status_banner
 from dashboard.components.navigation import render_sidebar_navigation
 from dashboard.components.persona_guard import apply_persona_guard
 from dashboard.components.theme import inject_theme
@@ -12,8 +13,8 @@ from dashboard.components.widgets.pro_tcl import (
     render_line_kpis,
     render_network_map,
     render_otp_heatmap_mini,
+    render_traffic_map,
 )
-
 
 st.set_page_config(
     page_title="PCC Live — Pro TCL · LyonFlowFull",
@@ -29,6 +30,7 @@ render_sidebar_navigation()
 # Câblage préparé — voir dashboard/components/colors.py et config/personas.yaml.
 
 st.title("📡 PCC Live — Réseau TCL")
+render_data_status_banner()
 
 # Ticker en haut
 render_alert_ticker()
@@ -38,32 +40,48 @@ st.markdown("---")
 # 4 quadrants
 q1, q2 = st.columns(2)
 with q1:
-    st.markdown("##### 🗺️ NW — Carte réseau live")
-    render_network_map(height=350)
+    st.markdown("##### 🗺️ NW — Carte live")
+    tab_bus, tab_traffic = st.tabs(["🚌 Bus GPS", "🚗 Charge trafic"])
+    with tab_bus:
+        render_network_map(height=320)
+    with tab_traffic:
+        render_traffic_map(
+            height=320,
+            horizon_default=60,  # Sprint 8+ : focus H+1h
+            show_horizon_selector=True,
+            show_legend=True,
+            show_caption=False,
+            key_suffix="pro1",
+        )
 with q2:
     st.markdown("##### ⚠️ NE — Alertes live (détail)")
-    from src.data.mock.pro_tcl import PREDICTED_ALERTS
-    severity_colors = {"critical": "#E74C3C", "warning": "#FF9800", "info": "#2196F3"}
-    for alert in PREDICTED_ALERTS:
-        severity = alert.get("severity", "info")
-        color = severity_colors.get(severity, "#666")
-        st.markdown(
-            f"""
-            <div style="background:#1A1D24;border-left:4px solid {color};
-                        border-radius:6px;padding:0.6rem;margin:0.4rem 0;">
-                <div style="font-weight:600;font-size:0.9rem;">
-                    {alert.get('line_icon')} {alert.get('title')}
+    from dashboard.components.colors import STATUS_COLORS
+    from dashboard.components.data_cache import cached_recent_alerts
+
+    alerts_df = cached_recent_alerts(hours=2, limit=10)
+    if alerts_df.empty:
+        st.info("Aucune alerte active sur les 2 dernières heures.")
+    else:
+        for _, alert in alerts_df.iterrows():
+            severity = alert.get("severity", "info")
+            color = STATUS_COLORS.get(severity, STATUS_COLORS["info"])
+            line_ref = alert.get("line_ref", "—")
+            st.markdown(
+                f"""
+                <div class="lyonflow-card" style="border-left-color:{color};padding:0.6rem;">
+                    <div style="font-weight:600;font-size:0.9rem;">
+                        🚦 [{line_ref}] {alert.get("title", "Alerte")}
+                    </div>
+                    <div style="font-size:0.75rem;opacity:0.7;margin-top:0.2rem;">
+                        {alert.get("description", "")}
+                    </div>
+                    <div style="font-size:0.75rem;color:var(--status-ok);margin-top:0.3rem;">
+                        💡 {alert.get("action", "—")}
+                    </div>
                 </div>
-                <div style="font-size:0.75rem;opacity:0.7;margin-top:0.2rem;">
-                    {alert.get('description')}
-                </div>
-                <div style="font-size:0.75rem;color:#4CAF50;margin-top:0.3rem;">
-                    💡 {alert.get('recommendation')}
-                </div>
-            </div>
-            """,
-            unsafe_allow_html=True,
-        )
+                """,
+                unsafe_allow_html=True,
+            )
 
 q3, q4 = st.columns(2)
 with q3:
@@ -71,20 +89,29 @@ with q3:
     render_otp_heatmap_mini(height=280)
 with q4:
     st.markdown("##### 🎯 SE — Top bottlenecks")
-    from src.data.mock.pro_tcl import TOP_BOTTLENECKS
-    for b in TOP_BOTTLENECKS[:5]:
-        st.markdown(
-            f"""
-            <div style="background:#1A1D24;border-radius:6px;padding:0.5rem 0.7rem;
-                        margin:0.3rem 0;font-size:0.85rem;">
-                <div style="font-weight:600;">#{b['rank']} {b['zone']}</div>
-                <div style="opacity:0.7;font-size:0.75rem;">
-                    {len(b['lines'])} lignes · {b['voyageurs_jour']:,} voy/j · ROI {b['roi_mois']} mois
+    from dashboard.components.data_cache import cached_bottlenecks_top
+
+    top_bottlenecks = cached_bottlenecks_top()
+    if not top_bottlenecks:
+        st.info("Aucun bottleneck détecté actuellement.")
+    else:
+        for i, b in enumerate(top_bottlenecks[:5]):
+            rank = b.get("rank", i + 1)
+            zone = b.get("zone", "—")
+            lines = b.get("lines") or b.get("lines_impacted") or []
+            voy = b.get("voyageurs_jour", 0)
+            roi = b.get("roi_mois", 0)
+            st.markdown(
+                f"""
+                <div class="lyonflow-card-flat" style="padding:0.5rem 0.7rem;font-size:0.85rem;">
+                    <div style="font-weight:600;">#{rank} {zone}</div>
+                    <div style="opacity:0.7;font-size:0.75rem;">
+                        {len(lines)} lignes · {voy:,} voy/j · ROI {roi} mois
+                    </div>
                 </div>
-            </div>
-            """,
-            unsafe_allow_html=True,
-        )
+                """,
+                unsafe_allow_html=True,
+            )
 
 st.markdown("---")
 

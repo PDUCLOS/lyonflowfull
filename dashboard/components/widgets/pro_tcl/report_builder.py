@@ -31,6 +31,7 @@ def render_report_builder() -> dict:
 
     st.markdown("**Lignes à inclure**")
     from dashboard.components.widgets.pro_tcl.line_selector import render_line_selector
+
     lines = render_line_selector(multiselect=True, key_suffix="rb")
 
     st.markdown("**Sections à inclure**")

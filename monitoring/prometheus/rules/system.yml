@@ -1,0 +1,99 @@
+# =============================================================================
+# monitoring/prometheus/rules/system.yml — Alertes système (VPS, Docker)
+# =============================================================================
+# Sprint VPS-3 : surveille CPU, RAM, load, disk, docker, TLS.
+# =============================================================================
+
+groups:
+  - name: vps-system
+    interval: 1m
+    rules:
+      # CPU > 80% sur 10min
+      - alert: HighCpuUsage
+        expr: |
+          100 - (avg by (instance) (rate(node_cpu_seconds_total{mode="idle"}[10m])) * 100) > 80
+        for: 10m
+        labels:
+          severity: warning
+          component: vps-host
+        annotations:
+          summary: "CPU > 80% (10min)"
+          description: "CPU VPS à {{ $value }}%. Vérifier les conteneurs Docker."
+
+      # RAM > 90%
+      - alert: HighMemoryUsage
+        expr: |
+          (1 - (node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes)) * 100 > 90
+        for: 5m
+        labels:
+          severity: critical
+          component: vps-host
+        annotations:
+          summary: "RAM > 90% (5min)"
+          description: "RAM VPS à {{ $value }}%. OOM killer imminent."
+
+      # Load average > 4 (VPS a 6 CPU)
+      - alert: HighLoadAverage
+        expr: |
+          node_load5 > 4
+        for: 10m
+        labels:
+          severity: warning
+          component: vps-host
+        annotations:
+          summary: "Load average > 4 (10min)"
+          description: "Load 5min = {{ $value }}. VPS a 6 CPU."
+
+  - name: docker
+    interval: 1m
+    rules:
+      # Conteneur restarté récemment
+      - alert: ContainerRestarting
+        expr: |
+          increase(container_restart_count[1h]) > 2
+        for: 5m
+        labels:
+          severity: warning
+          component: docker
+        annotations:
+          summary: "Container restarting > 2x en 1h"
+          description: "Le container a redémarré {{ $value }} fois en 1h."
+
+      # Conteneur mort
+      - alert: ContainerDown
+        expr: |
+          container_last_seen{name=~"lyonflow-.*"} == 0
+        for: 2m
+        labels:
+          severity: critical
+          component: docker
+        annotations:
+          summary: "Container DOWN (2min)"
+          description: "Le container lyonflow-* ne répond plus."
+
+  - name: tls
+    interval: 1h
+    rules:
+      # Cert TLS expire < 14j
+      - alert: TlsCertExpiringSoon
+        expr: |
+          (probe_ssl_earliest_cert_expiry - time()) / 86400 < 14
+        for: 1h
+        labels:
+          severity: warning
+          component: tls
+        annotations:
+          summary: "Cert TLS expire < 14j"
+          description: "Cert Let's Encrypt expire dans {{ $value }} jours. Renouveler !"
+
+      # Cert TLS expire < 3j (critique)
+      - alert: TlsCertExpiringImminent
+        expr: |
+          (probe_ssl_earliest_cert_expiry - time()) / 86400 < 3
+        for: 30m
+        labels:
+          severity: critical
+          component: tls
+        annotations:
+          summary: "Cert TLS expire < 3j !!!"
+          description: "URGENT: cert expire dans {{ $value }} jours. HTTPS va casser."

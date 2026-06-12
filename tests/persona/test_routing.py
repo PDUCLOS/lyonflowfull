@@ -14,12 +14,13 @@ sys.path.insert(0, str(WORKSPACE))
 def test_routing_module_importable():
     """Le module routing doit s'importer."""
     from src.routing import (
+        Itinerary,
+        ItinerarySegment,
         build_routing_graph,
         compute_itinerary,
         shortest_path,
-        Itinerary,
-        ItinerarySegment,
     )
+
     assert callable(build_routing_graph)
     assert callable(compute_itinerary)
     assert callable(shortest_path)
@@ -29,10 +30,11 @@ def test_routing_module_importable():
 
 def test_build_routing_graph_mock():
     """Le graphe mock doit fonctionner sans DB."""
-    from src.routing import build_routing_graph
-
     # Force le mock en mettant APP_ENV=development (déjà par défaut)
     import os
+
+    from src.routing import build_routing_graph
+
     os.environ["APP_ENV"] = "development"
 
     graph = build_routing_graph(use_cache=False)
@@ -41,7 +43,7 @@ def test_build_routing_graph_mock():
     assert graph.number_of_edges() > 0, "Mock graphe doit avoir des arêtes"
 
     # Vérifier les attributs des nœuds
-    for node_id, data in graph.nodes(data=True):
+    for _node_id, data in graph.nodes(data=True):
         assert "length_m" in data
         assert "current_speed_kmh" in data
         assert data["length_m"] > 0
@@ -56,8 +58,10 @@ def test_compute_itinerary_mock():
     # Part-Dieu : 4.8589, 45.7607
     # Bellecour : 4.8324, 45.7575
     itinerary = compute_itinerary(
-        origin_lon=4.8589, origin_lat=45.7607,
-        destination_lon=4.8324, destination_lat=45.7575,
+        origin_lon=4.8589,
+        origin_lat=45.7607,
+        destination_lon=4.8324,
+        destination_lat=45.7575,
         horizon_minutes=0,
     )
     assert itinerary is not None
@@ -72,8 +76,10 @@ def test_itinerary_segments_have_geometry():
     from src.routing import compute_itinerary
 
     itinerary = compute_itinerary(
-        origin_lon=4.8589, origin_lat=45.7607,
-        destination_lon=4.8324, destination_lat=45.7575,
+        origin_lon=4.8589,
+        origin_lat=45.7607,
+        destination_lon=4.8324,
+        destination_lat=45.7575,
     )
     for seg in itinerary.segments:
         assert seg.start_lon is not None
@@ -88,8 +94,10 @@ def test_itinerary_total_duration_reasonable():
 
     # 3 km en ville Lyon → 10-30 min attendu (trafic)
     itinerary = compute_itinerary(
-        origin_lon=4.8589, origin_lat=45.7607,
-        destination_lon=4.8324, destination_lat=45.7575,
+        origin_lon=4.8589,
+        origin_lat=45.7607,
+        destination_lon=4.8324,
+        destination_lat=45.7575,
     )
     assert itinerary.total_duration_s > 60, "Au moins 1 min pour 3km"
     assert itinerary.total_duration_s < 7200, "Pas plus de 2h pour 3km"
@@ -112,7 +120,7 @@ def test_shortest_path_direct():
 
     graph = build_routing_graph(use_cache=False)
     # Récupère 2 nœuds connectés
-    edge = list(graph.edges())[0]
+    edge = next(iter(graph.edges()))
     u, v = edge[0], edge[1]
 
     itinerary = shortest_path(graph, u, v)

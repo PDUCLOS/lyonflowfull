@@ -13,14 +13,11 @@ Usage :
 
 from __future__ import annotations
 
-import json
+import contextlib
 import logging
-from typing import Optional
-
-import psycopg2.extras
+import re
 
 from src.db import raw_connection
-
 
 logger = logging.getLogger(__name__)
 
@@ -51,231 +48,416 @@ def transform_to_silver(source: str, dry_run: bool = False) -> int:
     return fn()
 
 
+def _parse_grandlyon_vitesse(raw: object) -> float | None:
+    """Parse la nouvelle forme WFS Grand Lyon v3 (2026+).
+
+    Exemples acceptés :
+      - "18 km/h"        → 18.0
+      - "56.5 km/h"      → 56.5
+      - "Vitesse réglementaire"  → None (capteur en vitesse libre, vitesse_kmh inconnue)
+      - "" / None        → None
+
+    Returns:
+        Vitesse en km/h (float) ou None si non exploitable.
+    """
+    if raw is None:
+        return None
+    if not isinstance(raw, str):
+        try:
+            return float(raw)
+        except (TypeError, ValueError):
+            return None
+    s = raw.strip()
+    if not s:
+        return None
+    m = re.match(r"^\s*(\d+(?:[.,]\d+)?)\s*km/h", s)
+    if m:
+        return float(m.group(1).replace(",", "."))
+    return None
+
+
 def _transform_trafic_boucles() -> int:
-    """Bronze.trafic_boucles → silver.trafic_boucles_clean."""
-    with raw_connection() as conn:
-        with conn.cursor() as cur:
-            # 1. Lire Bronze non encore transformés (ou tous, idempotent)
-            cur.execute("""
+    """Bronze.trafic_boucles → silver.trafic_boucles_clean.
+
+    Nouveau format WFS Grand Lyon (juin 2026+) :
+      - props["code"]      : channel_id (ex. "LYO02336")  ← source de vérité
+      - props["gid"]       : identifiant numérique interne
+      - props["twgid"]     : identifiant numérique (utilisé par dim_spatial_grid_mapping)
+      - props["etat"]      : code 1 char — G (vert), V (orange), R (rouge)
+      - props["vitesse"]   : "18 km/h" (mesurée) ou "Vitesse réglementaire" (libre)
+      - props["est_a_jour"]: bool — on garde seulement les capteurs frais
+      - props["sens"], props["libelle"], props["longueur"], props["fournisseur"]
+
+    Schéma silver v0.3.1 :
+      channel_id, measurement_time, vitesse_kmh, vitesse_limite_kmh,
+      is_sanitary, geom (4326), geom_2154, silver_updated_at
+
+    Performance : le DAG tourne toutes les 5 min, on ne process donc que les
+    5 dernières minutes de bronze (1 cycle) pour rester < 1 minute runtime.
+    """
+    with raw_connection() as conn, conn.cursor() as cur:
+        cur.execute("""
                 SELECT id, fetched_at, raw_data
                 FROM bronze.trafic_boucles
+                WHERE fetched_at > NOW() - INTERVAL '5 minutes'
                 ORDER BY fetched_at DESC
-                LIMIT 10000
+                LIMIT 200
             """)
-            rows = cur.fetchall()
+        rows = cur.fetchall()
 
-            n_inserted = 0
-            seen = set()
-            for _id, fetched_at, raw_data in rows:
-                # Parse la FeatureCollection GeoJSON
-                if not isinstance(raw_data, dict):
+        n_inserted = 0
+        seen: set[tuple[str, object]] = set()
+        for _id, fetched_at, raw_data in rows:
+            if not isinstance(raw_data, dict):
+                continue
+            features = raw_data.get("features", [])
+            for feat in features:
+                props = feat.get("properties", {})
+                geom = feat.get("geometry", {})
+
+                channel_id = props.get("code")
+                if not channel_id:
                     continue
-                features = raw_data.get("features", [])
-                for feat in features:
-                    props = feat.get("properties", {})
-                    geom = feat.get("geometry", {})
 
-                    channel_id = props.get("id") or props.get("gid")
-                    if not channel_id:
-                        continue
-                    measurement_time = fetched_at.replace(tzinfo=None) if fetched_at else None
-                    if not measurement_time:
-                        continue
+                measurement_time = fetched_at.replace(tzinfo=None) if fetched_at else None
+                if not measurement_time:
+                    continue
 
-                    # Dédup
-                    key = (channel_id, measurement_time)
-                    if key in seen:
-                        continue
-                    seen.add(key)
+                key = (channel_id, measurement_time)
+                if key in seen:
+                    continue
+                seen.add(key)
 
-                    vitesse = props.get("vitesse")
-                    etat = props.get("etat")
-                    importance = props.get("importance")
+                vitesse_kmh = _parse_grandlyon_vitesse(props.get("vitesse"))
+                vitesse_limite_kmh = 50.0  # Lyon intra-muros
+                is_sanitary_flag = bool(props.get("est_a_jour", False))
 
-                    # Géométrie LineString WKT
-                    geom_wkt = None
-                    if geom.get("type") == "LineString":
-                        coords = geom.get("coordinates", [])
-                        if coords:
-                            wkt_coords = ", ".join(
-                                f"{c[0]} {c[1]}" for c in coords
-                            )
-                            geom_wkt = f"LINESTRING({wkt_coords})"
+                geom_wkt = None
+                if geom.get("type") == "LineString":
+                    coords = geom.get("coordinates", [])
+                    if coords:
+                        # silver.trafic_boucles_clean.geom est typé geometry(Point, 4326)
+                        # (contrainte schema legacy) — on ne peut pas y stocker
+                        # un LineString directement. Workaround : on prend le
+                        # point médian du segment. Cela donne une position
+                        # approximative du capteur (centre du tronçon routier).
+                        # TODO Sprint 10 : modifier le schéma pour passer en
+                        # geometry(LineString, 4326) (ou geometry générique) et
+                        # stocker le segment complet.
+                        mid = coords[len(coords) // 2]
+                        geom_wkt = f"POINT({mid[0]} {mid[1]})"
 
-                    try:
-                        cur.execute("""
+                cur.execute("SAVEPOINT sp_trafic")
+                try:
+                    cur.execute(
+                        """
                             INSERT INTO silver.trafic_boucles_clean
-                                (measurement_time, channel_id, vitesse_kmh, etat,
-                                 importance_code, geom_wgs84)
+                                (channel_id, measurement_time,
+                                 vitesse_kmh, vitesse_limite_kmh,
+                                 is_sanitary, geom, geom_2154,
+                                 silver_updated_at)
                             VALUES (%s, %s, %s, %s, %s,
                                 CASE WHEN %s IS NOT NULL
                                      THEN ST_GeomFromText(%s, 4326)
-                                     ELSE NULL END)
+                                     ELSE NULL END,
+                                CASE WHEN %s IS NOT NULL
+                                     THEN ST_Transform(
+                                            ST_GeomFromText(%s, 4326), 2154)
+                                     ELSE NULL END,
+                                NOW())
                             ON CONFLICT (channel_id, measurement_time) DO UPDATE
-                            SET vitesse_kmh = EXCLUDED.vitesse_kmh,
-                                etat = EXCLUDED.etat,
-                                importance_code = EXCLUDED.importance_code
-                        """, (
-                            measurement_time, channel_id, vitesse, etat, importance,
-                            geom_wkt, geom_wkt,
-                        ))
-                        n_inserted += 1
-                    except Exception as e:
-                        logger.warning(f"Skip feature {channel_id}: {e}")
-                        continue
+                            SET vitesse_kmh       = EXCLUDED.vitesse_kmh,
+                                vitesse_limite_kmh= EXCLUDED.vitesse_limite_kmh,
+                                is_sanitary       = EXCLUDED.is_sanitary,
+                                geom              = EXCLUDED.geom,
+                                geom_2154         = EXCLUDED.geom_2154,
+                                silver_updated_at = NOW()
+                        """,
+                        (
+                            channel_id,
+                            measurement_time,
+                            vitesse_kmh,
+                            vitesse_limite_kmh,
+                            is_sanitary_flag,
+                            geom_wkt,
+                            geom_wkt,
+                            geom_wkt,
+                            geom_wkt,
+                        ),
+                    )
+                    cur.execute("RELEASE SAVEPOINT sp_trafic")
+                    n_inserted += 1
+                except Exception as e:
+                    # Rollback au savepoint : annule juste l'INSERT foireux,
+                    # pas toute la transaction. On garde tous les autres
+                    # inserts valides.
+                    try:
+                        cur.execute("ROLLBACK TO SAVEPOINT sp_trafic")
+                    except Exception:
+                        pass
+                    logger.warning(f"Skip feature {channel_id}: {e}")
+                    continue
 
-            logger.info(f"Silver trafic_boucles: {n_inserted} rows inserted/updated")
-            return n_inserted
+        logger.info(f"Silver trafic_boucles: {n_inserted} rows inserted/updated")
+        return n_inserted
 
 
 def _transform_velov() -> int:
-    """Bronze.velov → silver.velov_clean."""
-    with raw_connection() as conn:
-        with conn.cursor() as cur:
-            cur.execute("""
+    """Bronze.velov → silver.velov_clean.
+
+    Sprint 10 — payload GBFS unifié ``{status: [...], information: [...]}``.
+    Join par ``station_id`` pour récupérer ``name/lat/lon/address`` depuis
+    l'endpoint ``station_information`` (l'endpoint ``status`` ne contient
+    plus que les compteurs temps réel depuis l'API Grand Lyon de juin 2026).
+
+    Backward-compat : si ``raw_data`` est l'ancien format (liste plate
+    de stations avec name/lat/lon au top-level), on dégrade proprement.
+    """
+    with raw_connection() as conn, conn.cursor() as cur:
+        cur.execute("""
                 SELECT id, fetched_at, raw_data
                 FROM bronze.velov
                 ORDER BY fetched_at DESC
                 LIMIT 5000
             """)
-            rows = cur.fetchall()
+        rows = cur.fetchall()
 
-            n_inserted = 0
-            seen = set()
-            for _id, fetched_at, raw_data in rows:
-                if not isinstance(raw_data, dict):
-                    continue
-                stations = (
+        n_inserted = 0
+        seen = set()
+        for _id, fetched_at, raw_data in rows:
+            if not isinstance(raw_data, dict):
+                continue
+
+            # Format nouveau (Sprint 10) : {status: [...], information: [...]}
+            # Format legacy (avant Sprint 10) : {data: {stations: [...]}} ou liste plate
+            if "status" in raw_data and "information" in raw_data:
+                stations_status = raw_data.get("status", []) or []
+                stations_info_list = raw_data.get("information", []) or []
+                # Index par station_id pour lookup O(1)
+                info_by_id: dict[str, dict] = {
+                    str(s.get("station_id")): s
+                    for s in stations_info_list
+                    if s.get("station_id") is not None
+                }
+                stations_iter = (
+                    {**st, **info_by_id.get(str(st.get("station_id")), {})}
+                    for st in stations_status
+                )
+            else:
+                # Backward-compat : ancien format où name/lat/lon étaient dans status
+                stations_legacy = (
                     raw_data.get("data", {}).get("stations", [])
                     or raw_data.get("stations", [])
                 )
-                for st in stations:
-                    sid = st.get("station_id")
-                    if not sid:
-                        continue
-                    key = (sid, fetched_at)
-                    if key in seen:
-                        continue
-                    seen.add(key)
+                stations_iter = (st for st in stations_legacy)
 
-                    try:
-                        cur.execute("""
+            for st in stations_iter:
+                sid = st.get("station_id")
+                if not sid:
+                    continue
+                key = (sid, fetched_at)
+                if key in seen:
+                    continue
+                seen.add(key)
+
+                try:
+                    cur.execute(
+                        """
                             INSERT INTO silver.velov_clean
-                                (fetched_at, station_id, station_name, bikes_available,
-                                 stands_available, is_installed, is_renting, is_returning,
+                                (fetched_at, measurement_time, station_id, station_name,
+                                 num_bikes_available, num_docks_available, is_active,
                                  lat, lon)
-                            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
-                            ON CONFLICT (station_id, fetched_at) DO UPDATE
-                            SET bikes_available = EXCLUDED.bikes_available,
-                                stands_available = EXCLUDED.stands_available
-                        """, (
+                            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
+                            ON CONFLICT (station_id, measurement_time) DO UPDATE
+                            SET station_name = EXCLUDED.station_name,
+                                num_bikes_available = EXCLUDED.num_bikes_available,
+                                num_docks_available = EXCLUDED.num_docks_available,
+                                is_active = EXCLUDED.is_active,
+                                lat = EXCLUDED.lat,
+                                lon = EXCLUDED.lon
+                        """,
+                        (
                             fetched_at,
+                            fetched_at,  # measurement_time = fetched_at (GBFS pas de timestamp station-level)
                             sid,
-                            st.get("name", ""),
+                            st.get("name", "") or f"Station {sid}",
                             st.get("num_bikes_available", 0),
                             st.get("num_docks_available", 0),
-                            st.get("is_installed", 1) == 1,
-                            st.get("is_renting", 1) == 1,
-                            st.get("is_returning", 1) == 1,
+                            bool(
+                                st.get("is_installed", 1) == 1
+                                and st.get("is_renting", 1) == 1
+                                and st.get("is_returning", 1) == 1
+                            ),
                             st.get("lat"),
                             st.get("lon"),
-                        ))
-                        n_inserted += 1
-                    except Exception as e:
-                        logger.warning(f"Skip Vélov station {sid}: {e}")
+                        ),
+                    )
+                    n_inserted += 1
+                except Exception as e:
+                    logger.warning(f"Skip Vélov station {sid}: {e}")
 
-            logger.info(f"Silver velov: {n_inserted} rows inserted/updated")
-            return n_inserted
+        logger.info(f"Silver velov: {n_inserted} rows inserted/updated")
+        return n_inserted
+
+
+def _parse_siri_delay(raw_delay) -> int:
+    """Parse SIRI Delay: integer seconds or ISO 8601 duration (PT2M30S)."""
+    if raw_delay is None:
+        return 0
+    if isinstance(raw_delay, (int, float)):
+        return int(raw_delay)
+    s = str(raw_delay).strip()
+    if not s.startswith("PT"):
+        try:
+            return int(float(s))
+        except (ValueError, TypeError):
+            return 0
+    total = 0
+    s = s[2:]
+    for unit, factor in [("H", 3600), ("M", 60), ("S", 1)]:
+        if unit in s:
+            val, s = s.split(unit, 1)
+            with contextlib.suppress(ValueError, TypeError):
+                total += int(float(val)) * factor
+    return total
+
+
+def _siri_ref(node: object) -> str | None:
+    """SIRI 2.0 (juin 2026+) : les refs (LineRef, VehicleRef, StopPointRef, ...)
+    sont des objets ``{"value": "ActIV:..."}`` au lieu de strings brutes.
+
+    Cette fonction extrait la string de value, ou None si structure inattendue.
+    """
+    if node is None:
+        return None
+    if isinstance(node, str):
+        return node or None
+    if isinstance(node, dict):
+        v = node.get("value")
+        if isinstance(v, str) and v:
+            return v
+    return None
 
 
 def _transform_tcl_vehicles() -> int:
-    """Bronze.tcl_vehicles → silver.tcl_vehicles_clean."""
-    with raw_connection() as conn:
-        with conn.cursor() as cur:
-            cur.execute("""
+    """Bronze.tcl_vehicles -> silver.tcl_vehicles_clean.
+
+    Schema silver : UNIQUE (line_ref, journey_ref, stop_ref, measurement_time).
+
+    Nouveau format SIRI 2.0 (juin 2026+) : LineRef, VehicleRef, DirectionRef,
+    StopPointRef sont des objets ``{"value": "..."}`` et non plus des strings.
+    Ancien code ``mvj.get("LineRef")`` retournait un dict, qui passait la garde
+    ``if not line_ref`` (dict truthy) puis crashait à l'INSERT TEXT.
+    """
+    with raw_connection() as conn, conn.cursor() as cur:
+        cur.execute("""
                 SELECT id, fetched_at, raw_data
                 FROM bronze.tcl_vehicles
                 ORDER BY fetched_at DESC
                 LIMIT 5000
             """)
-            rows = cur.fetchall()
+        rows = cur.fetchall()
 
-            n_inserted = 0
-            seen = set()
-            for _id, fetched_at, raw_data in rows:
-                if not isinstance(raw_data, dict):
+        n_inserted = 0
+        seen: set[tuple[str, str, str, object]] = set()
+        for _id, fetched_at, raw_data in rows:
+            if not isinstance(raw_data, dict):
+                continue
+            delivery = (
+                raw_data.get("Siri", {})
+                .get("ServiceDelivery", {})
+                .get("VehicleMonitoringDelivery", [{}])[0]
+            )
+            activities = delivery.get("VehicleActivity", [])
+            if not activities:
+                continue
+
+            for act in activities:
+                mvj = act.get("MonitoredVehicleJourney", {})
+
+                line_ref = _siri_ref(mvj.get("LineRef"))
+                if not line_ref:
                     continue
-                # SIRI Lite structure: ServiceDelivery > VehicleMonitoringDelivery > VehicleActivity[]
-                delivery = (
-                    raw_data.get("Siri", {}).get("ServiceDelivery", {})
-                    .get("VehicleMonitoringDelivery", [{}])[0]
-                )
-                activities = delivery.get("VehicleActivity", [])
 
-                for act in activities:
-                    monitored = act.get("MonitoredVehicleJourney", {})
-                    vehicle_ref = monitored.get("VehicleRef") or monitored.get("VehicleMode")
-                    if not vehicle_ref:
-                        continue
-                    key = (vehicle_ref, fetched_at)
-                    if key in seen:
-                        continue
-                    seen.add(key)
+                fvj = mvj.get("FramedVehicleJourneyRef") or {}
+                journey_ref = (
+                    fvj.get("DatedVehicleJourneyRef")
+                    if isinstance(fvj, dict)
+                    else None
+                ) or _siri_ref(mvj.get("VehicleRef")) or "unknown"
 
-                    try:
-                        cur.execute("""
+                call = mvj.get("MonitoredCall") or {}
+                stop_ref = _siri_ref(call.get("StopPointRef")) or "unknown"
+
+                key = (line_ref, journey_ref, stop_ref, fetched_at)
+                if key in seen:
+                    continue
+                seen.add(key)
+
+                delay_s = _parse_siri_delay(mvj.get("Delay"))
+                loc = mvj.get("VehicleLocation") or {}
+                direction_ref = _siri_ref(mvj.get("DirectionRef"))
+
+                try:
+                    cur.execute(
+                        """
                             INSERT INTO silver.tcl_vehicles_clean
-                                (fetched_at, vehicle_ref, line_ref, direction_ref,
-                                 delay_seconds, latitude, longitude, monitored)
-                            VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
-                            ON CONFLICT (vehicle_ref, fetched_at) DO UPDATE
-                            SET delay_seconds = EXCLUDED.delay_seconds,
-                                line_ref = EXCLUDED.line_ref
-                        """, (
+                                (fetched_at, measurement_time, line_ref,
+                                 direction_ref, journey_ref, stop_ref,
+                                 delay_seconds, lat, lon)
+                            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
+                            ON CONFLICT (line_ref, journey_ref, stop_ref, measurement_time)
+                            DO UPDATE SET
+                                delay_seconds = EXCLUDED.delay_seconds,
+                                fetched_at    = EXCLUDED.fetched_at
+                        """,
+                        (
                             fetched_at,
-                            vehicle_ref,
-                            monitored.get("LineRef"),
-                            monitored.get("DirectionRef"),
-                            monitored.get("Delay", 0),
-                            monitored.get("VehicleLocation", {}).get("Latitude"),
-                            monitored.get("VehicleLocation", {}).get("Longitude"),
-                            True,
-                        ))
-                        n_inserted += 1
-                    except Exception as e:
-                        logger.warning(f"Skip TCL vehicle {vehicle_ref}: {e}")
+                            fetched_at,
+                            line_ref,
+                            direction_ref,
+                            journey_ref,
+                            stop_ref,
+                            delay_s,
+                            loc.get("Latitude") if isinstance(loc, dict) else None,
+                            loc.get("Longitude") if isinstance(loc, dict) else None,
+                        ),
+                    )
+                    n_inserted += 1
+                except Exception as e:
+                    logger.warning("Skip TCL %s/%s: %s", line_ref, journey_ref, e)
 
-            logger.info(f"Silver tcl_vehicles: {n_inserted} rows inserted/updated")
-            return n_inserted
+        logger.info("Silver tcl_vehicles: %d rows inserted/updated", n_inserted)
+        return n_inserted
 
 
 def _transform_meteo() -> int:
     """Bronze.meteo → silver.meteo_hourly."""
-    with raw_connection() as conn:
-        with conn.cursor() as cur:
-            cur.execute("""
+    with raw_connection() as conn, conn.cursor() as cur:
+        cur.execute("""
                 SELECT id, fetched_at, raw_data
                 FROM bronze.meteo
                 ORDER BY fetched_at DESC
                 LIMIT 200
             """)
-            rows = cur.fetchall()
+        rows = cur.fetchall()
 
-            n_inserted = 0
-            for _id, fetched_at, raw_data in rows:
-                if not isinstance(raw_data, dict):
-                    continue
-                hourly = raw_data.get("hourly", {})
-                times = hourly.get("time", [])
-                temps = hourly.get("temperature_2m", [])
-                hums = hourly.get("relative_humidity_2m", [])
-                rains = hourly.get("precipitation", [])
-                winds = hourly.get("wind_speed_10m", [])
-                codes = hourly.get("weather_code", [])
+        n_inserted = 0
+        for _id, _fetched_at, raw_data in rows:
+            if not isinstance(raw_data, dict):
+                continue
+            hourly = raw_data.get("hourly", {})
+            times = hourly.get("time", [])
+            temps = hourly.get("temperature_2m", [])
+            hums = hourly.get("relative_humidity_2m", [])
+            rains = hourly.get("precipitation", [])
+            winds = hourly.get("wind_speed_10m", [])
+            codes = hourly.get("weather_code", [])
 
-                for i, t in enumerate(times):
-                    try:
-                        cur.execute("""
+            for i, t in enumerate(times):
+                try:
+                    cur.execute(
+                        """
                             INSERT INTO silver.meteo_hourly
                                 (measurement_time, temperature_c, humidity_pct,
                                  rain_mm, wind_kmh, weather_code)
@@ -283,60 +465,63 @@ def _transform_meteo() -> int:
                             ON CONFLICT (measurement_time) DO UPDATE
                             SET temperature_c = EXCLUDED.temperature_c,
                                 rain_mm = EXCLUDED.rain_mm
-                        """, (
-                            t, temps[i] if i < len(temps) else None,
+                        """,
+                        (
+                            t,
+                            temps[i] if i < len(temps) else None,
                             hums[i] if i < len(hums) else None,
                             rains[i] if i < len(rains) else None,
                             winds[i] if i < len(winds) else None,
                             codes[i] if i < len(codes) else None,
-                        ))
-                        n_inserted += 1
-                    except Exception as e:
-                        logger.warning(f"Skip meteo {t}: {e}")
+                        ),
+                    )
+                    n_inserted += 1
+                except Exception as e:
+                    logger.warning(f"Skip meteo {t}: {e}")
 
-            logger.info(f"Silver meteo: {n_inserted} rows inserted/updated")
-            return n_inserted
+        logger.info(f"Silver meteo: {n_inserted} rows inserted/updated")
+        return n_inserted
 
 
 def _transform_chantiers() -> int:
     """Bronze.chantiers → silver.chantiers_actifs (avec filtrage dates actives)."""
-    with raw_connection() as conn:
-        with conn.cursor() as cur:
-            cur.execute("""
+    with raw_connection() as conn, conn.cursor() as cur:
+        cur.execute("""
                 SELECT id, fetched_at, raw_data
                 FROM bronze.chantiers
                 ORDER BY fetched_at DESC
                 LIMIT 200
             """)
-            rows = cur.fetchall()
+        rows = cur.fetchall()
 
-            n_inserted = 0
-            for _id, fetched_at, raw_data in rows:
-                if not isinstance(raw_data, dict):
+        n_inserted = 0
+        for _id, _fetched_at, raw_data in rows:
+            if not isinstance(raw_data, dict):
+                continue
+            features = raw_data.get("features", [])
+            for feat in features:
+                props = feat.get("properties", {})
+                geom = feat.get("geometry", {})
+
+                chantier_id = props.get("id")
+                if not chantier_id:
                     continue
-                features = raw_data.get("features", [])
-                for feat in features:
-                    props = feat.get("properties", {})
-                    geom = feat.get("geometry", {})
 
-                    chantier_id = props.get("id")
-                    if not chantier_id:
-                        continue
+                date_debut = props.get("date_debut")
+                date_fin = props.get("date_fin")
+                localisation = props.get("localisation", "")
+                impact_lines = props.get("lignes_tcl", "").split(",") if props.get("lignes_tcl") else []
 
-                    date_debut = props.get("date_debut")
-                    date_fin = props.get("date_fin")
-                    localisation = props.get("localisation", "")
-                    impact_lines = props.get("lignes_tcl", "").split(",") if props.get("lignes_tcl") else []
+                # Point geometry
+                geom_wkt = None
+                if geom.get("type") == "Point":
+                    coords = geom.get("coordinates", [])
+                    if len(coords) == 2:
+                        geom_wkt = f"POINT({coords[0]} {coords[1]})"
 
-                    # Point geometry
-                    geom_wkt = None
-                    if geom.get("type") == "Point":
-                        coords = geom.get("coordinates", [])
-                        if len(coords) == 2:
-                            geom_wkt = f"POINT({coords[0]} {coords[1]})"
-
-                    try:
-                        cur.execute("""
+                try:
+                    cur.execute(
+                        """
                             INSERT INTO silver.chantiers_actifs
                                 (chantier_id, date_debut, date_fin, localisation,
                                  impact_lines, geom_wgs84, updated_at)
@@ -349,13 +534,20 @@ def _transform_chantiers() -> int:
                             SET date_debut = EXCLUDED.date_debut,
                                 date_fin = EXCLUDED.date_fin,
                                 updated_at = NOW()
-                        """, (
-                            chantier_id, date_debut, date_fin, localisation,
-                            impact_lines, geom_wkt, geom_wkt,
-                        ))
-                        n_inserted += 1
-                    except Exception as e:
-                        logger.warning(f"Skip chantier {chantier_id}: {e}")
+                        """,
+                        (
+                            chantier_id,
+                            date_debut,
+                            date_fin,
+                            localisation,
+                            impact_lines,
+                            geom_wkt,
+                            geom_wkt,
+                        ),
+                    )
+                    n_inserted += 1
+                except Exception as e:
+                    logger.warning(f"Skip chantier {chantier_id}: {e}")
 
-            logger.info(f"Silver chantiers: {n_inserted} rows inserted/updated")
-            return n_inserted
+        logger.info(f"Silver chantiers: {n_inserted} rows inserted/updated")
+        return n_inserted

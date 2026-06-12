@@ -26,13 +26,11 @@ from __future__ import annotations
 
 import logging
 import time
-from typing import Optional
 
 import networkx as nx
 
 from src.config import get_settings
 from src.db import execute_query
-
 
 logger = logging.getLogger(__name__)
 
@@ -89,14 +87,23 @@ def build_routing_graph(
 
 
 def _is_cache_valid() -> bool:
-    return (
-        _graph_cache["graph"] is not None
-        and (time.time() - _graph_cache["built_at"]) < CACHE_TTL_SECONDS
-    )
+    return _graph_cache["graph"] is not None and (time.time() - _graph_cache["built_at"]) < CACHE_TTL_SECONDS
+
+
+def reset_cache() -> None:
+    """Reset le cache module-level (utile pour les tests)."""
+    global _graph_cache
+    _graph_cache = {
+        "graph": None,
+        "node_to_idx": None,
+        "idx_to_node": None,
+        "built_at": 0.0,
+    }
 
 
 def _db_available() -> bool:
     from src.db import test_connection
+
     return test_connection()
 
 
@@ -104,80 +111,97 @@ def _build_graph_from_db(
     min_segment_length_m: float,
     endpoint_tolerance_deg: float,
 ) -> nx.Graph:
-    """Construit le graphe depuis la DB en SQL.
+    """Construit le graphe routier depuis la DB.
 
-    Requiert l'extension PostGIS (ST_StartPoint, ST_EndPoint, ST_Length).
+    Sprint 8 hotfix 2 (2026-06-12) — Le bon graphe routier n'est PAS
+    silver.trafic_boucles_clean (qui sont des Points isolés par
+    capteur) mais le graphe H3 déjà construit en Sprint 5 :
+    * gold.dim_spatial_grid_mapping : 1520 nœuds routiers H3 res 13
+    * gold.dim_gnn_adjacency : 4072 arêtes K=2 (chaque nœud relié à
+      ses voisins H3 les plus proches)
+
+    On croise avec gold.traffic_features_live pour récupérer la
+    vitesse temps réel du nœud H3 le plus proche du capteur
+    (mapping approximatif via lat/lon).
     """
-    query = """
+    # 1. Charger les nœuds H3 (lat/lon par node_idx)
+    nodes_query = """
+        SELECT node_idx, properties_twgid AS channel_id, lat, lon
+        FROM gold.dim_spatial_grid_mapping
+        WHERE lat IS NOT NULL AND lon IS NOT NULL
+    """
+    nodes_rows = execute_query(nodes_query)
+    if not nodes_rows:
+        raise ValueError("Aucun noeud dans gold.dim_spatial_grid_mapping")
+
+    G = nx.Graph()  # noqa: N806
+
+    # 2. Charger la vitesse temps réel la plus récente par node H3
+    # Sprint 10+ (2026-06-12) — Le JOIN direct ``m.properties_twgid =
+    # t.channel_id`` ne matche JAMAIS (LYO0xxxx ≠ "537"). On passe par
+    # ``gold.mv_twgid_to_lyo`` qui mappe par proximité géographique
+    # (seuil 500m). Refresh manuel : REFRESH MATERIALIZED VIEW
+    # gold.mv_twgid_to_lyo;
+    speed_query = """
         WITH latest AS (
-            SELECT DISTINCT ON (channel_id)
-                channel_id,
-                ST_StartPoint(geom_wgs84) AS start_pt,
-                ST_EndPoint(geom_wgs84) AS end_pt,
-                ST_X(ST_StartPoint(geom_wgs84)) AS start_lon,
-                ST_Y(ST_StartPoint(geom_wgs84)) AS start_lat,
-                ST_X(ST_EndPoint(geom_wgs84)) AS end_lon,
-                ST_Y(ST_EndPoint(geom_wgs84)) AS end_lat,
-                ST_Length(geom_wgs84::geography) AS length_m,
-                vitesse_kmh AS current_speed_kmh,
-                measurement_time
-            FROM silver.trafic_boucles_clean
-            WHERE geom_wgs84 IS NOT NULL
-              AND vitesse_kmh IS NOT NULL
-              AND measurement_time > NOW() - INTERVAL '1 hour'
-            ORDER BY channel_id, measurement_time DESC
+            SELECT DISTINCT ON (m.node_idx)
+                m.node_idx, t.speed_kmh
+            FROM gold.dim_spatial_grid_mapping m
+            JOIN gold.mv_twgid_to_lyo mv
+              ON mv.properties_twgid = m.properties_twgid
+            JOIN gold.traffic_features_live t
+              ON t.channel_id = mv.channel_id
+            WHERE t.computed_at >= NOW() - INTERVAL '1 hour'
+              AND t.speed_kmh IS NOT NULL
+            ORDER BY m.node_idx, t.computed_at DESC
         )
-        SELECT
-            channel_id,
-            start_lon, start_lat, end_lon, end_lat,
-            length_m,
-            current_speed_kmh
-        FROM latest
-        WHERE length_m > %s
+        SELECT node_idx, speed_kmh FROM latest
     """
-    rows = execute_query(query, (min_segment_length_m,))
-    if not rows:
-        raise ValueError("Aucun segment dans silver.trafic_boucles_clean")
+    speed_map = {r["node_idx"]: float(r["speed_kmh"]) for r in execute_query(speed_query)}
 
-    G = nx.Graph()
+    # 3. Construire les nœuds du graphe
+    for r in nodes_rows:
+        node_idx = int(r["node_idx"])
+        G.add_node(
+            node_idx,
+            **{
+                "length_m": 50.0,  # défaut H3 res 13 ≈ 30-50m
+                "current_speed_kmh": speed_map.get(node_idx, 30.0),
+                "start_lon": float(r["lon"]),
+                "start_lat": float(r["lat"]),
+                "end_lon": float(r["lon"]),
+                "end_lat": float(r["lat"]),
+            },
+        )
 
-    # 1. Ajouter les nœuds
-    for r in rows:
-        channel_id = r["channel_id"]
-        G.add_node(channel_id, **{
-            "length_m": float(r["length_m"]),
-            "current_speed_kmh": float(r["current_speed_kmh"]),
-            "start_lon": float(r["start_lon"]),
-            "start_lat": float(r["start_lat"]),
-            "end_lon": float(r["end_lon"]),
-            "end_lat": float(r["end_lat"]),
-        })
-
-    # 2. Construire les arêtes par matching d'endpoints
-    #    On indexe les endpoints (start + end) et on groupe
-    nodes_data = list(G.nodes(data=True))
-    endpoint_index: dict[tuple[float, float], list[str]] = {}
-    for cid, data in nodes_data:
-        for ep in [(data["start_lon"], data["start_lat"]),
-                   (data["end_lon"], data["end_lat"])]:
-            # Quantize for tolerance
-            key = (round(ep[0] / endpoint_tolerance_deg),
-                   round(ep[1] / endpoint_tolerance_deg))
-            endpoint_index.setdefault(key, []).append(cid)
-
-    # 3. Pour chaque endpoint partagé, créer les arêtes
-    edge_set: set[tuple[str, str]] = set()
-    for cid_list in endpoint_index.values():
-        if len(cid_list) < 2:
-            continue
-        for i, u in enumerate(cid_list):
-            for v in cid_list[i + 1:]:
-                edge = tuple(sorted([u, v]))
-                if edge not in edge_set:
-                    edge_set.add(edge)
-                    G.add_edge(u, v, via="shared_endpoint")
+    # 4. Construire les arêtes via dim_gnn_adjacency (K=2 H3)
+    edges_query = """
+        SELECT node_u, node_v
+        FROM gold.dim_gnn_adjacency
+        WHERE is_connected = TRUE
+    """
+    edges_rows = execute_query(edges_query)
+    for r in edges_rows:
+        u, v = int(r["node_u"]), int(r["node_v"])
+        if u in G.nodes and v in G.nodes:
+            # Distance haversine pour l'arête (approx edge weight)
+            u_data, v_data = G.nodes[u], G.nodes[v]
+            d = _haversine_m_local(u_data["start_lat"], u_data["start_lon"],
+                                  v_data["start_lat"], v_data["start_lon"])
+            G.add_edge(u, v, via="h3_adjacency", length_m=d)
 
     return G
+
+
+def _haversine_m_local(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
+    """Distance haversine en mètres — version locale (évite round-trip DB)."""
+    import math
+    r = 6_371_000  # m
+    p1, p2 = math.radians(lat1), math.radians(lat2)
+    dp = math.radians(lat2 - lat1)
+    dl = math.radians(lon2 - lon1)
+    a = math.sin(dp / 2) ** 2 + math.cos(p1) * math.cos(p2) * math.sin(dl / 2) ** 2
+    return 2 * r * math.asin(math.sqrt(a))
 
 
 def _build_mock_graph() -> nx.Graph:
@@ -186,7 +210,7 @@ def _build_mock_graph() -> nx.Graph:
     Simule 12 segments dans le centre de Lyon (Part-Dieu, Bellecour, etc.)
     avec adjacences réalistes et vitesses mock.
     """
-    G = nx.Graph()
+    G = nx.Graph()  # noqa: N806
 
     # Centre Lyon : Presqu'île + Part-Dieu + Confluence
     # Format : (channel_id, start_lon, start_lat, end_lon, end_lat, length_m, speed)
@@ -215,12 +239,17 @@ def _build_mock_graph() -> nx.Graph:
     ]
 
     for cid, slon, slat, elon, elat, length, speed in segments:
-        G.add_node(cid, **{
-            "length_m": length,
-            "current_speed_kmh": speed,
-            "start_lon": slon, "start_lat": slat,
-            "end_lon": elon, "end_lat": elat,
-        })
+        G.add_node(
+            cid,
+            **{
+                "length_m": length,
+                "current_speed_kmh": speed,
+                "start_lon": slon,
+                "start_lat": slat,
+                "end_lon": elon,
+                "end_lat": elat,
+            },
+        )
 
     # Adjacences mockées (segments qui se touchent)
     adjacencies = [
@@ -254,7 +283,7 @@ def get_node_speed(graph: nx.Graph, node_id: str, horizon_minutes: int = 0) -> f
     return float(data.get("current_speed_kmh", 30.0))
 
 
-def get_nearest_node(graph: nx.Graph, lon: float, lat: float) -> Optional[str]:
+def get_nearest_node(graph: nx.Graph, lon: float, lat: float) -> str | None:
     """Trouve le nœud le plus proche d'un point (lon, lat)."""
     if graph.number_of_nodes() == 0:
         return None
@@ -263,8 +292,7 @@ def get_nearest_node(graph: nx.Graph, lon: float, lat: float) -> Optional[str]:
     nearest = None
     for node_id, data in graph.nodes(data=True):
         # Distance euclidienne sur les endpoints
-        for ep_lon, ep_lat in [(data["start_lon"], data["start_lat"]),
-                                (data["end_lon"], data["end_lat"])]:
+        for ep_lon, ep_lat in [(data["start_lon"], data["start_lat"]), (data["end_lon"], data["end_lat"])]:
             d = (ep_lon - lon) ** 2 + (ep_lat - lat) ** 2
             if d < min_dist:
                 min_dist = d

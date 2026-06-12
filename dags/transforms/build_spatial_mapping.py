@@ -15,7 +15,6 @@ from datetime import datetime, timedelta
 from airflow import DAG
 from airflow.operators.python import PythonOperator
 
-
 logger = logging.getLogger(__name__)
 
 
@@ -23,21 +22,27 @@ def _build_spatial_mapping() -> int:
     """Construit gold.dim_spatial_grid_mapping depuis silver.trafic_boucles_clean.
 
     Stratégie :
-    1. Récupère tous les channels distincts avec leur geom_wgs84
+    1. Récupère tous les channels distincts avec leur geom (WGS84)
     2. Assigne un node_idx séquentiel (0..N-1)
     3. Calcule matrix_i/j via h3 si dispo
-    4. UPSERT dans gold.dim_spatial_grid_mapping
+    4. UPSERT dans gold.dim_spatial_grid_mapping (PK = properties_twgid)
+
+    Sprint VPS-5 — Schema v0.3.1 :
+    * `silver.trafic_boucles_clean` a ``geom`` (geometry 4326) et ``geom_2154``
+      (Lambert 93). Plus de ``geom_wgs84``.
+    * `gold.dim_spatial_grid_mapping` PK = ``properties_twgid`` (et plus
+      ``channel_id``). Colonnes ``lat`` + ``lon`` en double precision.
     """
     from src.db import execute_query
 
-    # 1. Liste des channels distincts
+    # 1. Liste des channels distincts avec lat/lon
     query = """
         SELECT DISTINCT ON (channel_id)
             channel_id,
-            ST_X(ST_StartPoint(geom_wgs84)) AS lon,
-            ST_Y(ST_StartPoint(geom_wgs84)) AS lat
+            ST_Y(geom) AS lat,
+            ST_X(geom) AS lon
         FROM silver.trafic_boucles_clean
-        WHERE geom_wgs84 IS NOT NULL
+        WHERE geom IS NOT NULL
         ORDER BY channel_id, measurement_time DESC
     """
     rows = execute_query(query, ())
@@ -58,6 +63,7 @@ def _build_spatial_mapping() -> int:
         h3_id = None
         try:
             import h3
+
             h3_id = h3.latlng_to_cell(lat, lon, 13)
         except (ImportError, Exception) as e:
             logger.debug(f"h3 non dispo: {e}")
@@ -70,31 +76,47 @@ def _build_spatial_mapping() -> int:
         try:
             cur_query = """
                 INSERT INTO gold.dim_spatial_grid_mapping
-                    (node_idx, channel_id, matrix_i, matrix_j, h3_id, geom_wgs84, updated_at)
-                VALUES (%s, %s, %s, %s, %s, ST_SetSRID(ST_MakePoint(%s, %s), 4326), NOW())
-                ON CONFLICT (channel_id) DO UPDATE
+                    (node_idx, properties_twgid, matrix_i, matrix_j, h3_id, lat, lon, updated_at)
+                VALUES (%s, %s, %s, %s, %s, %s, %s, NOW())
+                ON CONFLICT (properties_twgid) DO UPDATE
                 SET node_idx = EXCLUDED.node_idx,
                     matrix_i = EXCLUDED.matrix_i,
                     matrix_j = EXCLUDED.matrix_j,
                     h3_id = EXCLUDED.h3_id,
-                    geom_wgs84 = EXCLUDED.geom_wgs84,
+                    lat = EXCLUDED.lat,
+                    lon = EXCLUDED.lon,
                     updated_at = NOW()
             """
-            execute_query(cur_query, (
-                node_idx, channel_id, matrix_i, matrix_j, h3_id, lon, lat,
-            ))
+            execute_query(
+                cur_query,
+                (
+                    node_idx,
+                    channel_id,
+                    matrix_i,
+                    matrix_j,
+                    h3_id,
+                    lat,
+                    lon,
+                ),
+            )
             n_inserted += 1
         except Exception as e:
             logger.warning(f"Skip channel {channel_id}: {e}")
 
     # 3. Build adjacency (arêtes graphe GNN) — K=2 grid
-    _build_adjacency()
-    logger.info(f"dim_spatial_grid_mapping: {n_inserted} channels inserted/updated")
+    n_edges = _build_adjacency()
+    logger.info(
+        f"dim_spatial_grid_mapping: {n_inserted} channels inserted/updated, "
+        f"{n_edges} adjacency edges"
+    )
     return n_inserted
 
 
 def _build_adjacency() -> int:
-    """Construit gold.dim_gnn_adjacency : arêtes entre channels proches (K=2 grid)."""
+    """Construit gold.dim_gnn_adjacency : arêtes entre nodes proches (K=2 grid).
+
+    Sprint VPS-5 : la PK de dim_gnn_adjacency est (node_u, node_v) — inchangé.
+    """
     from src.db import execute_query
 
     # Récupère tous les node_idx avec leurs matrix_i/j
@@ -123,7 +145,7 @@ def _build_adjacency() -> int:
                         INSERT INTO gold.dim_gnn_adjacency
                             (node_u, node_v, is_connected, updated_at)
                         VALUES (%s, %s, TRUE, NOW())
-                        ON CONFLICT DO NOTHING
+                        ON CONFLICT (node_u, node_v) DO NOTHING
                     """
                     # Stocke bidirectionnel (l'inférence GNN traitera comme undirected)
                     execute_query(cur_query, (u_node, v_node))

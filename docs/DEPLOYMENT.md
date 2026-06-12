@@ -66,7 +66,7 @@ docker compose exec postgres psql -U lyonflow -d lyonflow -c "\dt bronze.*"
 ### Health check
 
 ```bash
-# Nginx (public)
+# Nginx (public) — endpoint dédié /nginx-health (texte brut 200 ok)
 curl http://localhost/nginx-health
 # → "ok"
 
@@ -77,6 +77,11 @@ curl http://localhost/api/health
 # Airflow (interne)
 docker compose exec airflow-webserver airflow dags list
 ```
+
+> **⚠️ Healthcheck Docker Nginx (depuis VPS-6)** : la commande interne est
+> `wget --spider -q http://127.0.0.1/nginx-health` (IPv4 forcée). **Ne pas
+> remettre `localhost`** : Alpine `wget` résout en IPv6 `::1` → Nginx n'écoute
+> qu'en IPv4 → healthcheck échoue en boucle.
 
 ## 2. Déploiement sur VPS unique
 

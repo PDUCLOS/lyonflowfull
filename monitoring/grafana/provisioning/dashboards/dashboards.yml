@@ -1,0 +1,20 @@
+# =============================================================================
+# monitoring/grafana/provisioning/dashboards/dashboards.yml
+# =============================================================================
+# Auto-provisionne les dashboards depuis /var/lib/grafana/dashboards.
+# Sprint VPS-3.
+# =============================================================================
+
+apiVersion: 1
+
+providers:
+  - name: 'LyonFlowFull dashboards'
+    orgId: 1
+    folder: 'LyonFlowFull'
+    type: file
+    disableDeletion: false
+    updateIntervalSeconds: 30
+    allowUiUpdates: true
+    options:
+      path: /var/lib/grafana/dashboards
+      foldersFromFilesStructure: false

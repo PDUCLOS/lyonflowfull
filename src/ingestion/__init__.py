@@ -1,44 +1,58 @@
 """Ingestion package — DataCollector ABC + 8 collecteurs concrets.
 
-Permet l'import direct des collecteurs :
-    from src.ingestion import TraficGrandLyon, VelovCollector, ...
+Les collecteurs sont exposés en CLASSES (pas en instances) : aucune
+side-effect au chargement du module (HTTP, env, etc.). Instanciation à
+la demande dans les DAGs Airflow.
 """
 
-from src.ingestion.base import DataCollector, FetchResult, CollectorError
+from src.ingestion.air_quality import AirQualityOpenMeteo
+from src.ingestion.base import CollectorError, DataCollector, FetchResult
+from src.ingestion.calendrier_scolaire import CalendrierScolaire
+from src.ingestion.chantiers import ChantiersGrandLyon
+from src.ingestion.jours_feries import JoursFeries
+from src.ingestion.meteo import MeteoOpenMeteo
+from src.ingestion.tcl_siri_lite import TclSiriLite
+
+# Sprint 8 (2026-06-12) — tomtom_traffic désactivé. Le module
+# n'a jamais eu la classe TomTomTrafficFlow ni les fonctions
+# collect_lyon_tiles() / save_lyon_tiles_to_bronze() / health().
+# Le DAG collect_tomtom_traffic est en no-op. Réactivation Sprint 12+.
+# import src.ingestion.tomtom_traffic as tomtom_traffic
+# from src.ingestion.tomtom_traffic import TomTomTrafficFlow
 from src.ingestion.trafic_grandlyon import TraficGrandLyon
 from src.ingestion.velov import VelovCollector
-from src.ingestion.meteo import MeteoOpenMeteo
-from src.ingestion.air_quality import AirQualityOpenMeteo
-from src.ingestion.chantiers import ChantiersGrandLyon
-from src.ingestion.tcl_siri_lite import TclSiriLite
-from src.ingestion.calendrier_scolaire import CalendrierScolaire
-from src.ingestion.jours_feries import JoursFeries
 
-
-# Instance de chaque collecteur pour itération facile
-ALL_COLLECTORS = [
-    TraficGrandLyon(),
-    VelovCollector(),
-    MeteoOpenMeteo(),
-    AirQualityOpenMeteo(),
-    ChantiersGrandLyon(),
-    TclSiriLite(),
-    CalendrierScolaire(),
-    JoursFeries(),
+REALTIME_COLLECTORS: list[type[DataCollector]] = [
+    TraficGrandLyon,
+    VelovCollector,
+    MeteoOpenMeteo,
+    AirQualityOpenMeteo,
+    ChantiersGrandLyon,
+    TclSiriLite,
+    # Sprint 8 — TomTomTrafficFlow désactivé (cf. docstring tomtom_traffic.py)
 ]
+
+MONTHLY_COLLECTORS: list[type[DataCollector]] = [
+    CalendrierScolaire,
+    JoursFeries,
+]
+
+ALL_COLLECTOR_CLASSES: list[type[DataCollector]] = REALTIME_COLLECTORS + MONTHLY_COLLECTORS
 
 
 __all__ = [
+    "ALL_COLLECTOR_CLASSES",
+    "MONTHLY_COLLECTORS",
+    "REALTIME_COLLECTORS",
+    "AirQualityOpenMeteo",
+    "CalendrierScolaire",
+    "ChantiersGrandLyon",
+    "CollectorError",
     "DataCollector",
     "FetchResult",
-    "CollectorError",
+    "JoursFeries",
+    "MeteoOpenMeteo",
+    "TclSiriLite",
     "TraficGrandLyon",
     "VelovCollector",
-    "MeteoOpenMeteo",
-    "AirQualityOpenMeteo",
-    "ChantiersGrandLyon",
-    "TclSiriLite",
-    "CalendrierScolaire",
-    "JoursFeries",
-    "ALL_COLLECTORS",
 ]

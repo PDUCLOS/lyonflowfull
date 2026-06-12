@@ -73,13 +73,15 @@ class STGCNWrapper:
 
             from training.stgcn.model import build_module
 
-            ckpt = torch.load(model_path, map_location="cpu", weights_only=False)
+            ckpt = torch.load(model_path, map_location="cpu", weights_only=True)
             self._config = ckpt["config"]
             self._model = build_module(_config_to_stgcn_config(self._config))
             self._model.load_state_dict(ckpt["state_dict"])
             self._model.eval()
             self._is_loaded = True
-            logger.info("STGCN H+%dmin loaded (%d params)", self.horizon_min, sum(p.numel() for p in self._model.parameters()))
+            logger.info(
+                "STGCN H+%dmin loaded (%d params)", self.horizon_min, sum(p.numel() for p in self._model.parameters())
+            )
             return True
         except Exception as e:  # pragma: no cover
             logger.exception("Failed to load STGCN H+%dmin: %s", self.horizon_min, e)
