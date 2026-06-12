@@ -70,8 +70,8 @@ class XGBoostSpeedModel:
     """Modèle XGBoost multi-horizon pour prédiction vitesse trafic."""
 
     def __init__(self, model_dir: str | None = None):
-        # Une seule assignation de model_dir
-        self.model_dir = Path(model_dir or os.getenv("LYONFLOW_MODELS_DIR", "/app/models"))
+        # Modèles par horizon (H+1h focus)
+        self._model_dir = Path(model_dir or os.getenv("LYONFLOW_MODELS_DIR", "/app/models"))
         self.models: dict[int, xgb.XGBRegressor] = {}  # horizon_minutes → model
 
     def load(self, horizons: list[int] | None = None) -> None:
@@ -88,7 +88,7 @@ class XGBoostSpeedModel:
         horizons = horizons or [60]
         for h in horizons:
             model_name = f"xgb_speed_h{h}"
-            model_path = self.model_dir / f"{model_name}.pkl"
+            model_path = self._model_dir / f"{model_name}.pkl"
 
             # Essayer MLflow en premier (Model Registry)
             mlflow_success = False
@@ -96,7 +96,7 @@ class XGBoostSpeedModel:
                 try:
                     # Télécharge l'artifact depuis le registre (Production)
                     artifact_uri = f"models:/{model_name}/Production"
-                    local_path = mlflow.artifacts.download_artifacts(artifact_uri, dst_path=str(self.model_dir))
+                    local_path = mlflow.artifacts.download_artifacts(artifact_uri, dst_path=str(self._model_dir))
                     self.models[h] = joblib.load(local_path)
                     logger.info(f"Loaded XGBoost model horizon {h}min from MLflow Registry (Production)")
                     mlflow_success = True
@@ -166,7 +166,7 @@ class XGBoostSpeedModel:
 
         # Sauvegarde
         self.models[horizon_minutes] = model
-        model_path = self.model_dir / f"xgb_speed_h{horizon_minutes}.pkl"
+        model_path = self._model_dir / f"xgb_speed_h{horizon_minutes}.pkl"
         model_path.parent.mkdir(parents=True, exist_ok=True)
         joblib.dump(model, model_path)
 
@@ -207,16 +207,23 @@ class XGBoostSpeedModel:
                 "n_rows": len(df),
                 "n_channels": int(df["channel_id"].nunique()) if "channel_id" in df.columns else 0,
             }
+            card_params = {
+                "horizon_min": horizon_minutes,
+                "n_estimators": n_estimators,
+                "max_depth": max_depth,
+                "learning_rate": learning_rate,
+                "model_version": "1.2.0",
+            }
             card_md = generate_xgboost_card(
-                model_version=str(params.get("model_version", "1.2.0")),
+                model_version=card_params["model_version"],
                 horizon_minutes=horizon_minutes,
                 metrics=metrics,
-                params=params,
+                params=card_params,
                 dataset_stats=dataset_stats,
                 drift_report=get_latest_drift_report(),
                 feature_cols=FEATURE_COLS,
             )
-            card_path = save_card(card_md, "xgboost_speed", str(params.get("model_version", "1.2.0")))
+            card_path = save_card(card_md, "xgboost_speed", card_params["model_version"])
             # Pousse le card comme artifact MLflow si tracking actif
             if os.getenv("MLFLOW_TRACKING_URI", "") != "":
                 try:
