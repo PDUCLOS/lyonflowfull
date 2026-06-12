@@ -41,7 +41,7 @@ class XGBoostVelovModel:
     """Modèle XGBoost pour prédire le nombre de vélos disponibles."""
 
     def __init__(self, model_dir: str | None = None):
-        self.model_dir = Path(model_dir or os.getenv("LYONFLOW_MODELS_DIR", "/app/models"))
+        self._model_dir = Path(model_dir or os.getenv("LYONFLOW_MODELS_DIR", "/app/models"))
         self.models: dict[int, xgb.Booster] = {}
 
     def load(self, horizons: list[int] | None = None) -> None:
@@ -53,13 +53,13 @@ class XGBoostVelovModel:
         horizons = horizons or [30, 60]
         for h in horizons:
             model_name = f"xgb_velov_h{h}"
-            model_path = self.model_dir / f"{model_name}.pkl"
+            model_path = self._model_dir / f"{model_name}.pkl"
 
             mlflow_success = False
             if is_mlflow_available():
                 try:
                     artifact_uri = f"models:/{model_name}/Production"
-                    local_path = mlflow.artifacts.download_artifacts(artifact_uri, dst_path=str(self.model_dir))
+                    local_path = mlflow.artifacts.download_artifacts(artifact_uri, dst_path=str(self._model_dir))
                     self.models[h] = joblib.load(local_path)
                     logger.info(f"Loaded XGBoost Velov horizon {h}min from MLflow Registry (Production)")
                     mlflow_success = True
@@ -107,7 +107,7 @@ class XGBoostVelovModel:
         }
 
         self.models[horizon_minutes] = model
-        model_path = self.model_dir / f"xgb_velov_h{horizon_minutes}.pkl"
+        model_path = self._model_dir / f"xgb_velov_h{horizon_minutes}.pkl"
         model_path.parent.mkdir(parents=True, exist_ok=True)
         joblib.dump(model, model_path)
 
@@ -180,7 +180,7 @@ class XGBoostVelovModel:
               AND measurement_time > NOW() - INTERVAL '14 days'
             ORDER BY measurement_time
         """
-        rows = execute_query(query, ())
+        rows = execute_query(query)
         return pd.DataFrame(rows)
 
     def _lookup_features(self, station_id: str) -> dict:
