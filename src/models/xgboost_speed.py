@@ -29,20 +29,28 @@ from src.ml.mlflow_integration import MLflowTracker
 logger = logging.getLogger(__name__)
 
 
-# Features utilisées
+# Features utilisées (Sprint 9 — alignées sur schéma v0.3.1 de gold.traffic_features_live,
+# focus H+1h depuis Sprint VPS-6 2026-06-11).
+# Convention de nommage : `lag_h1` = valeur il y a 1h, `lag_h2` = 2h, `lag_h3` = 3h.
+# `delta_h1` = speed - lag_h1 (variation sur 1h).
+# `rolling_mean_h1` = moyenne sur les 3 derniers pas de 5 min (= 15 min de contexte ~ 1h).
+# Avant : speed_lag_1/2/3, speed_delta_1, rolling_mean_5min, hour_sin/cos, day_sin/cos,
+#         temperature_c, rain_mm, node_idx
+# Après : lag_h1/h2/h3, delta_h1, rolling_mean_h1, sin_hour/cos_hour, sin_dow/cos_dow,
+#         temperature_2m, precipitation, channel_id (string LYO000xx, pas int node_idx)
 FEATURE_COLS = [
     "speed_kmh",
-    "speed_lag_1",
-    "speed_lag_2",
-    "speed_lag_3",
-    "speed_delta_1",
-    "rolling_mean_5min",
-    "hour_sin",
-    "hour_cos",
-    "day_sin",
-    "day_cos",
-    "temperature_c",
-    "rain_mm",
+    "lag_h1",
+    "lag_h2",
+    "lag_h3",
+    "delta_h1",
+    "rolling_mean_h1",
+    "sin_hour",
+    "cos_hour",
+    "sin_dow",
+    "cos_dow",
+    "temperature_2m",
+    "precipitation",
     "is_vacances",
     "is_ferie",
 ]
@@ -184,14 +192,14 @@ class XGBoostSpeedModel:
 
     def predict(
         self,
-        node_idx: int,
+        channel_id: str,
         horizon_minutes: int,
         features: dict | None = None,
     ) -> dict:
-        """Prédit la vitesse pour un nœud et un horizon.
+        """Prédit la vitesse pour un canal (string LYO000xx) et un horizon.
 
         Args:
-            node_idx: index du nœud (GNN mapping)
+            channel_id: identifiant canal trafic (ex. "LYO00007")
             horizon_minutes: 5, 60, 180, 360
             features: dict de features. Si None, lookup gold.
 
@@ -211,7 +219,7 @@ class XGBoostSpeedModel:
             }
 
         if features is None:
-            features = self._lookup_features(node_idx)
+            features = self._lookup_features(channel_id)
         if not features:
             return {
                 "predicted_speed_kmh": 30.0,
@@ -248,52 +256,56 @@ class XGBoostSpeedModel:
         query = """
             WITH ranked AS (
                 SELECT
-                    speed_kmh, speed_lag_1, speed_lag_2, speed_lag_3,
-                    speed_delta_1, rolling_mean_5min,
-                    hour_sin, hour_cos, day_sin, day_cos,
-                    temperature_c, rain_mm,
+                    speed_kmh, lag_h1, lag_h2, lag_h3,
+                    delta_h1, rolling_mean_h1,
+                    sin_hour, cos_hour, sin_dow, cos_dow,
+                    temperature_2m, precipitation,
                     COALESCE(is_vacances, FALSE) AS is_vacances,
                     COALESCE(is_ferie, FALSE) AS is_ferie,
                     -- Target : speed au temps t + horizon (LEAD window function)
                     LEAD(speed_kmh, %s) OVER (
-                        PARTITION BY node_idx ORDER BY measurement_time
+                        PARTITION BY channel_id ORDER BY computed_at
                     ) AS target_speed,
-                    node_idx
+                    channel_id
                 FROM gold.traffic_features_live
                 WHERE speed_kmh IS NOT NULL
-                  AND measurement_time > NOW() - INTERVAL '7 days'
+                  AND computed_at > NOW() - INTERVAL '7 days'
             )
             SELECT
-                speed_kmh, speed_lag_1, speed_lag_2, speed_lag_3,
-                speed_delta_1, rolling_mean_5min,
-                hour_sin, hour_cos, day_sin, day_cos,
-                temperature_c, rain_mm,
+                speed_kmh, lag_h1, lag_h2, lag_h3,
+                delta_h1, rolling_mean_h1,
+                sin_hour, cos_hour, sin_dow, cos_dow,
+                temperature_2m, precipitation,
                 is_vacances, is_ferie,
                 target_speed
             FROM ranked
             WHERE target_speed IS NOT NULL
-            ORDER BY node_idx
+            ORDER BY channel_id
         """
         # Note: psycopg2 peut paramétrer un int dans LEAD()
         rows = execute_query(query, (lead_steps,))
         return pd.DataFrame(rows)
 
-    def _lookup_features(self, node_idx: int) -> dict:
-        """Récupère les dernières features pour un nœud."""
+    def _lookup_features(self, channel_id: str) -> dict:
+        """Récupère les dernières features pour un canal (string LYO000xx).
+
+        Sprint 9 : `channel_id` est maintenant un string (LYO000xx) au lieu
+        d'un int `node_idx`. Voir gold.dim_spatial_grid_mapping.
+        """
         query = """
             SELECT
-                speed_kmh, speed_lag_1, speed_lag_2, speed_lag_3,
-                speed_delta_1, rolling_mean_5min,
-                hour_sin, hour_cos, day_sin, day_cos,
-                temperature_c, rain_mm,
+                speed_kmh, lag_h1, lag_h2, lag_h3,
+                delta_h1, rolling_mean_h1,
+                sin_hour, cos_hour, sin_dow, cos_dow,
+                temperature_2m, precipitation,
                 COALESCE(is_vacances, FALSE) AS is_vacances,
                 COALESCE(is_ferie, FALSE) AS is_ferie
             FROM gold.traffic_features_live
-            WHERE node_idx = %s
-            ORDER BY measurement_time DESC
+            WHERE channel_id = %s
+            ORDER BY computed_at DESC
             LIMIT 1
         """
-        rows = execute_query(query, (node_idx,))
+        rows = execute_query(query, (channel_id,))
         if not rows:
             return {}
         return dict(rows[0])
