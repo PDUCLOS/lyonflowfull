@@ -28,7 +28,7 @@ from src.models.stgcn_wrapper import STGCNWrapper
 
 logger = logging.getLogger(__name__)
 
-_DEFAULT_HORIZONS = (5, 15, 30, 60, 180, 360)
+_DEFAULT_HORIZONS = (60,)  # Sprint 12+ — focus H+1h strict (Patrice : "les autres H+1h")
 
 
 # -----------------------------------------------------------------------------

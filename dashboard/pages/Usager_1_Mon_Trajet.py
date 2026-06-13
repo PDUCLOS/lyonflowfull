@@ -99,7 +99,7 @@ if st.session_state.get("results_loaded"):
 
     # Carte trafic compacte — vitesses prédites par tronçon (Sprint 10)
     st.markdown("##### 🗺️ Carte du trafic — H+30min")
-    render_traffic_map_compact(height=320, horizon_minutes=30, key_suffix="usager")
+    render_traffic_map_compact(height=320, horizon_minutes=60, key_suffix="usager")  # Sprint 12+ H+1h
 
     # Carte Vélo'v — dispo actuelle + tooltip prédictions H+30/H+1h (Sprint 10)
     st.markdown("##### 🚲 Stations Vélo'v — dispo + prédictions")
@@ -135,11 +135,12 @@ if st.session_state.get("results_loaded"):
             unsafe_allow_html=True,
         )
     with itin_col2:
+        # Sprint 12+ — focus H+1h strict (Patrice : "les autres H+1h")
         horizon = st.selectbox(
             "🕐 Trafic",
-            [0, 30, 60, 180, 360],
+            [60],
             index=0,
-            format_func=lambda x: "Maintenant" if x == 0 else f"H+{x}min",
+            format_func=lambda x: "H+1h" if x == 60 else f"H+{x}min",
             key="itin_horizon",
         )
 
@@ -154,6 +155,25 @@ if st.session_state.get("results_loaded"):
             destination=search["destination"],
             horizon_minutes=horizon,
         )
+
+    # === QUALITÉ DE LA PRÉDICTION H+1h (Sprint 12 — feedback user) ===
+    # Affiche MAE / RMSE / % fiable sur les 7 derniers jours pour que
+    # l'usager sache s'il peut faire confiance à la prédiction de temps
+    # de trajet. Sprint 12 — widget simple, pas de carte de caro.
+    from dashboard.components.widgets.usager.prediction_quality import (
+        render_prediction_quality,
+    )
+
+    with st.expander(
+        "🎯 Qualité de la prédiction H+1h (est-ce que ça marche ?)",
+        expanded=False,
+    ):
+        try:
+            render_prediction_quality()
+        except Exception as e:
+            from dashboard.components.loading_state import data_error_to_message
+
+            st.error(data_error_to_message(e, source="gold.predictions_vs_actuals"))
 
     st.markdown("---")
 

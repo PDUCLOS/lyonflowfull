@@ -2,13 +2,14 @@
 
 Affiche toutes les stations Vélo'v sur la carte de Lyon avec :
 * Couleur = nb de vélos disponibles **actuel** (silver.velov_clean)
-* Tooltip = nom station + vélos/places actuels + prédiction H+30/H+1h
-* Mode "Maintenant" ou "Prédiction H+X" (selectbox)
+* Tooltip = nom station + vélos/places actuels + prédiction **H+30min** uniquement
+* Mode "Maintenant" ou "Prédiction H+30min" (selectbox)
 
 Source données :
 * ``silver.velov_clean`` via ``get_velov_stations_geo()``
-* ``gold.velov_predictions`` via ``get_velov_predictions(30 ou 60)``
+* ``gold.velov_predictions`` via ``get_velov_predictions(30)`` — H+30min uniquement
 
+Sprint 12+ — focus H+30min (Patrice : "tout en H+30min pour Vélov").
 Sprint 10 — comble le gap "on prédit la dispo mais on l'affiche pas".
 """
 
@@ -45,19 +46,21 @@ def _docks_to_color(docks: int) -> list:
 def _load_stations_with_predictions(horizon_minutes: int = 30) -> pd.DataFrame:
     """Joint stations courantes + prédictions du modèle XGBoost Vélo'v.
 
+    Args:
+        horizon_minutes: doit être 30 (Vélov = H+30min only, Sprint 12+).
+            L'arg est conservé pour rétro-compatibilité de l'API mais ignoré.
+
     Returns:
         DataFrame: station_id, station_name, lat, lng, bikes_available,
-        docks_available, predicted_bikes_30, predicted_bikes_60.
+        docks_available, predicted_bikes_30.
     """
     stations = get_velov_stations_geo()
     if stations.empty:
         return stations
 
-    # Prédictions H+30 et H+1h (peut être vide si DAG pas tourné)
+    # Sprint 12+ — Vélov = H+30min uniquement (plus de pred_60)
     pred_30 = cached_velov_predictions(horizon_minutes=30, force_mock=False)
-    pred_60 = cached_velov_predictions(horizon_minutes=60, force_mock=False)
 
-    # Garder la prédiction la plus récente par station
     if not pred_30.empty and "station_id" in pred_30.columns:
         pred_30_latest = (
             pred_30.sort_values("prediction_timestamp", ascending=False)
@@ -67,16 +70,6 @@ def _load_stations_with_predictions(horizon_minutes: int = 30) -> pd.DataFrame:
         stations = stations.merge(pred_30_latest, on="station_id", how="left")
     else:
         stations["predicted_bikes_30"] = None
-
-    if not pred_60.empty and "station_id" in pred_60.columns:
-        pred_60_latest = (
-            pred_60.sort_values("prediction_timestamp", ascending=False)
-            .drop_duplicates(subset=["station_id"])
-            .rename(columns={"predicted_bikes": "predicted_bikes_60"})[["station_id", "predicted_bikes_60"]]
-        )
-        stations = stations.merge(pred_60_latest, on="station_id", how="left")
-    else:
-        stations["predicted_bikes_60"] = None
 
     return stations
 
@@ -88,11 +81,14 @@ def render_velov_map(
     show_horizon_selector: bool = True,
     key_suffix: str = "",
 ) -> None:
-    """Carte Vélo'v avec choix Maintenant / H+30 / H+1h.
+    """Carte Vélo'v avec choix Maintenant / H+30min.
+
+    Sprint 12+ — Vélov est en H+30min uniquement (plus de H+1h).
+    Le sélecteur est conservé pour bascule Maintenant ↔ H+30min.
 
     Args:
         height: hauteur pydeck.
-        horizon_default: 0 (maintenant), 30 ou 60.
+        horizon_default: 0 (maintenant) ou 30 (H+30min).
         show_horizon_selector: affiche selectbox de l'horizon.
         key_suffix: suffixe key Streamlit (évite collisions).
     """
@@ -103,7 +99,8 @@ def render_velov_map(
 
     horizon = horizon_default
     if show_horizon_selector:
-        labels = {0: "Maintenant", 30: "Prédiction H+30min", 60: "Prédiction H+1h"}
+        # Sprint 12+ — Vélov : Maintenant / H+30min uniquement (plus de H+1h)
+        labels = {0: "Maintenant", 30: "Prédiction H+30min"}
         horizon = st.selectbox(
             "Horizon",
             list(labels.keys()),
@@ -115,8 +112,6 @@ def render_velov_map(
     # Choisir colonne d'affichage
     if horizon == 30:
         df["bikes_display"] = df["predicted_bikes_30"].fillna(df["bikes_available"])
-    elif horizon == 60:
-        df["bikes_display"] = df["predicted_bikes_60"].fillna(df["bikes_available"])
     else:
         df["bikes_display"] = df["bikes_available"]
 
@@ -143,7 +138,7 @@ def render_velov_map(
                 "html": (
                     "<b>{station_name}</b><br/>"
                     "🚲 Maintenant: <b>{bikes_available}</b> vélos · {docks_available} places<br/>"
-                    "🔮 H+30: <b>{predicted_bikes_30}</b> · H+1h: <b>{predicted_bikes_60}</b>"
+                    "🔮 H+30min: <b>{predicted_bikes_30}</b>"
                 ),
                 "style": {
                     "backgroundColor": COLORS["bg_card"],
@@ -157,9 +152,7 @@ def render_velov_map(
     except ImportError:
         st.warning("Pydeck non installé — fallback table.")
         st.dataframe(
-            df[["station_name", "bikes_available", "docks_available", "predicted_bikes_30", "predicted_bikes_60"]].head(
-                50
-            ),
+            df[["station_name", "bikes_available", "docks_available", "predicted_bikes_30"]].head(50),
             use_container_width=True,
             hide_index=True,
         )
@@ -169,14 +162,15 @@ def render_velov_map(
     empty_stations = int((df["bikes_display"] == 0).sum())
     low_stations = int((df["bikes_display"] < 5).sum())
     cols = st.columns(4)
-    label = {0: "Maintenant", 30: "H+30min", 60: "H+1h"}[horizon]
+    label = {0: "Maintenant", 30: "H+30min"}[horizon]
     cols[0].metric("Stations", len(df))
     cols[1].metric(f"Vélos ({label})", total_bikes)
     cols[2].metric("Stations vides", empty_stations, delta=None)
     cols[3].metric("Stations < 5 vélos", low_stations)
 
     st.caption(
-        "Légende : 🔴 0 vélo · 🟠 <5 vélos · 🟡 <10 vélos · 🟢 ≥10 vélos · Prédictions : XGBoost Vélo'v (retrain :50)"
+        "Légende : 🔴 0 vélo · 🟠 <5 vélos · 🟡 <10 vélos · 🟢 ≥10 vélos · "
+        "Prédictions : XGBoost Vélo'v H+30min (retrain :50, focus Sprint 12+)"
     )
 
 

@@ -22,7 +22,7 @@ from src.routing import Itinerary, compute_itinerary
 def render_itinerary_result(
     origin: str,
     destination: str,
-    horizon_minutes: int = 0,
+    horizon_minutes: int = 60,  # Sprint 12+ — focus H+1h strict (Patrice : "les autres H+1h")
 ) -> None:
     """Affiche l'itinéraire entre 2 adresses.
 

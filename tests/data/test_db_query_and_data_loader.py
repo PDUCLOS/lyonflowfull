@@ -80,6 +80,11 @@ class TestDbQueryFallback:
         monkeypatch.setattr(db_query, "execute_query", mock_execute_query)
         monkeypatch.setattr(db_query, "_is_db_available", lambda: True)
         monkeypatch.setattr(db_query, "_db_available_cache", True)
+        # H2 (Sprint 11+) — le timestamp de cache doit aussi être récent
+        # pour que le TTL de 60s ne déclenche pas un re-test de la DB
+        # (qui échouerait en local et ferait retomber sur le mock fallback).
+        import time as _time
+        monkeypatch.setattr(db_query, "_db_available_cache_ts", _time.monotonic())
 
         with pytest.raises(DashboardDataError):
             data_loader.load_traffic(force_mock=False)

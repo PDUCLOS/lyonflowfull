@@ -13,6 +13,9 @@ from dashboard.components.widgets.usager.favorite_list import (
     render_recurrent_trip_card,
 )
 from dashboard.components.widgets.usager.itinerary import render_itinerary_result
+from dashboard.components.widgets.usager.prediction_quality import (
+    render_prediction_quality,
+)
 from dashboard.components.widgets.usager.recommendation_card import (
     render_recommendation_card,
     render_steps,
@@ -37,6 +40,7 @@ __all__ = [
     "render_alternative_card",
     "render_favorite_list",
     "render_itinerary_result",
+    "render_prediction_quality",
     "render_recommendation_card",
     "render_recurrent_trip_card",
     "render_search_bar",

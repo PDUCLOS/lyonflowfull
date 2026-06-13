@@ -6,6 +6,7 @@ Configure Alembic pour utiliser notre config + DB.
 from __future__ import annotations
 
 import sys
+import urllib.parse
 from logging.config import fileConfig
 from pathlib import Path
 
@@ -24,10 +25,14 @@ from src.config import get_settings  # noqa: E402
 config = context.config
 
 # Override URL avec env var
+# C4 (Sprint 11+) — urllib.parse.quote_plus échappe les caractères spéciaux
+# dans le mot de passe (ex. '@', ':', '/', '?', '#', '%') qui autrement
+# casseraient l'URL ou permettraient une injection.
 settings = get_settings()
+_safe_pwd = urllib.parse.quote_plus(settings.db.password)
 config.set_main_option(
     "sqlalchemy.url",
-    f"postgresql://{settings.db.user}:{settings.db.password}@{settings.db.host}:{settings.db.port}/{settings.db.db}",
+    f"postgresql://{settings.db.user}:{_safe_pwd}@{settings.db.host}:{settings.db.port}/{settings.db.db}",
 )
 
 # Config logging

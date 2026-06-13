@@ -22,6 +22,7 @@ Pour les widgets, voir le pattern dans ``dashboard/components/widgets/usager/tra
 from __future__ import annotations
 
 import logging
+import time
 
 import pandas as pd
 
@@ -35,20 +36,26 @@ logger = logging.getLogger(__name__)
 # -----------------------------------------------------------------------------
 
 _db_available_cache: bool | None = None
+_db_available_cache_ts: float = 0.0
+_DB_CACHE_TTL_SECONDS = 60.0  # H2 (Sprint 11+) — évite un cache "False" éternel
 
 
 def _is_db_available() -> bool:
-    """Teste la connexion DB. Cache le résultat pendant la durée du process.
+    """Teste la connexion DB. Cache le résultat pendant la durée du process
+    avec un TTL court (60s) — H2 (Sprint 11+) : si la DB revient dans la même
+    vie de process, on la redécouvre sans avoir à redémarrer.
 
     Returns:
         True si la DB répond, False sinon.
     """
-    global _db_available_cache
-    if _db_available_cache is None:
+    global _db_available_cache, _db_available_cache_ts
+    now = time.monotonic()
+    if _db_available_cache is None or (now - _db_available_cache_ts) > _DB_CACHE_TTL_SECONDS:
         _db_available_cache = test_connection()
+        _db_available_cache_ts = now
         if not _db_available_cache:
             logger.warning(
-                "DB non disponible — les widgets basculeront sur les données mock. "
+                "DB non disponible — les widgets soulèveront DashboardDataError. "
                 "Vérifiez POSTGRES_HOST/POSTGRES_PORT/POSTGRES_PASSWORD dans .env"
             )
     return _db_available_cache
@@ -56,8 +63,9 @@ def _is_db_available() -> bool:
 
 def reset_db_cache() -> None:
     """Reset le cache (utile pour les tests)."""
-    global _db_available_cache
+    global _db_available_cache, _db_available_cache_ts
     _db_available_cache = None
+    _db_available_cache_ts = 0.0
 
 
 # -----------------------------------------------------------------------------
@@ -550,7 +558,14 @@ def get_data_freshness(schema: str = "bronze", table: str = "trafic_boucles") ->
         logger.warning("Schema/table (%s.%s) not whitelisted in db_query", schema, table)
         return None
 
-    query = f"SELECT MAX(fetched_at) FROM {schema}.{table}"  # nosec B608 (safe: identifiants whitelistés)
+    # C2 (Sprint 11+) — psycopg2.sql.Identifier quote proprement les identifiants
+    # même après whitelist. Defense in depth (ne jamais faire confiance à
+    # f-string même si input est validée).
+    from psycopg2 import sql as pg_sql
+    query = pg_sql.SQL("SELECT MAX(fetched_at) FROM {}.{}").format(
+        pg_sql.Identifier(schema),
+        pg_sql.Identifier(table),
+    )
     try:
         result = execute_scalar(query)
         return pd.Timestamp(result) if result else None
@@ -579,14 +594,21 @@ def get_bronze_source_counts(hours: int = 1) -> pd.DataFrame:
         return pd.DataFrame(MOCK_BRONZE_COUNTS)
 
     rows = []
+    from psycopg2 import sql as pg_sql
     for table, label in sources:
         # Une requête par table (pas de UNION sur des tables hétérogènes)
         try:
             count = execute_scalar(
-                f"SELECT COUNT(*) FROM bronze.{table} WHERE fetched_at >= NOW() - make_interval(hours => %s)",  # nosec B608
+                pg_sql.SQL("SELECT COUNT(*) FROM bronze.{} WHERE fetched_at >= NOW() - make_interval(hours => %s)").format(
+                    pg_sql.Identifier(table)
+                ),
                 (hours,),
             )
-            last = execute_scalar(f"SELECT MAX(fetched_at) FROM bronze.{table}")  # nosec B608
+            last = execute_scalar(
+                pg_sql.SQL("SELECT MAX(fetched_at) FROM bronze.{}").format(
+                    pg_sql.Identifier(table)
+                )
+            )
             rows.append(
                 {
                     "source": label,

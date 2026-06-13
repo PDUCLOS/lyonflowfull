@@ -50,7 +50,9 @@ class XGBoostVelovModel:
 
         from src.ml.mlflow_integration import is_mlflow_available
 
-        horizons = horizons or [30, 60]
+        # Sprint 12+ — Vélov = XGBoost H+30min uniquement (focus réactivité).
+        # Avant : [30, 60] (2 horizons). Patrice : "tout en H+30min pour Vélov".
+        horizons = horizons or [30]
         for h in horizons:
             model_name = f"xgb_velov_h{h}"
             model_path = self._model_dir / f"{model_name}.pkl"

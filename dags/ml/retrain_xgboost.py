@@ -1,7 +1,7 @@
 """DAG — Retrain ML models.
 
 XGBoost Speed : hourly
-XGBoost Velov : hourly (2 horizons : H+30min, H+1h)
+XGBoost Velov : hourly (H+30min uniquement — Sprint 12+, Patrice : "tout en H+30min pour Vélov")
 
 Sprint 8 — Toggle ``LYONFLOW_XGBOOST_TRAINING`` permet de désactiver
 le retrain nightly (par exemple quand le GNN a pris le relais en prod).

@@ -68,16 +68,7 @@ MOCK_MODELS = [
         "feature_count": 11,
         "drift_status": "ok",
     },
-    {
-        "name": "xgboost_velov_h60",
-        "version": "1.0.0",
-        "stage": "Production",
-        "metrics": {"mae": 4.31, "rmse": 5.48, "r2": 0.299},
-        "trained_at": "2026-06-06 14:50:00",
-        "n_training_samples": 13_824,
-        "feature_count": 11,
-        "drift_status": "ok",
-    },
+    # Sprint 12+ — Vélov H+30min uniquement (xgb_velov_h60 supprimé)
     {
         "name": "stgcn_gnn_h60",
         "version": "0.3.0",
@@ -267,7 +258,8 @@ def render_model_registry_status() -> None:
     # Detail table
     st.markdown("---")
     st.markdown("**Status par horizon**")
-    horizons = [5, 15, 30, 60, 180, 360]
+    # Sprint 12+ — focus H+1h strict pour le trafic (Patrice : "les autres H+1h")
+    horizons = [60]
     for h in horizons:
         reg = ModelRegistry.get(h)
         s = reg.status()
@@ -517,11 +509,11 @@ def render_velov_model_analysis() -> None:
         return
 
     pred_30 = cached_velov_predictions(horizon_minutes=30, force_mock=False)
-    pred_60 = cached_velov_predictions(horizon_minutes=60, force_mock=False)
+    # Sprint 12+ — Vélov H+30min uniquement (plus de pred_60)
     stations = get_velov_stations_geo()
     n_stations_total = len(stations) if not stations.empty else 0
 
-    if pred_30.empty and pred_60.empty:
+    if pred_30.empty:
         st.info(
             "Aucune prédiction Vélo'v dans `gold.velov_predictions`. "
             "Lancer le DAG `retrain_velov` puis `predict_velov`."

@@ -188,7 +188,7 @@ def cached_spatial_mapping(force_mock: bool = False) -> pd.DataFrame:
 
 
 @st.cache_data(ttl=TTL_SLOW, show_spinner=False)
-def cached_traffic_predictions_for_map(horizon_minutes: int = 30, limit: int = 500) -> pd.DataFrame:
+def cached_traffic_predictions_for_map(horizon_minutes: int = 60, limit: int = 500) -> pd.DataFrame:
     """Cache les prédictions trafic pour la carte GNN.
 
     Args typés explicitement (pas *args/**kwargs) pour garantir le hashage

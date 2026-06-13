@@ -118,6 +118,11 @@ class AirflowSettings(BaseSettings):
     admin_password: str = Field(default="", alias="AIRFLOW_ADMIN_PASSWORD")
     secret_key: str = Field(default="", alias="AIRFLOW_SECRET_KEY")
     fernet_key: str = Field(default="", alias="AIRFLOW_FERNET_KEY")
+    # C3 (Sprint 11+) — JWT secret pour l'API Airflow (auth sur /api/v1).
+    # Requis en production.
+    jwt_secret_key: str = Field(
+        default="", alias="AIRFLOW__API__AUTH__JWT_SECRET_KEY"
+    )
 
 
 class MLSettings(BaseSettings):
@@ -211,15 +216,40 @@ def validate_settings() -> None:
     """Vérifie que les settings critiques sont définis. Lève RuntimeError sinon."""
     s = get_settings()
     missing = []
+    dangerous_defaults: list[str] = []
 
     if not s.db.password:
         missing.append("POSTGRES_PASSWORD")
-    if not s.minio.root_password:
-        missing.append("MINIO_ROOT_PASSWORD")
+    if s.minio.enabled and not s.minio.root_password:
+        missing.append("MINIO_ROOT_PASSWORD (required when MINIO_ENABLED=True)")
     if s.app_env == "production" and not s.api.key:
         missing.append("LYONFLOW_API_KEY (required in production)")
     if s.app_env == "production" and not s.airflow.admin_password:
         missing.append("AIRFLOW_ADMIN_PASSWORD (required in production)")
 
+    # C1 (Sprint 11+) — Refuse le default password en production
+    if s.app_env == "production" and s.db.password == "dev-password-not-for-prod":
+        dangerous_defaults.append(
+            "POSTGRES_PASSWORD est encore le default 'dev-password-not-for-prod' en production"
+        )
+    if s.app_env == "production" and s.db.password == "lyonflow_demo_2026":
+        dangerous_defaults.append(
+            "POSTGRES_PASSWORD est le password DEMO ('lyonflow_demo_2026') en production"
+        )
+
+    # C3 (Sprint 11+) — Secrets Airflow/JWT obligatoires en production
+    if s.app_env == "production" and not s.airflow.fernet_key:
+        missing.append("AIRFLOW_FERNET_KEY (required in production)")
+    if s.app_env == "production" and not s.airflow.jwt_secret_key:
+        missing.append("AIRFLOW__API__AUTH__JWT_SECRET_KEY (required in production)")
+
+    # C3 (Sprint 11+) — MinIO password check : uniquement si MinIO activé.
+    # (déjà couvert par le bloc MinIO au-dessus, pas de doublon ici)
+
     if missing:
         raise RuntimeError(f"Variables d'environnement manquantes : {', '.join(missing)}")
+    if dangerous_defaults:
+        raise RuntimeError(
+            "Configuration dangereuse détectée :\n  - "
+            + "\n  - ".join(dangerous_defaults)
+        )
