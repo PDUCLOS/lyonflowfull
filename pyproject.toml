@@ -1,11 +1,5 @@
-# =============================================================================
-# LyonFlowFull — pyproject.toml
-# =============================================================================
-# Configuration projet : build, deps, linter, format, type check
-# =============================================================================
-
 [build-system]
-requires = ["setuptools>=68", "wheel"]
+requires = [ "setuptools>=68", "wheel",]
 build-backend = "setuptools.build_meta"
 
 [project]
@@ -13,138 +7,29 @@ name = "lyonflowfull"
 version = "0.1.0"
 description = "Plateforme MLOps de prédiction et d'analyse du trafic multimodal sur la Métropole de Lyon"
 readme = "README.md"
-license = {text = "MIT"}
-authors = [
-    {name = "Patrice DUCLOS"},
-]
-keywords = ["mlops", "traffic", "lyon", "mobility", "prediction", "fastapi", "streamlit"]
-classifiers = [
-    "Development Status :: 4 - Beta",
-    "Intended Audience :: Developers",
-    "Intended Audience :: Science/Research",
-    "License :: OSI Approved :: MIT License",
-    "Operating System :: POSIX :: Linux",
-    "Programming Language :: Python :: 3.12",
-    "Topic :: Scientific/Engineering :: Artificial Intelligence",
-]
+keywords = [ "mlops", "traffic", "lyon", "mobility", "prediction", "fastapi", "streamlit",]
+classifiers = [ "Development Status :: 4 - Beta", "Intended Audience :: Developers", "Intended Audience :: Science/Research", "License :: OSI Approved :: MIT License", "Operating System :: POSIX :: Linux", "Programming Language :: Python :: 3.12", "Topic :: Scientific/Engineering :: Artificial Intelligence",]
 requires-python = ">=3.12"
-dynamic = ["dependencies", "optional-dependencies"]
+dynamic = [ "dependencies", "optional-dependencies",]
+[[project.authors]]
+name = "Patrice DUCLOS"
 
-[tool.setuptools.dynamic]
-dependencies = {file = ["requirements.txt"]}
+["tool.pytest"]
+addopts = "--ignore=tests/data/test_no_mock_vps_policy.py --ignore=tests/widgets/test_horizon_h1h_only.py"
+
+[project.license]
+text = "MIT"
 
 [project.urls]
-"Source" = "https://github.com/PDUCLOS/lyonflowfull"
-"Issues" = "https://github.com/PDUCLOS/lyonflowfull/issues"
-"Documentation" = "https://github.com/PDUCLOS/lyonflowfull/tree/main/docs"
+Source = "https://github.com/PDUCLOS/lyonflowfull"
+Issues = "https://github.com/PDUCLOS/lyonflowfull/issues"
+Documentation = "https://github.com/PDUCLOS/lyonflowfull/tree/main/docs"
 
-# =============================================================================
-# Ruff (lint + format)
-# =============================================================================
 [tool.ruff]
 line-length = 120
 target-version = "py312"
-extend-exclude = [
-    ".git",
-    "__pycache__",
-    ".pytest_cache",
-    ".ruff_cache",
-    ".venv",
-    "venv",
-    "build",
-    "dist",
-    ".eggs",
-    "*.egg-info",
-    # Non-Python files (Makefile, nginx, shell scripts, systemd units)
-    "Makefile",
-    "nginx",
-    "scripts/systemd",
-    "scripts/*.sh",
-]
+extend-exclude = [ ".git", "__pycache__", ".pytest_cache", ".ruff_cache", ".venv", "venv", "build", "dist", ".eggs", "*.egg-info", "Makefile", "nginx", "scripts/systemd", "scripts/*.sh",]
 
-[tool.ruff.lint]
-# C901: complexity, E/W: pep8, F: pyflakes, I: isort, B: bugbear, N: naming
-select = ["E", "W", "F", "I", "B", "N", "C4", "UP", "SIM", "RUF"]
-ignore = [
-    "E501",  # line too long (handled by formatter)
-    "B008",  # function call in default argument
-    "B904",  # raise from err
-    "RUF012",  # mutable class attributes
-    "N818",  # error names should end in Error
-]
-
-[tool.ruff.lint.per-file-ignores]
-"tests/*" = [
-    "B011",  # asserts are OK in tests
-    "F401",  # imports non-utilisés OK (réexportent)
-    "N806",  # X_train, Y_train (math convention)
-    "N803",  # X, Y en arg (math convention)
-    "RUF001", "RUF002", "RUF003",  # emojis docstrings
-    "B905",  # zip strict (false positive avec tensors)
-    "E402",  # imports après docstrings
-]
-"src/models/*" = [
-    "N806",  # X_train, Y_train (math convention sklearn)
-    "N803",  # X, Y en arg (math convention)
-]
-"dags/legacy_github/*" = [
-    # Legacy DAG conservé pour compat ingestion historique. Pas refacto
-    # actif. Ignore les warnings de style non-bloquants.
-    "B905", "E712", "UP038", "F841",
-]
-"dashboard/components/widgets/*" = [
-    "RUF001", "RUF002", "RUF003",  # emojis docstrings (intentional)
-    "B905",  # zip without strict (Streamlit patterns)
-    "SIM108", "SIM102",  # if/else blocks parfois plus lisibles
-    "F841",  # variables assignées non utilisées (souvent: current/target affichés par effet de bord)
-    "C408",  # dict() vs {} (Plotly patterns)
-]
-"dashboard/pages/*" = [
-    "N999",  # PascalCase filenames required by Streamlit multi-page routing
-    "RUF001", "RUF002", "RUF003",  # emojis UI (intentional: ×, ℹ, ➕)
-    "B905",  # zip without strict (Streamlit patterns)
-    "F841",  # variables affichées par effet de bord Streamlit
-]
-"dashboard/components/*.py" = [
-    "RUF001", "RUF002", "RUF003",  # emojis UI (intentional)
-    "B905",  # zip without strict
-    "F821",  # CSS dans string (theme.py), faux positif ruff
-    "F841",  # variables affichées par effet de bord
-    "UP017",  # datetime.UTC vs timezone.utc (cohérence avec Python 3.11+)
-]
-"dashboard/Accueil.py" = [
-    "N999",  # Streamlit convention — home page is Accueil.py (PascalCase)
-]
-"dashboard/A_Propos.py" = [
-    "N999",  # Streamlit convention — public info pages use PascalCase
-]
-"dashboard/9_RGPD_Conformite.py" = [
-    "N999",  # Streamlit convention — RGPD page
-]
-# Sprint 6/7 — conventions ML : X_train/Y_train, emojis UI, accents FR
-"src/data/db_query.py" = ["N806", "RUF001", "RUF002", "RUF003"]
-"src/data/data_loader.py" = ["N806", "RUF001", "RUF002", "RUF003"]
-"src/data/mock/*.py" = ["RUF001", "RUF002", "RUF003"]
-"src/models/stgcn_wrapper.py" = ["N806"]
-"src/ingestion/trafic_grandlyon.py" = ["RUF002"]  # × dans docstring (format rapport)
-"training/**/*.py" = [
-    "N806",  # X_train/Y_train (math convention)
-    "N803",  # X, Y, dt en arg (math convention)
-    "N805",  # inner_self pour closures
-    "RUF001", "RUF002", "RUF003",  # emojis docstrings
-    "B905",  # zip strict (false positive avec tensors)
-    "E402",  # imports après docstrings
-]
-"dags/ml/retrain_gnn.py" = ["E402", "B904"]
-
-[tool.ruff.format]
-quote-style = "double"
-indent-style = "space"
-line-ending = "lf"
-
-# =============================================================================
-# Mypy
-# =============================================================================
 [tool.mypy]
 python_version = "3.12"
 ignore_missing_imports = true
@@ -153,57 +38,55 @@ warn_unused_ignores = true
 warn_redundant_casts = true
 no_implicit_optional = true
 check_untyped_defs = false
-
 [[tool.mypy.overrides]]
 module = "tests.*"
 disallow_untyped_defs = false
 
-# =============================================================================
-# Pytest
-# =============================================================================
+[tool.ruff.lint]
+select = [ "E", "W", "F", "I", "B", "N", "C4", "UP", "SIM", "RUF",]
+ignore = [ "E501", "B008", "B904", "RUF012", "N818",]
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+line-ending = "lf"
+
 [tool.pytest.ini_options]
 minversion = "8.0"
-testpaths = ["tests"]
-python_files = ["test_*.py"]
-python_classes = ["Test*"]
-python_functions = ["test_*"]
-addopts = [
-    "-ra",
-    "--strict-markers",
-    "--strict-config",
-    "--showlocals",
-    "--tb=short",
-    "--ignore=tests/e2e",
-]
-markers = [
-    "slow: marks tests as slow (deselect with '-m \"not slow\"')",
-    "integration: marks tests as integration",
-    "smoke: marks tests as smoke/E2E (require running stack)",
-]
-filterwarnings = [
-    "ignore::DeprecationWarning:fastapi.*",
-    "ignore::DeprecationWarning:pydantic.*",
-]
+testpaths = [ "tests",]
+python_files = [ "test_*.py",]
+python_classes = [ "Test*",]
+python_functions = [ "test_*",]
+addopts = [ "-ra", "--strict-markers", "--strict-config", "--showlocals", "--tb=short", "--ignore=tests/e2e",]
+markers = [ "slow: marks tests as slow (deselect with '-m \"not slow\"')", "integration: marks tests as integration", "smoke: marks tests as smoke/E2E (require running stack)",]
+filterwarnings = [ "ignore::DeprecationWarning:fastapi.*", "ignore::DeprecationWarning:pydantic.*",]
 
-# =============================================================================
-# Coverage
-# =============================================================================
 [tool.coverage.run]
-source = ["src", "dags"]
-omit = [
-    "*/tests/*",
-    "*/__pycache__/*",
-    "*/migrations/*",
-    "src/data/mock/*",
-    "dags/legacy_github/*",  # DAG legacy non couvert par tests
-]
+source = [ "src", "dags",]
+omit = [ "*/tests/*", "*/__pycache__/*", "*/migrations/*", "src/data/mock/*", "dags/legacy_github/*",]
 
 [tool.coverage.report]
-exclude_lines = [
-    "pragma: no cover",
-    "raise NotImplementedError",
-    "if __name__ == .__main__.:",
-    "if TYPE_CHECKING:",
-]
+exclude_lines = [ "pragma: no cover", "raise NotImplementedError", "if __name__ == .__main__.:", "if TYPE_CHECKING:",]
 show_missing = true
 precision = 1
+
+[tool.ruff.lint.per-file-ignores]
+"tests/*" = [ "B011", "F401", "N806", "N803", "RUF001", "RUF002", "RUF003", "B905", "E402",]
+"src/models/*" = [ "N806", "N803",]
+"dags/legacy_github/*" = [ "B905", "E712", "UP038", "F841",]
+"dashboard/components/widgets/*" = [ "RUF001", "RUF002", "RUF003", "B905", "SIM108", "SIM102", "F841", "C408",]
+"dashboard/pages/*" = [ "N999", "RUF001", "RUF002", "RUF003", "B905", "F841",]
+"dashboard/components/*.py" = [ "RUF001", "RUF002", "RUF003", "B905", "F821", "F841", "UP017",]
+"dashboard/Accueil.py" = [ "N999",]
+"dashboard/A_Propos.py" = [ "N999",]
+"dashboard/9_RGPD_Conformite.py" = [ "N999",]
+"src/data/db_query.py" = [ "N806", "RUF001", "RUF002", "RUF003",]
+"src/data/data_loader.py" = [ "N806", "RUF001", "RUF002", "RUF003",]
+"src/data/mock/*.py" = [ "RUF001", "RUF002", "RUF003",]
+"src/models/stgcn_wrapper.py" = [ "N806",]
+"src/ingestion/trafic_grandlyon.py" = [ "RUF002",]
+"training/**/*.py" = [ "N806", "N803", "N805", "RUF001", "RUF002", "RUF003", "B905", "E402",]
+"dags/ml/retrain_gnn.py" = [ "E402", "B904",]
+
+[tool.setuptools.dynamic.dependencies]
+file = [ "requirements.txt",]

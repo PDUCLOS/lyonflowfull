@@ -27,6 +27,10 @@ x-common-env: &common-env
   POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
   MINIO_ENDPOINT: minio:9000
   MINIO_ROOT_USER: ${MINIO_ROOT_USER}
+  # Sprint 10+ MLOps — modèles .pkl persistés dans /opt/airflow/data/models
+  # (volume airflow_data monté par tous les services Airflow). /app/models
+  # n'est pas accessible en écriture (image scellée, USER appuser).
+  LYONFLOW_MODELS_DIR: /opt/airflow/data/models
   MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD}
   MINIO_BUCKET_BRONZE: lyonflow-bronze
   MINIO_BUCKET_GOLD: lyonflow-gold

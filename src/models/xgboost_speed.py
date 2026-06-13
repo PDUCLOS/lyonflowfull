@@ -119,6 +119,7 @@ class XGBoostSpeedModel:
         n_estimators: int = 200,
         max_depth: int = 6,
         learning_rate: float = 0.1,
+        max_train_rows: int = 100_000,  # Sprint 10+ — limite RAM sur VPS
     ) -> dict:
         """Entraîne un modèle pour un horizon donné.
 
@@ -136,6 +137,23 @@ class XGBoostSpeedModel:
         if df.empty:
             raise ValueError(f"Pas de données d'entraînement pour horizon {horizon_minutes}min")
 
+        # Sprint 10+ : sous-échantillonnage si dataset trop gros (VPS 12 Go)
+        # XGBoost avec n_jobs=-1 et 358k rows × 11 features × 200 estimators
+        # consomme 4-5 Go RAM. On limite à 100k rows (suffisant pour 11 features
+        # + évite de bouffer le worker Airflow qui héberge aussi les autres
+        # DAGs Bronze / Silver / Gold).
+        if len(df) > max_train_rows:
+            logger.info(
+                "Sous-échantillonnage : %d → %d rows (max_train_rows)",
+                len(df), max_train_rows,
+            )
+            # Échantillonnage stratifié par channel_id pour conserver la
+            # représentativité (Sprint 10+ — fix diversity loss)
+            df_sorted = df.sort_values("channel_id")
+            step = max(1, len(df_sorted) // max_train_rows)
+            df = df_sorted.iloc[::step].copy()
+            logger.info("Après sous-échantillonnage : %d rows", len(df))
+
         # Split train/test chronologique
         split_idx = int(len(df) * 0.8)
         train = df.iloc[:split_idx]
@@ -146,14 +164,15 @@ class XGBoostSpeedModel:
         X_test = test[FEATURE_COLS]
         y_test = test["target_speed"]
 
-        # Entraînement
+        # Entraînement (Sprint 10+ — n_jobs=2 pour ne pas saturer le worker)
         model = xgb.XGBRegressor(
             n_estimators=n_estimators,
             max_depth=max_depth,
             learning_rate=learning_rate,
             objective="reg:squarederror",
             random_state=42,
-            n_jobs=-1,
+            n_jobs=2,  # était -1 (=tous les CPU), réduit pour VPS 12 Go
+            tree_method="hist",  # algo memory-efficient (Sprint 10+)
         )
         model.fit(X_train, y_train, eval_set=[(X_test, y_test)], verbose=False)
 
