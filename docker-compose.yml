@@ -124,7 +124,7 @@ services:
       MINIO_ROOT_USER: ${MINIO_ROOT_USER}
       MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD}
     volumes:
-      - minio_data:/data
+      - /mnt/postgres-data/minio:/data
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
       interval: 30s
@@ -267,7 +267,10 @@ services:
       retries: 5
       start_period: 60s
     ports:
-      - "127.0.0.1:8080:8080"
+      # Sprint 12+ — Patrice : "je veux un accès web à Airflow pour contrôler les DAGs"
+      # On expose directement sur 0.0.0.0 (sans Nginx) — sécurité via auth Airflow
+      # (AIRFLOW_ADMIN_PASSWORD obligatoire en prod, validate_settings Sprint 11+)
+      - "8080:8080"
     volumes:
       - ./dags:/opt/airflow/dags
       - ./src:/opt/airflow/src
@@ -467,8 +470,7 @@ services:
 volumes:
   postgres_data:
     driver: local
-  minio_data:
-    driver: local
+  # minio_data supprimé — bind mount direct /mnt/postgres-data/minio (sdb)
   airflow_data:
     driver: local
   # Sprint 10+ MLOps — models_data supprimé (bind mount direct sdb2)
