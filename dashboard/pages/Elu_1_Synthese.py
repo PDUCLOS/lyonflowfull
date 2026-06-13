@@ -55,6 +55,12 @@ render_traffic_map_compact(height=340, horizon_minutes=60, key_suffix="elu")
 
 st.markdown("---")
 
+# Carte charge trafic — synthèse exécutive (Sprint 10)
+st.markdown("##### 🗺️ Charge du trafic — projection H+1h")
+render_traffic_map_compact(height=340, horizon_minutes=60, key_suffix="elu")
+
+st.markdown("---")
+
 # 2 colonnes : tendance + décisions
 col1, col2 = st.columns([3, 2])
 with col1:

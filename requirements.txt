@@ -39,6 +39,9 @@ geopandas>=0.14.0
 pyproj>=3.6.0
 h3>=4.1.0
 
+# DataFrame vectorisé (mapping LYO↔twgid Sprint 10+)
+polars>=0.20.0
+
 # HTTP + retry
 httpx>=0.25.0
 tenacity>=8.2.0

@@ -1,0 +1,40 @@
+#!/bin/sh
+# =============================================================================
+# pre-commit hook — LyonFlowFull (Sprint 8+, 2026-06-12)
+# =============================================================================
+# Bloque le commit si :
+# 1. scrub_secrets.py détecte un secret (DB_PASSWORD, API keys, etc.)
+# 2. ruff signale des erreurs de formatage dans le code Python
+#
+# Installation : cp scripts/pre-commit-hook .git/hooks/pre-commit && chmod +x .git/hooks/pre-commit
+# =============================================================================
+
+set -e
+
+REPO_ROOT=$(git rev-parse --show-toplevel)
+cd "$REPO_ROOT" || exit 1
+
+# 1. Scrub secrets
+echo "🔒 Scrub secrets..."
+if ! python3 scripts/scrub_secrets.py src/ tests/ dashboard/ scripts/ 2>&1; then
+    echo ""
+    echo "❌ Commit bloqué : des secrets ont été détectés."
+    echo "   Soit vous les déplacez dans .env (gitignored),"
+    echo "   soit vous les préfixez par 'test_' pour les tests."
+    exit 1
+fi
+
+# 2. Ruff format check (rapide, ne fail que si formatage incorrect)
+if command -v ruff >/dev/null 2>&1; then
+    echo "🎨 Ruff format check..."
+    # On ne fait que vérifier, on n'auto-format pas (commit propre)
+    if ! ruff format --check . 2>&1 | tail -3; then
+        echo ""
+        echo "❌ Commit bloqué : des fichiers Python ne sont pas formatés."
+        echo "   Lancez 'ruff format .' puis re-tentez le commit."
+        exit 1
+    fi
+fi
+
+echo "✅ pre-commit OK"
+exit 0

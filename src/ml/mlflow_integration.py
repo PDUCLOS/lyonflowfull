@@ -303,15 +303,35 @@ def list_registered_models(experiment: str | None = None, max_results: int = 50)
         Liste de dicts avec ``name``, ``version``, ``stage``, ``metrics``,
         ``params``, ``trained_at``, ``run_id``.
 
+    Raises:
+        DashboardDataError: en mode prod, si MLflow indispo ou serveur non
+            joignable. Sprint VPS-6 — fail loud.
+
     Note:
-        Si MLflow indispo ou serveur non joignable, retourne une liste
-        vide (le dashboard affichera un message "MLflow non accessible").
+        Mode démo (``LYONFLOW_DEMO_MODE=1``) : retourne liste vide (le
+        data_loader fait le fallback mock).
     """
+    from src.data.data_loader import _is_demo_mode
+    from src.data.exceptions import DashboardDataError
+
     if not is_mlflow_available():
-        return []
+        if _is_demo_mode():
+            return []
+        raise DashboardDataError(
+            source="mlflow",
+            detail="Module mlflow non installé. `pip install mlflow`",
+        )
     # Quick reachability check avant d'appeler le client (sinon hang)
     if not is_tracking_server_reachable():
-        return []
+        if _is_demo_mode():
+            return []
+        raise DashboardDataError(
+            source="mlflow",
+            detail=(
+                f"MLflow tracking server non joignable ({get_tracking_uri()}). "
+                "Vérifier que le service mlflow tourne (docker compose ps mlflow)"
+            ),
+        )
     try:
         from mlflow.tracking import MlflowClient  # type: ignore[import-untyped]
 
@@ -356,9 +376,16 @@ def list_registered_models(experiment: str | None = None, max_results: int = 50)
                 }
             )
         return out
+    except DashboardDataError:
+        raise
     except Exception as e:  # pragma: no cover
-        logger.warning("list_registered_models failed: %s", e)
-        return []
+        if _is_demo_mode():
+            logger.warning("list_registered_models failed: %s", e)
+            return []
+        raise DashboardDataError(
+            source="mlflow",
+            detail=f"MLflow search_registered_models a échoué : {e}",
+        ) from e
 
 
 def get_latest_run(model_name: str, experiment: str | None = None) -> dict | None:

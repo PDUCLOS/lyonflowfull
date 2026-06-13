@@ -17,7 +17,7 @@ features ML-ready, et servies via API REST + dashboard multi-persona.
 ┌─────────────────────────────────────────────────────────────┐
 │                 BRONZE LAYER (immutable)                      │
 │  • 8 tables bronze.* (raw_data JSONB + fetched_at)          │
-│  • Backup MinIO bucket bronze                                │
+│  • Backup offsite (rclone Google Drive / SSH)                 │
 │  • Rétention 7-365j (purge DAG quotidien 03h)               │
 └────────────────────────────┬────────────────────────────────┘
                              │  Transforms psycopg2
@@ -46,8 +46,8 @@ features ML-ready, et servies via API REST + dashboard multi-persona.
                              ▼
 ┌─────────────────────────────────────────────────────────────┐
 │                ML MODELS (tracking MLflow)                   │
-│  • XGBoost Speed (4 horizons : 5/60/180/360 min)            │
-│  • XGBoost Vélov (3 horizons : 30/60/180 min)                │
+│  • XGBoost Speed (H+1h, focus stable depuis VPS-6)          │
+│  • XGBoost Vélov (2 horizons : 30/60 min)                    │
 │  • ST-GRU-GNN (Sprint 6+ : spatial dependencies)            │
 │  Quality gate : MAE ≤ prev × 1.15                           │
 └────────────────────────────┬────────────────────────────────┘
@@ -56,7 +56,7 @@ features ML-ready, et servies via API REST + dashboard multi-persona.
 ┌─────────────────────────────────────────────────────────────┐
 │              SERVING LAYER                                   │
 │  • FastAPI REST (port 8000)                                 │
-│  • Streamlit Dashboard (port 8501, 15 pages)                │
+│  • Streamlit Dashboard (port 8501, 18 pages)                │
 │  • Nginx reverse proxy (port 80 public)                     │
 │  • Endpoints : /health, /api/v1/predict/*,                  │
 │                /api/v1/recommend, /api/v1/bottlenecks,      │

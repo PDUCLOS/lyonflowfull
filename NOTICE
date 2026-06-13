@@ -1,0 +1,68 @@
+# =============================================================================
+# LyonFlowFull — NOTICE — Copyright & Conditions d'usage
+# =============================================================================
+# Sprint 8+ (2026-06-12) — protection de la logique projet.
+#
+# Ce projet (PDUCLOS/lyonflowfull) est un dépôt PUBLIC sur GitHub :
+# - Le code source (Python, SQL, YAML, scripts) est partagé sous licence
+#   MIT (cf. LICENSE) — libre consultation, fork, modification, redistribution
+#   tant que la notice de copyright est préservée.
+# - Le projet est un TRAVAIL DE DÉMONSTRATION réalisé dans le cadre de la
+#   certification Jedha RNCP 38777 (Architecte en IA, juin 2026).
+#
+# --------------------------------------------------------------------------
+# Ce qui est PUBLIC (peut être copié, forké, modifié librement)
+# --------------------------------------------------------------------------
+# - L'architecture Medallion (Bronze → Silver → Gold)
+# - Les scripts d'ingestion (8 collecteurs API)
+# - Le code Streamlit / FastAPI / Airflow
+# - Les vues SQL et migrations
+# - La configuration Docker / monitoring
+# - Le pipeline CI/CD
+#
+# --------------------------------------------------------------------------
+# Ce qui est RESTREINT (à ne pas réutiliser sans autorisation)
+# --------------------------------------------------------------------------
+# - Les modèles ML entraînés (XGBoost, SpatioTemporalGCN) : NON versionnés,
+#   exclus du repo, stockés dans MLflow Model Registry sur le VPS. Pour
+#   les utiliser, il faut les entraîner vous-même sur vos données.
+# - Les hyperparamètres ML (best_params.json) sont exclus du repo.
+# - Les secrets de production (DB password, API keys, Fernet key) ne sont
+#   JAMAIS dans le repo — uniquement dans .env (gitignored) ou injectés
+#   au déploiement.
+# - Les modèles pré-entraînés (.pkl, .joblib) sont gitignored.
+#
+# --------------------------------------------------------------------------
+# Trademark & Attribution
+# --------------------------------------------------------------------------
+# Le nom "LyonFlowFull", le logo, et la marque sont la propriété de
+# Patrice DUCLOS. Toute réutilisation commerciale nécessite une
+# autorisation écrite préalable.
+# Les APIs tierces utilisées (Grand Lyon Open Data, Open-Meteo, SIRI Lite
+# TCL, TomTom Traffic Flow) restent la propriété de leurs détenteurs
+# respectifs ; les conditions d'usage sont détaillées dans le rapport
+# SPRINT_VPS-6_REPORT.md.
+#
+# --------------------------------------------------------------------------
+# Limitation de responsabilité
+# --------------------------------------------------------------------------
+# Ce code est fourni "EN L'ÉTAT" sans aucune garantie (cf. MIT License).
+# Pour un usage en production réelle, plusieurs éléments doivent être
+# renforcés (cf. docs/PROJECT_STATUS_AND_GOALS.md section 2 "Sprint 9+") :
+# - Hasher les mots de passe démo (bcrypt déjà en place côté API)
+# - Implémenter un rate-limiting sur l'API
+# - Activer un monitoring d'anomalies sur les prédictions
+# - Mettre en place un WAF (Web Application Firewall) devant Nginx
+# - Rotation automatique des secrets (Vault, AWS Secrets Manager, etc.)
+# - Tests de pénétration annuels
+#
+# --------------------------------------------------------------------------
+# Citation académique
+# --------------------------------------------------------------------------
+# Si vous utilisez ce travail dans un contexte académique ou de
+# recherche, merci de citer :
+#   DUCLOS, Patrice (2026). "LyonFlowFull : plateforme MLOps de
+#   prédiction du trafic multimodal sur la Métropole de Lyon".
+#   Certification Jedha RNCP 38777, Architecte en IA.
+#
+# =============================================================================
