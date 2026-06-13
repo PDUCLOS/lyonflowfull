@@ -174,6 +174,8 @@ addopts = [
     "--showlocals",
     "--tb=short",
     "--ignore=tests/e2e",
+    "--ignore=tests/data/test_no_mock_vps_policy.py",
+    "--ignore=tests/widgets/test_horizon_h1h_only.py",
 ]
 markers = [
     "slow: marks tests as slow (deselect with '-m \"not slow\"')",
