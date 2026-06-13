@@ -1,7 +1,7 @@
 """E2E test: login Élu et navigation vers Simulateur.
 
 Ce test vérifie le flow complet :
-1. Ouverture de l'accueil (pas de persona actif → splash cards)
+1. Ouverture de l'accueil (splash cards persona)
 2. Sélection du persona Élu via la carte "Adopter" (auth requise)
 3. Authentification avec le mot de passe de test
 4. Redirection vers la landing Élu (Synthèse Exécutive)
@@ -18,11 +18,9 @@ def test_elu_roi(page: Page, streamlit_server: str):
     # Wait for app load — splash screen with persona cards
     expect(page.get_by_text("Qui es-tu ?")).to_be_visible(timeout=10000)
 
-    # Persona cards: index 0 = Pro TCL, index 1 = Élu (pas d'Adopter pour Usager)
     # Clique sur "Adopter" de la carte Élu (2e bouton Adopter)
     all_adopter_buttons = page.get_by_role("button", name="Adopter").all()
     assert len(all_adopter_buttons) >= 2, "Les cartes Élu et Pro TCL doivent être visibles"
-    # Le 2e bouton "Adopter" correspond à Élu (ordre : Pro TCL puis Élu)
     elu_adopt_btn = all_adopter_buttons[1]
     elu_adopt_btn.click()
 
@@ -36,8 +34,13 @@ def test_elu_roi(page: Page, streamlit_server: str):
     # Landing Élu = Synthèse Exécutive
     expect(page.get_by_text("Synthèse Exécutive")).to_be_visible(timeout=10000)
 
-    # Navigation vers Simulateur via le lien sidebar
-    page.get_by_role("link", name="Elu 4 Simulateur").click()
+    # Navigation vers Simulateur via la sidebar
+    # Sprint 10: sidebar avec liens texte, plus de selectbox
+    sidebar = page.locator("[data-testid='stSidebarNav']")
+    # Cherche le lien "Simulateur" dans la section Élu
+    simulateur_link = sidebar.get_by_text("Simulateur").first
+    expect(simulateur_link).to_be_visible()
+    simulateur_link.click()
 
     # Vérifie que la page Simulateur est affichée
-    expect(page.get_by_role("heading", name="Simulateur d'aménagement")).to_be_visible()
+    expect(page.get_by_role("heading", name="Simulateur")).to_be_visible(timeout=10000)

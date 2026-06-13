@@ -17,7 +17,6 @@ from pydantic import BaseModel, Field
 
 from src.api.main import verify_api_key
 from src.db.connection import execute_query
-from src.routing.recommendation import get_alternatives
 
 router = APIRouter(prefix="/api/favorites", tags=["favorites"])
 
@@ -202,6 +201,7 @@ async def toggle_alert(
 # -----------------------------------------------------------------------------
 # Recommandation multimodale (Sprint 10)
 # -----------------------------------------------------------------------------
+from src.routing.recommendation import get_alternatives  # noqa: E402
 
 
 class AlternativeItem(BaseModel):

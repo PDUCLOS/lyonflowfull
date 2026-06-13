@@ -96,7 +96,7 @@ def _project_on_segment(
 def _query_overpass(lat: float, lon: float, radius_m: float) -> list[tuple[float, float, float, float]]:
     """Query Overpass pour les ways dans un rayon donné. Retourne liste de segments [(lat1,lon1,lat2,lon2)]."""
     # Rayon en degrés (approx)
-    radius_m / 111_320
+    _radius_deg = radius_m / 111_320
     query = f"""
     [out:json][timeout:8];
     way(

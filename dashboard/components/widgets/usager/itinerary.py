@@ -16,14 +16,14 @@ import logging
 
 import streamlit as st
 
-from dashboard.components.colors import COLORS
-from src.data.data_loader import (
+logger = logging.getLogger(__name__)
+
+from dashboard.components.colors import COLORS  # noqa: E402
+from src.data.data_loader import (  # noqa: E402
     load_lyon_addresses,
 )
-from src.data.exceptions import DashboardDataError
-from src.routing import Itinerary, compute_itinerary
-
-logger = logging.getLogger(__name__)
+from src.data.exceptions import DashboardDataError  # noqa: E402
+from src.routing import Itinerary, compute_itinerary  # noqa: E402
 
 
 def _resolve_address(text: str) -> tuple[float, float] | None:

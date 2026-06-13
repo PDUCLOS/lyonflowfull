@@ -136,7 +136,7 @@ trafic et le module de recommandation multimodal).
 ## Recommandations
 
 - **Re-training** : quotidien via `dag_daily_speed_train` (03h00).
-- **Rollback** : si MAE > 8 km/h (x2 baseline) sur la prod pendant
+- **Rollback** : si MAE > 8 km/h (×2 baseline) sur la prod pendant  # noqa: RUF001  # noqa: RUF001
   > 24h, envisager transition vers le modèle Staging précédent.
 - **Drift** : si ``dataset_drift = True`` pendant > 3 jours consécutifs,
   investiguer le pipeline d'ingestion Bronze (changement API Grand

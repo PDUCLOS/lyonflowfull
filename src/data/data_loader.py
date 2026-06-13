@@ -927,6 +927,9 @@ def load_mlflow_models(
     """
     from src.ml.mlflow_integration import list_registered_models
 
+    if force_mock or _is_demo_mode():
+        return _FALLBACK_MOCK_MODELS
+
     try:
         runs = list_registered_models(experiment=experiment, max_results=max_results)
     except Exception as e:

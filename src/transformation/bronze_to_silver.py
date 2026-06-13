@@ -191,8 +191,10 @@ def _transform_trafic_boucles() -> int:
                     # Rollback au savepoint : annule juste l'INSERT foireux,
                     # pas toute la transaction. On garde tous les autres
                     # inserts valides.
-                    with contextlib.suppress(Exception):
+                    try:  # noqa: SIM105
                         cur.execute("ROLLBACK TO SAVEPOINT sp_trafic")
+                    except Exception:
+                        pass
                     logger.warning(f"Skip feature {channel_id}: {e}")
                     continue
 
