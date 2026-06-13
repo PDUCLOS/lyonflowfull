@@ -85,6 +85,7 @@ def build_routing_graph(
         # 2. Fallback H3 graph (Sprint 8 legacy — kept for dev without OSM data)
         try:
             from src.routing.h3_graph import build_h3_graph as _build_h3
+
             G, graph_type = _build_h3(min_segment_length_m)  # noqa: N806
             logger.info(f"Routing graph (H3): {G.number_of_nodes()} nodes, {G.number_of_edges()} edges")
         except Exception as e2:
@@ -273,18 +274,26 @@ def get_node_speed(graph: nx.Graph, node_id: str, horizon_minutes: int = 0) -> f
     return float(data.get("current_speed_kmh", 30.0))
 
 
-
 def _speed_from_highway(highway: str | None) -> float:
     """Retourne la vitesse par défaut pour un type de route (km/h)."""
     defaults = {
-        "motorway": 130, "motorway_link": 80,
-        "trunk": 110, "trunk_link": 80,
-        "primary": 90, "primary_link": 65,
-        "secondary": 70, "secondary_link": 55,
-        "tertiary": 50, "tertiary_link": 40,
-        "unclassified": 50, "residential": 30,
-        "living_street": 10, "pedestrian": 5,
-        "track": 20, "service": 20, "road": 50,
+        "motorway": 130,
+        "motorway_link": 80,
+        "trunk": 110,
+        "trunk_link": 80,
+        "primary": 90,
+        "primary_link": 65,
+        "secondary": 70,
+        "secondary_link": 55,
+        "tertiary": 50,
+        "tertiary_link": 40,
+        "unclassified": 50,
+        "residential": 30,
+        "living_street": 10,
+        "pedestrian": 5,
+        "track": 20,
+        "service": 20,
+        "road": 50,
     }
     return defaults.get(highway, 50.0)
 
@@ -304,5 +313,3 @@ def get_nearest_node(graph: nx.Graph, lon: float, lat: float) -> str | None:
                 min_dist = d
                 nearest = node_id
     return nearest
-
-

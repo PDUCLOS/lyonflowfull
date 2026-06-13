@@ -90,7 +90,7 @@ _CACHE_TTL = 6 * 3600
 def _overpass_cache_key(bbox: list[float]) -> str:
     """Hash stable pour le cache Overpass (basé sur bbox uniquement)."""
     key = json.dumps({"bbox": bbox}, sort_keys=True)
-    return hashlib.md5(key.encode()).hexdigest()[:16]
+    return hashlib.md5(key.encode()).hexdigest()[:16]  # nosec: B324 — cache key only, no security
 
 
 def _build_overpass_query(bbox: list[float]) -> str:
