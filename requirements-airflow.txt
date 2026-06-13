@@ -15,6 +15,13 @@ joblib>=1.3.0
 pyproj>=3.6.0
 h3>=4.1.0
 geopandas>=0.14.0
+# Sprint 10+ — Polars pour silver_archive_to_minio + build_mv_twgid_to_lyo
+polars>=0.20.0
+# Sprint 10+ — MinIO push via boto3 (silver_archive)
+# NOTE: boto3 1.34+ a une dépendance cassée (OpenSSL/crypto.py GEN_EMAIL).
+# On utilise la lib standard urllib3 (déjà présente) à la place dans
+# le code (push S3 multipart via requests, pas boto3).
+# boto3>=1.28.0  # DÉSACTIVÉ — voir scripts/maintenance/silver_archive_to_minio.py
 httpx>=0.25.0
 tenacity>=8.2.0
 networkx>=3.2.0

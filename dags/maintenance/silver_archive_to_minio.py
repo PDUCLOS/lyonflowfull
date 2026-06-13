@@ -25,8 +25,8 @@ import logging
 from datetime import datetime, timedelta
 from pathlib import Path
 
-import boto3
 import polars as pl
+import requests  # Sprint 10+ : urllib3 natif au lieu de boto3 (cassé)
 from airflow import DAG
 from airflow.operators.python import PythonOperator
 
@@ -68,6 +68,95 @@ def _get_s3_client():
         aws_secret_access_key=s.minio.root_password,
         region_name="us-east-1",  # dummy, MinIO n'en tient pas compte
     )
+
+
+def _s3_put_object(local_path: Path, bucket: str, key: str, content_type: str = "application/octet-stream") -> None:
+    """Upload un fichier vers MinIO via S3 multipart (Sprint 10+ urllib3 natif).
+
+    Pas de dépendance boto3 (cassé sur airflow 2.9.3 / OpenSSL 1.1.1f).
+    Utilise ``requests`` (déjà présent) pour faire un PUT signé AWS
+    Signature V4. Limité aux fichiers < 5 Go (single-part) — largement
+    suffisant pour nos archives Parquet (~100-300 Mo compressés).
+
+    Args:
+        local_path: chemin du fichier à uploader.
+        bucket: nom du bucket MinIO (ex. 'lyonflow-bronze').
+        key: clé S3 cible (ex. 'silver_archive/foo.parquet').
+        content_type: MIME type.
+    """
+    import hashlib
+    import hmac
+    from datetime import datetime, timezone
+
+    s = get_settings()
+    endpoint = s.minio.endpoint
+    access_key = s.minio.root_user
+    secret_key = s.minio.root_password
+
+    # Lecture fichier
+    body = local_path.read_bytes()
+    content_sha256 = hashlib.sha256(body).hexdigest()
+    content_length = len(body)
+
+    # AWS Signature V4 (single-part PUT)
+    now = datetime.now(timezone.utc)
+    amz_date = now.strftime("%Y%m%dT%H%M%SZ")
+    date_stamp = now.strftime("%Y%m%d")
+    host = endpoint
+    region = "us-east-1"
+    service = "s3"
+
+    canonical_uri = f"/{bucket}/{key}"
+    canonical_querystring = ""
+
+    canonical_headers = (
+        f"content-length:{content_length}\n"
+        f"content-type:{content_type}\n"
+        f"host:{host}\n"
+        f"x-amz-content-sha256:{content_sha256}\n"
+        f"x-amz-date:{amz_date}\n"
+    )
+    signed_headers = "content-length;content-type;host;x-amz-content-sha256;x-amz-date"
+
+    canonical_request = (
+        f"PUT\n{canonical_uri}\n{canonical_querystring}\n"
+        f"{canonical_headers}\n{signed_headers}\n{content_sha256}"
+    )
+
+    credential_scope = f"{date_stamp}/{region}/{service}/aws4_request"
+    string_to_sign = (
+        f"AWS4-HMAC-SHA256\n{amz_date}\n{credential_scope}\n"
+        + hashlib.sha256(canonical_request.encode("utf-8")).hexdigest()
+    )
+
+    def _sign(key: bytes, msg: str) -> bytes:
+        return hmac.new(key, msg.encode("utf-8"), hashlib.sha256).digest()
+
+    k_date = _sign(f"AWS4{secret_key}".encode("utf-8"), date_stamp)
+    k_region = _sign(k_date, region)
+    k_service = _sign(k_region, service)
+    k_signing = _sign(k_service, "aws4_request")
+    signature = hmac.new(k_signing, string_to_sign.encode("utf-8"), hashlib.sha256).hexdigest()
+
+    authorization_header = (
+        f"AWS4-HMAC-SHA256 Credential={access_key}/{credential_scope}, "
+        f"SignedHeaders={signed_headers}, Signature={signature}"
+    )
+
+    url = f"http://{host}{canonical_uri}"
+    headers = {
+        "Authorization": authorization_header,
+        "Content-Type": content_type,
+        "Content-Length": str(content_length),
+        "x-amz-content-sha256": content_sha256,
+        "x-amz-date": amz_date,
+    }
+
+    resp = requests.put(url, data=body, headers=headers, timeout=120)
+    if not (200 <= resp.status_code < 300):
+        raise RuntimeError(
+            f"MinIO PUT failed: {resp.status_code} {resp.reason} — {resp.text[:200]}"
+        )
 
 
 def _archive_one_table(table: str, cutoff: datetime) -> dict:
@@ -122,20 +211,18 @@ def _archive_one_table(table: str, cutoff: datetime) -> dict:
     bytes_parquet = local_path.stat().st_size
     logger.info("Wrote %s (%.1f MB) — %d rows", local_path, bytes_parquet / 1e6, df.height)
 
-    # 3) Push vers MinIO
-    s3 = _get_s3_client()
+    # 3) Push vers MinIO via S3 multipart upload (urllib3 natif, pas boto3)
+    #    Sprint 10+ : boto3 1.34+ a une dépendance cassée (OpenSSL/crypto.py
+    #    GEN_EMAIL). On utilise la lib standard `requests` (déjà présente
+    #    dans requirements-airflow) pour faire un PUT multipart signé
+    #    avec AWS Signature V4. Voir _s3_put_object() ci-dessous.
     bucket = "lyonflow-bronze"
     key = (
         f"silver_archive/{table}/"
         f"year={cutoff.strftime('%Y')}/month={cutoff.strftime('%m')}/"
         f"{table}_{cutoff.strftime('%Y%m%d')}.parquet"
     )
-    s3.upload_file(
-        str(local_path),
-        bucket,
-        key,
-        ExtraArgs={"ContentType": "application/octet-stream"},
-    )
+    _s3_put_object(local_path, bucket, key, content_type="application/octet-stream")
     logger.info("Uploaded s3://%s/%s (%.1f MB)", bucket, key, bytes_parquet / 1e6)
 
     # 4) DELETE Postgres (libère l'espace DB)
