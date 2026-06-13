@@ -12,15 +12,13 @@ Fonctions :
 
 from __future__ import annotations
 
-import time
 import logging
 import time
 from dataclasses import dataclass, field
-from typing import Any
 
 import networkx as nx
 
-from src.routing.graph import build_routing_graph, get_nearest_node, get_node_speed, get_graph_type
+from src.routing.graph import build_routing_graph, get_graph_type, get_nearest_node, get_node_speed
 
 logger = logging.getLogger(__name__)
 

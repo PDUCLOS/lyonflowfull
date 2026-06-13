@@ -29,7 +29,6 @@ import time
 
 import networkx as nx
 
-from src.config import get_settings
 from src.db import execute_query
 from src.routing.gtfs_graph_builder import load_graph_from_db
 
@@ -63,7 +62,7 @@ def build_routing_graph(
 
     # 1. Essayer Overpass/OSM graph (Sprint 12)
     try:
-        G_diag = load_graph_from_db()  # returns nx.DiGraph
+        G_diag = load_graph_from_db()  # returns nx.DiGraph  # noqa: N806
         # Convert to undirected for pathfinding
         G = G_diag.to_undirected()  # noqa: N806
         # Add node attrs needed by pathfinder (start/end coords)
@@ -83,9 +82,10 @@ def build_routing_graph(
         logger.info(f"Routing graph (Overpass): {G.number_of_nodes()} nodes, {G.number_of_edges()} edges")
     except Exception as e:
         logger.warning(f"Overpass graph failed ({e})")
-        # 2. Fallback H3 graph
+        # 2. Fallback H3 graph (Sprint 8 legacy — kept for dev without OSM data)
         try:
-            G, graph_type = build_h3_graph(min_segment_length_m)  # noqa: N806
+            from src.routing.h3_graph import build_h3_graph as _build_h3
+            G, graph_type = _build_h3(min_segment_length_m)  # noqa: N806
             logger.info(f"Routing graph (H3): {G.number_of_nodes()} nodes, {G.number_of_edges()} edges")
         except Exception as e2:
             logger.warning(f"H3 graph failed ({e2}) — fallback mock")
@@ -304,9 +304,5 @@ def get_nearest_node(graph: nx.Graph, lon: float, lat: float) -> str | None:
                 min_dist = d
                 nearest = node_id
     return nearest
-
-def get_graph_type() -> str:
-    """Retourne le type de graphe utilisé ('overpass' | 'h3' | 'mock')."""
-    return _graph_cache.get("graph_type", "unknown")
 
 

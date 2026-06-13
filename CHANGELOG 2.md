@@ -1,0 +1,332 @@
+# Changelog
+
+Toutes les modifications notables de ce projet sont documentées ici.
+
+Le format suit [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/),
+et ce projet adhère au [Semantic Versioning](https://semver.org/lang/fr/).
+
+<<<<<<< HEAD
+## [0.6.1] - 2026-06-10 — Sprint VPS-5 (branche `vps`)
+=======
+## [0.6.3] - 2026-06-11 — Focus H+1h + Nginx healthcheck fix (branche `vps`)
+
+Voir [SPRINT_VPS-6_REPORT.md](SPRINT_VPS-6_REPORT.md) pour le détail.
+
+### Changed
+- **`dags/ml/dag_live_speed_retrain.py`** : `HORIZON_MAP` réduit à `{60: 1}`
+  (focus **H+1h stable** uniquement, suppression H+0/3/6). Schedule `:20 hourly`
+  → **`*/30 * * * *`** (toutes les 30 min, fenêtre d'usage idéale pour H+1h).
+- **`docker-compose.yml`** : healthcheck Nginx `http://localhost/nginx-health`
+  → `http://127.0.0.1/nginx-health` (fix `::1` IPv6 connection refused).
+
+### Database cleanup
+- **`gold.trafic_predictions`** : `DELETE 232 284` rows (horizons 0/3/6). Reste
+  **77 514** rows `horizon_h=1` uniquement, fraîche à <5 min.
+
+### Fixed
+- **Nginx Docker healthcheck** : échouait 2654 fois consécutives (~22h) car
+  Alpine `wget localhost` résout en IPv6 `::1` et Nginx n'écoute qu'en IPv4.
+  Fix = forcer IPv4 dans le healthcheck. `Status=healthy, FailStreak=0` depuis
+  11:28 UTC+2.
+
+## [0.6.2] - 2026-06-10 — Réparation 3 chaînes bronze→silver→gold silencieusement cassées
+>>>>>>> origin/main
+
+Voir [SPRINT_VPS-5_REPORT.md](SPRINT_VPS-5_REPORT.md) pour le détail complet.
+
+### Ajouté
+- **DAG `dags/ml/dag_live_speed_retrain.py`** : train 4 XGBoost speed (5min/1h/3h/6h)
+  + INSERT hourly dans `gold.trafic_predictions` (schéma v0.3.1).
+  Schedule `:20` hourly. Stratégie = **baseline** (dernière vitesse observée
+  par channel_id, propagée sur 4 horizons), car le vrai modèle XGBoost a un
+  drift de schéma à fixer en Sprint 9+ (voir "Dette technique").
+- **Widget KPIs par ligne** (`dashboard/components/widgets/pro_tcl/line_kpis.py`)
+  : sélecteur de tri (10 options : OTP/Retard/Charge/Fréq/LineID ↑↓), slider
+  Top N (5→50), checkbox "Détails par ligne" avec cards dépliables, tableau
+  Streamlit avec barres de progression OTP/Charge.
+- **Pro_4_Simulateur** : `load_tcl_lines()` charge **166 lignes TCL distinctes**
+  depuis `gold.tcl_vehicle_realtime.line_ref` (9 trams T1..T7/TB11/TB12 +
+  157 bus). Auto-catégorisation `T*=tram, M*=metro, reste=bus`. Mock fallback.
+
+### Corrige
+- **Pipeline trafic reconnecté** : `gold.trafic_predictions` n'était plus
+  alimentée depuis 2026-06-06 (4 jours de trou). Cause : aucun DAG ne
+  persistait les prédictions après le refactor v0.3.1.
+- **`src/data/db_query.get_traffic_predictions()`** réécrit pour le nouveau
+  schéma v0.3.1 (mapping horizon_minutes → horizon_h, colonnes `axis_key,
+  horizon_h, calculated_at, speed_pred, etat_pred`).
+- **`src/data/db_query.get_traffic_bottlenecks()`** : `node_idx/measurement_time`
+  → `channel_id/computed_at` (colonnes inexistantes en v0.3.1).
+- **`src/monitoring/health_checks.py.check_predictions_presentes()`** :
+  `prediction_timestamp` → `calculated_at`.
+- **`dashboard/components/widgets/pro_tcl/model_monitoring.py`** : idem dans
+  la liste data-quality tables.
+- **`src/data/data_loader.py.load_traffic()`** : utilise la nouvelle signature
+  `get_traffic_predictions(horizon_minutes=...)` et colonnes `speed_pred`.
+- **Bug permissions `logs/`** : `chown -R 50000:0 /opt/lyonflow/logs` après
+  chaque rsync (sinon le worker Celery crash silencieusement et les tasks
+  restent en `queued`). Fix durable TODO = entrypoint Dockerfile.
+- **Bug air UI "DAGs visibles"** : `airflow dags reserialize` + `rm -rf __pycache__`
+  quand un nouveau DAG n'apparaît pas après rsync.
+
+### Dette technique (Sprint 9+)
+- **`src/models/xgboost_speed.py` + `xgboost_velov.py`** : 9+ colonnes
+  référencées n'existent plus dans `gold.traffic_features_live` v0.3.1
+  (`speed_lag_1, node_idx, hour_sin, temperature_c, rain_mm, measurement_time`
+  → `lag_1, delta_1, sin_hour, temperature_2m, precipitation, computed_at`).
+  Le `train_one()` échoue → le baseline prend le relais dans `dag_live_speed_retrain`.
+- **Mapping `dim_spatial_grid_mapping.properties_twgid` (entiers)** ≠
+  **`traffic_features_live.channel_id` (format LYO00xxx)** : pas de JOIN possible
+  → `lat/lon` écrits NULL dans `gold.trafic_predictions`. Réconcilier en Sprint 9+.
+
+## [0.6.2] - 2026-06-10 — Réparation 3 chaînes bronze→silver→gold silencieusement cassées
+
+Suite au déploiement Sprint VPS-5, 3 chaînes de données étaient en
+**échec silencieux** depuis 2-15 jours (DAGs verts mais 0 rows insérées).
+Cause = dette schéma `gold.traffic_features_live` v0.3.1 (colonnes
+renommées : `lag_1`, `delta_1`, `sin_hour`, `temperature_2m`,
+`precipitation`, `computed_at`...) **non propagée à `silver_to_gold.py`**,
+combinée à un changement de structure JSON côté WFS Grand Lyon, GBFS
+Vélov et SIRI Lite TCL (juin 2026+).
+
+### Corrigé
+
+#### bronze_to_silver (3 transformers)
+
+- **`_transform_trafic_boucles`** : nouveau format WFS Grand Lyon
+  - `channel_id` extrait de `props["code"]` (ex. `LYO02336`), plus de
+    `props["id"]` (chemin WFS complet, pas un identifiant capteur).
+  - `vitesse` parsé depuis `"18 km/h"` → `18.0` (avant : string brute).
+  - Filtre fraîcheur basé sur `fetched_at` (le WFS signale
+    `est_a_jour=false` quasi systématiquement à cause de la dérive
+    d'horloge des capteurs).
+  - Geom : `silver.trafic_boucles_clean` attend `geometry(Point, 4326)`,
+    le WFS renvoie `LineString` → workaround = point médian du segment.
+    TODO Sprint 10 : passer la colonne en `LineString`.
+  - SAVEPOINT par feature pour ne pas perdre les inserts valides en
+    cas d'erreur sur une feature.
+
+- **`_transform_tcl_vehicles`** : SIRI 2.0
+  - `LineRef`, `VehicleRef`, `DirectionRef`, `StopPointRef` sont des
+    objets `{"value": "..."}` au lieu de strings brutes → extraction
+    via helper `_siri_ref()`.
+
+- **`_transform_velov`** : inchangé, déjà fonctionnel (lat/lon absents
+  du nouveau payload GBFS → NULL accepté).
+
+#### silver_to_gold (5 requêtes SQL)
+
+- **`_TRAFFIC_SQL`** : alignement schéma v0.3.1 (12+ colonnes renommées)
+  - JOIN sur `dim_spatial_grid_mapping.properties_twgid` (et plus
+    `channel_id` qui n'existe pas dans dim).
+  - LATERAL `meteo` avec alias explicites (`temperature_c` →
+    `temperature_2m`, `rain_mm` → `precipitation`).
+  - `x_2154, y_2154` NULL (colonnes pas encore dans dim).
+  - ON CONFLICT adapté : `(channel_id, fetched_at)`.
+
+- **`_VELOV_SQL`** : CTE lit `silver.velov_clean.num_bikes_available`
+  (et plus `bikes_available` qui n'existe pas).
+
+- **`_BUS_DELAY_SQL`** : PK réel `(date, hour, line_ref, segment_id)`
+  (et plus `(line_ref, segment_id, hour_of_day, day_of_week)`).
+
+- **`_BOTTLENECK_SQL`** : filtre `date >= CURRENT_DATE - 7 days` (et
+  plus `computed_at > ...` qui n'existe pas sur `bus_delay_segments`).
+
+- **Nouveau `_build_tcl_realtime` + `_TCL_REALTIME_SQL`** : alimente
+  `gold.tcl_vehicle_realtime` (Pro_4_Simulateur) depuis
+  `silver.tcl_vehicles_clean` via `DISTINCT ON journey_ref` (dernière
+  position par véhicule). Cleanup 1h (le Pro a besoin d'historique pour
+  les graphes "trajet des 5 dernières minutes").
+
+#### DAG `transform_silver_to_gold.py`
+
+- Remplacement des **NOOP explicites** (`build_traffic_features`,
+  `build_velov_features`) par les vrais appels `_run_traffic`,
+  `_run_velov`. Le docstring "Tasks NOOP (gérées par
+  legacy_github/dag_pipeline.py)" est obsolète : la chaîne
+  `transform_silver_to_gold` est désormais autonome.
+- Ajout de `build_tcl_realtime` dans la chaîne.
+- Dépendance bottleneck : `[traffic, velov, tcl_realtime, bus_delay] >> bottleneck`.
+
+### Résultats e2e (vérifiés sur VPS, snapshots 14:32 UTC+2)
+
+| Table                              | Avant    | Après (15 min) |
+| ---------------------------------- | -------- | -------------- |
+| `silver.trafic_boucles_clean`      | 0 recent | **7 209 rows** |
+| `silver.tcl_vehicles_clean`        | 0 recent | **1 546 rows** |
+| `gold.traffic_features_live`       | 0 recent | **2 084 rows** |
+| `gold.velov_features`              | 0 recent | **926 rows**   |
+| `gold.bus_delay_segments`          | 0 rows   | **1 567 rows** |
+| `gold.tcl_vehicle_realtime`        | 0 (15j)  | **577 rows**   |
+| `gold.infrastructure_bottlenecks`  | 0 rows   | **1 567 rows** |
+
+### Dette technique restante (Sprint 10+)
+
+- `silver.trafic_boucles_clean.geom` devrait être `geometry(LineString, 4326)`
+  (ou générique) pour stocker le tronçon complet au lieu du point médian.
+- `gold.dim_spatial_grid_mapping` devrait exposer `x_2154, y_2154` (pour
+  permettre le `JOIN` géométrique côté `_TRAFFIC_SQL`).
+- `src/models/xgboost_speed.py` référence encore les anciennes colonnes
+  (`speed_lag_1`, `node_idx`, `hour_sin`, `temperature_c`, `rain_mm`,
+  `measurement_time`). Le baseline `dag_live_speed_retrain` prend le
+  relais en attendant — Sprint 9+ prévu pour la migration.
+
+## [0.6.0] - 2026-06-07 — VPS production (branche `vps`, ACTIVE)
+
+**Décision déploiement : VPS unique.** Branche `vps` = source de vérité du
+déploiement actif. Les branches `kubernetes` et `cloud-demo` restent dormantes,
+préparées pour un futur déploiement AWS/GCP, **non mergées dans `vps` ou `main`**.
+
+### Sprint VPS-1 — TLS + hardening
+
+- **TLS Let's Encrypt** via certbot (`make certbot-init`, `make certbot-renew`)
+- **nginx/ssl.conf** : HSTS, ciphers modernes, OCSP stapling
+- **scripts/check-deploy-env.sh** : vérifie `.deploy.env` chmod 600 + vars critiques
+- **docs/VPS_HARDENING.md** : SSH key-only, ufw firewall, fail2ban, users dédiés
+- **make healthcheck-vps**, **make tls-status**
+
+### Sprint VPS-2 — systemd + backup + rollback
+
+- **scripts/systemd/lyonflow.service** : process supervisor
+- **scripts/systemd/lyonflow-backup.timer** + `.service` : backup quotidien 03:00
+- **scripts/backup.sh** + **scripts/restore.sh** : pg_dump compressed + rétention 30j
+- **make rollback-vps** : rollback automatique dernière release
+- **make tag-vps** : tag versionné déploiements
+- CI `.github/workflows/ci.yml` : branche `vps` ajoutée
+
+### Sprint VPS-3 — monitoring Prometheus / Grafana / Alertmanager
+
+- **docker-compose.monitoring.yml** : Prometheus, Alertmanager, Grafana,
+  node-exporter, postgres-exporter, nginx-exporter, redis-exporter
+- **monitoring/prometheus/prometheus.yml** : scrape 15s, rétention 30j
+- **monitoring/prometheus/rules/** : alertes api.yml, database.yml, system.yml
+- **monitoring/alertmanager/alertmanager.yml** : webhook Discord/Slack
+- **monitoring/grafana/dashboards/** : lyonflow-overview.json + lyonflow-business.json
+- **nginx stub_status** sur localhost+Docker networks pour nginx-exporter
+- **docs/MONITORING.md** : guide complet
+- **make monitoring-up/down/status/logs**
+
+### Sprint VPS-4 — métriques FastAPI custom
+
+- **src/api/metrics.py** : Counter/Histogram/Gauge custom
+  - `lyonflow_predictions_total` (model, horizon, status)
+  - `lyonflow_prediction_latency_seconds` (model)
+  - `lyonflow_persona_requests_total` (persona, endpoint)
+  - `lyonflow_dag_runs_total` (dag_id, state)
+  - `lyonflow_mlflow_active_runs` (experiment_name)
+  - `lyonflow_db_query_duration_seconds` (query_type)
+- **prometheus_fastapi_instrumentator** : expose `/metrics` standard FastAPI
+  (http_requests_total, http_request_duration_seconds, process_*)
+- Instrumentation `/api/v1/predict/traffic` + `/api/v1/predict/velov`
+
+### Audit isolation
+
+- **docs/CONTROLE_VPS_VS_CLOUD_DEMO.md** : matrice 3 contextes (VPS / K8s / cloud-demo)
+  - Isolation physique VPS ↔ cloud-demo (cluster Scaleway séparé)
+  - Isolation logique VPS ↔ K8s (namespace + NetworkPolicy)
+  - Garde-fous PostgreSQL prod (volume `/opt/lyonflow/postgres_data`)
+
+## [0.5.0-rc1] - 2026-06-07 — Phase 3 Cloud demo Jedha (branche `cloud-demo`, DORMANTE)
+
+### Ajouté
+- **Terraform Scaleway Kapsule** ephemere (control plane + 2 pools POP2)
+- **Overlay `jedha-demo`** extends `kubernetes/base` (1 replica, hosts demo)
+- **Scripts** `spin-up.sh` / `tear-down.sh` / `seed-demo-data.sh`
+- **Docs soutenance** `SOUTENANCE_RNCP_38777.md` (pitch + Q&A + URLs)
+- **DEMO_SCRIPT.md** : minute par minute 20 min + parade pannes
+- Cout estime : ~0,40 €/h, ~2 € pour 3 repetitions + jour J
+
+## [0.4.0] - 2026-06-07 — Phase 2 Kubernetes complete (branche `kubernetes`, DORMANTE)
+
+### Ajouté
+- **Kustomize base + overlays** (dev/prod) : 8 services manifests
+- **Postgres StatefulSet** PostGIS 16 + PVC + backup CronJob daily
+- **FastAPI/Streamlit** Deployment + HPA + Ingress TLS + PDB
+- **Airflow Helm values** KubernetesExecutor + git-sync DAGs
+- **Monitoring** kube-prometheus-stack + ServiceMonitor + 9 alertes
+- **GNN trainer CronJob** nodeSelector GPU + tolerations + PVC weights
+- **4 Dockerfiles** (api, dashboard, airflow, gnn CUDA 12.1)
+- **CI workflow** `k8s-images.yml` buildx multi-arch + ghcr push + Trivy
+- **Tests de charge** k6 (100 VU API) + Locust (Streamlit sessions)
+- **Migration script** VPS→K8s avec checksums MD5 gold tables
+- **Documentation** DEPLOY.md, RUNBOOK.md, DECOMMISSION.md
+
+## [0.3.1] - 2026-06-07 — Fix pipeline (branche `main` + `vps`)
+
+### Corrige
+- **is_vacances/is_ferie** : 2 fonctions PL/pgSQL `_is_vacances(date)` /
+  `_is_ferie(date)` enrichissent depuis bronze.calendrier_scolaire /
+  bronze.jours_feries. Avant : valeur hardcodee `FALSE`.
+- **N+1 SQL silver_to_gold.py** : remplace boucle Python 4 sous-queries
+  par `INSERT...SELECT` avec window LAG/AVG + LATERAL meteo + JOIN
+  spatial. Speedup x100 estime sur 1000 capteurs.
+- **Doublon `src/ingestion/collectors.py`** : supprime (meme contenu
+  que `__init__.py`).
+
+### Change
+- `src/ingestion/__init__.py` expose **classes** (lazy) au lieu d'instances
+  pre-construites. Nouveaux : `REALTIME_COLLECTORS`, `MONTHLY_COLLECTORS`,
+  `ALL_COLLECTOR_CLASSES`.
+- DAGs `collect_bronze.py`, `collect_calendriers_monthly.py` : boucle
+  `for cls in COLLECTORS` au lieu d'instanciation hardcodee.
+- DAG `transform_silver_to_gold.py` : 3 fonctions Python nommees au
+  lieu de lambdas (XCom serialisation propre).
+
+### Conserve
+- MinIO path dans `src/ingestion/base.py` (deprecated mais opt-in).
+
+## [0.3.0] - 2026-06-06 — Phase 1 production-ready local (branche `main`)
+
+### Sprint 7 — GNN training
+
+#### Ajouté
+- **SpatioTemporalGCN** PyTorch Geometric (`training/stgcn/model.py`)
+- **STGCNDataset** + **STGCNTrainer** + **STGCNWrapper** production
+- DAG Airflow `retrain_gnn.py` (daily 03h sur GPU)
+- 19 tests (12 OK sans torch, 6 skip, 1 skip cuda.is_available)
+
+### Sprint 6 — Couche data offline-first
+
+#### Ajouté
+- `src/data/db_query.py` (~480L) : helpers SQL parametres typeSafe
+- `src/data/data_loader.py` (~280L) : cache + retry + fallback mock
+- 6 widgets migres vers DB (sur 47, voir `SPRINT_6_WIDGET_MIGRATION_CHECKLIST.md`)
+- Page RGPD live + 42 nouveaux tests
+
+## [0.1.0] - 2026-06-06 — Sprint 5
+
+### Sprint 5 — Production-ready local
+
+#### Ajouté
+- **Infrastructure** : Docker Compose (12 services), Dockerfile non-root,
+  Nginx reverse proxy avec rate limiting, init-db.sql complet
+- **Ingestion** : 8 collecteurs Bronze (DataCollector ABC + tenacity)
+- **Transforms** : Bronze→Silver (5 transformers) + Silver→Gold (3 builders)
+- **ML** : XGBoost Speed (4 horizons) + Vélov (3 horizons)
+- **API** : FastAPI 8 endpoints (predict, recommend, bottlenecks, RGPD, auth)
+- **RGPD** : consentement, audit log, DSR, hashing SHA256
+- **Data Governance** : data dictionary, lineage, PII classification
+- **Airflow** : 6 DAGs (collect, transforms, retrain, maintenance)
+- **File Manager** : page upload/download Streamlit
+- **CI/CD** : GitHub Actions (lint, security, tests, docker build, Trivy)
+- **Documentation** : README, ARCHITECTURE, DEPLOYMENT, DATA_GOVERNANCE
+- **Monitoring** : 6 health checks + rate limit middleware
+- **Sécurité** : scanning secrets, JWT auth, audit trail
+
+### Sprint 1-4 — UI Foundation
+
+#### Ajouté
+- 3 personas (Usager, Pro TCL, Élu) avec auth par mot de passe
+- 16 pages Streamlit (Mon Trajet, PCC Live, Synthèse exécutive, etc.)
+- 45 widgets réutilisables
+- Mock data Lyon réaliste (12 lignes TCL, 458 stations Vélov, etc.)
+- Génération PDF (WeasyPrint + fallback reportlab)
+- 28 tests (tous verts)
+- Sélecteur de persona dans la sidebar
+
+### Notes
+- **Déploiement production actif** : VPS (branche `vps`, 0.6.0)
+- Branche `kubernetes` (0.4.0) : DORMANTE, préparée AWS/GCP futur
+- Branche `cloud-demo` (0.5.0-rc1) : DORMANTE, POC cloud ponctuel futur
+- VPS replacement : garder PostgreSQL, remplacer le reste

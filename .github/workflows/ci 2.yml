@@ -1,0 +1,180 @@
+name: CI LyonFlowFull
+
+on:
+  push:
+    branches: [main, develop, vps, "feature/**", "fix/**"]
+  pull_request:
+    branches: [main, develop, vps]
+
+env:
+  PYTHON_VERSION: "3.12"
+  POSTGRES_VERSION: "16"
+  RUFF_VERSION: "0.15.12"
+  # Force Node 24 — Node 20 is deprecated on GitHub runners since Sept 2025
+  # and will be removed in Sept 2026. Opt-in early to avoid CI breakage.
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
+
+jobs:
+  # ---------------------------------------------------------------------------
+  # 1. Lint (ruff) — bloquant
+  # ---------------------------------------------------------------------------
+  lint:
+    name: Lint (ruff)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Install ruff
+        run: pip install ruff==${{ env.RUFF_VERSION }}
+
+      - name: Lint
+        run: ruff check . --output-format=github
+
+      - name: Format check
+        run: ruff format --check .
+
+  # ---------------------------------------------------------------------------
+  # 2. Type check (mypy) — non bloquant
+  # ---------------------------------------------------------------------------
+  typecheck:
+    name: Type check (mypy)
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+      - run: pip install mypy
+      - run: mypy src/ dags/ --ignore-missing-imports || true
+
+  # ---------------------------------------------------------------------------
+  # 3. Security — bloquant
+  # ---------------------------------------------------------------------------
+  security:
+    name: Security
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # gitleaks-action a besoin de l'historique complet pour comparer
+          # PR base..head. Sinon "fatal: ambiguous argument" + exit 1.
+          fetch-depth: 0
+
+      - name: pip-audit
+        continue-on-error: true  # report-only : vulns reportées mais CI ne bloque pas (cf CHANGELOG v0.3.1)
+        run: |
+          pip install pip-audit
+          pip-audit || true
+
+      - name: bandit
+        # Skip B608 (SQL f-string sur tables whitelistées internes — pas user input).
+        # Skip B614 (torch.load sur nos propres checkpoints — weights_only=False nécessaire).
+        # Fail only on HIGH severity. Low/medium reportés en logs mais non bloquants.
+        run: |
+          pip install bandit
+          bandit -r src/ dags/ -f json -o bandit-report.json --skip B608,B614 || true
+          bandit -r src/ dags/ --skip B608,B614 --severity-level high
+
+      - name: Upload bandit report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: bandit-report
+          path: bandit-report.json
+
+      - name: gitleaks
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  # ---------------------------------------------------------------------------
+  # 4. Tests (PostgreSQL service container)
+  # ---------------------------------------------------------------------------
+  test:
+    name: Tests
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgis/postgis:16-3.4
+        env:
+          POSTGRES_USER: lyonflow_test
+          POSTGRES_PASSWORD: test
+          POSTGRES_DB: lyonflow_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U lyonflow_test"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    env:
+      POSTGRES_HOST: localhost
+      POSTGRES_PORT: 5432
+      POSTGRES_DB: lyonflow_test
+      POSTGRES_USER: lyonflow_test
+      POSTGRES_PASSWORD: test
+      APP_ENV: test
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: pip  # pip cache to speed up
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install pytest pytest-cov
+
+      - name: Init DB
+        run: |
+          PGPASSWORD=test psql -h localhost -U lyonflow_test -d lyonflow_test \
+            -f deploy/init-db.sql
+
+      - name: Run tests
+        run: |
+<<<<<<< HEAD
+          pytest tests/ -v --tb=short --cov=src --cov=dags --cov-report=term-missing --cov-report=xml --cov-fail-under=40
+=======
+          pytest tests/ -v --tb=short --cov=src --cov=dags --cov-report=term-missing --cov-report=xml --cov-fail-under=38
+>>>>>>> origin/main
+
+      - name: Upload coverage
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-report
+          path: coverage.xml
+
+  # ---------------------------------------------------------------------------
+  # 5. Docker build — bloquant (skip sur vps, déploié manuellement)
+  # ---------------------------------------------------------------------------
+  docker-build:
+    name: Docker build
+    runs-on: ubuntu-latest
+    needs: [lint, test]
+    # Skip docker build on vps branch (no Dockerfile change needed, just deploy)
+    if: github.ref != 'refs/heads/vps'
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build image
+        run: docker build -t lyonflow-app:test .
+
+      - name: Trivy scan
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: lyonflow-app:test
+          format: table
+          exit-code: "0"

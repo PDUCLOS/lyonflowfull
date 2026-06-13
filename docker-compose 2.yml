@@ -1,0 +1,468 @@
+# =============================================================================
+# LyonFlowFull — Docker Compose (production-ready)
+# =============================================================================
+# Stack complète :
+# - PostgreSQL 16 + PostGIS (Gold layer + Airflow metadata)
+# - MinIO (S3-compatible, optionnel — Google Drive est préféré)
+# - Redis (cache + Celery broker pour Airflow)
+# - MLflow (tracking + registry)
+# - Airflow (orchestration DAGs)
+# - Streamlit (dashboard multi-persona)
+# - FastAPI (REST endpoints)
+# - Nginx (reverse proxy public)
+#
+# Usage :
+#   docker compose up -d --build        # démarrer
+#   docker compose down -v              # arrêter + purger volumes
+#   docker compose logs -f streamlit    # voir les logs
+# =============================================================================
+
+# Note : `version: "3.9"` retiré (obsolète depuis Compose V2, ignoré silencieusement)
+
+x-common-env: &common-env
+  POSTGRES_HOST: postgres
+  POSTGRES_PORT: 5432
+  POSTGRES_DB: lyonflow
+  POSTGRES_USER: ${POSTGRES_USER}
+  POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+  MINIO_ENDPOINT: minio:9000
+  MINIO_ROOT_USER: ${MINIO_ROOT_USER}
+  MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD}
+  MINIO_BUCKET_BRONZE: lyonflow-bronze
+  MINIO_BUCKET_GOLD: lyonflow-gold
+  REDIS_URL: redis://redis:6379/0
+  MLFLOW_TRACKING_URI: http://mlflow:5000
+  # Personas (auth) — lus par src/persona/auth.py
+  PERSONA_PRO_TCL_USERNAME: ${PERSONA_PRO_TCL_USERNAME}
+  PERSONA_PRO_TCL_PASSWORD: ${PERSONA_PRO_TCL_PASSWORD}
+  PERSONA_ELU_USERNAME: ${PERSONA_ELU_USERNAME}
+  PERSONA_ELU_PASSWORD: ${PERSONA_ELU_PASSWORD}
+  LYONFLOW_API_KEY: ${LYONFLOW_API_KEY}
+  # Grand Lyon Open Data auth (HTTP Basic — collecteurs ingestion)
+  GRANDLYON_USERNAME: ${GRANDLYON_USERNAME:-}
+  GRANDLYON_PASSWORD: ${GRANDLYON_PASSWORD:-}
+  API_LOGIN: ${API_LOGIN:-}
+  API_PASSWORD: ${API_PASSWORD:-}
+  AIRFLOW_ADMIN_USERNAME: ${AIRFLOW_ADMIN_USERNAME:-admin}
+  AIRFLOW_ADMIN_PASSWORD: ${AIRFLOW_ADMIN_PASSWORD:-admin}
+  AIRFLOW__WEBSERVER__SECRET_KEY: ${AIRFLOW_SECRET_KEY:-lyonflow_default_secret_key_12345}
+  # Prefixe /airflow nécessaire pour nginx reverse-proxy (cf. Lyontraffic config)
+  AIRFLOW__WEBSERVER__BASE_URL: ${AIRFLOW_BASE_URL:-http://51.83.159.224/airflow}
+  # Honore X-Forwarded-* headers (sinon redirects perdent le préfixe /airflow)
+  AIRFLOW__WEBSERVER__ENABLE_PROXY_FIX: "true"
+  AIRFLOW__WEBSERVER__PROXY_FIX_X_FOR: "1"
+  AIRFLOW__WEBSERVER__PROXY_FIX_X_PROTO: "1"
+  AIRFLOW__WEBSERVER__PROXY_FIX_X_HOST: "1"
+  AIRFLOW__WEBSERVER__PROXY_FIX_X_PORT: "1"
+  AIRFLOW__WEBSERVER__PROXY_FIX_X_PREFIX: "0"
+  PYTHONUNBUFFERED: "1"
+  TZ: Europe/Paris
+
+services:
+  # ---------------------------------------------------------------------------
+  # PostgreSQL 16 + PostGIS
+  # ---------------------------------------------------------------------------
+  postgres:
+    image: postgis/postgis:16-3.4
+    container_name: lyonflow-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: lyonflow
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    volumes:
+      # POSTGRES_DATA_DIR pointe vers le bind mount disque dédié (VPS = /mnt/postgres-data/pgdata).
+      # Default = volume Docker pour dev local (cf. .env.example).
+      - ${POSTGRES_DATA_DIR:-postgres_data}:/var/lib/postgresql/data
+      - ./deploy/init-db.sql:/docker-entrypoint-initdb.d/01-init.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d lyonflow"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    ports:
+      - "127.0.0.1:5432:5432"
+    deploy:
+      resources:
+        limits:
+          cpus: "1.0"
+          memory: 2.5G
+
+  # ---------------------------------------------------------------------------
+  # Redis (cache + Celery broker)
+  # ---------------------------------------------------------------------------
+  redis:
+    image: redis:7-alpine
+    container_name: lyonflow-redis
+    restart: unless-stopped
+    command: redis-server --maxmemory 200mb --maxmemory-policy allkeys-lru
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+    ports:
+      - "127.0.0.1:6379:6379"
+    deploy:
+      resources:
+        limits:
+          cpus: "0.5"
+          memory: 256M
+
+  # ---------------------------------------------------------------------------
+  # MinIO (S3-compatible)
+  # ---------------------------------------------------------------------------
+  minio:
+    image: minio/minio:latest
+    container_name: lyonflow-minio
+    restart: unless-stopped
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD}
+    volumes:
+      # Sprint 10+ Optimisation (2026-06-12) — MinIO migré de sda1
+      # (volume Docker /var/lib/docker/volumes/) vers sdb2 (bind mount).
+      # Raison : sda1 à 80%, sdb à 54% avec 43 Go libres. Archive silver
+      # > 30 jours en Parquet compressé.
+      - /mnt/postgres-data/minio:/data
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    ports:
+      - "127.0.0.1:9000:9000"  # API
+      - "127.0.0.1:9001:9001"  # Console web
+    deploy:
+      resources:
+        limits:
+          cpus: "0.5"
+          memory: 512M
+
+  # ---------------------------------------------------------------------------
+  # MinIO init (crée les buckets au démarrage, en ACCÈS PRIVÉ)
+  # ---------------------------------------------------------------------------
+  minio-init:
+    image: minio/mc:latest
+    container_name: lyonflow-minio-init
+    depends_on:
+      minio:
+        condition: service_healthy
+    entrypoint: >
+      /bin/sh -c "
+      sleep 5;
+      mc alias set local http://minio:9000 ${MINIO_ROOT_USER} ${MINIO_ROOT_PASSWORD};
+      mc mb --ignore-existing local/lyonflow-bronze;
+      mc mb --ignore-existing local/lyonflow-gold;
+      # Pas d'accès public — tout via credentials.
+      # Si l'on doit servir des fichiers publiquement (rare), utiliser
+      # des presigned URLs via boto3/client.generate_presigned_url().
+      echo 'MinIO buckets initialisés (accès privé uniquement)';
+      "
+    restart: "no"
+
+  # ---------------------------------------------------------------------------
+  # MLflow (tracking + model registry)
+  # ---------------------------------------------------------------------------
+  mlflow:
+    build:
+      context: .
+      dockerfile: Dockerfile.mlflow
+    image: lyonflow-mlflow:custom
+    container_name: lyonflow-mlflow
+    restart: unless-stopped
+    command: >
+      mlflow server
+        --backend-store-uri postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/mlflow
+        --default-artifact-root s3://lyonflow-gold/mlflow-artifacts/
+        --host 0.0.0.0
+        --port 5000
+    environment:
+      <<: *common-env
+      AWS_ACCESS_KEY_ID: ${MINIO_ROOT_USER}
+      AWS_SECRET_ACCESS_KEY: ${MINIO_ROOT_PASSWORD}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
+    healthcheck:
+      # mlflow image has no curl/wget, use python urllib
+      test: ["CMD", "python", "-c", "import urllib.request, sys; sys.exit(0 if urllib.request.urlopen('http://localhost:5000/health', timeout=5).status == 200 else 1)"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+    ports:
+      - "127.0.0.1:5001:5000"  # exposée sur 5001 pour éviter conflit éventuel
+    deploy:
+      resources:
+        limits:
+          cpus: "0.5"
+          memory: 768M
+
+  # ---------------------------------------------------------------------------
+  # Airflow (init — crée l'utilisateur admin)
+  # ---------------------------------------------------------------------------
+  airflow-init:
+    build:
+      context: .
+      dockerfile: Dockerfile.airflow
+    container_name: lyonflow-airflow-init
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      <<: *common-env
+      PYTHONPATH: /opt/airflow
+    entrypoint: /bin/bash
+    command: -c "
+      airflow db init &&
+      airflow users create
+        --username $${AIRFLOW_ADMIN_USERNAME}
+        --password $${AIRFLOW_ADMIN_PASSWORD}
+        --firstname Admin
+        --lastname LyonFlow
+        --role Admin
+        --email admin@lyonflow.fr
+      "
+    user: "0:0"
+    volumes:
+      - ./dags:/opt/airflow/dags
+      - ./src:/opt/airflow/src
+      - airflow_data:/opt/airflow/data
+    restart: "no"
+
+  # ---------------------------------------------------------------------------
+  # Airflow webserver
+  # ---------------------------------------------------------------------------
+  airflow-webserver:
+    build:
+      context: .
+      dockerfile: Dockerfile.airflow
+    container_name: lyonflow-airflow
+    restart: unless-stopped
+    depends_on:
+      airflow-init:
+        condition: service_completed_successfully
+      postgres:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    environment:
+      <<: *common-env
+      PYTHONPATH: /opt/airflow
+      AIRFLOW__CORE__EXECUTOR: CeleryExecutor
+      AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/airflow
+      AIRFLOW__CELERY__BROKER_URL: redis://redis:6379/0
+      AIRFLOW__CELERY__RESULT_BACKEND: db+postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/airflow
+      AIRFLOW__WEBSERVER__SECRET_KEY: ${AIRFLOW_SECRET_KEY}
+    command: webserver
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://localhost:8080/airflow/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+    ports:
+      - "127.0.0.1:8080:8080"
+    volumes:
+      - ./dags:/opt/airflow/dags
+      - ./src:/opt/airflow/src
+      - airflow_data:/opt/airflow/data
+      - ./logs/airflow:/opt/airflow/logs
+    deploy:
+      resources:
+        limits:
+          cpus: "0.5"
+          memory: 1G
+
+  # ---------------------------------------------------------------------------
+  # Airflow scheduler
+  # ---------------------------------------------------------------------------
+  airflow-scheduler:
+    build:
+      context: .
+      dockerfile: Dockerfile.airflow
+    container_name: lyonflow-airflow-scheduler
+    restart: unless-stopped
+    depends_on:
+      - airflow-webserver
+    environment:
+      <<: *common-env
+      PYTHONPATH: /opt/airflow
+      AIRFLOW__CORE__EXECUTOR: CeleryExecutor
+      AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/airflow
+      AIRFLOW__CELERY__BROKER_URL: redis://redis:6379/0
+      AIRFLOW__CELERY__RESULT_BACKEND: db+postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/airflow
+    command: scheduler
+    volumes:
+      - ./dags:/opt/airflow/dags
+      - ./src:/opt/airflow/src
+      - ./training:/opt/airflow/training
+      - airflow_data:/opt/airflow/data
+      - ./logs/airflow:/opt/airflow/logs
+    deploy:
+      resources:
+        limits:
+          cpus: "0.5"
+          memory: 768M
+
+  # ---------------------------------------------------------------------------
+  # Airflow worker
+  # ---------------------------------------------------------------------------
+  airflow-worker:
+    build:
+      context: .
+      dockerfile: Dockerfile.airflow
+    container_name: lyonflow-airflow-worker
+    restart: unless-stopped
+    depends_on:
+      - airflow-webserver
+    environment:
+      <<: *common-env
+      PYTHONPATH: /opt/airflow
+      AIRFLOW__CORE__EXECUTOR: CeleryExecutor
+      AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/airflow
+      AIRFLOW__CELERY__BROKER_URL: redis://redis:6379/0
+      AIRFLOW__CELERY__RESULT_BACKEND: db+postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/airflow
+      AIRFLOW__CELERY__WORKER_CONCURRENCY: "2"
+    command: celery worker
+    volumes:
+      - ./dags:/opt/airflow/dags
+      - ./src:/opt/airflow/src
+      - airflow_data:/opt/airflow/data
+      - ./logs/airflow:/opt/airflow/logs
+    deploy:
+      resources:
+        limits:
+          cpus: "2.0"
+<<<<<<< HEAD
+          memory: 9G
+=======
+          memory: 6G
+>>>>>>> origin/main
+
+  # ---------------------------------------------------------------------------
+  # FastAPI (REST endpoints)
+  # ---------------------------------------------------------------------------
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: lyonflow-api
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+      mlflow:
+        condition: service_healthy
+    environment:
+      <<: *common-env
+    command: uvicorn src.api.main:app --host 0.0.0.0 --port 8000 --workers 2
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+    ports:
+      - "127.0.0.1:8000:8000"
+    volumes:
+      - ./src:/app/src
+      - ./models:/app/models
+    deploy:
+      resources:
+        limits:
+          cpus: "0.5"
+          memory: 512M
+
+  # ---------------------------------------------------------------------------
+  # Streamlit (dashboard)
+  # ---------------------------------------------------------------------------
+  streamlit:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: lyonflow-streamlit
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+      api:
+        condition: service_healthy
+    environment:
+      <<: *common-env
+      STREAMLIT_SERVER_PORT: 8501
+      STREAMLIT_SERVER_ADDRESS: 0.0.0.0
+      # PYTHONPATH=/app ensures `import dashboard` resolves in Streamlit MPA
+      # (Streamlit-MPA adds dashboard/ to sys.path, not /app)
+      PYTHONPATH: /app
+    working_dir: /app
+    command: streamlit run dashboard/Accueil.py --server.port 8501 --server.address 0.0.0.0 --server.headless true
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request, sys; sys.exit(0 if urllib.request.urlopen('http://localhost:8501/_stcore/health', timeout=5).status == 200 else 1)"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    ports:
+      - "127.0.0.1:8501:8501"
+    volumes:
+      - ./dashboard:/app/dashboard
+      - ./src:/app/src
+      - ./config:/app/config
+      - ./uploads:/app/uploads
+    deploy:
+      resources:
+        limits:
+          cpus: "0.5"
+          memory: 512M
+
+  # ---------------------------------------------------------------------------
+  # Nginx (reverse proxy public)
+  # ---------------------------------------------------------------------------
+  nginx:
+    image: nginx:1.27-alpine
+    container_name: lyonflow-nginx
+    restart: unless-stopped
+    depends_on:
+      streamlit:
+        condition: service_healthy
+      api:
+        condition: service_healthy
+      airflow-webserver:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://127.0.0.1/nginx-health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./nginx/ssl.conf:/etc/nginx/ssl.conf:ro
+      # ssl.conf pointe /etc/letsencrypt/live/lyonflow/*.pem
+      # En attendant Let's Encrypt, on monte des certs self-signed à ce path.
+      # Voir scripts/generate-self-signed-cert.sh
+      - ./nginx/certs:/etc/letsencrypt/live/lyonflow:ro
+    ports:
+      - "80:80"
+      - "443:443"
+    deploy:
+      resources:
+        limits:
+          cpus: "0.2"
+          memory: 128M
+
+# =============================================================================
+# Volumes
+# =============================================================================
+volumes:
+  postgres_data:
+    driver: local
+  # minio_data supprimé Sprint 10+ (bind mount direct sur sdb2)
+  airflow_data:
+    driver: local
