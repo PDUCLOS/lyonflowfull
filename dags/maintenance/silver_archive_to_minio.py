@@ -11,10 +11,12 @@ fait 28 Go et continue à grossir (~500 Mo/jour). 80% de ces données ont
 
 **Ratio attendu** : 28 Go → 2.8 Go en Parquet snappy, puis DELETE.
 
-**Stratégie Parquet** : on dump avec COPY TO STDOUT (Postgres natif) puis
-on parse avec polars qui sait lire du TSV/csv. Alternative : utiliser
-``pyarrow.parquet`` directement + ``read_sql`` via SQLAlchemy. On opte
-pour polars.read_database + write_parquet (vectorisé, simple).
+**Stratégie Parquet** : on dump avec polars.read_database + write_parquet.
+
+**Push MinIO** : Sprint 12+ — boto3 cassé sur airflow:2.9.3 (pyOpenSSL
+`AttributeError: module 'lib' has no attribute 'GEN_EMAIL'` — conflit
+boto3 1.34+ / cryptography 41+). On utilise ``urllib3`` + AWS Signature
+V4 manuelle (``src.minio_s3v4_upload``). Pas de boto3 dans les deps.
 
 Schedule : quotidien 04h00 (après dag_daily_speed_train 03h00).
 """
@@ -25,13 +27,13 @@ import logging
 from datetime import datetime, timedelta
 from pathlib import Path
 
-import boto3
 import polars as pl
 from airflow import DAG
 from airflow.operators.python import PythonOperator
 
 from src.config import get_settings
 from src.db.connection import execute_query, raw_connection
+from src.minio_s3v4_upload import upload_file_to_minio
 
 logger = logging.getLogger(__name__)
 
@@ -54,20 +56,6 @@ SILVER_TABLES = [
 
 RETENTION_DAYS = 30  # garde 30 jours en DB
 LOCAL_STAGING = Path("/tmp/silver_archive_staging")
-
-
-def _get_s3_client():
-    """Client boto3 pour MinIO. Sprint 10+ (2026-06-12)."""
-    s = get_settings()
-    if not s.minio.enabled:
-        raise RuntimeError("MINIO_ENABLED=false. Active MinIO dans .env pour archiver.")
-    return boto3.client(
-        "s3",
-        endpoint_url=f"http://{s.minio.endpoint}",
-        aws_access_key_id=s.minio.root_user,
-        aws_secret_access_key=s.minio.root_password,
-        region_name="us-east-1",  # dummy, MinIO n'en tient pas compte
-    )
 
 
 def _archive_one_table(table: str, cutoff: datetime) -> dict:
@@ -122,19 +110,22 @@ def _archive_one_table(table: str, cutoff: datetime) -> dict:
     bytes_parquet = local_path.stat().st_size
     logger.info("Wrote %s (%.1f MB) — %d rows", local_path, bytes_parquet / 1e6, df.height)
 
-    # 3) Push vers MinIO
-    s3 = _get_s3_client()
+    # 3) Push vers MinIO (urllib3 + AWS Sig V4 manuelle — pas de boto3)
     bucket = "lyonflow-bronze"
     key = (
         f"silver_archive/{table}/"
         f"year={cutoff.strftime('%Y')}/month={cutoff.strftime('%m')}/"
         f"{table}_{cutoff.strftime('%Y%m%d')}.parquet"
     )
-    s3.upload_file(
-        str(local_path),
-        bucket,
-        key,
-        ExtraArgs={"ContentType": "application/octet-stream"},
+    s = get_settings()
+    upload_file_to_minio(
+        local_path=str(local_path),
+        bucket=bucket,
+        key=key,
+        endpoint=s.minio.endpoint,
+        access_key=s.minio.root_user,
+        secret_key=s.minio.root_password,
+        content_type="application/octet-stream",
     )
     logger.info("Uploaded s3://%s/%s (%.1f MB)", bucket, key, bytes_parquet / 1e6)
 
