@@ -13,12 +13,8 @@ global:
     env: production
 
 # Load alerting rules
-# Sprint 8+4 (2026-06-12) — Règles désactivées temporairement : database.yml
-# utilise des fonctions Go templates (label_value, humanizeBytes) non
-# supportées en Prometheus v2.54 sans template global. Le scraping
-# continue normalement, seules les alertes sont en pause.
-# rule_files:
-#  - "rules/*.yml"
+rule_files:
+  - "rules/*.yml"
 
 # Alertmanager
 alerting:
@@ -26,10 +22,11 @@ alerting:
     - static_configs:
         - targets: ["alertmanager:9093"]
 
-# Storage retention (30 jours) — via flags CLI dans docker-compose
-# (--storage.tsdb.retention.time=30d --storage.tsdb.retention.size=10GB).
-# Pas de bloc YAML ici : la syntaxe `storage.tsdb.retention` n'est
-# pas supportée en Prometheus v2.54.
+# Storage retention (30 jours)
+storage:
+  tsdb:
+    retention.time: 30d
+    retention.size: 10GB
 
 # Scrape configs
 scrape_configs:

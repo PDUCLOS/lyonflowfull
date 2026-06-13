@@ -103,15 +103,11 @@ def render_velov_map(
 
     horizon = horizon_default
     if show_horizon_selector:
-        # Sprint 8+ (2026-06-12) — focus H+1h. Le selectbox propose
-        # uniquement H+1h (60 min). La valeur 0 ("Maintenant") est
-        # supportée pour les usages internes (autres widgets) mais
-        # l'utilisateur n'a plus à choisir : tout est H+1h.
-        labels = {60: "Prédiction H+1h"}
+        labels = {0: "Maintenant", 30: "Prédiction H+30min", 60: "Prédiction H+1h"}
         horizon = st.selectbox(
-            "Horizon (focus H+1h — Sprint 8+)",
+            "Horizon",
             list(labels.keys()),
-            index=0,
+            index=list(labels.keys()).index(horizon_default) if horizon_default in labels else 0,
             format_func=lambda x: labels[x],
             key=f"velov_map_horizon_{key_suffix}",
         )

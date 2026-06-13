@@ -54,23 +54,28 @@ def render_traffic_widget(traffic: dict | None = None) -> None:
     with col3:
         st.metric("Bouchons actifs", n_bottlenecks)
 
-    # Prédictions (Sprint 8+ : focus H+1h, les autres horizons masqués)
-    st.markdown("##### 🔮 Prédiction H+1h")
+    # Prédictions
+    st.markdown("##### 🔮 Prédictions")
     preds = traffic.get("predictions", {})
-    p = preds.get("h_plus_1h", {})
-    if p:
-        st.markdown(
-            f"""
-            <div class="lyonflow-card" style="text-align:center;padding:1rem;">
-                <div style="font-size:0.85rem;opacity:0.6;">H+1h</div>
-                <div style="font-size:1.6rem;font-weight:600;">{p.get("average_speed_kmh", 0)} km/h</div>
-                <div style="font-size:0.95rem;">{p.get("congestion_level", "—")}</div>
-            </div>
-            """,
-            unsafe_allow_html=True,
-        )
-    else:
-        st.info("🔮 Pas de prédiction H+1h disponible (DB vide ou DAG en retard).")
+    pred_cols = st.columns(3)
+    pred_data = [
+        ("H+30min", preds.get("h_plus_30min", {})),
+        ("H+1h", preds.get("h_plus_1h", {})),
+        ("H+3h", preds.get("h_plus_3h", {})),
+    ]
+    for col, (label, p) in zip(pred_cols, pred_data):
+        if p:
+            with col:
+                st.markdown(
+                    f"""
+                    <div class="lyonflow-card" style="text-align:center;padding:0.6rem;">
+                        <div style="font-size:0.75rem;opacity:0.6;">{label}</div>
+                        <div style="font-size:1.3rem;font-weight:600;">{p.get("average_speed_kmh", 0)} km/h</div>
+                        <div style="font-size:0.85rem;">{p.get("congestion_level", "—")}</div>
+                    </div>
+                    """,
+                    unsafe_allow_html=True,
+                )
 
     # Top bouchons
     main_jams = traffic.get("main_jams", [])

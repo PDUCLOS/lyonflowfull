@@ -70,7 +70,7 @@ class Alternative:
     mode_label: str
     mode_icon: str
     temps_min: int
-    score_confiance: float  # 0.0 – 1.0  # noqa: RUF003
+    score_confiance: float  # 0.0 - 1.0
     raison: str
 
     def to_dict(self) -> dict:

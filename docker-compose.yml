@@ -121,11 +121,7 @@ services:
       MINIO_ROOT_USER: ${MINIO_ROOT_USER}
       MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD}
     volumes:
-      # Sprint 10+ Optimisation (2026-06-12) — MinIO migré de sda1
-      # (volume Docker /var/lib/docker/volumes/) vers sdb2 (bind mount).
-      # Raison : sda1 à 80%, sdb à 54% avec 43 Go libres. Archive silver
-      # > 30 jours en Parquet compressé.
-      - /mnt/postgres-data/minio:/data
+      - minio_data:/data
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
       interval: 30s
@@ -302,7 +298,6 @@ services:
     volumes:
       - ./dags:/opt/airflow/dags
       - ./src:/opt/airflow/src
-      - ./training:/opt/airflow/training
       - airflow_data:/opt/airflow/data
       - ./logs/airflow:/opt/airflow/logs
     deploy:
@@ -340,7 +335,7 @@ services:
       resources:
         limits:
           cpus: "2.0"
-          memory: 6G
+          memory: 9G
 
   # ---------------------------------------------------------------------------
   # FastAPI (REST endpoints)
@@ -433,7 +428,7 @@ services:
       airflow-webserver:
         condition: service_healthy
     healthcheck:
-      test: ["CMD", "wget", "--spider", "-q", "http://127.0.0.1/nginx-health"]
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost/nginx-health"]
       interval: 30s
       timeout: 5s
       retries: 3
@@ -459,6 +454,7 @@ services:
 volumes:
   postgres_data:
     driver: local
-  # minio_data supprimé Sprint 10+ (bind mount direct sur sdb2)
+  minio_data:
+    driver: local
   airflow_data:
     driver: local

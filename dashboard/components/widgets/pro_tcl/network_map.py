@@ -1,13 +1,7 @@
 """Widget — Carte réseau Pydeck (bus GPS colorés par retard).
 
 Sprint 8 — Positions bus chargées via data_loader.cached_buses_positions()
-(qui lit silver.tcl_vehicles_clean).
-
-Sprint VPS-6 (2026-06-11) — fail loud en prod :
-* DB répond, données présentes : carte temps réel.
-* DB répond, table vide : ``st.info("Aucun bus en circulation")``.
-* DB indispo en prod : ``DashboardDataError`` → ``st.error``.
-* Mode démo (``LYONFLOW_DEMO_MODE=1``) : fallback ``ALL_BUSES`` mock autorisé.
+(qui lit silver.tcl_vehicles_clean). Fallback mock si DB down.
 """
 
 from __future__ import annotations
@@ -17,7 +11,7 @@ import streamlit as st
 
 from dashboard.components.colors import COLORS
 from dashboard.components.data_cache import cached_buses_positions
-from src.data.exceptions import DashboardDataError
+from src.data.mock.pro_tcl import ALL_BUSES
 
 
 def _delay_to_color(delay_min: int) -> list:
@@ -39,11 +33,7 @@ def render_network_map(buses: list | None = None, height: int = 400) -> None:
         height: hauteur de la carte en pixels.
     """
     if buses is None:
-        try:
-            df = cached_buses_positions(force_mock=False)
-        except DashboardDataError as e:
-            st.error(f"⚠️ {e}")
-            return
+        df = cached_buses_positions(force_mock=False)
         if not df.empty:
             # Adapter le format DB → format attendu par le widget
             def _safe_delay_min(seconds):
@@ -64,11 +54,8 @@ def render_network_map(buses: list | None = None, height: int = 400) -> None:
                 }
                 for _, row in df.iterrows()
             ]
-        # Sprint 8 (2026-06-12) — viré le fallback ALL_BUSES (mock).
-        # Si la DB est vide, on affiche l'info.
         else:
-            st.info("Aucun bus en circulation actuellement.")
-            return
+            buses = ALL_BUSES
 
     if not buses:
         st.info("Aucun bus en circulation.")

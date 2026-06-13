@@ -96,42 +96,15 @@ def render_model_registry() -> None:
     """Affiche la liste des modèles dans le registry."""
     st.markdown("##### 📚 Model Registry")
 
-    # Sprint 9 — charge les modèles depuis MLflow live.
-    # Sprint VPS-6 — fail loud en prod, fallback mock en démo uniquement.
-    from dashboard.components.data_cache import (
-        cached_mlflow_experiment_summary,
-        cached_mlflow_models,
-    )
-    from dashboard.components.loading_state import (
-        data_error_to_message,
-        empty_state,
-        loading_wrapper,
-    )
-    from src.data.data_loader import _is_demo_mode
-    from src.data.exceptions import DashboardDataError
+    # Sprint 9 — charge les modèles depuis MLflow live (fallback mock si down)
+    try:
+        from dashboard.components.data_cache import cached_mlflow_experiment_summary, cached_mlflow_models
 
-    with loading_wrapper("Chargement registry MLflow…", "📊"):
-        try:
-            summary = cached_mlflow_experiment_summary(force_mock=False)
-            models = cached_mlflow_models(force_mock=False)
-        except DashboardDataError as e:
-            empty_state(
-                icon="🟡",
-                title="MLflow indisponible",
-                message=data_error_to_message(e),
-            )
-            return
-        except Exception:
-            if _is_demo_mode():
-                models = MOCK_MODELS
-                summary = {"available": False, "run_count": 0, "model_names": []}
-            else:
-                empty_state(
-                    icon="🔴",
-                    title="MLflow a échoué",
-                    message="Registry modèles indisponible. Vérifie l'état du container `lyonflow-mlflow` (port 5000).",
-                )
-            return
+        summary = cached_mlflow_experiment_summary(force_mock=False)
+        models = cached_mlflow_models(force_mock=False)
+    except Exception:
+        models = MOCK_MODELS
+        summary = {"available": False, "run_count": 0, "model_names": []}
 
     # Bandeau source (transparence MLflow)
     if summary.get("available"):
@@ -140,8 +113,8 @@ def render_model_registry() -> None:
         )
     else:
         st.warning(
-            "🟡 **MLflow non accessible** — affichage fallback mock (mode démo). "
-            "Pour activer en prod : démarrer le service `mlflow` (docker compose) "
+            "🟡 **MLflow non accessible** — affichage fallback mock. "
+            "Pour activer : démarrer le service `mlflow` (docker compose) "
             "et recharger cette page."
         )
 
@@ -152,20 +125,7 @@ def render_model_registry() -> None:
     # KPIs
     prod = sum(1 for m in models if m.get("stage") == "Production")
     staging = sum(1 for m in models if m.get("stage") == "Staging")
-
-    # Sprint 10+ : drift réel depuis gold.model_drift_reports (PAS mock)
-    # Lecture du dernier rapport de drift persisté par build_xgb_training_set.
-    from src.data.db_query import get_latest_drift_report
-
-    latest_drift = get_latest_drift_report()
-    if latest_drift:
-        n_drift = 1 if latest_drift.get("dataset_drift") else 0
-        drift_share_pct = float(latest_drift.get("drift_share", 0.0)) * 100
-        drift_status = "🔴 DRIFT" if latest_drift.get("dataset_drift") else "🟢 OK"
-    else:
-        n_drift = 0
-        drift_share_pct = 0.0
-        drift_status = "⚪ Pas de rapport"
+    n_drift = sum(1 for m in models if m.get("drift_status") != "ok")
 
     cols = st.columns(4)
     with cols[0]:
@@ -175,29 +135,7 @@ def render_model_registry() -> None:
     with cols[2]:
         st.metric("Total modèles", len(models))
     with cols[3]:
-        st.metric(f"🚨 Drift {drift_status}", f"{drift_share_pct:.0f}%", delta_color="inverse")
-
-    # Détail drift (Sprint 10+ — affiche le dernier rapport PSI)
-    if latest_drift:
-        with st.expander("📊 Dernier rapport de drift (PSI)", expanded=False):
-            st.markdown(
-                f"""
-                - **Dataset drift** : `{latest_drift.get("dataset_drift")}`
-                - **Drift share** : `{drift_share_pct:.1f}%`
-                - **N ref / current** : `{latest_drift.get("n_ref")}` / `{latest_drift.get("n_current")}`
-                - **Période ref** : `{latest_drift.get("ref_from")}` → `{latest_drift.get("ref_to")}`
-                - **Période current** : `{latest_drift.get("current_from")}` → `{latest_drift.get("current_to")}`
-                - **Computed at** : `{latest_drift.get("computed_at")}`
-                """
-            )
-            report = latest_drift.get("report", {})
-            if report.get("per_column"):
-                st.markdown("**Per-column drift** :")
-                for col, stats in report["per_column"].items():
-                    psi = stats.get("psi", 0)
-                    status = stats.get("status", "?")
-                    icon = {"stable": "🟢", "moderate": "🟡", "significant": "🔴"}.get(status, "⚪")
-                    st.markdown(f"- {icon} **{col}** : PSI = {psi:.3f} ({status})")
+        st.metric("🚨 Drift alertes", n_drift, delta_color="inverse")
 
     # Tableau (Sprint 9 — utilise la variable `models` MLflow ou mock)
     _render_model_registry_table(models)
@@ -328,11 +266,8 @@ def render_model_registry_status() -> None:
 
     # Detail table
     st.markdown("---")
-    st.markdown("**Status par horizon (Sprint 8+ : focus H+1h)**")
-    # Sprint 8+ — seul H+1h (60 min) est entraîné. Les autres
-    # horizons sont conservés dans la liste pour le monitoring
-    # (compat ModelRegistry) mais marqués "non entraînés".
-    horizons = [60]
+    st.markdown("**Status par horizon**")
+    horizons = [5, 15, 30, 60, 180, 360]
     for h in horizons:
         reg = ModelRegistry.get(h)
         s = reg.status()
@@ -393,32 +328,18 @@ def render_metrics_comparison() -> None:
     """Affiche la comparaison des métriques entre modèles."""
     st.markdown("##### 📊 Comparaison métriques (XGBoost vs GNN)")
 
-    # Sources live MLflow (fail loud en prod, fallback mock en démo)
-    from dashboard.components.data_cache import cached_mlflow_models
-    from src.data.data_loader import _is_demo_mode
-    from src.data.exceptions import DashboardDataError
-
+    # Sources live MLflow (fallback mock auto via data_loader)
     try:
-        models = cached_mlflow_models(force_mock=False)
-    except DashboardDataError as e:
-        st.error(f"⚠️ {e}")
-        return
-    except Exception:
-        if _is_demo_mode():
-            models = MOCK_MODELS
-        else:
-            st.error("🔴 MLflow a échoué — métriques modèles indisponibles.")
-            return
+        from dashboard.components.data_cache import cached_mlflow_models
 
-    if not models:
-        st.info("Aucun modèle tracké dans MLflow pour le moment.")
-        return
+        models = cached_mlflow_models(force_mock=False) or MOCK_MODELS
+    except Exception:
+        models = MOCK_MODELS
 
     xgb_h60 = next((m for m in models if m.get("name") == "xgboost_speed_h60"), None)
     gnn_h60 = next((m for m in models if m.get("name") == "stgcn_gnn_h60"), None)
 
     if not xgb_h60 or not gnn_h60:
-        st.info("Modèles XGBoost H+60min ou GNN H+60min non trouvés dans le registry.")
         return
 
     # Defensive : valeurs None-safe pour éviter crash si MLflow renvoie un dict partiel

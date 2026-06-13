@@ -12,6 +12,7 @@ from dashboard.components.widgets.usager import (
     render_favorite_list,
     render_recurrent_trip_card,
 )
+from src.data.mock.usager import MOCK_FAVORITES
 
 # IMPORTANT: set_page_config() doit être la PREMIÈRE commande Streamlit de la page.
 # Sinon StreamlitAPIException au runtime.
@@ -21,12 +22,9 @@ st.set_page_config(
     layout="wide",
 )
 
-# Sprint 8 (2026-06-12) — viré le seed MOCK_FAVORITES. Les favoris
-# commencent vides ; l'utilisateur les ajoute via la page Mes trajets
-# (bouton ⭐). Persistance : session_state pour l'instant, futur
-# Sprint 10 = table user_favorites en DB.
+# Favoris persistes en session_state (demo) — futur: table user_favorites.
 if "user_favorites" not in st.session_state:
-    st.session_state["user_favorites"] = []
+    st.session_state["user_favorites"] = list(MOCK_FAVORITES)
 favorites = st.session_state["user_favorites"]
 
 apply_persona_guard(expected_persona="usager")

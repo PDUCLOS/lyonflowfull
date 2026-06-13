@@ -5,28 +5,7 @@ Toutes les modifications notables de ce projet sont documentées ici.
 Le format suit [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/),
 et ce projet adhère au [Semantic Versioning](https://semver.org/lang/fr/).
 
-## [0.6.3] - 2026-06-11 — Focus H+1h + Nginx healthcheck fix (branche `vps`)
-
-Voir [SPRINT_VPS-6_REPORT.md](SPRINT_VPS-6_REPORT.md) pour le détail.
-
-### Changed
-- **`dags/ml/dag_live_speed_retrain.py`** : `HORIZON_MAP` réduit à `{60: 1}`
-  (focus **H+1h stable** uniquement, suppression H+0/3/6). Schedule `:20 hourly`
-  → **`*/30 * * * *`** (toutes les 30 min, fenêtre d'usage idéale pour H+1h).
-- **`docker-compose.yml`** : healthcheck Nginx `http://localhost/nginx-health`
-  → `http://127.0.0.1/nginx-health` (fix `::1` IPv6 connection refused).
-
-### Database cleanup
-- **`gold.trafic_predictions`** : `DELETE 232 284` rows (horizons 0/3/6). Reste
-  **77 514** rows `horizon_h=1` uniquement, fraîche à <5 min.
-
-### Fixed
-- **Nginx Docker healthcheck** : échouait 2654 fois consécutives (~22h) car
-  Alpine `wget localhost` résout en IPv6 `::1` et Nginx n'écoute qu'en IPv4.
-  Fix = forcer IPv4 dans le healthcheck. `Status=healthy, FailStreak=0` depuis
-  11:28 UTC+2.
-
-## [0.6.2] - 2026-06-10 — Réparation 3 chaînes bronze→silver→gold silencieusement cassées
+## [0.6.1] - 2026-06-10 — Sprint VPS-5 (branche `vps`)
 
 Voir [SPRINT_VPS-5_REPORT.md](SPRINT_VPS-5_REPORT.md) pour le détail complet.
 

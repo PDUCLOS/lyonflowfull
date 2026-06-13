@@ -8,6 +8,7 @@ from dashboard.components.widgets.elu.executive_summary import render_executive_
 from dashboard.components.widgets.elu.impact_projection import render_impact_projection
 from dashboard.components.widgets.elu.kpi_cards import render_kpi_cards
 from dashboard.components.widgets.elu.map_painter import render_map_painter
+from dashboard.components.widgets.elu.monthly_evolution_chart import render_monthly_evolution  # noqa: F401
 from dashboard.components.widgets.elu.news_section import render_news_section
 from dashboard.components.widgets.elu.pdf_generator import render_pdf_generator
 from dashboard.components.widgets.elu.project_selector import render_project_selector

@@ -51,9 +51,7 @@ def cached_velov_stations(force_mock: bool = False) -> list[dict]:
 
 
 @st.cache_data(ttl=TTL_FAST, show_spinner=False)
-def cached_velov_predictions(
-    horizon_minutes: int = 60, force_mock: bool = False
-) -> pd.DataFrame:  # Sprint 8+ : focus H+1h
+def cached_velov_predictions(horizon_minutes: int = 30, force_mock: bool = False) -> pd.DataFrame:
     return dl.load_velov_predictions(horizon_minutes=horizon_minutes, force_mock=force_mock)
 
 
@@ -190,9 +188,7 @@ def cached_spatial_mapping(force_mock: bool = False) -> pd.DataFrame:
 
 
 @st.cache_data(ttl=TTL_SLOW, show_spinner=False)
-def cached_traffic_predictions_for_map(
-    horizon_minutes: int = 60, limit: int = 500
-) -> pd.DataFrame:  # Sprint 8+ : focus H+1h
+def cached_traffic_predictions_for_map(horizon_minutes: int = 30, limit: int = 500) -> pd.DataFrame:
     """Cache les prédictions trafic pour la carte GNN.
 
     Args typés explicitement (pas *args/**kwargs) pour garantir le hashage

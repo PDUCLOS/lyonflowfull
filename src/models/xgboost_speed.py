@@ -202,8 +202,9 @@ class XGBoostSpeedModel:
 
         # Sprint 10+ MLOps — Génère et sauvegarde un Model Card (Markdown)
         try:
-            from src.data.db_query import get_latest_drift_report
             from src.ml.model_card import generate_xgboost_card, save_card
+
+            from src.data.db_query import get_latest_drift_report
 
             dataset_stats = {
                 "n_rows": len(df),

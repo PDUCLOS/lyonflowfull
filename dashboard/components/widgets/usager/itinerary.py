@@ -6,92 +6,36 @@ Affiche :
 - Comparaison temps actuel vs temps prédit (H+30min par défaut)
 - Bouton "recommencer"
 
-Sprint VPS-6 (2026-06-11) — démoctisé : résolution d'adresse via
-``referentiel.lieux_lyon`` (PostgreSQL) au lieu du mock ``lyon_addresses``.
+Sprint 8 — utilise la liste d'adresses centralisée
+src.data.mock.lyon_addresses.LYON_ADDRESSES (20 lieux avec coords GPS).
 """
 
 from __future__ import annotations
 
-import logging
-
 import streamlit as st
 
-logger = logging.getLogger(__name__)
-
-from dashboard.components.colors import COLORS  # noqa: E402
-from src.data.data_loader import (  # noqa: E402
-    load_lyon_addresses,
-)
-from src.data.exceptions import DashboardDataError  # noqa: E402
-from src.routing import Itinerary, compute_itinerary  # noqa: E402
-
-
-def _resolve_address(text: str) -> tuple[float, float] | None:
-    """Résout une adresse texte → (lon, lat) via la DB (referentiel.lieux_lyon).
-
-    Sprint 8 (2026-06-12) — viré le fallback mock lyon_addresses.
-    La DB est l'unique source. Si DB indispo, DashboardDataError.
-    """
-    from src.data.db_query import _is_db_available, execute_query
-
-    if not _is_db_available():
-        raise DashboardDataError(source="referentiel.lieux_lyon", detail="DB indisponible")
-
-    if not text:
-        return None
-    # Strip emoji préfixe (search_bar préfixe avec emoji + espace)
-    cleaned = text.strip()
-    if cleaned and ord(cleaned[0]) > 0x2700:
-        sp = cleaned.find(" ")
-        if sp > 0 and sp <= 3:
-            cleaned = cleaned[sp + 1 :].strip()
-    text_lower = cleaned.lower().strip()
-    if not text_lower:
-        return None
-    rows = execute_query(
-        """
-        SELECT lon, lat FROM referentiel.lieux_lyon
-        WHERE is_active = TRUE
-          AND LOWER(name) LIKE %s
-        ORDER BY LENGTH(name) ASC
-        LIMIT 1
-        """,
-        (f"%{text_lower}%",),
-    )
-    if not rows:
-        return None
-    return (float(rows[0]["lon"]), float(rows[0]["lat"]))
-
-
-def _sample_addresses(n: int = 5) -> list[str]:
-    """Renvoie N adresses pour les messages d'erreur."""
-    try:
-        return load_lyon_addresses()[:n]
-    except Exception:
-        return []
+from dashboard.components.colors import COLORS
+from src.data.mock.lyon_addresses import get_address_names, resolve_address
+from src.routing import Itinerary, compute_itinerary
 
 
 def render_itinerary_result(
     origin: str,
     destination: str,
-    horizon_minutes: int = 60,  # Sprint 8+ : focus H+1h (0 = maintenant)
+    horizon_minutes: int = 0,
 ) -> None:
     """Affiche l'itinéraire entre 2 adresses.
 
     Args:
         origin: adresse d'origine (texte)
         destination: adresse de destination (texte)
-        horizon_minutes: 60 = H+1h (défaut Sprint 8+), 0 = maintenant
+        horizon_minutes: 0 = maintenant, sinon H+ (utilise vitesse prédite)
     """
-    try:
-        origin_coords = _resolve_address(origin)
-        dest_coords = _resolve_address(destination)
-    except DashboardDataError as e:
-        st.error(f"⚠️ {e}")
-        return
+    origin_coords = resolve_address(origin)
+    dest_coords = resolve_address(destination)
 
     if not origin_coords:
-        sample = ", ".join(_sample_addresses(5))
+        sample = ", ".join(get_address_names()[:5])
         st.error(f"❌ Adresse d'origine non reconnue : '{origin}'. Essayez : {sample}...")
         return
     if not dest_coords:
@@ -99,9 +43,7 @@ def render_itinerary_result(
         return
 
     # Calcul itinéraire
-    from dashboard.components.loading_state import empty_state, loading_wrapper
-
-    with loading_wrapper("Calcul itinéraire en cours…", "🔍"):
+    with st.spinner("🔍 Calcul itinéraire en cours..."):
         itinerary = compute_itinerary(
             origin_lon=origin_coords[0],
             origin_lat=origin_coords[1],
@@ -111,19 +53,13 @@ def render_itinerary_result(
         )
 
     if not itinerary or not itinerary.segments:
-        empty_state(
-            icon="🗺️",
-            title="Aucun itinéraire trouvé",
-            message="Le graphe routier n'est peut-être pas chargé. Vérifie "
-            "que les données Gold sont à jour ou choisis un autre point "
-            "d'arrivée.",
-        )
+        st.warning("⚠️ Aucun itinéraire trouvé. Le graphe routier n'est peut-être pas chargé.")
         return
 
     # Comparaison si horizon > 0
     comparison = None
     if horizon_minutes > 0:
-        with loading_wrapper(f"Comparaison avec H+{horizon_minutes}min…", "🔮"):
+        with st.spinner(f"🔮 Comparaison avec H+{horizon_minutes}min..."):
             current_itin = compute_itinerary(
                 origin_lon=origin_coords[0],
                 origin_lat=origin_coords[1],
@@ -216,58 +152,7 @@ def _render_map(
             icon=folium.Icon(color="red", icon="stop"),
         ).add_to(m)
 
-        # Sprint 10+ (2026-06-12) : snap-to-roads via Overpass API
-        # On projette chaque nœud H3 sur la rue OSM la plus proche (rayon
-        # 30m). Si Overpass down, fallback gracieux sur le point original.
-        try:
-            from src.routing.snap_to_roads import snap_path_to_roads
-
-            raw_points = [origin_coords[::-1]]  # (lon, lat) for snap_to_road
-            for seg in itinerary.segments:
-                raw_points.append((seg.start_lon, seg.start_lat))
-                raw_points.append((seg.end_lon, seg.end_lat))
-            raw_points.append(dest_coords[::-1])
-            snapped = snap_path_to_roads(raw_points, radius_m=30.0)
-            snap_label = " (Sprint 10+ snap-to-roads ✓)"
-        except Exception as e:
-            logger.warning(f"Snap-to-roads failed: {e} — fallback H3 brut")
-            snapped = None
-            snap_label = " (H3 brut, snap-to-roads indispo)"
-
-        # Polyligne continue reliant tous les nœuds du chemin (Sprint 9+)
-        # Avant (Sprint 8) : 1 PolyLine par segment = traits dispersés
-        # (les nœuds H3 ne sont pas sur les vraies rues, donc les segments
-        # paraissent décousus). Maintenant : on relie start→end→start→end
-        # en une seule polyligne colorée par la vitesse dominante.
-        poly_locations: list[tuple[float, float]] = [tuple(origin_coords)]
-        for seg in itinerary.segments:
-            poly_locations.append((seg.start_lat, seg.start_lon))
-            poly_locations.append((seg.end_lat, seg.end_lon))
-        poly_locations.append(tuple(dest_coords))
-
-        # Si snap-to-roads a réussi, on trace la polyligne snappée en BLEU continu
-        # et on garde les segments H3 par-dessus en couleurs.
-        if snapped:
-            snapped_locations = [(lat, lon) for lon, lat in snapped]
-            folium.PolyLine(
-                locations=snapped_locations,
-                color="#1f77b4",
-                weight=5,
-                opacity=0.9,
-                popup=f"🛣️ Tracé snappé sur rues OSM{snap_label}",
-            ).add_to(m)
-
-        # Polyligne principale (bleu par défaut, épaisseur 4) — fallback H3
-        folium.PolyLine(
-            locations=[[lat, lon] for lat, lon in poly_locations],
-            color="#888",
-            weight=3,
-            opacity=0.5,
-            dash_array="2 4",  # pointillé fin = H3 brut
-            popup=f"🛣️ {len(itinerary.segments)} tronçons H3 — Sprint 9+",
-        ).add_to(m)
-
-        # Polylines colorées par tronçon (overlay, opacité réduite)
+        # Polyline par segment (couleur selon vitesse)
         for seg in itinerary.segments:
             color = _speed_to_color(seg.speed_kmh)
             folium.PolyLine(
@@ -276,25 +161,14 @@ def _render_map(
                     [seg.end_lat, seg.end_lon],
                 ],
                 color=color,
-                weight=6,
-                opacity=0.9,
+                weight=5,
+                opacity=0.8,
                 popup=(
                     f"<b>{seg.channel_id}</b><br>"
                     f"📏 {seg.length_m:.0f} m<br>"
                     f"🚗 {seg.speed_kmh:.0f} km/h<br>"
                     f"🕐 {seg.duration_s / 60:.1f} min"
                 ),
-            ).add_to(m)
-
-        # Markers aux nœuds H3 (visualiser le maillage)
-        for i, seg in enumerate(itinerary.segments):
-            folium.CircleMarker(
-                location=[seg.start_lat, seg.start_lon],
-                radius=3,
-                color="#888",
-                fill=True,
-                fill_opacity=0.5,
-                tooltip=f"nœud H3 #{i} · {seg.channel_id}",
             ).add_to(m)
 
         st_folium(m, width=None, height=400, returned_objects=[])

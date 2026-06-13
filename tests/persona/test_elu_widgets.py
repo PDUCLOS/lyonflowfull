@@ -10,7 +10,7 @@ sys.path.insert(0, str(WORKSPACE))
 
 
 def test_mock_data_elu_imports():
-    from tests.fixtures.mock_data import elu
+    from src.data.mock import elu
 
     assert hasattr(elu, "KPI_12_MONTHS")
     assert hasattr(elu, "BOTTLENECKS_TOP_10")
@@ -19,7 +19,7 @@ def test_mock_data_elu_imports():
 
 
 def test_kpis_have_5_entries():
-    from tests.fixtures.mock_data.elu import KPI_12_MONTHS
+    from src.data.mock.elu import KPI_12_MONTHS
 
     assert len(KPI_12_MONTHS) == 5
     required = ["part_modale_tc", "ponctualite_reseau", "co2_evite", "bottlenecks_actifs", "satisfaction_usager"]
@@ -32,7 +32,7 @@ def test_kpis_have_5_entries():
 
 
 def test_bottlenecks_count():
-    from tests.fixtures.mock_data.elu import BOTTLENECKS_TOP_10
+    from src.data.mock.elu import BOTTLENECKS_TOP_10
 
     assert len(BOTTLENECKS_TOP_10) == 10
     for b in BOTTLENECKS_TOP_10:
@@ -53,7 +53,7 @@ def test_bottlenecks_count():
 
 
 def test_amenagements_passes_have_avant_apres():
-    from tests.fixtures.mock_data.elu import AMENAGEMENTS_PASSES
+    from src.data.mock.elu import AMENAGEMENTS_PASSES
 
     assert len(AMENAGEMENTS_PASSES) >= 5
     for a in AMENAGEMENTS_PASSES:

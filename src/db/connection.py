@@ -65,11 +65,6 @@ def raw_connection() -> Generator[psycopg2.extensions.connection, None, None]:
         dbname=s.db.db,
         user=s.db.user,
         password=s.db.password,
-        # Sprint 8 hotfix 4 (2026-06-12) — Force le search_path au
-        # niveau DSN. Le user `lyonflow` du container n'a pas gold
-        # dans son search_path par défaut, ce qui faisait planter
-        # toutes les queries type `gold.dim_spatial_grid_mapping`.
-        options="-c search_path=public,gold,bronze,silver,referentiel,airflow_db,mlflow",
     )
     try:
         yield conn
@@ -84,12 +79,6 @@ def raw_connection() -> Generator[psycopg2.extensions.connection, None, None]:
 def execute_query(query: str, params: tuple = ()) -> list[dict]:
     """Exécute une requête paramétrée, retourne les résultats en list[dict]."""
     with raw_connection() as conn, conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
-        # Sprint 8 hotfix 3 (2026-06-12) — Force search_path explicite.
-        # Le user `lyonflow` du container Streamlit a un search_path par
-        # défaut qui n'inclut pas `gold` (et autres schémas applicatifs),
-        # ce qui faisait planter les queries type
-        # `SELECT * FROM gold.dim_spatial_grid_mapping`.
-        cur.execute("SET search_path TO public, gold, bronze, silver, referentiel, airflow_db, mlflow")
         cur.execute(query, params)
         if cur.description:
             return [dict(row) for row in cur.fetchall()]
@@ -99,7 +88,6 @@ def execute_query(query: str, params: tuple = ()) -> list[dict]:
 def execute_scalar(query: str, params: tuple = ()) -> object | None:
     """Retourne le premier scalar (première row, première col) ou None."""
     with raw_connection() as conn, conn.cursor() as cur:
-        cur.execute("SET search_path TO public, gold, bronze, silver, referentiel, airflow_db, mlflow")
         cur.execute(query, params)
         row = cur.fetchone()
         return row[0] if row else None

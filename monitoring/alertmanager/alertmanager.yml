@@ -2,36 +2,51 @@
 # monitoring/alertmanager/alertmanager.yml — Config Alertmanager
 # =============================================================================
 # Sprint VPS-3 : route les alertes critiques vers Discord (ou Slack).
-# Sprint 8+4 (2026-06-12) : receivers webhook désactivés (pas de
-# ALERT_WEBHOOK_URL dans .env, sinon container restart-loop).
+# Configuration secrete via .env : ALERT_WEBHOOK_URL.
 # =============================================================================
 
 global:
   resolve_timeout: 5m
 
+# Templates
 templates:
   - '/etc/alertmanager/templates/*.tmpl'
 
+# Route par défaut
 route:
   group_by: ['alertname', 'component', 'severity']
   group_wait: 30s
   group_interval: 5m
   repeat_interval: 4h
-  receiver: 'null-receiver'
+  receiver: 'discord-default'
   routes:
+    # Alertes critiques -> Discord #alerts-critical + Telegram SMS
     - match:
         severity: critical
-      receiver: 'null-receiver'
+      receiver: 'discord-critical'
       repeat_interval: 1h
       continue: true
+    # Warning -> Discord #alerts (sans spam)
     - match:
         severity: warning
-      receiver: 'null-receiver'
+      receiver: 'discord-default'
       repeat_interval: 6h
 
+# Receivers
 receivers:
-  - name: 'null-receiver'
+  - name: 'discord-default'
+    webhook_configs:
+      - url: '${ALERT_WEBHOOK_URL}'
+        send_resolved: true
+        max_alerts: 10
 
+  - name: 'discord-critical'
+    webhook_configs:
+      - url: '${ALERT_WEBHOOK_CRITICAL_URL}'
+        send_resolved: true
+        max_alerts: 0  # pas de limite pour les critiques
+
+# Inhibitions (si DB down, ne pas spammer avec d'autres alertes DB)
 inhibit_rules:
   - source_match:
       severity: 'critical'

@@ -5,11 +5,6 @@ Affiche :
 - Health checks (6 checks depuis src.monitoring.health_checks)
 - Fraîcheur des données (Bronze ingestion times par source)
 - Boutons trigger manuel
-
-Sprint VPS-6 (2026-06-11) — fail loud en prod :
-* Mode démo (``LYONFLOW_DEMO_MODE=1``) : fallback ``MOCK_DAGS``/``MOCK_FRESHNESS``
-  préservé (Airflow indispo autorisé).
-* Mode prod : Airflow indispo → ``DashboardDataError`` propagé.
 """
 
 from __future__ import annotations
@@ -18,85 +13,173 @@ import streamlit as st
 
 from dashboard.components.colors import COLORS
 from src.data.airflow_client import get_dags_status, is_airflow_available, trigger_dag
-from src.data.data_loader import _is_demo_mode
-from src.data.exceptions import DashboardDataError
 from src.monitoring.health_checks import run_all_checks
-
-# Sprint 8 (2026-06-12) — viré le bloc MOCK_DAGS / MOCK_FRESHNESS
-# (lignes 64-200 dans la version précédente). Le widget lit désormais
-# la DB et l'API Airflow uniquement. Si l'un des deux est indispo,
-# DashboardDataError.
 
 
 @st.cache_data(ttl=30, show_spinner=False)
 def _cached_dags() -> list[dict]:
-    """Liste des DAGs Airflow. Fail loud (Sprint 8 — viré fallback mock)."""
-    try:
-        dags = get_dags_status()
-    except DashboardDataError:
-        raise
-    except Exception as e:
-        raise DashboardDataError(
-            source="airflow",
-            detail=f"Airflow REST API a échoué : {e}",
-        ) from e
-    # Airflow répond mais 0 DAG : situation légitime (premier démarrage)
-    return list(dags) if dags else []
+    return get_dags_status()
 
 
 @st.cache_data(ttl=60, show_spinner=False)
 def _cached_freshness() -> list[dict]:
-    """Fraîcheur live des sources Bronze. Fail loud (Sprint 8 — viré fallback mock)."""
-    from src.data.db_query import _is_db_available, get_bronze_source_counts
+    """Fraicheur live via gold.bronze_source_counts ou fallback mock."""
+    try:
+        from src.data.db_query import _is_db_available, get_bronze_source_counts
 
-    if not _is_db_available():
-        raise DashboardDataError(source="gold.bronze_source_counts", detail="PostgreSQL indisponible")
-    df = get_bronze_source_counts(hours=24)
-    if df.empty:
-        return []  # DB répond mais vide
-    rows: list[dict] = []
-    for _, r in df.iterrows():
-        n_rows = int(r.get("n_rows", 0) or 0)
-        last_fetch = r.get("last_fetch")
-        rows.append(
-            {
-                "source": str(r.get("source", "—")),
-                "last_ingestion": str(last_fetch) if last_fetch else "—",
-                "n_records_24h": n_rows,
-                "status": "ok" if n_rows > 0 else "stale",
-            }
-        )
-    return rows
+        if _is_db_available():
+            df = get_bronze_source_counts(hours=24)
+            if not df.empty:
+                rows: list[dict] = []
+                for _, r in df.iterrows():
+                    n_rows = int(r.get("n_rows", 0) or 0)
+                    last_fetch = r.get("last_fetch")
+                    rows.append(
+                        {
+                            "source": str(r.get("source", "—")),
+                            "last_ingestion": str(last_fetch) if last_fetch else "—",
+                            "n_records_24h": n_rows,
+                            "status": "ok" if n_rows > 0 else "stale",
+                        }
+                    )
+                return rows
+    except Exception:
+        pass
+    from src.data.mock.pro_tcl_pipeline import MOCK_FRESHNESS
+
+    return list(MOCK_FRESHNESS)
 
 
-# Sprint 8 (2026-06-12) — MOCK_DAGS, MOCK_FRESHNESS, helpers _ago,
-# _in_minutes, _in_months, _NOW, _FMT : tous virés. Le widget ne
-# mock plus. Si Airflow indispo → DashboardDataError. Si la DB
-# indispo → DashboardDataError. La source de vérité c'est le pipeline.
+# Fallback mock — utilise par get_dags_status() quand Airflow indispo.
+# Les dates sont générées dynamiquement à partir de now() pour éviter qu'elles
+# soient figées dans le passé (avant : 2026-06-06 hardcodé, pépé en 2027).
+from datetime import datetime, timedelta  # noqa: E402
+
+_NOW = datetime.now()
+_FMT = "%Y-%m-%d %H:%M:%S"
+
+
+def _ago(minutes: int) -> str:
+    return (_NOW - timedelta(minutes=minutes)).strftime(_FMT)
+
+
+def _in_minutes(minutes: int) -> str:
+    return (_NOW + timedelta(minutes=minutes)).strftime(_FMT)
+
+
+def _in_months(months: int) -> str:
+    # Approximation (1 mois = 30j) — utilisée pour monthly schedules
+    return (_NOW + timedelta(days=30 * months)).strftime(_FMT)
+
+
+MOCK_DAGS = [
+    {
+        "dag_id": "collect_bronze",
+        "schedule": "*/5 * * * *",
+        "last_run": _ago(5),
+        "last_status": "success",
+        "last_duration_s": 12,
+        "next_run": _in_minutes(5),
+        "description": "Collecte 8 sources temps réel",
+    },
+    {
+        "dag_id": "collect_calendriers_monthly",
+        "schedule": "@monthly",
+        "last_run": _ago(60 * 24 * 5),
+        "last_status": "success",
+        "last_duration_s": 5,
+        "next_run": _in_months(1),
+        "description": "Collecte calendriers (vacances, fériés)",
+    },
+    {
+        "dag_id": "transform_bronze_to_silver",
+        "schedule": "*/5* * * *",
+        "last_run": _ago(5),
+        "last_status": "success",
+        "last_duration_s": 8,
+        "next_run": _in_minutes(5),
+        "description": "Bronze → Silver (5 sources)",
+    },
+    {
+        "dag_id": "transform_silver_to_gold",
+        "schedule": "*/10* * * *",
+        "last_run": _ago(10),
+        "last_status": "success",
+        "last_duration_s": 14,
+        "next_run": _in_minutes(10),
+        "description": "Silver → Gold (3 builders)",
+    },
+    {
+        "dag_id": "build_spatial_mapping",
+        "schedule": "30 2* * *",
+        "last_run": _ago(60 * 12),
+        "last_status": "success",
+        "last_duration_s": 22,
+        "next_run": _in_minutes(60 * 12),
+        "description": "Construit dim_spatial_grid_mapping + adjacency",
+    },
+    {
+        "dag_id": "retrain_xgboost_speed",
+        "schedule": "25* * * *",
+        "last_run": _ago(35),
+        "last_status": "success",
+        "last_duration_s": 184,
+        "next_run": _in_minutes(25),
+        "description": "Retrain XGBoost Speed (4 horizons)",
+    },
+    {
+        "dag_id": "retrain_xgboost_velov",
+        "schedule": "50* * * *",
+        "last_run": _ago(10),
+        "last_status": "success",
+        "last_duration_s": 142,
+        "next_run": _in_minutes(10),
+        "description": "Retrain XGBoost Velov (2 horizons)",
+    },
+    {
+        "dag_id": "data_quality_daily",
+        "schedule": "15 4* * *",
+        "last_run": _ago(60 * 11),
+        "last_status": "success",
+        "last_duration_s": 28,
+        "next_run": _in_minutes(60 * 13),
+        "description": "6 checks qualité quotidien",
+    },
+    {
+        "dag_id": "purge_bronze",
+        "schedule": "0 3* * *",
+        "last_run": _ago(60 * 12),
+        "last_status": "success",
+        "last_duration_s": 8,
+        "next_run": _in_minutes(60 * 12),
+        "description": "Purge Bronze rétention",
+    },
+]
+
+# Fraîcheur mock des sources Bronze (en prod : query DB)
+MOCK_FRESHNESS = [
+    {"source": "trafic_boucles", "last_ingestion": _ago(5), "n_records_24h": 316800, "status": "ok"},
+    {"source": "velov", "last_ingestion": _ago(5), "n_records_24h": 132192, "status": "ok"},
+    {"source": "tcl_vehicles", "last_ingestion": _ago(5), "n_records_24h": 69120, "status": "ok"},
+    {"source": "meteo", "last_ingestion": _ago(60), "n_records_24h": 24, "status": "ok"},
+    {"source": "air_quality", "last_ingestion": _ago(60), "n_records_24h": 24, "status": "ok"},
+    {"source": "chantiers", "last_ingestion": _ago(60 * 12), "n_records_24h": 1, "status": "ok"},
+    {"source": "calendrier_scolaire", "last_ingestion": _ago(60 * 24 * 5), "n_records_24h": 0, "status": "stale"},
+    {"source": "jours_feries", "last_ingestion": _ago(60 * 24 * 5), "n_records_24h": 0, "status": "stale"},
+]
 
 
 def render_pipeline_status() -> None:
     """Affiche le statut complet des pipelines."""
     st.markdown("##### 📊 Statut global")
 
-    if not is_airflow_available() and not _is_demo_mode():
-        st.error(
-            "🔴 **Airflow REST API non joignable** — le statut DAGs est indisponible. "
-            "Vérifiez que le service Airflow tourne et que "
-            "`AIRFLOW_HOST`/`AIRFLOW_ADMIN_PASSWORD` sont corrects dans `.env`."
-        )
-        return
-    if not is_airflow_available() and _is_demo_mode():
+    if not is_airflow_available():
         st.warning(
-            "🟡 Airflow REST API non joignable — affichage en **mode démo** "
-            "(fallback MOCK_DAGS autorisé quand `LYONFLOW_DEMO_MODE=1`)."
+            "🟡 Airflow REST API non joignable — les statuts DAGs sont en mode demo. "
+            "Configurez AIRFLOW_HOST/AIRFLOW_ADMIN_PASSWORD pour activer le live."
         )
 
-    try:
-        dags = _cached_dags()
-    except DashboardDataError as e:
-        st.error(f"⚠️ {e}")
-        return
+    dags = _cached_dags()
     cols = st.columns(4)
     n_success = sum(1 for d in dags if d.get("last_status") == "success")
     n_running = sum(1 for d in dags if d.get("last_status") == "running")
@@ -136,15 +219,6 @@ def render_dag_list() -> None:
     """Affiche la liste des DAGs avec leur état."""
     st.markdown("##### 📋 Liste des DAGs")
 
-    try:
-        dags = _cached_dags()
-    except DashboardDataError as e:
-        st.error(f"⚠️ {e}")
-        return
-    if not dags:
-        st.info("Aucun DAG enregistré pour le moment.")
-        return
-
     # En-tête
     header_cols = st.columns([3, 2, 1.5, 1, 1, 1.5])
     with header_cols[0]:
@@ -162,8 +236,7 @@ def render_dag_list() -> None:
 
     st.markdown("---")
 
-    # Réutilise la liste déjà chargée en tête de fonction
-    for dag in dags:
+    for dag in _cached_dags():
         cols = st.columns([3, 2, 1.5, 1, 1, 1.5])
         with cols[0]:
             st.markdown(f"**{dag.get('dag_id', '—')}**")
@@ -190,63 +263,52 @@ def render_health_panel() -> None:
     with st.spinner("Exécution des 6 health checks..."):
         try:
             results = run_all_checks()
-        except DashboardDataError as e:
-            st.error(f"⚠️ {e}")
-            return
         except Exception as e:
-            if _is_demo_mode():
-                st.info(f"Mode démo — health checks indisponibles ({e})")
-                results = None
-            else:
-                st.error(
-                    f"🔴 Health checks indisponibles ({e}). "
-                    "Vérifier que PostgreSQL répond et que le DAG "
-                    "data_quality_daily a tourné."
-                )
-                return
+            # Fallback mock si DB pas dispo
+            st.info(f"Mode mock — DB indisponible ({e})")
+            results = None
 
     if not results:
-        if _is_demo_mode():
-            # Fallback mock (mode démo uniquement)
-            results = [
-                {
-                    "name": "bronze_freshness",
-                    "status": "ok",
-                    "details": "Bronze trafic: 4 min",
-                    "metric_value": 4.0,
-                    "threshold": 30.0,
-                    "timestamp": "2026-06-06T15:00:00",
-                },
-                {
-                    "name": "bronze_volume",
-                    "status": "ok",
-                    "details": "522k records/24h",
-                    "metric_value": 522000,
-                    "threshold": 1000,
-                },
-                {
-                    "name": "silver_nulls",
-                    "status": "ok",
-                    "details": "Nulls vitesse: 0.2%",
-                    "metric_value": 0.2,
-                    "threshold": 5.0,
-                },
-                {"name": "silver_doublons", "status": "ok", "details": "0 doublons", "metric_value": 0, "threshold": 0},
-                {
-                    "name": "predictions_presentes",
-                    "status": "ok",
-                    "details": "124 prédictions/2h",
-                    "metric_value": 124,
-                    "threshold": 100,
-                },
-                {
-                    "name": "drift_baseline",
-                    "status": "warning",
-                    "details": "1 rapport drift (à analyser)",
-                    "metric_value": 1,
-                    "threshold": 1,
-                },
-            ]
+        # Affichage mock
+        results = [
+            {
+                "name": "bronze_freshness",
+                "status": "ok",
+                "details": "Bronze trafic: 4 min",
+                "metric_value": 4.0,
+                "threshold": 30.0,
+                "timestamp": "2026-06-06T15:00:00",
+            },
+            {
+                "name": "bronze_volume",
+                "status": "ok",
+                "details": "522k records/24h",
+                "metric_value": 522000,
+                "threshold": 1000,
+            },
+            {
+                "name": "silver_nulls",
+                "status": "ok",
+                "details": "Nulls vitesse: 0.2%",
+                "metric_value": 0.2,
+                "threshold": 5.0,
+            },
+            {"name": "silver_doublons", "status": "ok", "details": "0 doublons", "metric_value": 0, "threshold": 0},
+            {
+                "name": "predictions_presentes",
+                "status": "ok",
+                "details": "124 prédictions/2h",
+                "metric_value": 124,
+                "threshold": 100,
+            },
+            {
+                "name": "drift_baseline",
+                "status": "warning",
+                "details": "1 rapport drift (à analyser)",
+                "metric_value": 1,
+                "threshold": 1,
+            },
+        ]
 
     # Normaliser: CheckResult dataclass OU dict mock
     def _as_dict(r):
@@ -290,14 +352,7 @@ def render_data_freshness() -> None:
     """Affiche la fraîcheur des données par source Bronze."""
     st.markdown("##### 📡 Fraîcheur des données (Bronze)")
 
-    try:
-        freshness = _cached_freshness()
-    except DashboardDataError as e:
-        st.error(f"⚠️ {e}")
-        return
-    if not freshness:
-        st.info("Aucune source Bronze n'a collecté de données dans les 24 dernières heures.")
-        return
+    freshness = _cached_freshness()
     # KPI
     n_ok = sum(1 for s in freshness if s.get("status") == "ok")
     n_stale = sum(1 for s in freshness if s.get("status") == "stale")

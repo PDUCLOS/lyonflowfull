@@ -83,23 +83,9 @@ ignore = [
     "B905",  # zip strict (false positive avec tensors)
     "E402",  # imports après docstrings
 ]
-"src/ml/*" = [
-    "RUF001", "RUF002", "RUF003",  # emojis ×ℹ dans Model Card Markdown
-]
 "src/models/*" = [
     "N806",  # X_train, Y_train (math convention sklearn)
     "N803",  # X, Y en arg (math convention)
-]
-"scripts/maintenance/*" = [
-    "RUF002", "RUF003",  # docstring chars (×, –)
-    "B905",  # zip without strict
-    "E741",  # short variable names in debug scripts
-    "F841",  # unused vars in maintenance scripts
-    "B007",  # unused loop vars
-]
-"scripts/debug/*" = [
-    "I001",  # import sorting in debug scripts
-    "E402",  # module imports
 ]
 "dags/legacy_github/*" = [
     # Legacy DAG conservé pour compat ingestion historique. Pas refacto
@@ -187,8 +173,6 @@ addopts = [
     "--strict-config",
     "--showlocals",
     "--tb=short",
-    "-m",
-    "not integration",
     "--ignore=tests/e2e",
 ]
 markers = [

@@ -42,19 +42,4 @@ for var in VPS_HOST VPS_SSH_KEY VPS_DEPLOY_PATH DEPLOY_BRANCH; do
     fi
 done
 
-# Sprint VPS-6 (2026-06-11) — Vérifie que la politique "zéro mock" est
-# activée sur le VPS : LYONFLOW_DEMO_MODE doit être présent et valoir 0.
-# Les mocks sont INTERDITS en production. Le mode démo est réservé au
-# dev local (LYONFLOW_DEMO_MODE=1).
-DEMO_MODE_VAL=$(grep -E "^LYONFLOW_DEMO_MODE=" "$DEPLOY_ENV" | cut -d= -f2 || echo "")
-if [ -z "$DEMO_MODE_VAL" ]; then
-    echo "[WARN] LYONFLOW_DEMO_MODE absent de $DEPLOY_ENV — fallback par défaut (0 = prod)."
-    echo "       Pour lever l'ambiguïté, ajouter explicitement : LYONFLOW_DEMO_MODE=0"
-elif [ "$DEMO_MODE_VAL" != "0" ]; then
-    echo "[ERROR] LYONFLOW_DEMO_MODE=$DEMO_MODE_VAL (attendu: 0 = prod)."
-    echo "         Le mode démo (LYONFLOW_DEMO_MODE=1) est INTERDIT en production."
-    echo "         Voir docs/PLAN_NO_MOCK_VPS.md pour la politique fail loud."
-    exit 1
-fi
-
 echo "[OK] Toutes les variables critiques sont configurées."

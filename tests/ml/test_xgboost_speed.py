@@ -96,10 +96,9 @@ class TestXGBoostSpeedLoad:
 
     @patch("src.ml.mlflow_integration.is_mlflow_available", return_value=False)
     def test_load_skips_mlflow_when_unavailable(self, mock_mlflow):
-        """load() appelle is_mlflow_available depuis mlflow_integration."""
         model = XGBoostSpeedModel()
         model.load()
-        mock_mlflow.assert_called()
+        mock_mlflow.assert_called_once()
 
 
 class TestXGBoostSpeedPredict:
@@ -119,7 +118,6 @@ class TestXGBoostSpeedPredict:
 
     @patch("src.models.xgboost_speed.execute_query")
     def test_predict_with_features_uses_them(self, mock_eq):
-        """predict() utilise les features passees en argument, pas la DB."""
         model = XGBoostSpeedModel()
         model.models[60] = MagicMock()
         model.models[60].predict.return_value = [65.0]

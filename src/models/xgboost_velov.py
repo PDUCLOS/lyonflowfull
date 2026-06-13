@@ -42,7 +42,7 @@ class XGBoostVelovModel:
 
     def __init__(self, model_dir: str | None = None):
         self._model_dir = Path(model_dir or os.getenv("LYONFLOW_MODELS_DIR", "/app/models"))
-        self.models: dict[int, xgb.Booster] = {}
+        self.models: dict[int, xgb.XGBRegressor] = {}
 
     def load(self, horizons: list[int] | None = None) -> None:
         """Charge les modèles depuis MLflow (si dispo) ou depuis le disque local."""

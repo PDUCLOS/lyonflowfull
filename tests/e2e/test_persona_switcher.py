@@ -1,34 +1,28 @@
-"""E2E test: sélection du persona Pro TCL et redirection auth.
-
-Ce test vérifie :
-1. Le persona Usager est le défaut (pas de redirection car pas de session)
-2. Sélection de Pro TCL via la carte "Adopter" (auth requise)
-3. Vérifie que la page affiche bien "Authentification requise"
-4. Vérifie que le sidebar affiche les liens de navigation Pro TCL
-"""
+import re
 
 from playwright.sync_api import Page, expect
 
 
 def test_persona_switcher(page: Page, streamlit_server: str):
-    """Test switching to Pro TCL persona and auth redirect."""
+    """Test switching from no persona to Pro TCL using the sidebar dropdown."""
     page.goto(streamlit_server)
 
-    # Wait for splash screen
-    expect(page.get_by_text("Qui es-tu ?")).to_be_visible(timeout=10000)
+    # Wait for the main app to load by checking the first button
+    expect(page.get_by_role("button", name="➡️ Adopter").first).to_be_visible()
 
-    # Clique sur "Adopter" de la carte Pro TCL (1er bouton Adopter)
-    all_adopter_buttons = page.get_by_role("button", name="Adopter").all()
-    assert len(all_adopter_buttons) >= 1, "Au moins la carte Pro TCL doit être visible"
-    pro_tcl_adopt_btn = all_adopter_buttons[0]
-    pro_tcl_adopt_btn.click()
+    # We want to test the sidebar persona switcher, NOT the main page button
+    # The persona switcher is a selectbox in the sidebar
+    combobox = page.locator("[data-testid='stSidebar']").get_by_role("combobox")
+    combobox.click()
+    # Streamlit selectboxes are best navigated with keyboard in E2E tests
+    # First option is '👤 Usager', second is '💼 Pro TCL'
+    combobox.press("ArrowDown")
+    combobox.press("Enter")
 
-    # Pro TCL est protégé → redirection vers le formulaire d'auth
+    # Pro TCL is protected, so it should redirect back to Accueil asking for a password
     expect(page.get_by_text("Authentification requise")).to_be_visible()
 
-    # Vérifie que la sidebar contient des liens de navigation Pro TCL
-    # Sprint 10: sidebar avec liens texte (plus de stSidebarNav combobox)
-    sidebar = page.locator("[data-testid='stSidebarNav']")
-    # Cherche au moins un lien Pro TCL visible
-    pro_links = sidebar.get_by_text("PCC").all()
-    assert len(pro_links) > 0, "Au moins un lien Pro TCL doit être visible dans la sidebar"
+    # Ensure the sidebar selector has been updated to Pro TCL
+    # Streamlit selectboxes are complex DOM structures
+    sidebar = page.locator("[data-testid='stSidebar']")
+    expect(sidebar.get_by_text("🎛 Pro TCL")).to_be_visible()

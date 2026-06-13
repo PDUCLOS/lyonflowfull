@@ -104,7 +104,7 @@ GET  /api/favorites/fav_1/alternatives → 200, 4 alternatives (velov:25min/1.0,
 | Track | Commit | Message |
 |-------|--------|---------|
 | user_favorites-db | `19f650c9` | Tables, CRUD API, load_favorites() |
-| reco-multimodale | `91acb54f` | Recommandations multimodales + endpoint alternatives |
+| reco-multimodale | `4e1c4262` | Recommandations multimodales + endpoint alternatives |
 | **sprint10-summary** | _(ce commit)_ | sprint10-summary.md |
 
 ---

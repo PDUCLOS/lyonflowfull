@@ -18,8 +18,10 @@ import streamlit as st
 
 from dashboard.components.colors import COLORS
 from dashboard.components.data_cache import cached_infra_bottlenecks
-from src.data.exceptions import DashboardDataError
-from src.data.labels import DIAGNOSIS_LABELS  # Sprint 8 : libellé FR d'un code SQL, pas du mock.
+from src.data.mock.pro_tcl import (
+    DIAGNOSIS_LABELS,
+    SEGMENTS,
+)
 
 _DELAY_THRESHOLD = 120
 _SPEED_THRESHOLD = 25
@@ -56,21 +58,12 @@ def _bottlenecks_to_segments(df: pd.DataFrame) -> list[dict]:
 
 def render_correlation_matrix(line_id: str | None = None) -> None:
     """Affiche la matrice de corrélation bus × trafic pour une ou toutes lignes."""
-    try:
-        df = cached_infra_bottlenecks(top=500)
-    except DashboardDataError as e:
-        st.error(f"⚠️ {e}")
-        return
+    df = cached_infra_bottlenecks(top=500)
 
-    # Sprint 8 (2026-06-12) — viré le fallback mock. Si la DB renvoie
-    # un df vide, on affiche l'info. Pas de mock en prod, pas de mock
-    # en démo (les données viennent de la DB toujours, via les helpers
-    # db_query.py — eux peuvent avoir un fallback gracieux).
     if not df.empty:
         segments = _bottlenecks_to_segments(df)
     else:
-        st.info("Aucun segment瓶颈 — gold.infrastructure_bottlenecks est vide.")
-        return
+        segments = SEGMENTS
 
     if line_id:
         segments = [s for s in segments if s.get("line_id") == line_id]

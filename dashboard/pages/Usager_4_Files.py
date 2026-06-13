@@ -184,8 +184,8 @@ try:
     from dashboard.components.data_cache import cached_spatial_mapping
     from src.data.data_loader import load_traffic_predictions_for_map
 
-    with st.spinner("Chargement des prédictions H+1h…"):
-        df_pred = load_traffic_predictions_for_map(horizon_minutes=60, limit=2000)  # Sprint 8+ : focus H+1h
+    with st.spinner("Chargement des prédictions…"):
+        df_pred = load_traffic_predictions_for_map(horizon_minutes=30, limit=2000)
         df_geo = cached_spatial_mapping(force_mock=False)
 
     if df_pred.empty or df_geo.empty:
