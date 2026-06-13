@@ -32,6 +32,9 @@ x-common-env: &common-env
   MINIO_BUCKET_GOLD: lyonflow-gold
   REDIS_URL: redis://redis:6379/0
   MLFLOW_TRACKING_URI: http://mlflow:5000
+  # Sprint 10+ MLOps — modèles .pkl persistés dans /tmp/models
+  # (volume Docker partagé scheduler+worker, cf. models_data)
+  LYONFLOW_MODELS_DIR: /tmp/models
   # Personas (auth) — lus par src/persona/auth.py
   PERSONA_PRO_TCL_USERNAME: ${PERSONA_PRO_TCL_USERNAME}
   PERSONA_PRO_TCL_PASSWORD: ${PERSONA_PRO_TCL_PASSWORD}
@@ -293,19 +296,27 @@ services:
       AIRFLOW__CORE__EXECUTOR: CeleryExecutor
       AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/airflow
       AIRFLOW__CELERY__BROKER_URL: redis://redis:6379/0
-      AIRFLOW__CELERY__RESULT_BACKEND: db+postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/airflow
+      AIRFLOW__CELERY__RESULT_BACKEND: db+postgresql+psycopg2://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/airflow
+      AIRFLOW__CELERY__WORKER_CONCURRENCY: "2"
     command: scheduler
     volumes:
       - ./dags:/opt/airflow/dags
       - ./src:/opt/airflow/src
+      - ./training:/opt/airflow/training
       - airflow_data:/opt/airflow/data
       - ./logs/airflow:/opt/airflow/logs
+      # Sprint 10+ MLOps — bind mount sdb2 pour les modèles .pkl
+      # (survit aux restarts, partagé scheduler+worker, accessible depuis
+      # l'host pour backup/mirror)
+      - /mnt/postgres-data/models:/tmp/models
     deploy:
       resources:
         limits:
           cpus: "0.5"
           memory: 768M
 
+  # ---------------------------------------------------------------------------
+  # Airflow (init — crée l'utilisateur admin)
   # ---------------------------------------------------------------------------
   # Airflow worker
   # ---------------------------------------------------------------------------
@@ -331,6 +342,8 @@ services:
       - ./src:/opt/airflow/src
       - airflow_data:/opt/airflow/data
       - ./logs/airflow:/opt/airflow/logs
+      # Sprint 10+ MLOps — bind mount sdb2 partagé avec scheduler
+      - /mnt/postgres-data/models:/tmp/models
     deploy:
       resources:
         limits:
@@ -458,3 +471,4 @@ volumes:
     driver: local
   airflow_data:
     driver: local
+  # Sprint 10+ MLOps — models_data supprimé (bind mount direct sdb2)
