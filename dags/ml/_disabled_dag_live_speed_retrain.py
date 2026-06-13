@@ -1,16 +1,20 @@
-"""DAG — Prédiction XGBoost Speed + persiste dans gold.trafic_predictions.
+"""DAG — Retrain XGBoost Speed + persiste prédictions dans gold.trafic_predictions.
 
-Sprint 9+ (Optimisation) — L'entraînement a été déplacé dans un DAG quotidien
-(`dag_daily_speed_train.py`). Ce DAG-ci ne gère plus que l'inférence temps réel.
-Il utilise le vrai modèle XGBoost au lieu de la baseline naïve.
+Sprint VPS-5 (2026-06-10) — Ce DAG comble le trou laissé par le refactor v0.3.1 :
+le nouveau schéma `gold.trafic_predictions` (colonnes axis_key, horizon_h,
+calculated_at, speed_pred, etat_pred, ...) n'était alimenté par aucun DAG
+depuis le déploiement, alors que `db_query.get_traffic_predictions()`
+ainsi que les widgets dashboard l'attendent.
 
-Plan :
-  1. Pour chaque axe, on prédit la vitesse via `XGBoostSpeedModel.predict()`
-  2. INSERT en batch dans `gold.trafic_predictions` (psycopg2 executemany)
-  3. Cleanup : DELETE les prédictions > 7 jours (RGPD rétention)
+Plan (cf analyse_trafficlyon.md ligne 106) :
+  1. Train 4 modèles XGBoost speed (H+5min, H+1h, H+3h, H+6h)
+  2. Pour chaque axe de `gold.dim_spatial_grid_mapping` (~1518),
+     prédire la vitesse via `XGBoostSpeedModel.predict(node_idx, horizon_minutes)`
+  3. INSERT en batch dans `gold.trafic_predictions` (psycopg2 executemany)
+  4. Cleanup : DELETE les prédictions > 7 jours (RGPD rétention)
 
-Note d'horizon : le modèle prend `horizon_minutes` (60) mais
-le schéma gold stocke `horizon_h` (1). On mappe à l'INSERT.
+Note d'horizon : le modèle prend `horizon_minutes` (5/60/180/360) mais
+le schéma gold stocke `horizon_h` (0/1/3/6). On mappe à l'INSERT.
 """
 
 from __future__ import annotations
@@ -28,8 +32,11 @@ from src.db.connection import raw_connection
 logger = logging.getLogger(__name__)
 
 # Mapping horizon_minutes (modèle) -> horizon_h (schéma gold)
-HORIZON_MAP = {  # 2026-06-11: focus H+1h stable
+HORIZON_MAP = {
+    5: 0,  # H+5min  → 0h
     60: 1,  # H+1h
+    180: 3,  # H+3h
+    360: 6,  # H+6h
 }
 
 # Vitesse limite par défaut (Lyon intra-muros : 50 km/h)
@@ -62,31 +69,69 @@ def _etat_for_speed(speed_kmh: float, limit_kmh: float) -> str:
     return "B"
 
 
-def _predict_and_persist() -> dict:
-    """Task 1 — Pour chaque channel_id avec données, persiste une vraie prédiction XGBoost.
+def _train_all_xgboost_speed() -> dict:
+    """Task 1 — Entraîne les 4 modèles XGBoost speed (best-effort).
 
-    Stratégie (Sprint 9+ Optimisation) : Le modèle XGBoost entraîné la nuit dernière
-    est utilisé. La baseline naïve a été retirée.
+    Sprint VPS-5 — Le code XGBoost (src/models/xgboost_speed.py) référence des colonnes
+    obsolètes (speed_lag_1, node_idx, hour_sin, temperature_c, rain_mm, measurement_time)
+    qui n'existent plus dans gold.traffic_features_live (v0.3.1 a renommé en
+    lag_1/delta_1/rolling_mean_3/sin_hour/temperature_2m/precipitation/computed_at).
+
+    Refactor modèle = Sprint 9+. En attendant, on logge l'échec mais on ne bloque
+    pas le DAG : la task ``predict_and_persist_gold`` utilise un baseline
+    (vitesse courante propagée) pour que le dashboard ait des données.
+
+    Returns:
+        Dict {"h{min}min": {"error": str} | {"mae": float, "r2": float}}
+    """
+    from src.models.xgboost_speed import XGBoostSpeedModel
+
+    results = {}
+    for horizon_minutes in HORIZON_MAP:
+        try:
+            model = XGBoostSpeedModel()
+            metrics = model.train_one(horizon_minutes=horizon_minutes)
+            results[f"h{horizon_minutes}min"] = metrics
+            logger.info("Train H+%dmin OK: %s", horizon_minutes, metrics)
+        except Exception as e:
+            logger.warning(
+                "Train H+%dmin FAILED (schema drift probable) — fallback baseline activé: %s",
+                horizon_minutes,
+                e,
+            )
+            results[f"h{horizon_minutes}min"] = {"error": str(e), "fallback": "baseline"}
+    return results
+
+
+def _predict_and_persist() -> dict:
+    """Task 2 — Pour chaque channel_id avec données, persiste une prédiction par horizon.
+
+    Stratégie (Sprint VPS-5) : **baseline = dernière vitesse observée**, propagée
+    sur les 4 horizons. C'est volontairement naïf pour débloquer le dashboard.
+    Sera remplacé par les vraies prédictions XGBoost dès que ``src/models/xgboost_speed.py``
+    sera migré vers le schéma v0.3.1 (Sprint 9+).
+
+    Note technique (Sprint VPS-5) :
+    * ``dim_spatial_grid_mapping.properties_twgid`` contient des entiers (537, 1593...)
+      qui ne correspondent PAS au format ``LYO00xxx`` de ``traffic_features_live.channel_id``.
+    * On ne fait donc PAS de JOIN entre les deux. On itère sur les channel_ids distincts
+      de traffic_features_live (~1100) directement, en gardant lat/lon NULL.
+    * Quand le mapping axis_key ↔ node_idx sera réconcilié (Sprint 9+), on pourra
+      géocoder les prédictions sur la carte.
 
     Returns:
         Dict {"rows_inserted": int, "horizons": {h: count}, "duration_s": float}
     """
-    from src.models.xgboost_speed import XGBoostSpeedModel
-
     started = datetime.now()
 
-    # Load model once for all predictions
-    model = XGBoostSpeedModel()
-    model.load(horizons=list(HORIZON_MAP.keys()))
-
     with raw_connection() as conn, conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
-        # On récupère toutes les features nécessaires pour le predict
+        # DISTINCT ON : 1 ligne par channel_id avec le dernier computed_at
+        # (un INNER JOIN sur MAX(computed_at) matche 1.9M rows car tous les batch
+        # ont le même timestamp ; DISTINCT ON est l'idiome Postgres correct ici)
         cur.execute(
             """
             SELECT DISTINCT ON (channel_id)
-                channel_id, speed_kmh, lag_1, lag_2, lag_3, rolling_mean_3,
-                sin_hour, cos_hour, temperature_2m, precipitation,
-                is_vacances, is_ferie, vitesse_limite_kmh
+                channel_id, speed_kmh, vitesse_limite_kmh
             FROM gold.traffic_features_live
             WHERE speed_kmh IS NOT NULL
             ORDER BY channel_id, computed_at DESC
@@ -94,7 +139,7 @@ def _predict_and_persist() -> dict:
         )
         axes = cur.fetchall()
 
-    logger.info("Predicting XGBoost for %d axes x %d horizons", len(axes), len(HORIZON_MAP))
+    logger.info("Predicting baseline for %d axes x %d horizons", len(axes), len(HORIZON_MAP))
 
     rows_to_insert: list[tuple] = []
     per_horizon_count: dict[int, int] = {}
@@ -102,13 +147,8 @@ def _predict_and_persist() -> dict:
     for horizon_minutes, horizon_h in HORIZON_MAP.items():
         per_horizon_count[horizon_minutes] = 0
         for axis in axes:
+            speed = float(axis.get("speed_kmh") or 30.0)
             limit = float(axis.get("vitesse_limite_kmh") or DEFAULT_SPEED_LIMIT)
-
-            # Predict
-            pred_result = model.predict(str(axis["channel_id"]), horizon_minutes=horizon_minutes, features=axis)
-            speed = pred_result["predicted_speed_kmh"]
-            model_version = pred_result["model_version"]
-
             color = _color_for_speed(speed, limit)
             etat = _etat_for_speed(speed, limit)
             rows_to_insert.append(
@@ -121,7 +161,7 @@ def _predict_and_persist() -> dict:
                     color,
                     limit,
                     f"H+{horizon_minutes}min",
-                    f"xgboost_speed_{model_version}",
+                    "baseline_v0.3.1",
                     None,  # lat — pas de JOIN avec dim_spatial_grid_mapping (Sprint 9+)
                     None,  # lon
                 )
@@ -179,23 +219,30 @@ def _cleanup_old_predictions(retention_days: int = 7) -> int:
 
 default_args = {
     "owner": "lyonflow",
-    # Sprint 8+3 (2026-06-12) — Fiabilité VPS : retries=0 pour ne pas
-    # empiler des runs en cas d'échec (le DAG tourne déjà toutes les
-    # 30min, on attendra le prochain cycle).
-    "retries": 0,
+    "retries": 1,
     "retry_delay": timedelta(minutes=5),
 }
 
 with DAG(
     dag_id="dag_live_speed_retrain",
-    description="Prédictions XGBoost speed et persistance dans gold.trafic_predictions (inférence uniquement).",
+    description=(
+        "Retrain 4 XGBoost speed (5min/1h/3h/6h) + persiste prédictions "
+        "dans gold.trafic_predictions (nouveau schéma v0.3.1 axis_key/horizon_h/calculated_at). "
+        "Alimente les widgets dashboard et la couche routing."
+    ),
     default_args=default_args,
-    schedule="*/30 * * * *",  # 2026-06-11: 30min, focus H+1h (cf analyse_trafficlyon.md)
+    schedule="20 * * * *",  # hourly à :20 (cf analyse_trafficlyon.md)
     start_date=datetime(2026, 1, 1),
     catchup=False,
     max_active_runs=1,
     tags=["ml", "xgboost", "traffic", "predictions", "gold"],
 ) as dag:
+    train = PythonOperator(
+        task_id="train_xgboost_speed_all_horizons",
+        python_callable=_train_all_xgboost_speed,
+        execution_timeout=timedelta(minutes=20),
+    )
+
     predict = PythonOperator(
         task_id="predict_and_persist_gold",
         python_callable=_predict_and_persist,
@@ -209,4 +256,4 @@ with DAG(
         execution_timeout=timedelta(minutes=2),
     )
 
-    predict >> cleanup
+    train >> predict >> cleanup

@@ -12,6 +12,7 @@ from dashboard.components.theme import inject_theme
 from dashboard.components.widgets.elu import (
     render_executive_summary,
     render_kpi_cards,
+    render_monthly_evolution,
     render_news_section,
     render_pdf_generator,
     render_top_decisions,
@@ -43,6 +44,10 @@ st.markdown("---")
 render_kpi_cards()
 
 st.markdown("---")
+# Évolution mensuelle KPIs (Sprint 11 — Altair)
+st.markdown("##### 📊 Évolution mensuelle — 12 derniers mois")
+render_monthly_evolution()
+
 
 # Carte charge trafic — synthèse exécutive (Sprint 10)
 st.markdown("##### 🗺️ Charge du trafic — projection H+1h")

@@ -564,3 +564,11 @@ async def login(req: LoginRequest, request: Request):
         username=user["username"],
         token=token,
     )
+
+
+# -----------------------------------------------------------------------------
+# Favoris usager (Sprint 10)
+# -----------------------------------------------------------------------------
+from src.api.favorites import router as favorites_router  # noqa: E402
+
+app.include_router(favorites_router)

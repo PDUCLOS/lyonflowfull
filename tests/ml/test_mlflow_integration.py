@@ -20,6 +20,14 @@ import pytest
 # Permet l'import depuis la racine
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
+
+# Fixture pour forcer le mode démo dans les tests MLflow
+# (MLflow server non disponible en CI → utilise les mocks)
+@pytest.fixture(autouse=True)
+def force_demo_mode(monkeypatch):
+    monkeypatch.setenv("LYONFLOW_DEMO_MODE", "1")
+
+
 from src.ml import mlflow_integration
 from src.ml.mlflow_integration import (
     MLflowTracker,
