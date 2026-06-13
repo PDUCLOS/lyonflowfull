@@ -2,9 +2,9 @@ name: CI LyonFlowFull
 
 on:
   push:
-    branches: [main, develop, vps, "feature/**", "fix/**"]
+    branches: [main, develop, vps, "feature/**", "fix/**", "sprint**"]
   pull_request:
-    branches: [main, develop, vps]
+    branches: [main, develop, vps, "sprint**"]
 
 env:
   PYTHON_VERSION: "3.12"
