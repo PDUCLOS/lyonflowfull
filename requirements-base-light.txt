@@ -35,6 +35,7 @@ requests>=2.31.0
 
 # DB
 psycopg2-binary>=2.9.9
+sqlalchemy>=2.0.0,<3.0.0
 
 # Data
 pandas>=2.0.0,<3.0.0
@@ -44,6 +45,9 @@ joblib>=1.3.0
 # ML (Sprint P2-bis : xgboost requis pour /api/v1/predict/traffic)
 xgboost>=2.0.0,<4.0.0
 scikit-learn>=1.3.0,<2.0.0
+
+# Routing (graphe multimodal, Dijkstra, nearest node — utilisé par src.routing)
+networkx>=3.2.0,<4.0.0
 
 # API
 fastapi>=0.110.0
