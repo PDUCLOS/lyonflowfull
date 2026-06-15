@@ -35,8 +35,12 @@ tests/
 # IDEs
 .vscode/
 .idea/
+.opencode/
 *.swp
 *.swo
+
+# Node (jamais utilisé en runtime, juste pour tooling local)
+node_modules/
 
 # OS
 .DS_Store
