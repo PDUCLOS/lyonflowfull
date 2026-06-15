@@ -8,6 +8,21 @@ Usage :
     python scripts/seed_users.py
 
 Idempotent : UPSERT sur username.
+
+Sprint P3.3 (2026-06-14) — AUDIT_INTEGRATION_LIVE.md § P3.3.
+Ce script est la pièce qui complète la migration alembic 0004
+(création de ``gold.app_users``). Sans seed, la table est vide après
+migration → login API inutilisable.
+
+Variables d'env (lues au boot) :
+- PERSONA_PRO_TCL_USERNAME (défaut: "pro_tcl")
+- PERSONA_PRO_TCL_PASSWORD (requis)
+- PERSONA_ELU_USERNAME (défaut: "elu")
+- PERSONA_ELU_PASSWORD (requis)
+- ADMIN_USERNAME (défaut: "admin")
+- ADMIN_PASSWORD (optionnel — admin seulement)
+
+Cf. aussi ``sprint10-summary.md`` pour le flow complet d'auth.
 """
 
 from __future__ import annotations
