@@ -45,8 +45,7 @@ COPY --chown=airflow:root config/ ${AIRFLOW_HOME}/config/
 WORKDIR ${AIRFLOW_HOME}
 
 # Etape 4 — entrypoint custom (fix permissions bind mounts après rsync)
+USER root
 COPY scripts/airflow-entrypoint.sh /entrypoint.sh
 RUN chmod +x /entrypoint.sh
-
-USER root
 ENTRYPOINT ["/entrypoint.sh"]
