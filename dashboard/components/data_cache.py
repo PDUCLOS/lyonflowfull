@@ -209,5 +209,20 @@ def cached_mlflow_experiment_summary(force_mock: bool = False) -> dict:
 
 
 def clear_all_caches() -> None:
-    """Vide tous les caches Streamlit (utilisable depuis un bouton 'refresh')."""
+    """Vide tous les caches Streamlit (utilisable depuis un bouton 'refresh').
+
+    Sprint P1.6 (2026-06-14) — Vide aussi le cache lieux (TTL 60s dans
+    ``src.data.data_loader``), pas seulement les caches ``@st.cache_data``.
+    Sinon un bouton "refresh" du dashboard ne re-chargerait pas les
+    référentiels lieux (autocomplete, itinerary) pendant 60s.
+    """
     st.cache_data.clear()
+    # Cache lieux (implémenté en TTL manuel dans data_loader, pas via
+    # @st.cache_data — il faut le vider explicitement).
+    try:
+        from src.data.data_loader import reset_lieux_cache
+
+        reset_lieux_cache()
+    except ImportError:  # pragma: no cover
+        # Si data_loader n'est pas dispo (ex. import en CI), on ignore.
+        pass
