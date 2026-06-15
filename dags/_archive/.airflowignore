@@ -1,0 +1,2 @@
+# Airflow ne doit PAS scanner ce dossier.
+# Contient des DAGs archivés / désactivés — cf. AUDIT_INTEGRATION_LIVE.md § 1.2.1.

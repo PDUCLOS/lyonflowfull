@@ -137,6 +137,7 @@ def _predict_and_persist() -> dict:
             vitesse_limite_kmh, label, model_version, lat, lon
         )
         VALUES %s
+        ON CONFLICT (axis_key, horizon_h, calculated_at) DO NOTHING
     """
 
     with raw_connection() as conn, conn.cursor() as cur:
