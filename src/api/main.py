@@ -319,7 +319,16 @@ async def list_models(api_key: None = Depends(verify_api_key)):
 
 @app.post("/api/v1/predict/traffic", response_model=PredictTrafficResponse, tags=["predict"])
 async def predict_traffic(req: PredictTrafficRequest, api_key: None = Depends(verify_api_key)):
-    """Prédit la vitesse trafic pour un nœud et un horizon."""
+    """Prédit la vitesse trafic pour un nœud et un horizon.
+
+    Note P0 (2026-06-14) : le Pydantic model expose ``node_idx: int`` pour
+    rétro-compat avec les clients existants, mais le modèle ML attend
+    ``channel_id: str`` (format "LYO00xxx"). Le cast ``str(node_idx)``
+    garantit la signature ; le lookup en base retournera souvent vide →
+    le modèle tombera sur son fallback (30 km/h ±5). C'est le comportement
+    attendu tant que l'API n'est pas migrée vers un channel_id string
+    (cf. AUDIT_INTEGRATION_LIVE.md § 2.2.1, à traiter en P1).
+    """
     # Sprint VPS-4 : métriques ML
     with PREDICTION_LATENCY.labels(model="xgboost_speed").time():
         from src.models.xgboost_speed import XGBoostSpeedModel
@@ -327,7 +336,7 @@ async def predict_traffic(req: PredictTrafficRequest, api_key: None = Depends(ve
         # TODO: Câbler la récupération du modèle depuis MLflow Registry en priorité
         # En attendant, on utilise la logique locale/fallback du modèle XGBoost
         model = XGBoostSpeedModel()
-        prediction = model.predict(req.node_idx, req.horizon_minutes)
+        prediction = model.predict(str(req.node_idx), req.horizon_minutes)
 
     PREDICTIONS_TOTAL.labels(
         model="xgboost_speed",
