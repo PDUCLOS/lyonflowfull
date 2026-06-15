@@ -133,24 +133,48 @@ def get_traffic_timeseries_for_node(node_idx: int, hours: int = 24) -> pd.DataFr
 
 
 def get_traffic_for_node(node_idx: int, hours: int = 24) -> pd.DataFrame:
-    """Série temporelle de vitesse pour un nœud donné.
+    """Série temporelle de vitesse pour un nœud GNN donné.
+
+    Sprint P1.2 (2026-06-14) — Fix AUDIT_INTEGRATION_LIVE.md § 1.1.2.
+    La query originale référençait des colonnes qui n'existent PAS dans
+    le schéma réel de ``gold.traffic_features_live`` (``node_idx``,
+    ``measurement_time``, ``speed_lag_1``, ``speed_delta_1``,
+    ``rolling_mean_5min``, ``hour_sin``, ``temperature_c``, ``rain_mm``).
+    Le schéma réel utilise ``channel_id`` + ``computed_at`` + ``lag_1`` +
+    ``delta_1`` + ``rolling_mean_3`` + ``sin_hour`` + ``temperature_2m`` +
+    ``precipitation``.
+
+    Le mapping ``node_idx`` → ``channel_id`` passe par
+    ``gold.dim_spatial_grid_mapping.properties_twgid`` (cf. init-db.sql:1066,
+    vue matérialisée ``gold.mv_fact_traffic_pivot``).
 
     Args:
-        node_idx: Index du nœud dans gold.dim_spatial_grid_mapping.
+        node_idx: Index du nœud GNN dans gold.dim_spatial_grid_mapping.
         hours: Fenêtre temporelle en heures (défaut 24).
 
     Returns:
-        DataFrame avec colonnes: measurement_time, speed_kmh, speed_lag_1,
-        rolling_mean_5min, hour_sin, hour_cos.
+        DataFrame avec colonnes: measurement_time, speed_kmh, lag_1, lag_2,
+        lag_3, delta_1, rolling_mean_3, sin_hour, cos_hour, temperature_2m,
+        precipitation, is_vacances.
+        DataFrame vide si aucun mapping trouvé pour ce node_idx.
     """
     query = """
-        SELECT measurement_time, speed_kmh, speed_lag_1, speed_lag_2,
-               speed_delta_1, rolling_mean_5min, hour_sin, hour_cos,
-               temperature_c, rain_mm, is_vacances
-        FROM gold.traffic_features_live
-        WHERE node_idx = %s
-          AND measurement_time >= NOW() - make_interval(hours => %s)
-        ORDER BY measurement_time ASC
+        SELECT
+            t.computed_at AS measurement_time,
+            t.speed_kmh,
+            t.lag_1, t.lag_2, t.lag_3,
+            t.delta_1,
+            t.rolling_mean_3,
+            t.sin_hour, t.cos_hour,
+            t.temperature_2m,
+            t.precipitation,
+            COALESCE(t.is_vacances, FALSE) AS is_vacances
+        FROM gold.traffic_features_live t
+        JOIN gold.dim_spatial_grid_mapping m
+          ON m.properties_twgid = t.channel_id
+        WHERE m.node_idx = %s
+          AND t.computed_at >= NOW() - make_interval(hours => %s)
+        ORDER BY t.computed_at ASC
     """
     return _df_from_query(query, (node_idx, hours))
 
@@ -783,11 +807,33 @@ def get_amenagements_passes(limit: int = 50) -> pd.DataFrame:
 def get_line_kpis(line_ids: list[str] | None = None) -> dict:
     """KPIs par ligne TCL (OTP, retards, fréquence).
 
-    En l'absence de DB, retourne un stub vide pour ne pas bloquer les tests.
-    TODO Sprint 10+: câbler sur gold.mv_line_kpis_live.
+    Sprint P0 (2026-06-14) — Format de retour aligné sur le contrat attendu
+    par les widgets dashboard (cf. ``widgets/pro_tcl/line_kpis.py``,
+    ``widgets/pro_tcl/line_comparison.py`` et le mock
+    ``pro_tcl.LINE_KPIS``)::
+
+        {
+            "<line_id>": {
+                "otp_pct": float,
+                "avg_delay_min": float,
+                "frequency_min": float,   # intervalle entre véhicules (min)
+                "load_pct": float,        # taux d'occupation (0..100)
+                "trend": str,             # "up" | "down" | "stable"
+                "trend_delta": float,
+            },
+            ...
+        }
+
+    Notes :
+    * La vue ``gold.mv_line_kpis_live`` n'est pas encore matérialisée
+      (Sprint 10+). Si elle n'existe pas, on retourne ``{}`` (les widgets
+      afficheront "Aucun KPI ligne disponible" plutôt que de crasher).
+    * Conversion ``frequency_pph`` (bus/h) → ``frequency_min`` (min/bus)
+      faite ici (60 / pph), arrondi à 1 décimale.
+    * ``occupancy_pct`` (DB) → ``load_pct`` (widget) : simple rename.
     """
     if not _is_db_available():
-        return {"lines": [], "timestamp": None}
+        return {}
     query = """
         SELECT line_id, line_name, otp_pct, avg_delay_min,
                frequency_pph, occupancy_pct, date
@@ -799,14 +845,42 @@ def get_line_kpis(line_ids: list[str] | None = None) -> dict:
     params = (line_ids, line_ids)
     try:
         df = _df_from_query(query, params)
-    except Exception:
-        return {"lines": [], "timestamp": None}
+    except Exception as e:
+        # Vue absente ou query invalide — fail-soft pour P0.
+        logger.warning(
+            "get_line_kpis: query gold.mv_line_kpis_live a échoué (%s) — "
+            "fallback dict vide. Vue à matérialiser Sprint 10+.",
+            e,
+        )
+        return {}
     if df.empty:
-        return {"lines": [], "timestamp": None}
-    return {
-        "lines": df.to_dict("records"),
-        "timestamp": df["date"].max().isoformat() if "date" in df.columns else None,
-    }
+        return {}
+
+    out: dict[str, dict] = {}
+    for _, row in df.iterrows():
+        line_id = str(row.get("line_id") or "").strip()
+        if not line_id:
+            continue
+        # Conversion fréquence : vehicles/h → minutes/vehicle
+        freq_pph = row.get("frequency_pph")
+        try:
+            freq_pph_val = float(freq_pph) if freq_pph is not None else 0.0
+        except (TypeError, ValueError):
+            freq_pph_val = 0.0
+        if freq_pph_val > 0:
+            frequency_min = round(60.0 / freq_pph_val, 1)
+        else:
+            frequency_min = 0.0
+
+        out[line_id] = {
+            "otp_pct": float(row.get("otp_pct") or 0),
+            "avg_delay_min": float(row.get("avg_delay_min") or 0),
+            "frequency_min": frequency_min,
+            "load_pct": float(row.get("occupancy_pct") or 0),
+            "trend": "stable",  # Pas dans la MV — déduit côté front si besoin
+            "trend_delta": 0.0,
+        }
+    return out
 
 
 def get_otp_heatmap() -> pd.DataFrame:
@@ -830,39 +904,76 @@ def get_otp_heatmap() -> pd.DataFrame:
 def get_bottlenecks_summary() -> pd.DataFrame:
     """Résumé agrégé des bottlenecks d'infrastructure.
 
-    TODO Sprint 10+: câbler sur gold.infrastructure_bottlenecks.
+    Sprint P2.2 (2026-06-14) — AUDIT_INTEGRATION_LIVE.md § 2.3.5.
+    Avant : la query référençait des colonnes (zone, line_id, voyageurs_jour,
+            gain_min, cout_M_euros, roi_mois, priorite) issues d'une vue
+            matérialisée ``gold.bottlenecks_summary_agg`` qui n'a jamais
+            été créée. Conséquence : la query tombait toujours dans le
+            except → DataFrame vide → widget Élu ignorait silencieusement
+            les bottlenecks réels et se rabattait sur les coords
+            hardcodées du mock.
+    Après : query directe sur ``gold.infrastructure_bottlenecks`` (créée
+            par le DAG gold). On agrège à la volée par ``line_ref`` et on
+            ramène lat/lon (moyenne par group) pour que le widget carte
+            puisse géocoder dynamiquement. Si lat/lon sont NULL en base
+            (migration 0006 pas encore appliquée), on retourne des NaN que
+            le widget sait gérer (fallback hardcode démo).
+
+    Returns:
+        DataFrame: line_id, zone, lat, lon, n_segments, n_observations,
+        avg_bus_delay, avg_traffic_speed, computed_at.
     """
     if not _is_db_available():
         return pd.DataFrame(
             columns=[
-                "zone",
                 "line_id",
-                "voyageurs_jour",
-                "gain_min",
-                "cout_M_euros",
-                "roi_mois",
-                "priorite",
+                "zone",
+                "lat",
+                "lon",
+                "n_segments",
+                "n_observations",
+                "avg_bus_delay",
+                "avg_traffic_speed",
+                "computed_at",
             ]
         )
     query = """
-        SELECT zone, line_id, voyageurs_jour, gain_min,
-               cout_M_euros, roi_mois, priorite
+        SELECT
+            line_ref AS line_id,
+            diagnosis AS zone,
+            AVG(lat) AS lat,
+            AVG(lon) AS lon,
+            COUNT(*) AS n_segments,
+            SUM(n_observations) AS n_observations,
+            AVG(bus_delay_seconds) AS avg_bus_delay,
+            AVG(traffic_speed_kmh) AS avg_traffic_speed,
+            MAX(computed_at) AS computed_at
         FROM gold.infrastructure_bottlenecks
-        ORDER BY priorite DESC, gain_min DESC
+        WHERE lat IS NOT NULL AND lon IS NOT NULL
+        GROUP BY line_ref, diagnosis
+        ORDER BY n_observations DESC
         LIMIT 50
     """
     try:
         return _df_from_query(query)
-    except Exception:
+    except Exception as e:
+        # Table absente ou query invalide — fail-soft.
+        logger.warning(
+            "get_bottlenecks_summary: query gold.infrastructure_bottlenecks a échoué (%s) — "
+            "fallback DF vide. Migration 0006 à appliquer (cf. AUDIT_P2_PLAN.md).",
+            e,
+        )
         return pd.DataFrame(
             columns=[
-                "zone",
                 "line_id",
-                "voyageurs_jour",
-                "gain_min",
-                "cout_M_euros",
-                "roi_mois",
-                "priorite",
+                "zone",
+                "lat",
+                "lon",
+                "n_segments",
+                "n_observations",
+                "avg_bus_delay",
+                "avg_traffic_speed",
+                "computed_at",
             ]
         )
 
@@ -909,3 +1020,91 @@ def get_smart_velov_for_lieu(lieu_id: int, k: int = 3) -> list[dict]:
         return df.to_dict("records") if not df.empty else []
     except Exception:
         return []
+
+
+# =============================================================================
+# Stubs P0 — fonctions référencées par data_loader/widgets mais non encore
+# implémentées côté SQL. AUDIT_INTEGRATION_LIVE.md § 2.1.1.
+#
+# Ces stubs retournent des valeurs vides sûres. Les callers
+# (load_lyon_addresses, load_cadence_for_line, xgboost_speed) gèrent
+# déjà la liste vide / None comme "DB OK, pas de données" sans crasher.
+#
+# Cible P1 : câbler ces 4 fonctions sur les vraies tables/vues Gold
+# (referentiel.lieux_lyon, referentiel.lieux_transports,
+#  referentiel.lieux_calendrier, gold.model_drift_reports).
+# =============================================================================
+
+
+def get_lieux_lyon_names() -> list[str]:
+    """Noms des lieux Lyon (pour autocomplete search_bar).
+
+    Sprint P0 (2026-06-14) — Stub. Cible P1 : câbler sur
+    ``referentiel.lieux_lyon.nom``.
+
+    Returns:
+        Liste vide (la table référentiel n'est pas encore créée).
+    """
+    logger.warning(
+        "get_lieux_lyon_names: stub P0 — table referentiel.lieux_lyon absente. "
+        "L'autocomplete renverra une liste vide. À implémenter en P1."
+    )
+    return []
+
+
+def get_lieux_lyon_with_coords() -> list[dict]:
+    """Lieux Lyon avec coordonnées GPS (pour markers carte).
+
+    Sprint P0 (2026-06-14) — Stub. Cible P1 : câbler sur
+    ``referentiel.lieux_lyon`` (colonnes nom, lon, lat, type).
+
+    Returns:
+        Liste vide (la table référentiel n'est pas encore créée).
+    """
+    logger.warning(
+        "get_lieux_lyon_with_coords: stub P0 — table referentiel.lieux_lyon absente. "
+        "Les markers carte seront vides. À implémenter en P1."
+    )
+    return []
+
+
+def get_cadence_for_line(
+    line_ref: str,
+    day_type: str | None = None,
+    time_bucket: str | None = None,
+) -> list[dict]:
+    """Cadence observée (intervalle entre bus/trams) pour une ligne TCL.
+
+    Sprint P0 (2026-06-14) — Stub. Cible P1 : câbler sur
+    ``referentiel.lieux_calendrier`` ou une vue équivalente.
+
+    Args:
+        line_ref: identifiant TCL (ex. ``'M_A'``, ``'T_1'``, ``'C_3'``).
+        day_type: filtre optionnel (weekday|saturday|sunday_holiday|vacation).
+        time_bucket: filtre optionnel (ex. ``'08:00'``).
+
+    Returns:
+        Liste vide — pas de cadence calculable sans la vue calendrier.
+    """
+    logger.warning(
+        "get_cadence_for_line(%s): stub P0 — vue calendrier absente. "
+        "La cadence retournée sera vide. À implémenter en P1.",
+        line_ref,
+    )
+    return []
+
+
+def get_latest_drift_report() -> dict | None:
+    """Dernier rapport de drift Evidently (Model Monitoring).
+
+    Sprint P0 (2026-06-14) — Stub. Cible P1 : câbler sur
+    ``gold.model_drift_reports`` (table existe dans init-db.sql ligne 909-920).
+
+    Returns:
+        None — la fonction est utilisée par ``XGBoostSpeedModel.train_one``
+        pour enrichir le Model Card. Sans rapport, le Model Card affiche
+        "drift = N/A" (acceptable P0, à enrichir P1).
+    """
+    # Pas de log warning ici : la fonction est appelée à chaque retrain et
+    # serait trop verbeuse. Le Model Card gère déjà le cas None.
+    return None

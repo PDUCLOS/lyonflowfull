@@ -313,6 +313,12 @@ def load_velov_stations(force_mock: bool = False) -> list[dict]:
     return [
         {
             "id": int(row.get("station_id", i)),
+            # Sprint P3.4 (2026-06-14) — AUDIT_INTEGRATION_LIVE.md § P3.4.
+            # Ajout de "station_id" (str) en plus de "id" (int) pour
+            # permettre au widget ``velov_widget.py`` de matcher avec
+            # le dict de prédictions H+30min (qui utilise station_id
+            # comme clé string).
+            "station_id": str(row.get("station_id", i)),
             "name": row.get("station_name", f"Station {i}"),
             "lat": float(row.get("lat") or 0.0) if not pd.isna(row.get("lat")) else 0.0,
             "lon": float(row.get("lng") or 0.0) if not pd.isna(row.get("lng")) else 0.0,
@@ -714,6 +720,11 @@ def load_bottlenecks_top(force_mock: bool = False) -> list[dict]:
 
     Reconstruit le format ``BOTTLENECKS_TOP_10`` mock depuis le DataFrame
     ``load_bottlenecks_summary``.
+
+    Sprint P2.2 (2026-06-14) — AUDIT_INTEGRATION_LIVE.md § 2.3.5.
+    Ajout du passage lat/lon (si disponibles) dans le dict retourné,
+    pour que le widget ``bottleneck_map.py`` puisse géocoder dynamiquement
+    plutôt que de tomber dans le fallback hardcodé.
     """
     # En attendant la vraie table gold.bottlenecks_summary_agg, on utilise
     # les données de load_bottlenecks_summary (MOCK_INFRA_BOTTLENECKS)
@@ -725,10 +736,22 @@ def load_bottlenecks_top(force_mock: bool = False) -> list[dict]:
 
     bottlenecks = []
     for i, row in df.head(10).iterrows():
+        # Sprint P2.2 : lat/lon dynamiques si présents
+        try:
+            lat = float(row["lat"]) if row.get("lat") is not None else None
+        except (ValueError, TypeError):
+            lat = None
+        try:
+            lon = float(row["lon"]) if row.get("lon") is not None else None
+        except (ValueError, TypeError):
+            lon = None
+
         bottlenecks.append(
             {
                 "rank": int(row.get("bottleneck_id", i + 1)),
                 "zone": row.get("road_name", "—"),
+                "lat": lat,
+                "lon": lon,
                 "lines_impacted": ["C3", "C13"],  # approximation mock
                 "voyageurs_jour": int(row.get("voyageurs_jour", 5000 + i * 1000)),
                 "gain_min": 5 + i,
