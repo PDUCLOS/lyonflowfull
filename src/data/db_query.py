@@ -1050,33 +1050,75 @@ def get_smart_velov_for_lieu(lieu_id: int, k: int = 3) -> list[dict]:
 def get_lieux_lyon_names() -> list[str]:
     """Noms des lieux Lyon (pour autocomplete search_bar).
 
-    Sprint P0 (2026-06-14) — Stub. Cible P1 : câbler sur
-    ``referentiel.lieux_lyon.nom``.
+    Sprint P2-ter (2026-06-15) — Câblage sur ``referentiel.lieux_lyon.name``.
 
     Returns:
-        Liste vide (la table référentiel n'est pas encore créée).
+        Liste des noms de lieux actifs (21 en prod), triés alpha.
+        Liste vide si DB indisponible (fail-soft, comme les autres stubs).
     """
-    logger.warning(
-        "get_lieux_lyon_names: stub P0 — table referentiel.lieux_lyon absente. "
-        "L'autocomplete renverra une liste vide. À implémenter en P1."
-    )
-    return []
+    if not _is_db_available():
+        return []
+    query = """
+        SELECT name
+        FROM referentiel.lieux_lyon
+        WHERE is_active = TRUE
+        ORDER BY name
+    """
+    try:
+        df = _df_from_query(query)
+    except Exception as e:
+        logger.warning(
+            "get_lieux_lyon_names: query referentiel.lieux_lyon a échoué (%s) — "
+            "fallback liste vide.",
+            e,
+        )
+        return []
+    if df.empty:
+        return []
+    return [str(n) for n in df["name"].tolist()]
 
 
 def get_lieux_lyon_with_coords() -> list[dict]:
-    """Lieux Lyon avec coordonnées GPS (pour markers carte).
+    """Lieux Lyon avec coordonnées GPS (pour markers carte + search bar).
 
-    Sprint P0 (2026-06-14) — Stub. Cible P1 : câbler sur
-    ``referentiel.lieux_lyon`` (colonnes nom, lon, lat, type).
+    Sprint P2-ter (2026-06-15) — Câblage sur ``referentiel.lieux_lyon``.
+
+    Format retour: list[dict] avec clés ``name, lon, lat, type``
+    (aligné avec ``LYON_ADDRESSES`` du mock ``src.data.mock.lyon_addresses``
+    pour drop-in replacement dans les widgets).
 
     Returns:
-        Liste vide (la table référentiel n'est pas encore créée).
+        Liste de dicts {name, lon, lat, type}, filtrés is_active=true.
+        Liste vide si DB indisponible (fail-soft).
     """
-    logger.warning(
-        "get_lieux_lyon_with_coords: stub P0 — table referentiel.lieux_lyon absente. "
-        "Les markers carte seront vides. À implémenter en P1."
-    )
-    return []
+    if not _is_db_available():
+        return []
+    query = """
+        SELECT name, lon, lat, type
+        FROM referentiel.lieux_lyon
+        WHERE is_active = TRUE
+        ORDER BY name
+    """
+    try:
+        df = _df_from_query(query)
+    except Exception as e:
+        logger.warning(
+            "get_lieux_lyon_with_coords: query referentiel.lieux_lyon a échoué (%s) — "
+            "fallback liste vide.",
+            e,
+        )
+        return []
+    if df.empty:
+        return []
+    return [
+        {
+            "name": str(row["name"]),
+            "lon": float(row["lon"]),
+            "lat": float(row["lat"]),
+            "type": str(row["type"]),
+        }
+        for _, row in df.iterrows()
+    ]
 
 
 def get_cadence_for_line(
