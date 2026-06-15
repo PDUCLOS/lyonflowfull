@@ -33,10 +33,10 @@ logger = logging.getLogger(__name__)
 
 # Mapping horizon_minutes (modèle) -> horizon_h (schéma gold)
 HORIZON_MAP = {
-    5: 0,  # H+5min  → 0h
-    60: 1,  # H+1h
-    180: 3,  # H+3h
-    360: 6,  # H+6h
+    # Sprint P2-bis (2026-06-15) — focus H+1h uniquement (alignement P2.1
+    # fait sur retrain_xgboost.py). 1 seul horizon = 1 seul modèle à
+    # entraîner hourly, économie 4x compute + RAM sur le worker.
+    60: 1,  # H+1h → 1h
 }
 
 # Vitesse limite par défaut (Lyon intra-muros : 50 km/h)
