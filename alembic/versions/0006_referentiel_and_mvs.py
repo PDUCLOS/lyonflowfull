@@ -68,13 +68,25 @@ def upgrade() -> None:
         )
         """
     )
+    # Sprint P2-bis (2026-06-15) — Le schéma prod préexistant utilise
+    # ``name`` (et pas ``nom``) + ``is_active`` + n'a PAS de colonne ``geom``.
+    # Les CREATE INDEX IF NOT EXISTS ne sont pas idempotents au niveau
+    # colonne : on saute si la colonne manque. Doc inline.
     op.execute(
-        "CREATE INDEX IF NOT EXISTS idx_lieux_lyon_nom "
-        "ON referentiel.lieux_lyon (nom)"
+        "DO $$ BEGIN "
+        "IF EXISTS (SELECT 1 FROM information_schema.columns "
+        "           WHERE table_schema='referentiel' AND table_name='lieux_lyon' AND column_name='nom') "
+        "THEN CREATE INDEX IF NOT EXISTS idx_lieux_lyon_nom ON referentiel.lieux_lyon (nom); "
+        "ELSE RAISE NOTICE 'colonne nom absente — idx_lieux_lyon_nom skip (sch\u00e9ma prod utilise name)'; "
+        "END IF; $$"
     )
     op.execute(
-        "CREATE INDEX IF NOT EXISTS idx_lieux_lyon_geom "
-        "ON referentiel.lieux_lyon USING gist (geom)"
+        "DO $$ BEGIN "
+        "IF EXISTS (SELECT 1 FROM information_schema.columns "
+        "           WHERE table_schema='referentiel' AND table_name='lieux_lyon' AND column_name='geom') "
+        "THEN CREATE INDEX IF NOT EXISTS idx_lieux_lyon_geom ON referentiel.lieux_lyon USING gist (geom); "
+        "ELSE RAISE NOTICE 'colonne geom absente — idx_lieux_lyon_geom skip'; "
+        "END IF; $$"
     )
 
     # -------------------------------------------------------------------------
