@@ -42,4 +42,21 @@ for var in VPS_HOST VPS_SSH_KEY VPS_DEPLOY_PATH DEPLOY_BRANCH; do
     fi
 done
 
+# Sprint P1.3 (2026-06-14) — Vérifie que l'aide démo n'est PAS visible en prod.
+# Le .env est rsync sur le VPS ; si LYONFLOW_DEMO_AUTH_HELPER_VISIBLE=1 sur
+# le VPS, l'UI affiche le mot de passe demo2026 en clair (cf. AUDIT § 2.3.1).
+if [ -f ".env" ]; then
+    DEMO_VISIBLE=$(grep -E "^LYONFLOW_DEMO_AUTH_HELPER_VISIBLE=" .env | cut -d= -f2 | tr -d '"' | tr -d "'" || echo "")
+    if [ "$DEMO_VISIBLE" = "1" ]; then
+        echo "[WARN] LYONFLOW_DEMO_AUTH_HELPER_VISIBLE=1 détecté dans .env"
+        echo "       → l'aide démo affichera le mot de passe en clair sur le VPS."
+        echo "       Pour la prod, mettre LYONFLOW_DEMO_AUTH_HELPER_VISIBLE=0 dans .env"
+        read -p "Continuer quand même ? [y/N] " confirm
+        if [ "$confirm" != "y" ] && [ "$confirm" != "Y" ]; then
+            echo "[ABORT] Déploiement annulé."
+            exit 1
+        fi
+    fi
+fi
+
 echo "[OK] Toutes les variables critiques sont configurées."
