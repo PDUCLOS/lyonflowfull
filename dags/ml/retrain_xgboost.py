@@ -61,12 +61,29 @@ def _train_xgboost_velov_wrapped() -> dict:
 
 
 def _train_xgboost_speed():
-    """Entraîne les 4 horizons XGBoost speed (5min, 1h, 3h, 6h)."""
+    """Entraîne le modèle XGBoost speed (H+1h uniquement — focus VPS).
+
+    Sprint P2.1 (2026-06-14) — AUDIT_INTEGRATION_LIVE.md § 1.2.2.
+    Avant : 4 horizons entraînés (5min, 1h, 3h, 6h) — 4x le coût
+             compute et la RAM, pour rien : les widgets dashboard ne
+             lisent que H+1h (cf. gold.trafic_predictions.horizon_h=1).
+    Après : 1 horizon H+1h — aligné avec CLAUDE.md « focus H+1h » et
+            avec le schéma gold (PK stocke horizon_h=1).
+
+    Si un caller demande un autre horizon à ``predict()``, le modèle
+    retourne son fallback (30.0 km/h) — déjà géré dans
+    ``XGBoostSpeedModel.predict()``.
+
+    Note : les anciens .pkl H+5min/H+3h/H+6h restent sur disque mais
+    ne sont plus ré-entraînés. Pas de suppression forcée — Patrice peut
+    purger ``/app/models/xgb_speed_h5.pkl`` etc. manuellement si besoin.
+    """
     from src.models.xgboost_speed import XGBoostSpeedModel
 
     model = XGBoostSpeedModel()
     results = {}
-    for horizon in [5, 60, 180, 360]:
+    # 1 horizon uniquement (Sprint P2.1 — focus fiabilité VPS)
+    for horizon in [60]:
         try:
             metrics = model.train_one(horizon_minutes=horizon)
             results[f"h{horizon}"] = metrics
@@ -76,13 +93,20 @@ def _train_xgboost_speed():
 
 
 def _train_xgboost_velov():
-    """Entraîne les 2 horizons XGBoost Velov (30min, 1h)."""
+    """Entraîne le modèle XGBoost Velov (H+30min uniquement — focus réactivité).
+
+    Sprint P2.1 (2026-06-14) — AUDIT_INTEGRATION_LIVE.md § 1.2.2.
+    Avant : 2 horizons (30min, 1h) — gaspillage CPU/RAM sur VPS.
+    Après : 1 horizon H+30min — aligné avec CLAUDE.md « Vélov = H+30min
+            uniquement » (Patrice 2026-06-13 : « tout en H+30min pour Vélov »).
+            Le modèle H+1h Vélov est supprimé du registry MLflow.
+    """
     from src.models.xgboost_velov import XGBoostVelovModel
 
     model = XGBoostVelovModel()
     results = {}
-    # 2 horizons uniquement (CLAUDE.md : "2 horizons, économe")
-    for horizon in [30, 60]:
+    # 1 horizon uniquement (Sprint P2.1 — focus H+30min pour Vélov)
+    for horizon in [30]:
         try:
             metrics = model.train_one(horizon_minutes=horizon)
             results[f"h{horizon}"] = metrics
@@ -98,9 +122,10 @@ default_args = {
 }
 
 # DAG 1: retrain_xgboost_speed (hourly :25 — match CLAUDE.md)
+# Sprint P2.1 (2026-06-14) — 1 horizon (H+1h) au lieu de 4 — focus fiabilité VPS.
 with DAG(
     dag_id="retrain_xgboost_speed",
-    description="Retrain XGBoost Speed hourly (4 horizons : 5min, 1h, 3h, 6h) — toggleable",
+    description="Retrain XGBoost Speed hourly (1 horizon H+1h — focus VPS) — toggleable",
     default_args=default_args,
     schedule="25 * * * *",
     start_date=datetime(2026, 1, 1),
@@ -115,9 +140,10 @@ with DAG(
     )
 
 # DAG 2: retrain_xgboost_velov (hourly :50 — match CLAUDE.md)
+# Sprint P2.1 (2026-06-14) — 1 horizon (H+30min) au lieu de 2 — focus réactivité.
 with DAG(
     dag_id="retrain_xgboost_velov",
-    description="Retrain XGBoost Velov hourly (2 horizons : 30min, 1h) — toggleable",
+    description="Retrain XGBoost Velov hourly (1 horizon H+30min — focus réactivité) — toggleable",
     default_args=default_args,
     schedule="50 * * * *",
     start_date=datetime(2026, 1, 1),
