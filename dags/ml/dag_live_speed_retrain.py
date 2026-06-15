@@ -171,12 +171,20 @@ def _predict_and_persist() -> dict:
     if not rows_to_insert:
         return {"rows_inserted": 0, "horizons": per_horizon_count, "duration_s": 0.0}
 
+    # Sprint P2.3 (2026-06-14) — AUDIT_INTEGRATION_LIVE.md § 1.1.4.
+    # Idempotence stricte : on utilise ON CONFLICT DO NOTHING sur la PK
+    # (axis_key, horizon_h, calculated_at) pour éviter les crashs en cas
+    # de retry Airflow (la PK aurait été violée sinon).
+    # C'est plus robuste que de calculer un calculated_at différent à
+    # chaque run (impossible de toute façon : 2 exécutions dans la même
+    # seconde = même timestamp).
     insert_sql = """
         INSERT INTO gold.trafic_predictions (
             axis_key, horizon_h, calculated_at, speed_pred, etat_pred, color,
             vitesse_limite_kmh, label, model_version, lat, lon
         )
         VALUES %s
+        ON CONFLICT (axis_key, horizon_h, calculated_at) DO NOTHING
     """
 
     with raw_connection() as conn, conn.cursor() as cur:
