@@ -26,6 +26,7 @@ USER root
 RUN apt-get update && apt-get install -y --no-install-recommends \
         gcc \
         libpq-dev \
+        gosu \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
@@ -42,3 +43,10 @@ COPY --chown=airflow:root src/ ${AIRFLOW_HOME}/src/
 COPY --chown=airflow:root config/ ${AIRFLOW_HOME}/config/
 
 WORKDIR ${AIRFLOW_HOME}
+
+# Etape 4 — entrypoint custom (fix permissions bind mounts après rsync)
+COPY scripts/airflow-entrypoint.sh /entrypoint.sh
+RUN chmod +x /entrypoint.sh
+
+USER root
+ENTRYPOINT ["/entrypoint.sh"]

@@ -1,0 +1,13 @@
+FROM pytorch/pytorch:2.2.0-cuda12.1-cudnn8-runtime
+
+RUN pip install --no-cache-dir \
+    torch-geometric==2.5.0 \
+    pyg-lib torch-scatter torch-sparse torch-cluster \
+    -f https://data.pyg.org/whl/torch-2.2.0+cu121.html \
+    && pip install --no-cache-dir \
+    pandas pyarrow numpy
+
+WORKDIR /app
+COPY scripts/train_gnn_remote.py .
+
+ENTRYPOINT ["python", "train_gnn_remote.py"]

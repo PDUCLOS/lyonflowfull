@@ -136,6 +136,8 @@ ignore = [
     "E402",  # imports après docstrings
 ]
 "dags/ml/retrain_gnn.py" = ["E402", "B904"]
+"scripts/train_gnn_remote.py" = ["N806", "N803"]
+"scripts/export_gnn_data.py" = ["E402"]
 
 [tool.ruff.format]
 quote-style = "double"

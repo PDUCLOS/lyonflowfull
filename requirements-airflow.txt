@@ -1,39 +1,63 @@
-# Slim airflow runtime — SQLAlchemy<2 mandatory (Airflow 2.9.x incompat 2.0)
+# =============================================================================
+# LyonFlowFull — Airflow runtime (Slim)
+# =============================================================================
+# Sprint P2-ter (2026-06-15) — Allègement de l'image airflow.
+# Avant : 4.91 GB. Cible : ~2 GB.
+#
+# Deps RETIRÉES (vérifié par grep dags/) :
+#   - torch, torch-geometric (noqa F401, jamais utilisé en runtime DAGs)
+#   - geopandas, shapely, pyproj (que dans dags/_archive/ legacy)
+#   - h3 (seulement utilisé par dags/transforms/build_spatial_mapping +
+#     dags/maintenance/backfill_dim_spatial_lat_lon — dynamic import OK)
+#   - boto3, botocore, google-api-python-client, google-auth, google-auth-oauthlib,
+#     google-auth-httplib2 (le DAG silver_archive_to_minio utilise urllib3 + AWS
+#     Sig V4 manuelle via src.minio_s3v4_upload, pas boto3 — voir commentaire
+#     dans dags/maintenance/silver_archive_to_minio.py:16-19)
+#   - optuna, evidently, litestar (morts, jamais importés dans dags/)
+#   - polars, pyarrow (utilisés par silver_archive_to_minio — dynamic import,
+#     voir ci-dessous. On garde polars pour le DAG actif.)
+#   - networkx (jamais importé dans dags/)
+#   - tenacity (jamais importé dans dags/)
+# =============================================================================
+
+# SQLAlchemy<2 mandatory (Airflow 2.9.x incompat 2.0)
 sqlalchemy>=1.4,<2.0
+
+# Config
 pyyaml>=6.0
 python-dotenv>=1.0.0
-pydantic>=2.5.0
-pydantic-settings>=2.1.0
-requests>=2.31.0
+pydantic>=2.5.0,<3.0.0
+pydantic-settings>=2.1.0,<3.0.0
 pytz>=2023.3
+
+# HTTP
+requests>=2.31.0
+httpx>=0.25.0
+
+# DB
 psycopg2-binary>=2.9.9
 geoalchemy2>=0.14.0
-shapely>=2.0.0
-pandas>=2.0.0
-numpy>=1.24.0
+
+# Data
+pandas>=2.0.0,<3.0.0
+numpy>=1.24.0,<3.0.0
 joblib>=1.3.0
-pyproj>=3.6.0
+
+# ML (xgboost utilisé par dags/ml/retrain_xgboost.py + dag_live_speed_retrain)
+xgboost>=2.0.0,<4.0.0
+scikit-learn>=1.3.0,<2.0.0
+
+# DAGs qui font du spatial via h3 (dynamic import, voir dags/transforms/build_spatial_mapping.py)
 h3>=4.1.0
-geopandas>=0.14.0
-httpx>=0.25.0
-tenacity>=8.2.0
-networkx>=3.2.0
-google-api-python-client>=2.100.0
-google-auth>=2.23.0
-google-auth-oauthlib>=1.1.0
-google-auth-httplib2>=0.1.1
-boto3>=1.34.0
-botocore>=1.34.0
-xgboost>=2.0.0
-scikit-learn>=1.3.0
-# mlflow + evidently pinned compat sqlalchemy 1.4
+
+# silver_archive_to_minio DAG (Sprint 12+) — utilise polars pour lire/écrire
+# les archives parquet avant push MinIO via urllib3.
+# pyarrow NON listé (polars>=1.0 a son propre engine parquet natif).
+polars>=0.20.0
+
+# mlflow pinned compat sqlalchemy 1.4
 mlflow>=2.10,<2.16
-optuna>=3.5,<4.0
+
+# Protobuf/grpc pinnés pour fix incompatibilité google-cloud-compute (Airflow webserver crash)
 protobuf>=4.25.0,<5.0.0
 grpcio>=1.60.0
-evidently>=0.4,<0.5
-litestar>=2.13.0,<2.19.0
-
-# Sprint 12+ — silver_archive_to_minio DAG a besoin de polars (Sprint 9+)
-polars>=0.20.0
-pyarrow>=14.0.0

@@ -47,7 +47,7 @@ Voir [AGENTS.md](AGENTS.md) pour les conventions et la mémoire projet.
 | ML Tracking / Registry | MLflow 2.12 |
 | ML Trafic (spatial) | ST-GRU-GNN (PyTorch Geometric) |
 | ML Trafic (réactif) | XGBoost multi-horizon |
-| ML Vélov | XGBoost (label encoding, 2 horizons) |
+| ML Vélov | XGBoost (label encoding, **H+30min uniquement** — Sprint 12+) |
 | ML Bus | XGBoost delay (après phase analyse) |
 | API | FastAPI |
 | Dashboard | Streamlit multi-pages |
@@ -91,12 +91,15 @@ Ensemble: les deux prédictions conservées. Recommandation trajet utilise le me
 - XGBoost delay: prédire delay_seconds par ligne/segment/heure
 - Features: heure, jour, vacances, météo, vitesse trafic adjacente, historique retard
 
-### 3. Vélov: 2 horizons, économe
+### 3. Vélov: H+30min uniquement, économe (Sprint 12+)
 
-- H+30min et H+1h uniquement
+- **H+30min uniquement** (Patrice 2026-06-13 : "tout en H+30min pour Vélov")
+  - Avant Sprint 12+ : 2 horizons (H+30min, H+1h)
+  - Pourquoi : focus réactivité court terme, économie RAM/CPU sur le VPS
 - Label encoding stations (pas 458 one-hot → économie RAM de 9GB à ~500MB)
 - Features: station_id encodé, temporel, météo (pluie), is_vacances, is_ferie, lags, rolling means
 - Retrain hourly :50
+- Modèle H+1h Vélov **supprimé** du registry MLflow (DAG `retrain_xgboost_velov` entraîne uniquement `xgb_velov_h30`)
 
 ### 4. Recommandation trajet multimodale
 
@@ -186,7 +189,7 @@ Chaque table Bronze: `fetched_at TIMESTAMPTZ` + `raw_data JSONB`. Immutable. Ré
 :15  Transform silver → gold (3 domaines parallèles)
 :20  dag_live_speed_retrain (Sprint VPS-5) — train 4 XGBoost + INSERT gold.trafic_predictions
 :25  Retrain XGBoost trafic (legacy, 4 horizons, ~10 min)
-:50  Retrain Vélov (2 horizons : H+30min, H+1h, ~5 min)
+:50  Retrain Vélov (**H+30min uniquement** Sprint 12+, ~3 min)
 03h  Retrain GNN daily (lourd, GPU si dispo)
 04h  Data quality daily (6 checks) + bottleneck analysis
 06h  Drift monitoring Evidently
