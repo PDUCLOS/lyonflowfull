@@ -1078,14 +1078,35 @@ def get_velov_neighbors_batch(station_ids: list[str], k: int = 3) -> dict[str, l
 def get_line_kpis(line_ids: list[str] | None = None) -> dict:
     """KPIs par ligne TCL depuis la vue matérialisée mv_line_kpis_live.
 
-    Args:
-        line_ids: filtre optionnel sur les lignes. None = toutes.
+    Sprint P2-quater (2026-06-15) — Format de retour aligné sur le
+    contrat des widgets (cf. ``widgets/pro_tcl/line_kpis.py`` et
+    ``widgets/pro_tcl/line_comparison.py``)::
 
-    Returns:
-        Dict au format ``{line_id: {otp_pct, retard_moyen_s,
-        freq_vehicules_par_h, charge_pct, mode, otp_status, n_obs_total,
-        n_days}}`` — rétro-compatible avec le mock ``pro_tcl.LINE_KPIS``.
+        {
+            "<line_id>": {
+                "otp_pct": float,
+                "avg_delay_min": float,        # retard en minutes
+                "frequency_min": float,         # intervalle entre véhicules (min)
+                "load_pct": float,             # taux d'occupation (0..100)
+                "trend": str,                  # "up" | "down" | "stable"
+                "trend_delta": float,
+            },
+            ...
+        }
+
+    Notes :
+    * La vue ``gold.mv_line_kpis_live`` n'est pas encore matérialisée
+      en prod. Si elle n'existe pas, on retourne ``{}`` (les widgets
+      afficheront "Aucun KPI ligne disponible" plutôt que de crasher).
+    * Conversion legacy schema prod :
+      - ``retard_moyen_s`` (DB, secondes) → ``avg_delay_min`` (min) : ÷ 60
+      - ``freq_vehicules_par_h`` (DB, veh/h) → ``frequency_min`` (min/veh) :
+        60 / fvh, arrondi à 1 décimale
+      - ``charge_pct`` (DB) → ``load_pct`` (widget) : simple rename
+      - Colonnes legacy conservées en plus (rétro-compatibilité mock).
     """
+    if not _is_db_available():
+        return {}
     where_clause = ""
     params: tuple = ()
     if line_ids:
@@ -1099,18 +1120,39 @@ def get_line_kpis(line_ids: list[str] | None = None) -> dict:
         {where_clause}
         ORDER BY line_ref
     """
-    rows = execute_query(query, params)
+    try:
+        rows = execute_query(query, params)
+    except Exception as e:
+        # Vue absente ou query invalide — fail-soft
+        logger.warning(
+            "get_line_kpis: query gold.mv_line_kpis_live a échoué (%s) — "
+            "fallback dict vide. Vue à matérialiser Sprint 10+.",
+            e,
+        )
+        return {}
+    if not rows:
+        return {}
+
     out: dict = {}
     for r in rows:
+        retard_s = float(r["retard_moyen_s"]) if r["retard_moyen_s"] is not None else 0.0
+        fvh = float(r["freq_vehicules_par_h"]) if r["freq_vehicules_par_h"] is not None else 0.0
+        charge = float(r["charge_pct"]) if r["charge_pct"] is not None else 0.0
         out[r["line_ref"]] = {
             "otp_pct": float(r["otp_pct"]) if r["otp_pct"] is not None else 0.0,
-            "retard_moyen_s": float(r["retard_moyen_s"]) if r["retard_moyen_s"] is not None else 0.0,
-            "freq_vehicules_par_h": float(r["freq_vehicules_par_h"]) if r["freq_vehicules_par_h"] is not None else 0.0,
-            "charge_pct": float(r["charge_pct"]) if r["charge_pct"] is not None else 0.0,
-            "mode": r["mode"],
-            "otp_status": r["otp_status"],
-            "n_obs_total": int(r["n_obs_total"]),
-            "n_days": int(r["n_days"]),
+            "avg_delay_min": round(retard_s / 60, 1),
+            "frequency_min": round(60 / fvh, 1) if fvh > 0 else 0.0,
+            "load_pct": charge,
+            "trend": "stable",  # Pas dans la MV — déduit côté front si besoin
+            "trend_delta": 0.0,
+            # Legacy fields (rétro-compatibilité mock / autres callers)
+            "retard_moyen_s": retard_s,
+            "freq_vehicules_par_h": fvh,
+            "charge_pct": charge,
+            "mode": r.get("mode"),
+            "otp_status": r.get("otp_status"),
+            "n_obs_total": int(r["n_obs_total"]) if r.get("n_obs_total") is not None else 0,
+            "n_days": int(r["n_days"]) if r.get("n_days") is not None else 0,
         }
     return out
 
