@@ -710,7 +710,7 @@ def get_recent_alerts(hours: int = 24, limit: int = 50) -> pd.DataFrame:
         ORDER BY alert_time DESC
         LIMIT %s
     """
-    return _df_from_query(query, (hours, limit))
+    return _df_from_query(query, (limit,))
 
 
 def get_segments(limit: int = 200) -> pd.DataFrame:
