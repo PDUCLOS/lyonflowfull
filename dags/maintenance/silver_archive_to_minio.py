@@ -110,7 +110,17 @@ def _archive_one_table(table: str, cutoff: datetime) -> dict:
     #
     # polars 1.41+ a séparé read_database() (Connection object) et
     # read_database_uri() (string URI). On utilise la nouvelle API.
+    #
+    # polars 1.41+ utilise 'connectorx' par défaut qui ne supporte
+    # PAS execute_options. On force l'engine 'adbc' qui supporte
+    # les paramètres psycopg2. À défaut, on pourrait aussi substituer
+    # les %s manuellement avant l'appel.
     df = pl.read_database_uri(
+        query=f"SELECT * FROM silver.{table} WHERE transformed_at < %s ORDER BY transformed_at",
+        uri=get_settings().db.url,  # type: ignore[arg-type]
+        execute_options={"parameters": [cutoff]},
+        engine="adbc",
+    )
         query=f"SELECT * FROM silver.{table} WHERE transformed_at < %s ORDER BY transformed_at",
         uri=get_settings().db.url,  # type: ignore[arg-type]
         execute_options={"parameters": [cutoff]},
