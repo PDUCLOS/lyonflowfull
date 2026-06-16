@@ -52,7 +52,8 @@ SILVER_TABLES = [
     # "velov_clean",  # 282 Mo, à faire Sprint 11+
 ]
 
-RETENTION_DAYS = 30  # garde 30 jours en DB
+RETENTION_DAYS = 7  # garde 7 jours en DB (était 30 avant P2-ter, mais oldest
+                   # row = 13j donc 0 archive — baisse pour activer)
 LOCAL_STAGING = Path("/tmp/silver_archive_staging")
 
 
