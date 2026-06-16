@@ -69,7 +69,7 @@ def _check_gnn_model(horizon: int) -> dict:
 
 
 def _load_merged(horizon: int, limit: int = 500) -> pd.DataFrame | None:
-    """Charge mapping H3 + prédictions et joint sur ``node_idx``.
+    """Charge mapping H3 + prédictions et joint sur ``axis_key`` ↔ ``channel_id``.
 
     Returns:
         DataFrame mergée ou None si données absentes/erreur.
@@ -79,10 +79,22 @@ def _load_merged(horizon: int, limit: int = 500) -> pd.DataFrame | None:
         return None
 
     preds_df = load_traffic_predictions(horizon_minutes=horizon, limit=limit)
-    if preds_df.empty or "node_idx" not in preds_df.columns:
+    if preds_df.empty:
         return None
 
-    merged = mapping_df.merge(preds_df, on="node_idx", how="inner")
+    if "axis_key" in preds_df.columns and "channel_id" in mapping_df.columns:
+        mapping_df = mapping_df.copy()
+        mapping_df["channel_id"] = mapping_df["channel_id"].astype(str)
+        preds_df = preds_df.copy()
+        preds_df["axis_key"] = preds_df["axis_key"].astype(str)
+        merged = mapping_df.merge(
+            preds_df, left_on="channel_id", right_on="axis_key", how="inner",
+        )
+    elif "node_idx" in preds_df.columns:
+        merged = mapping_df.merge(preds_df, on="node_idx", how="inner")
+    else:
+        return None
+
     return merged if not merged.empty else None
 
 
@@ -92,19 +104,18 @@ def _render_pydeck(merged: pd.DataFrame, height: int, zoom: float = 11.0) -> str
         import pydeck as pdk
     except ImportError:
         st.warning("Pydeck non installé — fallback liste tabulaire.")
-        st.dataframe(
-            merged[["node_idx", "lat", "lng", "predicted_speed", "model_name"]].head(50),
-            use_container_width=True,
-            hide_index=True,
-        )
+        fallback_cols = [c for c in ["axis_key", "lat", "lng", "speed_pred", "model_version"] if c in merged.columns]
+        st.dataframe(merged[fallback_cols].head(50), use_container_width=True, hide_index=True)
         return "?"
 
     merged = merged.copy()
-    merged["color"] = merged["predicted_speed"].apply(_speed_to_color)
+    speed_col = "speed_pred" if "speed_pred" in merged.columns else "predicted_speed"
+    merged["color"] = merged[speed_col].apply(_speed_to_color)
 
+    model_col = "model_version" if "model_version" in merged.columns else "model_name"
     dominant_model = (
-        merged["model_name"].mode().iloc[0]
-        if "model_name" in merged.columns and not merged["model_name"].mode().empty
+        merged[model_col].mode().iloc[0]
+        if model_col in merged.columns and not merged[model_col].mode().empty
         else "?"
     )
 
@@ -127,7 +138,7 @@ def _render_pydeck(merged: pd.DataFrame, height: int, zoom: float = 11.0) -> str
         initial_view_state=view_state,
         map_style="https://basemaps.cartocdn.com/gl/positron-gl-style/style.json",
         tooltip={
-            "html": ("<b>Node {node_idx}</b><br/>Speed: <b>{predicted_speed} km/h</b><br/>Model: {model_name}"),
+            "html": ("<b>{axis_key}</b><br/>Speed: <b>{speed_pred} km/h</b><br/>État: {etat_pred}"),
             "style": {
                 "backgroundColor": COLORS["bg_card"],
                 "color": "white",

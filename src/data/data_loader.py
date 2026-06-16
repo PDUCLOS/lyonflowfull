@@ -1015,17 +1015,6 @@ _FALLBACK_MOCK_MODELS: list[dict] = [
         "note": "MLflow non accessible — fallback mock",
     },
     {
-        "name": "xgboost_velov_h60",
-        "version": "1.0.0",
-        "stage": "Production",
-        "metrics": {"mae": 4.31, "rmse": 5.48, "r2": 0.299},
-        "trained_at": "—",
-        "n_training_samples": 13_824,
-        "feature_count": 11,
-        "drift_status": "ok",
-        "note": "MLflow non accessible — fallback mock",
-    },
-    {
         "name": "stgcn_gnn_h60",
         "version": "0.3.0",
         "stage": "Staging",

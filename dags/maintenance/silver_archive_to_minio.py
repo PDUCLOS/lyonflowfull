@@ -115,8 +115,8 @@ def _archive_one_table(table: str, cutoff: datetime) -> dict:
     # Phase 2 : read_sql via polars (plus simple, OK pour 1.5M rows)
     df = pl.read_database(
         query=f"SELECT * FROM silver.{table} WHERE transformed_at < %s ORDER BY transformed_at",
-        execute_args=[cutoff],
-        connection_uri=get_settings().db.url,  # type: ignore[arg-type]
+        execute_options={"parameters": [cutoff]},
+        connection=get_settings().db.url,  # type: ignore[arg-type]
     )
     df.write_parquet(local_path, compression="snappy")
     bytes_parquet = local_path.stat().st_size

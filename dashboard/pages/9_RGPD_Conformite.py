@@ -118,4 +118,4 @@ else:
     st.info("Aucun log d'audit disponible — DB non connectée ou table vide.")
 
 st.divider()
-st.caption("LyonFlowFull v0.1.0 — conforme RGPD")
+st.caption("LyonFlowFull v0.6.1 — conforme RGPD")

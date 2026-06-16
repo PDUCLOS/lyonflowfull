@@ -59,7 +59,7 @@ def render_kpi_cards() -> None:
                     </div>
                     <div>
                         <div class="lyonflow-kpi-delta" style="color:{d_color};">
-                            {delta_str} YTD
+                            {delta_str}
                         </div>
                         <div class="lyonflow-kpi-target">{target_str}</div>
                     </div>

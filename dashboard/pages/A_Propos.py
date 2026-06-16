@@ -36,7 +36,7 @@ st.markdown(
 
     1. **Trafic routier** — tandem GNN (spatial) + XGBoost (réactif)
     2. **Bus TCL** — analyse SIRI Lite + diagnostic infrastructure
-    3. **Vélov** — prédiction disponibilité H+30min et H+1h
+    3. **Vélov** — prédiction disponibilité H+30min
     4. **Recommandation trajet** — scoring composite 50% temps + 30% coût + 20% CO₂
 
     ### Les 3 personas
@@ -58,6 +58,6 @@ st.markdown(
 
     ---
 
-    *LyonFlowFull v0.1.0 — 2026-06-05*
+    *LyonFlowFull v0.6.1 — 2026-06-16*
     """
 )

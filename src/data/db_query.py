@@ -110,7 +110,6 @@ def get_latest_traffic(limit: int = 100) -> pd.DataFrame:
     """
     df = _df_from_query(query, (limit,))
     return df
-    return df
 
 
 def get_traffic_timeseries_for_node(node_idx: int, hours: int = 24) -> pd.DataFrame:
@@ -219,7 +218,6 @@ def get_traffic_bottlenecks(top: int = 20) -> pd.DataFrame:
     """
     df = _df_from_query(query, (top,))
     return df
-    return df
 
 
 def get_predictions_vs_actuals(limit: int = 1000) -> pd.DataFrame:
@@ -237,7 +235,6 @@ def get_predictions_vs_actuals(limit: int = 1000) -> pd.DataFrame:
         LIMIT %s
     """
     df = _df_from_query(query, (limit,))
-    return df
     return df
 
 
@@ -266,7 +263,6 @@ def get_velov_stations_geo() -> pd.DataFrame:
         ORDER BY station_id, measurement_time DESC
     """
     df = _df_from_query(query)
-    return df
     return df
 
 
@@ -346,7 +342,6 @@ def get_bus_delay_segments(line_ref: str | None = None, days: int = 7) -> pd.Dat
     """
     df = _df_from_query(query, (days,))
     return df
-    return df
 
 
 def get_infrastructure_bottlenecks(top: int = 30) -> pd.DataFrame:
@@ -365,7 +360,6 @@ def get_infrastructure_bottlenecks(top: int = 30) -> pd.DataFrame:
         LIMIT %s
     """
     df = _df_from_query(query, (top,))
-    return df
     return df
 
 
@@ -388,7 +382,6 @@ def get_spatial_mapping() -> pd.DataFrame:
     """
     df = _df_from_query(query)
     return df
-    return df
 
 
 def get_gnn_adjacency() -> pd.DataFrame:
@@ -399,7 +392,6 @@ def get_gnn_adjacency() -> pd.DataFrame:
         WHERE is_connected = TRUE
     """
     df = _df_from_query(query)
-    return df
     return df
 
 
@@ -424,7 +416,6 @@ def get_rgpd_audit_log(limit: int = 100) -> pd.DataFrame:
     """
     df = _df_from_query(query, (limit,))
     return df
-    return df
 
 
 def get_rgpd_consents_summary() -> pd.DataFrame:
@@ -441,7 +432,6 @@ def get_rgpd_consents_summary() -> pd.DataFrame:
     """
     df = _df_from_query(query)
     return df
-    return df
 
 
 def get_rgpd_data_subject_requests(limit: int = 50) -> pd.DataFrame:
@@ -455,7 +445,6 @@ def get_rgpd_data_subject_requests(limit: int = 50) -> pd.DataFrame:
     """
     df = _df_from_query(query, (limit,))
     return df
-    return df
 
 
 def get_rgpd_purge_history(limit: int = 50) -> pd.DataFrame:
@@ -467,7 +456,6 @@ def get_rgpd_purge_history(limit: int = 50) -> pd.DataFrame:
         LIMIT %s
     """
     df = _df_from_query(query, (limit,))
-    return df
     return df
 
 
@@ -622,7 +610,7 @@ def get_recent_alerts(hours: int = 24, limit: int = 50) -> pd.DataFrame:
         ORDER BY alert_time DESC
         LIMIT %s
     """
-    return _df_from_query(query, (hours, limit))
+    return _df_from_query(query, (limit,))
 
 
 def get_segments(limit: int = 200) -> pd.DataFrame:
