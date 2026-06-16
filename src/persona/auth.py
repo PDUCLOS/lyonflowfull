@@ -49,20 +49,22 @@ _DEMO_PASSWORD = "demo2026"
 def _get_expected_password(persona_id: str) -> str | None:
     """Récupère le mot de passe attendu.
 
-    Ordre de priorité :
-    1. Variable d'env PERSONA_<ID>_PASSWORD (override, prod-ready)
-    2. Valeur démo ``_DEMO_PASSWORD`` (Sprint 8+, simplifie la démo Jedha)
+    Sprint P2-quater (2026-06-16) — Force ``_DEMO_PASSWORD`` (toujours
+    ``demo2026``). Les env vars ``PERSONA_*_PASSWORD`` du .env sont
+    ignorées volontairement pour que la démo Jedha fonctionne partout
+    avec le même mot de passe.
+
+    Si on veut remettre l'override par env var, il faudra flagger ça
+    explicitement (variable d'env ``LYONFLOW_AUTH_USE_ENV_PASSWORD=1``).
 
     Returns:
         None si le persona n'a pas d'auth requise (usager).
-        Chaîne attendue sinon.
+        Chaîne attendue sinon (= _DEMO_PASSWORD).
     """
     pconf = get_persona_config(persona_id)
-    env_var = pconf.get("access", {}).get("password_env")
-    if not env_var:
+    if not pconf.get("access", {}).get("password_env"):
         return None
-    password = os.getenv(env_var)
-    return password if password else _DEMO_PASSWORD
+    return _DEMO_PASSWORD
 
 
 def authenticate_persona(persona_id: str, password: str) -> bool:
