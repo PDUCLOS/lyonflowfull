@@ -103,18 +103,11 @@ def _archive_one_table(table: str, date_col: str, cutoff: datetime) -> dict:
     LOCAL_STAGING.mkdir(parents=True, exist_ok=True)
     local_path = LOCAL_STAGING / f"{table}_{cutoff.strftime('%Y%m%d')}.parquet"
 
-    # Utilise psycopg2 + polars.read_csv (puisque COPY TO STDOUT produit du TSV)
-    with raw_connection() as conn, conn.cursor() as cur:
-        cur.copy_expert(
-            f"COPY (SELECT * FROM silver.{table} "
-            f"WHERE {date_col} < %s ORDER BY {date_col}) "
-            f"TO STDOUT WITH (FORMAT CSV, HEADER TRUE)",
-            (cutoff,),
-        )
-        # Au lieu de drainer ici, on lit via polars depuis un buffer
-        # (mais copy_expert envoie au file-like de cur). On simplifie :
-        # on lit en 2 phases.
-    # Phase 2 : read_sql via polars (plus simple, OK pour 1.5M rows)
+    # Lecture via polars directement (psycopg2 + polars.read_database).
+    # Note : on n'utilise pas cur.copy_expert (qui ne sert à rien ici —
+    # le résultat serait ignoré, et la signature psycopg2 v3 exige un
+    # file-like object qu'on ne fournit pas). Le commentaire original
+    # disait "Phase 2" mais Phase 1 (copy_expert) est supprimée.
     df = pl.read_database(
         query=f"SELECT * FROM silver.{table} WHERE {date_col} < %s ORDER BY {date_col}",
         execute_args=[cutoff],
