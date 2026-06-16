@@ -108,10 +108,13 @@ def _archive_one_table(table: str, date_col: str, cutoff: datetime) -> dict:
     # le résultat serait ignoré, et la signature psycopg2 v3 exige un
     # file-like object qu'on ne fournit pas). Le commentaire original
     # disait "Phase 2" mais Phase 1 (copy_expert) est supprimée.
+    #
+    # Sprint P2-quater — polars 1.41 a remplacé `execute_args` (list) par
+    # `execute_options` (dict). On utilise la nouvelle API.
     df = pl.read_database(
         query=f"SELECT * FROM silver.{table} WHERE {date_col} < %s ORDER BY {date_col}",
-        execute_args=[cutoff],
-        connection_uri=get_settings().db.url,  # type: ignore[arg-type]
+        connection=get_settings().db.url,  # type: ignore[arg-type]
+        execute_options={"params": [cutoff]},
     )
     df.write_parquet(local_path, compression="snappy")
     bytes_parquet = local_path.stat().st_size
