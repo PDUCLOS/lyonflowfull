@@ -615,37 +615,6 @@ ALTER SEQUENCE bronze.trafic_boucles_id_seq1 OWNED BY bronze.trafic_boucles.id;
 
 
 --
--- Name: trafic_vitesse_brute; Type: TABLE; Schema: bronze; Owner: -
---
-
-CREATE TABLE bronze.trafic_vitesse_brute (
-    id integer NOT NULL,
-    fetched_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP,
-    raw_data jsonb NOT NULL
-);
-
-
---
--- Name: trafic_vitesse_brute_id_seq; Type: SEQUENCE; Schema: bronze; Owner: -
---
-
-CREATE SEQUENCE bronze.trafic_vitesse_brute_id_seq
-    AS integer
-    START WITH 1
-    INCREMENT BY 1
-    NO MINVALUE
-    NO MAXVALUE
-    CACHE 1;
-
-
---
--- Name: trafic_vitesse_brute_id_seq; Type: SEQUENCE OWNED BY; Schema: bronze; Owner: -
---
-
-ALTER SEQUENCE bronze.trafic_vitesse_brute_id_seq OWNED BY bronze.trafic_vitesse_brute.id;
-
-
---
 -- Name: velov; Type: TABLE; Schema: bronze; Owner: -
 --
 
@@ -1397,13 +1366,6 @@ ALTER TABLE ONLY bronze.trafic_boucles ALTER COLUMN id SET DEFAULT nextval('bron
 
 
 --
--- Name: trafic_vitesse_brute id; Type: DEFAULT; Schema: bronze; Owner: -
---
-
-ALTER TABLE ONLY bronze.trafic_vitesse_brute ALTER COLUMN id SET DEFAULT nextval('bronze.trafic_vitesse_brute_id_seq'::regclass);
-
-
---
 -- Name: velov id; Type: DEFAULT; Schema: bronze; Owner: -
 --
 
@@ -1580,14 +1542,6 @@ ALTER TABLE ONLY bronze.tomtom_flow
 
 ALTER TABLE ONLY bronze.trafic_boucles
     ADD CONSTRAINT trafic_boucles_pkey PRIMARY KEY (id);
-
-
---
--- Name: trafic_vitesse_brute trafic_vitesse_brute_pkey; Type: CONSTRAINT; Schema: bronze; Owner: -
---
-
-ALTER TABLE ONLY bronze.trafic_vitesse_brute
-    ADD CONSTRAINT trafic_vitesse_brute_pkey PRIMARY KEY (id);
 
 
 --
@@ -1811,20 +1765,6 @@ ALTER TABLE ONLY silver.trafic_boucles_clean
 --
 
 CREATE INDEX idx_air_quality_time ON bronze.air_quality USING btree (measurement_time);
-
-
---
--- Name: idx_bronze_fetched_at; Type: INDEX; Schema: bronze; Owner: -
---
-
-CREATE INDEX idx_bronze_fetched_at ON bronze.trafic_vitesse_brute USING btree (fetched_at DESC);
-
-
---
--- Name: idx_bronze_trafic_vitesse_brute_fetched_at; Type: INDEX; Schema: bronze; Owner: -
---
-
-CREATE INDEX idx_bronze_trafic_vitesse_brute_fetched_at ON bronze.trafic_vitesse_brute USING btree (fetched_at DESC);
 
 
 --

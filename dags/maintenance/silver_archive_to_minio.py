@@ -47,24 +47,38 @@ DEFAULT_ARGS = {
     "retry_delay": timedelta(minutes=30),
 }
 
-# Tables silver à archiver > 30 jours (rétention or / Gold)
-SILVER_TABLES = [
-    "trafic_vitesse_propre",  # 28 Go, 1.5M rows, top priorité
-    # "tcl_vehicles_clean",  # 260 Mo, à faire Sprint 11+
-    # "velov_clean",  # 282 Mo, à faire Sprint 11+
+# Tables silver à archiver > RETENTION_DAYS.
+#
+# Format : (table_name, date_column). La colonne date est utilisée pour
+# le filtre WHERE et l'ORDER BY. Avant, le DAG assumait `transformed_at`
+# pour toutes les tables, mais tcl_vehicles_clean et velov_clean utilisent
+# `fetched_at` (legacy, leur date de transformation n'est pas trackée).
+#
+# Sprint P2-quater (2026-06-16) — élargissement à tcl_vehicles_clean +
+# velov_clean + rétention 30j → 7j (la table trafic_vitesse_propre n'a
+# que 13 jours d'historique, 30j ne déclenchait jamais d'archive).
+SILVER_TABLES: list[tuple[str, str]] = [
+    ("trafic_vitesse_propre", "transformed_at"),  # 28 Go, 1.5M rows
+    ("tcl_vehicles_clean", "fetched_at"),         # ~260 Mo
+    ("velov_clean", "fetched_at"),                # ~282 Mo
 ]
 
-RETENTION_DAYS = 30  # garde 30 jours en DB
+RETENTION_DAYS = 7  # garde 7 jours en DB (Gold lit les 2 derniers jours, le reste va sur MinIO froid)
 LOCAL_STAGING = Path("/tmp/silver_archive_staging")
 
 
-def _archive_one_table(table: str, cutoff: datetime) -> dict:
+def _archive_one_table(table: str, date_col: str, cutoff: datetime) -> dict:
     """Archive une table silver > cutoff vers MinIO en Parquet snappy.
+
+    Args:
+        table: nom de la table (sans le schema).
+        date_col: nom de la colonne date utilisée pour le filtre.
+        cutoff: datetime — on archive les rows < cutoff.
 
     Returns:
         Dict {"table", "rows_archived", "bytes_db", "bytes_parquet", "compression_ratio"}.
     """
-    logger.info("Archiving silver.%s older than %s", table, cutoff)
+    logger.info("Archiving silver.%s (date_col=%s) older than %s", table, date_col, cutoff)
 
     # 1) Stats avant
     stats = execute_query(
@@ -73,7 +87,7 @@ def _archive_one_table(table: str, cutoff: datetime) -> dict:
             count(*) AS n_rows,
             pg_size_pretty(pg_total_relation_size('silver.{table}')) AS total_size
         FROM silver.{table}
-        WHERE transformed_at < %s
+        WHERE {date_col} < %s
     """,
         (cutoff,),
     )
@@ -93,7 +107,7 @@ def _archive_one_table(table: str, cutoff: datetime) -> dict:
     with raw_connection() as conn, conn.cursor() as cur:
         cur.copy_expert(
             f"COPY (SELECT * FROM silver.{table} "
-            f"WHERE transformed_at < %s ORDER BY transformed_at) "
+            f"WHERE {date_col} < %s ORDER BY {date_col}) "
             f"TO STDOUT WITH (FORMAT CSV, HEADER TRUE)",
             (cutoff,),
         )
@@ -102,7 +116,7 @@ def _archive_one_table(table: str, cutoff: datetime) -> dict:
         # on lit en 2 phases.
     # Phase 2 : read_sql via polars (plus simple, OK pour 1.5M rows)
     df = pl.read_database(
-        query=f"SELECT * FROM silver.{table} WHERE transformed_at < %s ORDER BY transformed_at",
+        query=f"SELECT * FROM silver.{table} WHERE {date_col} < %s ORDER BY {date_col}",
         execute_args=[cutoff],
         connection_uri=get_settings().db.url,  # type: ignore[arg-type]
     )
@@ -131,7 +145,7 @@ def _archive_one_table(table: str, cutoff: datetime) -> dict:
 
     # 4) DELETE Postgres (libère l'espace DB)
     execute_query(
-        f"DELETE FROM silver.{table} WHERE transformed_at < %s",
+        f"DELETE FROM silver.{table} WHERE {date_col} < %s",
         (cutoff,),
     )
     logger.info("Deleted %d rows from silver.%s", n_rows, table)
@@ -164,9 +178,9 @@ def _archive_silver(**context) -> dict:
     )
 
     results = []
-    for table in SILVER_TABLES:
+    for table, date_col in SILVER_TABLES:
         try:
-            r = _archive_one_table(table, cutoff)
+            r = _archive_one_table(table, date_col, cutoff)
             results.append(r)
         except Exception as e:
             logger.exception("Failed to archive silver.%s: %s", table, e)
