@@ -102,23 +102,14 @@ def _archive_one_table(table: str, cutoff: datetime) -> dict:
     LOCAL_STAGING.mkdir(parents=True, exist_ok=True)
     local_path = LOCAL_STAGING / f"{table}_{cutoff.strftime('%Y%m%d')}.parquet"
 
-    # Utilise psycopg2 + polars.read_csv (puisque COPY TO STDOUT produit du TSV)
-    with raw_connection() as conn, conn.cursor() as cur:
-        cur.copy_expert(
-            f"COPY (SELECT * FROM silver.{table} "
-            f"WHERE transformed_at < %s ORDER BY transformed_at) "
-            f"TO STDOUT WITH (FORMAT CSV, HEADER TRUE)",
-            (cutoff,),
-        )
-        # Au lieu de drainer ici, on lit via polars depuis un buffer
-        # (mais copy_expert envoie au file-like de cur). On simplifie :
-        # on lit en 2 phases.
-    # Phase 2 : read_sql via polars (plus simple, OK pour 1.5M rows)
-    # Sprint P2-ter (2026-06-16) : polars 1.41+ a séparé read_database()
-    # (Connection object) et read_database_uri() (string URI). Le passage
-    # d'un string URI à read_database() raise
-    # "string URI is invalid here; call read_database_uri instead".
-    # Fix : utiliser pl.read_database_uri() pour les string URIs.
+    # Lecture via polars (psycopg2 + pl.read_database_uri).
+    # Le code copiait avant avec cur.copy_expert(TO STDOUT) mais
+    # psycopg2 v3 exige un file-like object en argument et le résultat
+    # était ignoré de toute façon (Phase 2 lit via polars). Bloc mort
+    # supprimé. Sprint P2-ter (2026-06-16).
+    #
+    # polars 1.41+ a séparé read_database() (Connection object) et
+    # read_database_uri() (string URI). On utilise la nouvelle API.
     df = pl.read_database_uri(
         query=f"SELECT * FROM silver.{table} WHERE transformed_at < %s ORDER BY transformed_at",
         uri=get_settings().db.url,  # type: ignore[arg-type]
