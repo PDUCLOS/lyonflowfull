@@ -60,7 +60,7 @@ def upgrade() -> None:
         CREATE MATERIALIZED VIEW gold.mv_otp_heatmap AS
         SELECT
             line_ref AS line_id,
-            regexp_replace(line_ref, '^ActIV:Line::(.*?):SYTRAL$', '\\1') AS line_label,
+            regexp_replace(line_ref, '^ActIV:Line::(.*?):SYTRAL$', r'\1') AS line_label,
             date,
             hour,
             LEAST(GREATEST(
