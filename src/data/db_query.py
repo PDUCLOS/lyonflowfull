@@ -897,19 +897,21 @@ def get_line_kpis(line_ids: list[str] | None = None) -> dict:
 def get_otp_heatmap() -> pd.DataFrame:
     """Heatmap OTP (ligne × heure).
 
-    TODO Sprint 10+: câbler sur gold.mv_otp_heatmap.
+    Sprint P2-quater (2026-06-16) : utilise la colonne ``line_label``
+    (ajoutée par migration 0008) pour avoir des labels propres
+    (juste ``Z18`` au lieu de ``ActIV:Line::Z18:SYTRAL``).
     """
     if not _is_db_available():
-        return pd.DataFrame(columns=["line_id", "date", "hour", "otp_pct"])
+        return pd.DataFrame(columns=["line_id", "line_label", "date", "hour", "otp_pct"])
     query = """
-        SELECT line_id, date, hour, otp_pct
+        SELECT line_id, line_label, date, hour, otp_pct
         FROM gold.mv_otp_heatmap
         LIMIT 5000
     """
     try:
         return _df_from_query(query)
     except Exception:
-        return pd.DataFrame(columns=["line_id", "date", "hour", "otp_pct"])
+        return pd.DataFrame(columns=["line_id", "line_label", "date", "hour", "otp_pct"])
 
 
 def get_bottlenecks_summary() -> pd.DataFrame:

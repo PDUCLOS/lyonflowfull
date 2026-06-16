@@ -27,20 +27,31 @@ def render_otp_heatmap(otp_data: dict | None = None, days: int = 1, height: int 
         df = cached_otp_heatmap_data(force_mock=False)
         if not df.empty:
             # Reconstruit le format {line_id: {date: [otp_per_hour]}}
+            # Sprint P2-quater : utilise line_label (ajouté par migration 0008)
+            # si dispo, sinon fallback sur line_id brut.
             otp_data = {}
             for _, row in df.iterrows():
                 line_id = row["line_id"]
+                # label court ("Z18" au lieu de "ActIV:Line::Z18:SYTRAL")
+                line_label = row.get("line_label") if "line_label" in df.columns else None
+                if line_label and str(line_label).strip() and str(line_label) != line_id:
+                    key = f"{str(line_label).strip()}"
+                else:
+                    key = line_id
                 date = str(row.get("date", ""))
-                if line_id not in otp_data:
-                    otp_data[line_id] = {}
+                if key not in otp_data:
+                    otp_data[key] = {}
                 # On a (line_id, date, hour, otp_pct) → on agrège par date
-                if date not in otp_data[line_id]:
-                    otp_data[line_id][date] = [0.0] * 24
-                otp_data[line_id][date][int(row["hour"])] = float(row["otp_pct"])
+                if date not in otp_data[key]:
+                    otp_data[key][date] = [0.0] * 24
+                otp_data[key][date][int(row["hour"])] = float(row["otp_pct"])
         else:
             otp_data = OTP_GRID
 
     # Calculer la moyenne
+    # Sprint P2-quater : si lines contient des labels courts (Z18, 10E)
+    # au lieu des line_id bruts, le sort par LINE_BASE_OTP reste OK
+    # (les labels ne sont pas dans LINE_BASE_OTP → tombent à 0 → tri stable).
     lines = sorted(otp_data.keys(), key=lambda lid: LINE_BASE_OTP.get(lid, 0), reverse=True)
     dates = sorted(otp_data[lines[0]].keys()) if lines else []
 
