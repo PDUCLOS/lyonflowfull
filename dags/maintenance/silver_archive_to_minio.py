@@ -113,10 +113,15 @@ def _archive_one_table(table: str, cutoff: datetime) -> dict:
         # (mais copy_expert envoie au file-like de cur). On simplifie :
         # on lit en 2 phases.
     # Phase 2 : read_sql via polars (plus simple, OK pour 1.5M rows)
-    df = pl.read_database(
+    # Sprint P2-ter (2026-06-16) : polars 1.41+ a séparé read_database()
+    # (Connection object) et read_database_uri() (string URI). Le passage
+    # d'un string URI à read_database() raise
+    # "string URI is invalid here; call read_database_uri instead".
+    # Fix : utiliser pl.read_database_uri() pour les string URIs.
+    df = pl.read_database_uri(
         query=f"SELECT * FROM silver.{table} WHERE transformed_at < %s ORDER BY transformed_at",
+        uri=get_settings().db.url,  # type: ignore[arg-type]
         execute_options={"parameters": [cutoff]},
-        connection=get_settings().db.url,  # type: ignore[arg-type]
     )
     df.write_parquet(local_path, compression="snappy")
     bytes_parquet = local_path.stat().st_size
