@@ -55,7 +55,7 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(
     title="LyonFlowFull API",
-    version="0.1.0",
+    version="0.6.1",
     description="API REST pour la plateforme MLOps LyonFlowFull",
     lifespan=lifespan,
 )
