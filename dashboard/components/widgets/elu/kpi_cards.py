@@ -35,7 +35,7 @@ def _build_sparkline(history: list, target: float = 0) -> alt.Chart | None:
     line = base.mark_line(
         color=COLORS["persona_elu_accent"],
         strokeWidth=2,
-        point=alt.MarkPointConfig(color=COLORS["persona_elu_accent"], size=30),
+        point=True,  # altair 5+ : True pour ajouter des markers, ou un dict de config
     ).encode(y=alt.Y("value:Q", title=None, axis=alt.Axis(ticks=False, labels=False)))
 
     layers = [line]
@@ -101,7 +101,7 @@ def render_kpi_cards() -> None:
                     </div>
                     <div>
                         <div class="lyonflow-kpi-delta" style="color:{d_color};">
-                            {delta_str} YTD
+                            {delta_str}
                         </div>
                         <div class="lyonflow-kpi-target">{target_str}</div>
                     </div>
