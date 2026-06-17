@@ -18,7 +18,7 @@ timeout depuis Streamlit).
 from __future__ import annotations
 
 import logging
-from datetime import datetime, timedelta
+from datetime import UTC, datetime, timedelta
 
 import pandas as pd
 from airflow import DAG
@@ -184,8 +184,9 @@ def _compute_and_persist_drift(stats_row: dict) -> None:
     - Features analysées : target_speed, speed_kmh, temperature_2m, precipitation
     - Score > 0.2 sur 50% des features → dataset_drift = True
     """
-    from datetime import datetime, timezone
     import json
+    from datetime import datetime
+
     from src.monitoring.psi import compute_dataset_drift
 
     # Charge la distribution des 2 dernières semaines
@@ -212,7 +213,7 @@ def _compute_and_persist_drift(stats_row: dict) -> None:
     summary = drift.pop("_summary", {})
 
     # Persiste dans gold.model_drift_reports (schéma v0.3.1)
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     ref_from = (now - timedelta(days=14)).isoformat()
     ref_to = (now - timedelta(days=7)).isoformat()
     curr_from = (now - timedelta(days=7)).isoformat()

@@ -1,12 +1,12 @@
-"""Widget — Barre de recherche trajet (géocodage simulé + sélection cliquable).
+"""Widget — Barre de recherche trajet (géocodage + sélection cliquable).
 
 Affiche 2 champs (départ + destination) avec auto-complétion **cliquable** :
-- Liste de 21 adresses Lyon (mock) avec icône par type (gare/place/quartier…)
+- Liste d'adresses Lyon (DB referentiel.lieux_lyon) avec icône par type (gare/place/quartier…)
 - Bouton par adresse : au clic, remplit départ OU destination selon le toggle actif
 - Plus de tape à la main, l'utilisateur clique
 
 Sprint 8 — Adresses chargées via
-data_loader.cached_lyon_addresses_with_coords().
+data_loader.cached_lyon_addresses_with_coords() (zéro mock).
 """
 
 from __future__ import annotations

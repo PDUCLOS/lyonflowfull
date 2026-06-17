@@ -116,7 +116,7 @@ def render_pipeline_status() -> None:
         if not df_alerts.empty:
             n_alerts = int(df_alerts.iloc[0].get("n") or 0)
     except Exception:
-        # DB indispo — fallback mock : 0 alertes en mode démo
+        # DB indispo — l'alerte est affichée par render_alerts_feed() (fail loud)
         n_alerts = 0
 
     with cols[0]:

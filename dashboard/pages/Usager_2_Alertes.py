@@ -28,7 +28,7 @@ render_sidebar_navigation()
 st.title("🔔 Mes alertes")
 render_data_status_banner()
 
-# Charge live (fallback mock auto via data_loader)
+# Charge live (DB Gold uniquement, fail loud via DashboardDataError)
 alerts_df = cached_recent_alerts(hours=6, limit=30)
 alerts_list = alerts_df.to_dict("records") if not alerts_df.empty else []
 

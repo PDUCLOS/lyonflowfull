@@ -311,20 +311,15 @@ def list_registered_models(experiment: str | None = None, max_results: int = 50)
         Mode démo (``LYONFLOW_DEMO_MODE=1``) : retourne liste vide (le
         data_loader fait le fallback mock).
     """
-    from src.data.data_loader import _is_demo_mode
     from src.data.exceptions import DashboardDataError
 
     if not is_mlflow_available():
-        if _is_demo_mode():
-            return []
         raise DashboardDataError(
             source="mlflow",
             detail="Module mlflow non installé. `pip install mlflow`",
         )
     # Quick reachability check avant d'appeler le client (sinon hang)
     if not is_tracking_server_reachable():
-        if _is_demo_mode():
-            return []
         raise DashboardDataError(
             source="mlflow",
             detail=(
@@ -379,9 +374,6 @@ def list_registered_models(experiment: str | None = None, max_results: int = 50)
     except DashboardDataError:
         raise
     except Exception as e:  # pragma: no cover
-        if _is_demo_mode():
-            logger.warning("list_registered_models failed: %s", e)
-            return []
         raise DashboardDataError(
             source="mlflow",
             detail=f"MLflow search_registered_models a échoué : {e}",

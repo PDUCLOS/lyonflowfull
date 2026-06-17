@@ -1,10 +1,10 @@
 """Widget — Trafic routier résumé (vitesse moyenne, bouchons).
 
-Sprint 6 — binding DB Gold via data_loader :
+Sprint 8 — binding DB Gold via data_loader (zéro mock) :
 * Si ``traffic=None`` → ``data_loader.cached_traffic()`` tente la DB
-  Gold, fallback mock si DB down.
+  Gold. Si DB down, lève ``DashboardDataError`` (fail loud).
 * Le widget reste 100% compatible avec l'ancien contrat (accepte toujours
-  un dict ``traffic`` en arg, utilisé en tests / mode démo forcé).
+  un dict ``traffic`` en arg, utilisé en tests).
 """
 
 from __future__ import annotations
@@ -19,7 +19,7 @@ def render_traffic_widget(traffic: dict | None = None) -> None:
     """Affiche le résumé trafic routier.
 
     Args:
-        traffic: dict de données. Si None, tente DB → fallback mock.
+        traffic: dict de données. Si None, charge via DB Gold (fail loud si indispo).
     """
     if traffic is None:
         traffic = cached_traffic(force_mock=False)
@@ -34,7 +34,7 @@ def render_traffic_widget(traffic: dict | None = None) -> None:
     if data_source == "db_gold":
         st.caption("🟢 Données temps réel (DB Gold)")
     else:
-        st.caption("🟡 Données démo (mock — DB non disponible)")
+        st.caption("🟡 Source inconnue — données potentiellement stales")
 
     col1, col2, col3 = st.columns(3)
     with col1:

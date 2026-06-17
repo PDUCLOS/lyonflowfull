@@ -121,10 +121,6 @@ def _archive_one_table(table: str, cutoff: datetime) -> dict:
         execute_options={"parameters": [cutoff]},
         engine="adbc",
     )
-        query=f"SELECT * FROM silver.{table} WHERE transformed_at < %s ORDER BY transformed_at",
-        uri=get_settings().db.url,  # type: ignore[arg-type]
-        execute_options={"parameters": [cutoff]},
-    )
     df.write_parquet(local_path, compression="snappy")
     bytes_parquet = local_path.stat().st_size
     logger.info("Wrote %s (%.1f MB) — %d rows",

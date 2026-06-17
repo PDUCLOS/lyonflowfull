@@ -201,8 +201,17 @@ class XGBoostSpeedModel:
 
         # Sprint 10+ MLOps — Génère et sauvegarde un Model Card (Markdown)
         try:
-            from src.ml.model_card import generate_xgboost_card, save_card
             from src.data.db_query import get_latest_drift_report
+            from src.ml.model_card import generate_xgboost_card, save_card
+            params = {
+                "horizon_min": horizon_minutes,
+                "n_estimators": n_estimators,
+                "max_depth": max_depth,
+                "learning_rate": learning_rate,
+                "n_samples": len(df),
+                "n_features": len(FEATURE_COLS),
+                "model_version": "1.2.0",
+            }
             dataset_stats = {
                 "n_rows": len(df),
                 "n_channels": int(df["channel_id"].nunique()) if "channel_id" in df.columns else 0,

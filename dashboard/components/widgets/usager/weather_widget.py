@@ -7,7 +7,6 @@ Sprint VPS-6 (2026-06-11) — fail loud en prod :
 * DB dispo + données : météo live.
 * DB indispo en prod : ``DashboardDataError`` → ``st.error``.
 * DB répond, table vide : ``st.warning("Météo indispo — données manquantes")``.
-* Mode démo (``LYONFLOW_DEMO_MODE=1``) : fallback ``MOCK_WEATHER`` autorisé.
 """
 
 from __future__ import annotations
@@ -157,15 +156,14 @@ _WMO_CODE_MAP: dict[int, tuple[str, str]] = {
 }
 
 
-def _wmo_to_label(code: Any) -> tuple[str, str]:
+def _wmo_to_label(code: int | str | None) -> tuple[str, str]:
     """Convertit un code météo WMO (int/str) en (label FR, emoji).
 
-    Tolérant : accepte str (depuis JSONB), int, None, ou un label FR déjà
-    valide (cas MOCK_WEATHER). Fallback "Couvert" si code inconnu.
+    Tolérant : accepte str (depuis JSONB), int, None. Fallback "Couvert" si code inconnu.
     """
     if code is None:
         return "Couvert", "☁️"
-    # Si c'est déjà un label FR (mock path), on garde
+    # Si c'est déjà un label FR (label direct), on garde
     if isinstance(code, str) and code in ("Ensoleillé", "Nuageux", "Pluvieux", "Brouillard", "Orageux", "Neige"):
         return code, _weather_icon(code)
     try:

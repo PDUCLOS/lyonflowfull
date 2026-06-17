@@ -11,9 +11,11 @@ Usage:
     docker compose exec -T streamlit python /app/scripts/maintenance/backfill_dim_spatial_lat_lon.py
 """
 import sys
+
 sys.path.insert(0, "/app")
 
 import h3
+
 from src.db.connection import execute_query
 
 

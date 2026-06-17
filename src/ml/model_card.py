@@ -20,7 +20,7 @@ from __future__ import annotations
 
 import json
 import logging
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 
 logger = logging.getLogger(__name__)
@@ -52,7 +52,7 @@ def generate_xgboost_card(
     Returns:
         Contenu Markdown du Model Card.
     """
-    now = datetime.now(timezone.utc).isoformat()
+    now = datetime.now(UTC).isoformat()
     feature_cols = feature_cols or []
     feature_table = "\n".join(f"| `{c}` | numérique |" for c in feature_cols)
 
@@ -165,7 +165,7 @@ def save_card(
     """Sauvegarde le Model Card en .md. Retourne le Path."""
     output_dir = Path(output_dir)
     output_dir.mkdir(parents=True, exist_ok=True)
-    date_str = datetime.now(timezone.utc).strftime("%Y%m%d")
+    date_str = datetime.now(UTC).strftime("%Y%m%d")
     path = output_dir / f"{model_name}_v{model_version}_{date_str}.md"
     path.write_text(card_md, encoding="utf-8")
     logger.info("Model Card saved to %s", path)

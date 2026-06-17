@@ -7,7 +7,6 @@ Sprint VPS-6 (2026-06-11) — fail loud en prod :
 * DB répond, données présentes : carte temps réel.
 * DB répond, table vide : ``st.info("Aucun bus en circulation")``.
 * DB indispo en prod : ``DashboardDataError`` → ``st.error``.
-* Mode démo (``LYONFLOW_DEMO_MODE=1``) : fallback ``ALL_BUSES`` mock autorisé.
 """
 
 from __future__ import annotations

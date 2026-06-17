@@ -1,7 +1,7 @@
 """Widget — Table des segments interactive.
 
 Segments chargés depuis gold.infrastructure_bottlenecks (croisement bus × trafic).
-Sprint VPS-6 — fail loud en prod, fallback mock SEGMENTS uniquement en démo.
+Sprint 8 — fail loud en prod, zéro mock (DB uniquement).
 """
 
 from __future__ import annotations

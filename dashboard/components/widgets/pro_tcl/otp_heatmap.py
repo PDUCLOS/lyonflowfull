@@ -23,7 +23,7 @@ def render_otp_heatmap(otp_data: dict | None = None, days: int = 1, height: int 
         height: hauteur du graphique.
     """
     if otp_data is None:
-        # Tente DB d'abord (Gold mv_otp_grid), fallback mock
+        # Charge depuis la DB (Gold mv_otp_grid) — fail loud si indispo
         df = cached_otp_heatmap_data(force_mock=False)
         if not df.empty:
             # Reconstruit le format {line_id: {date: [otp_per_hour]}}

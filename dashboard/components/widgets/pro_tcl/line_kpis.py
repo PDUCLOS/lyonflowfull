@@ -1,8 +1,8 @@
 """Widget — KPI cards denses par ligne (OTP, retard, fréquence, charge).
 
-Sprint 6 — binding DB :
+Sprint 8 — binding DB (zéro mock) :
 * ``line_ids=None`` → ``data_loader.cached_line_kpis()`` (DB Gold vue matérialisée
-  ``gold.mv_line_kpis_live`` ou mock fallback).
+  ``gold.mv_line_kpis_live``, fail loud via DashboardDataError si DB indispo).
 * Le widget reste rétro-compatible (accepte un dict en arg).
 
 Sprint VPS-5 — Mode explorable :
@@ -65,7 +65,7 @@ def render_line_kpis(
     Args:
         line_ids: liste de line_id. Si None, toutes les lignes.
         compact: True pour 4 KPIs/ligne en mode compact, False pour layout large.
-        kpis_dict: dict pré-calculé. Si None, tente DB → fallback mock.
+        kpis_dict: dict pré-calculé. Si None, charge via DB Gold (fail loud).
     """
     if kpis_dict is None:
         kpis_dict = cached_line_kpis(force_mock=False)

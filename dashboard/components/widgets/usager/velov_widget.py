@@ -1,7 +1,8 @@
 """Widget — Disponibilité Vélov des stations proches.
 
-Sprint 6 — binding DB Silver via data_loader :
-* ``stations=None`` → ``data_loader.cached_velov_stations()`` (DB Silver ou mock)
+Sprint 8 — binding DB Silver via data_loader (zéro mock) :
+* ``stations=None`` → ``data_loader.cached_velov_stations()`` (DB Silver uniquement,
+  fail loud via DashboardDataError si DB down)
 * Le widget reste rétro-compatible (accepte toujours une liste en arg).
 
 Sprint 10 — affichage des prédictions H+30min next to current state
@@ -37,7 +38,7 @@ def render_velov_widget(stations: list | None = None, max_stations: int = 3) -> 
     """Affiche la dispo Vélov des N stations les plus proches.
 
     Args:
-        stations: liste de stations Vélov. Si None, tente DB → fallback mock.
+        stations: liste de stations Vélov. Si None, charge via DB Silver (fail loud).
         max_stations: nombre max de stations à afficher.
     """
     if stations is None:
