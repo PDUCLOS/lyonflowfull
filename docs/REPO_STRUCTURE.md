@@ -125,12 +125,17 @@ lyonflowfull/
 │   ├── K8S_MIGRATION_PLAN.md     # Plan Phase 2 (source de verite)
 │   ├── CLOUD_DEPLOY_OPTIONS.md   # Comparatif providers Phase 3
 │   ├── PIPELINE_AUDIT_AND_PLAN.md
-│   ├── SPRINT_6_WIDGET_MIGRATION_CHECKLIST.md
 │   ├── ADR/                  # Architecture Decision Records
 │   ├── GIT_STRUCTURE.md     # Ce qu'est le repo Git (4 branches)
 │   └── REPO_STRUCTURE.md    # CE FICHIER (arbre annote)
 │
-└── SPRINT_*_REPORT.md       # Rapports sprints 1-7
+├── archive/                 # Documents historises (plus actifs mais conserves)
+│   ├── sprints/             #   Rapports sprints 1-7 + VPS-5/6/8 + Sprint 9+
+│   ├── audits/              #   Audits 2026-06-12 et corrections trackers
+│   ├── analysis/            #   Analyses des 3 repos sources pre-fusion
+│   └── misc/                #   B4_CANCELLED, autres decisions archivees
+│
+└── SPRINT_*_REPORT.md       # Rapports sprints 1-7 (archivés — voir archive/sprints/)
 ```
 
 ## Conventions fichiers

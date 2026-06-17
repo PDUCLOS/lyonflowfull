@@ -421,4 +421,4 @@ docker compose exec -T streamlit python /app/scripts/seed_lieux_calendrier.py
 - [docs/MONITORING.md](MONITORING.md) — Prometheus/Grafana
 - [docs/VPS_HARDENING.md](VPS_HARDENING.md) — SSH/firewall
 - [docs/DEPLOYMENT.md](DEPLOYMENT.md) — Procédure deploy
-- [SPRINT_VPS-8_REPORT.md](../SPRINT_VPS-8_REPORT.md) — Dernier sprint
+- [archive/sprints/SPRINT_VPS-8_REPORT.md](../archive/sprints/SPRINT_VPS-8_REPORT.md) — Dernier sprint

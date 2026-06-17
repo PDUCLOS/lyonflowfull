@@ -6,7 +6,7 @@
 #
 # Auteur: Patrice DUCLOS — Senior Data Analyst, Jedha RNCP 38777
 # Repo: PDUCLOS/lyonflowfull
-# Version: 0.6.1 (Sprint VPS-5 livré — voir SPRINT_VPS-5_REPORT.md)
+# Version: 0.6.3 (Sprints VPS 1-8 livrés — voir archive/sprints/SPRINT_VPS-8_REPORT.md)
 #
 # Branches :
 #   - main         : Phase 1 production-ready local + fixes pipeline
@@ -16,7 +16,7 @@
 #
 # Voir docs/GIT_STRUCTURE.md pour le workflow branches/merges.
 # Voir docs/REPO_STRUCTURE.md pour l'arbre annoté du repo.
-# Voir SPRINT_VPS-5_REPORT.md pour le détail du dernier sprint.
+# Voir archive/sprints/SPRINT_VPS-8_REPORT.md pour le détail du dernier sprint.
 # =============================================================================
 
 # Table des matières

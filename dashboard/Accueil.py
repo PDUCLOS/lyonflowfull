@@ -122,15 +122,13 @@ render_persona_switcher(layout="cards")
 # Footer : stats globales (lisibles par tous)
 # -----------------------------------------------------------------------------
 st.markdown("---")
-st.markdown("##### 📊 Lyon en ce moment (aperçu — valeurs de référence, mode démo)")
+# Sprint 11+ (2026-06-17) — caption refactor : virer "mode démo" (politique
+# zéro mock depuis Sprint 8, 2026-06-12). Distinguer explicitement les
+# métriques LIVE (lues en DB PostgreSQL Gold, fail loud si indispo) des
+# métriques de RÉFÉRENCE (chiffres Grand Lyon Open Data / capacité ML).
+st.markdown("##### 📊 Lyon en ce moment — données live + références Grand Lyon")
 
 stat_cols = st.columns(4)
-# Sprint 7+ : query live DB pour vraies valeurs (fallback mock si DB indispo).
-# Avant ce fix : "1 100", "118", "458" hardcodés en dur — incohérent avec le
-# bandeau "🟢 Live" en haut de page.
-# Sprint VPS-6 (2026-06-11) — fail loud en prod : on lit la DB, pas de
-# fallback hardcodé. Les chiffres du mock historique (118, 458) sont
-# conservés comme référence dans le caption.
 
 # Imports en bas du bloc : nécessaire car Accueil.py a du code Streamlit avant.
 from dashboard.components.data_cache import (  # noqa: E402
@@ -156,13 +154,17 @@ except DashboardDataError as e:
 with stat_cols[0]:
     st.metric("Capteurs trafic", "1 100", delta="référence Grand Lyon")
 with stat_cols[1]:
-    st.metric("Lignes TCL", f"{n_lines}", delta="live")
+    st.metric("Lignes TCL", f"{n_lines}", delta="live DB")
 with stat_cols[2]:
-    st.metric("Stations Vélov", f"{n_stations_velov}", delta="live")
+    st.metric("Stations Vélov", f"{n_stations_velov}", delta="live DB")
 with stat_cols[3]:
-    st.metric("Prédictions/jour", "~26k", delta="GNN + XGBoost")
+    st.metric("Prédictions/jour", "~26k", delta="capacité GNN + XGBoost")
 
 st.caption(
-    "Données mises à jour toutes les 5 min · Source : Grand Lyon Open Data + Open-Meteo. "
-    "Référence : ~118 lignes TCL historiques, ~458 stations Vélov."
+    "**Live (DB PostgreSQL Gold)** : Lignes TCL + Stations Vélov actuellement chargées — "
+    "fail loud (`DashboardDataError`) si la base est indisponible. "
+    "**Référence (Grand Lyon Open Data)** : ~1 100 capteurs trafic historiques, "
+    "~118 lignes TCL, ~458 stations Vélov. "
+    "**Capacité ML** : ~26k prédictions/jour (GNN + XGBoost H+1h). "
+    "Données temps réel mises à jour toutes les 5 min."
 )

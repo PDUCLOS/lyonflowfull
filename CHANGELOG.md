@@ -5,9 +5,70 @@ Toutes les modifications notables de ce projet sont documentées ici.
 Le format suit [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/),
 et ce projet adhère au [Semantic Versioning](https://semver.org/lang/fr/).
 
+## [0.6.4] - 2026-06-17 — Sprint 11+ : libellés TCL lisibles + reorg docs (branche `vps`)
+
+Voir [archive/sprints/SPRINT_11_REPORT.md](archive/sprints/SPRINT_11_REPORT.md)
+pour le détail complet.
+
+### Ajouté
+- **`src/data/db_query.clean_line_label()`** : helper qui convertit un
+  `line_ref` brut SIRI Lite (`"ActIV:Line::66:SYTRAL_h20"`) en libellé
+  lisible pour le dashboard (`"L66 ; 20h"`). Conserve tels quels les
+  identifiants déjà lisibles (`T1`, `M_A`, `C3`, ...). 30 tests unitaires
+  couvrent les 5 cas (format ActIV, déjà lisibles, vide/None, whitespace,
+  non-string, format inconnu).
+- **Colonnes `line_label` / `road_label`** sur les DataFrames de
+  `get_bottlenecks_summary`, `get_line_kpis`, `get_otp_heatmap` — les
+  widgets Pro TCL affichent désormais `"L66"` au lieu de
+  `"ActIV:Line::66:SYTRAL"`.
+- **`tests/data/test_clean_line_label.py`** (30 tests) : couverture
+  exhaustive du helper + cas limites (None, vide, type non-string,
+  format inconnu, whitespace).
+
+### Changed
+- **`dashboard/components/widgets/pro_tcl/line_kpis.py`** : affichage
+  par `line_label` (`"L66"`) au lieu de `line_id` brut
+  (`"ActIV:Line::66:SYTRAL"`). Le `line_id` reste la clé interne pour
+  le tri technique si besoin.
+- **`dashboard/components/widgets/pro_tcl/otp_heatmap.py`** : axe Y de
+  la heatmap affiche les libellés lisibles. Le `line_id` brut reste la
+  clé interne du dict pour l'agrégation par date.
+- **`dashboard/Accueil.py`** : caption refactor — virer toute mention
+  "mode démo" (politique zéro mock depuis Sprint 8). Distingue
+  explicitement **LIVE (DB PostgreSQL Gold)** vs **RÉFÉRENCE (Grand Lyon
+  Open Data)** vs **CAPACITÉ ML** dans le footer stats.
+- **`src/data/data_loader.load_bottlenecks_top()`** : utilise
+  `line_label` et `road_label` (calculés par `get_bottlenecks_summary`)
+  au lieu de mocks hardcodés `["C3", "C13"]`.
+
+### Fixed
+- **`src/transformation/bronze_to_silver._transform_tcl_vehicles()`** :
+  `LIMIT 5000 → 200` dans le SELECT bronze (OOM-kill du worker Airflow
+  sur 5000 SIRI JSON ≈ 2.5 Go en mémoire Python). 200 couvre largement
+  la fenêtre roulante 15-min et libère 5+ Go de RAM dans le worker.
+- **Idem sur `_transform_velov()`** : `LIMIT 5000 → 200` par cohérence
+  (même profil de risque OOM).
+
+### Removed
+- **`dashboard/pages/9_RGPD_Conformite.py`** : suppression du bloc
+  "Activité RGPD" (registre Article 30) et du "Contact DPO" placeholder
+  (`dpo@lyonflowfull.fr`). Le schéma `rgpd.audit_log` n'est pas peuplé
+  en prod — à recâbler quand l'implémentation sera complète.
+
+### Documentation
+- **Reorg complète** : tous les rapports de sprint (`SPRINT_*.md`), audits
+  (`AUDIT_*.md`), analyses des 3 repos sources (`analysis_*.md`),
+  `B4_CANCELLED.md` et `etude_marche_ui.md` sont déplacés sous
+  `archive/{sprints,audits,analysis,misc}/`. `archive/README.md`
+  documente la nouvelle structure et la convention (déplacer, jamais
+  supprimer, traçabilité RNCP 38777).
+- **Toutes les références** dans `CLAUDE.md`, `AGENTS.md`, `README.md`,
+  `CHANGELOG.md`, `docs/PLAN_NO_MOCK_VPS.md`, `docs/REPO_STRUCTURE.md`,
+  `docs/RUNBOOK.md` sont mises à jour vers les chemins `archive/...`.
+
 ## [0.6.3] - 2026-06-11 — Focus H+1h + Nginx healthcheck fix (branche `vps`)
 
-Voir [SPRINT_VPS-6_REPORT.md](SPRINT_VPS-6_REPORT.md) pour le détail.
+Voir [archive/sprints/SPRINT_VPS-6_REPORT.md](archive/sprints/SPRINT_VPS-6_REPORT.md) pour le détail.
 
 ### Changed
 - **`dags/ml/dag_live_speed_retrain.py`** : `HORIZON_MAP` réduit à `{60: 1}`
@@ -28,7 +89,7 @@ Voir [SPRINT_VPS-6_REPORT.md](SPRINT_VPS-6_REPORT.md) pour le détail.
 
 ## [0.6.2] - 2026-06-10 — Réparation 3 chaînes bronze→silver→gold silencieusement cassées
 
-Voir [SPRINT_VPS-5_REPORT.md](SPRINT_VPS-5_REPORT.md) pour le détail complet.
+Voir [archive/sprints/SPRINT_VPS-5_REPORT.md](archive/sprints/SPRINT_VPS-5_REPORT.md) pour le détail complet.
 
 ### Ajouté
 - **DAG `dags/ml/dag_live_speed_retrain.py`** : train 4 XGBoost speed (5min/1h/3h/6h)
@@ -287,7 +348,7 @@ préparées pour un futur déploiement AWS/GCP, **non mergées dans `vps` ou `ma
 #### Ajouté
 - `src/data/db_query.py` (~480L) : helpers SQL parametres typeSafe
 - `src/data/data_loader.py` (~280L) : cache + retry + fallback mock
-- 6 widgets migres vers DB (sur 47, voir `SPRINT_6_WIDGET_MIGRATION_CHECKLIST.md`)
+- 6 widgets migres vers DB (sur 47, voir `archive/sprints/SPRINT_6_REPORT.md`)
 - Page RGPD live + 42 nouveaux tests
 
 ## [0.1.0] - 2026-06-06 — Sprint 5

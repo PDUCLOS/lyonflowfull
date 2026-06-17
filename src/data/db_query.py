@@ -22,6 +22,7 @@ Pour les widgets, voir le pattern dans ``dashboard/components/widgets/usager/tra
 from __future__ import annotations
 
 import logging
+import re
 
 import pandas as pd
 
@@ -29,6 +30,58 @@ from src.data.exceptions import DashboardDataError
 from src.db.connection import execute_query, execute_scalar, test_connection
 
 logger = logging.getLogger(__name__)
+
+
+# =============================================================================
+# Helpers libellés (Sprint 11+ — nettoyage des identifiants TCL bruts)
+# =============================================================================
+# Les sources SIRI Lite Grand Lyon exposent des ``line_ref`` au format brut
+# ``ActIV:Line::66:SYTRAL`` (parfois suffixés ``_h20`` pour le bucket horaire).
+# C'est illisible côté UI. Ce helper standardise l'affichage avec ``;``
+# comme séparateur (convention validée par Patrice 2026-06-17).
+#
+# Exemples :
+#   "ActIV:Line::66:SYTRAL"       → "L66"
+#   "ActIV:Line::4252:SYTRAL_h16" → "L4252 ; 16h"
+#   "ActIV:Line::M_A:SYTRAL"      → "LM_A"
+#   "T1" / "M_A" / "C3"          → inchangé (déjà lisibles)
+#   None / ""                     → "—"
+
+
+_LINE_REF_ACTIV_PATTERN = re.compile(r"^ActIV:Line::([^:]+):SYTRAL(?:_h(\d+))?$")
+
+
+def clean_line_label(line_ref: str | None) -> str:
+    """Nettoie un identifiant TCL brut en libellé lisible (Sprint 11+).
+
+    Le ``;`` est utilisé comme séparateur (ligne ; bucket horaire) pour
+    respecter la convention validée par Patrice le 2026-06-17. Les
+    identifiants déjà lisibles (``T1``, ``M_A``, ``C3``, ...) passent
+    inchangés.
+
+    Args:
+        line_ref: identifiant TCL brut (ex. ``"ActIV:Line::66:SYTRAL_h20"``)
+            ou déjà lisible (ex. ``"T1"``). ``None`` et ``""`` renvoient ``"—"``.
+
+    Returns:
+        Libellé formaté. Exemples : ``"L66"``, ``"L4252 ; 16h"``, ``"T1"``, ``"—"``.
+    """
+    if not line_ref or not isinstance(line_ref, str):
+        return "—"
+    ref = line_ref.strip()
+    if not ref:
+        return "—"
+
+    m = _LINE_REF_ACTIV_PATTERN.match(ref)
+    if m:
+        line_num = m.group(1)
+        hour = m.group(2)
+        if hour:
+            return f"L{line_num} ; {int(hour)}h"
+        return f"L{line_num}"
+
+    # Cas déjà lisible (T1, M_A, C3, ...) ou format inconnu → pas de transformation
+    return ref
 
 
 # -----------------------------------------------------------------------------
@@ -473,6 +526,14 @@ def get_bottlenecks_summary(top: int = 50) -> pd.DataFrame:
         LIMIT %s
     """
     df = _df_from_query(query, (top,))
+    if not df.empty and "line_ref" in df.columns:
+        # Sprint 11+ — colonne line_label pour affichage lisible
+        # ("L66 ; 20h" au lieu de "ActIV:Line::66:SYTRAL_h20").
+        df["line_label"] = df["line_ref"].apply(clean_line_label)
+        # Le road_name (segment_id brut) peut aussi être nettoyé quand c'est
+        # un identifiant ActIV:Line:: (cas des bottlenecks routiers).
+        if "road_name" in df.columns:
+            df["road_label"] = df["road_name"].apply(clean_line_label)
     return df
 
 
@@ -1251,7 +1312,9 @@ def get_line_kpis(line_ids: list[str] | None = None) -> dict:
         retard_s = float(r["retard_moyen_s"]) if r["retard_moyen_s"] is not None else 0.0
         fvh = float(r["freq_vehicules_par_h"]) if r["freq_vehicules_par_h"] is not None else 0.0
         charge = float(r["charge_pct"]) if r["charge_pct"] is not None else 0.0
-        out[r["line_ref"]] = {
+        line_ref_raw = r["line_ref"]
+        out[line_ref_raw] = {
+            "line_label": clean_line_label(line_ref_raw),  # Sprint 11+ affichage lisible
             "otp_pct": float(r["otp_pct"]) if r["otp_pct"] is not None else 0.0,
             "avg_delay_min": round(retard_s / 60, 1),
             "frequency_min": round(60 / fvh, 1) if fvh > 0 else 0.0,
@@ -1277,9 +1340,11 @@ def get_otp_heatmap(days: int = 7) -> pd.DataFrame:
         days: fenêtre temporelle en jours (défaut 7).
 
     Returns:
-        DataFrame avec colonnes ``line_id, date, hour, otp_pct,
-        avg_delay_s, n_obs`` (rétro-compatible avec le mock aplati
-        ``OTP_GRID`` → ``[line_id, date, hour, otp_pct]``).
+        DataFrame avec colonnes ``line_id, line_label, date, hour,
+        otp_pct, avg_delay_s, n_obs`` (rétro-compatible avec le mock aplati
+        ``OTP_GRID`` → ``[line_id, date, hour, otp_pct]``). ``line_label``
+        est ajoutée par Sprint 11+ pour affichage lisible (``"L66"`` au
+        lieu de ``"ActIV:Line::66:SYTRAL"``).
     """
     query = """
         SELECT line_id, date, hour, otp_pct, avg_delay_s, n_obs
@@ -1287,7 +1352,10 @@ def get_otp_heatmap(days: int = 7) -> pd.DataFrame:
         WHERE date >= CURRENT_DATE - %s
         ORDER BY line_id, date, hour
     """
-    return _df_from_query(query, (days,))
+    df = _df_from_query(query, (days,))
+    if not df.empty and "line_id" in df.columns:
+        df["line_label"] = df["line_id"].apply(clean_line_label)
+    return df
 
 
 def get_latest_drift_report() -> dict | None:

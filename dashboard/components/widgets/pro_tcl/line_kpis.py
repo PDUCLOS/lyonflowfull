@@ -35,7 +35,12 @@ SORT_OPTIONS = {
 
 
 def _to_dataframe(kpis_dict: dict) -> pd.DataFrame:
-    """Convertit le dict de KPIs en DataFrame pour tri/filtre Streamlit."""
+    """Convertit le dict de KPIs en DataFrame pour tri/filtre Streamlit.
+
+    Sprint 11+ (2026-06-17) — utilise ``line_label`` (calculé par
+    ``get_line_kpis`` via ``clean_line_label``) pour l'affichage, et garde
+    ``line_id`` brut pour le tri A-Z technique si besoin.
+    """
     rows = []
     for line_id, kpis in kpis_dict.items():
         if not kpis:
@@ -43,6 +48,7 @@ def _to_dataframe(kpis_dict: dict) -> pd.DataFrame:
         rows.append(
             {
                 "line_id": line_id,
+                "line_label": kpis.get("line_label", line_id),
                 "otp_pct": float(kpis.get("otp_pct", 0)),
                 "avg_delay_min": float(kpis.get("avg_delay_min", 0)),
                 "frequency_min": float(kpis.get("frequency_min", 0)),
@@ -111,10 +117,12 @@ def render_line_kpis(
     df_view = df_sorted.head(top_n)
 
     # ---- Tableau Streamlit avec sort natif en plus ----
-    display_cols = ["line_id", "otp_pct", "avg_delay_min", "frequency_min", "load_pct", "trend"]
+    # Sprint 11+ — afficher le libellé lisible (``L66``) plutôt que le
+    # ``line_ref`` brut (``ActIV:Line::66:SYTRAL``).
+    display_cols = ["line_label", "otp_pct", "avg_delay_min", "frequency_min", "load_pct", "trend"]
     df_display = df_view[display_cols].rename(
         columns={
-            "line_id": "Ligne",
+            "line_label": "Ligne",
             "otp_pct": "OTP (%)",
             "avg_delay_min": "Retard (min)",
             "frequency_min": "Fréq. (min)",
@@ -150,7 +158,7 @@ def render_line_kpis(
     if show_details:
         st.markdown("##### 🔍 Détails par ligne")
         for _, row in df_view.iterrows():
-            with st.expander(f"**{row['line_id']}** — OTP {row['otp_pct']:.0f}% · retard {row['avg_delay_min']:.1f} min"):
+            with st.expander(f"**{row['line_label']}** — OTP {row['otp_pct']:.0f}% · retard {row['avg_delay_min']:.1f} min"):
                 c1, c2, c3, c4 = st.columns(4)
                 c1.metric("OTP", f"{row['otp_pct']:.1f}%")
                 c2.metric("Retard moyen", f"{row['avg_delay_min']:.1f} min")
@@ -165,6 +173,7 @@ def render_line_kpis(
         st.markdown("##### 🟢🟠🔴 Vue cartes (legacy)")
         for _, row in df_view.iterrows():
             line_id = row["line_id"]
+            line_label = row["line_label"]
             kpis = kpis_dict.get(line_id, {})
             otp = row["otp_pct"]
             otp_color = (
@@ -182,7 +191,7 @@ def render_line_kpis(
                 <div class="lyonflow-card" style="padding:0.6rem 0.8rem;margin:0.3rem 0;">
                     <div style="display:flex;align-items:center;justify-content:space-between;
                                 margin-bottom:6px;">
-                        <div style="font-weight:600;font-size:0.95rem;">{line_id}</div>
+                        <div style="font-weight:600;font-size:0.95rem;">{line_label}</div>
                         <div style="font-size:0.75rem;opacity:0.7;">
                             {trend_icon} {row['trend_delta']:+.1f}pts
                         </div>

@@ -1,9 +1,11 @@
 """Page commune — RGPD & Conformité.
 
-Sprint 6 — binding DB :
-* Section "Activité RGPD" lit directement ``rgpd.audit_log``,
-  ``rgpd.user_consents``, ``rgpd.data_subject_requests`` via data_loader.
-* Si DB down → fallback mock transparent.
+Sprint 11+ (2026-06-17) — nettoyage :
+* Bloc "Contact DPO" viré (email placeholder dpo@lyonflowfull.fr, pas de
+  DPO nommé en prod — sera réintroduit quand un vrai DPO sera nommé).
+* Section "Activité RGPD" (registre Article 30) virée : affiche "Aucun
+  log d'audit disponible" tant que le schéma ``rgpd.audit_log`` n'est pas
+  peuplé en prod. À recâbler quand l'implémentation sera complète.
 """
 
 from __future__ import annotations
@@ -13,10 +15,6 @@ import streamlit as st
 from dashboard.components.data_status import render_data_status_banner
 from dashboard.components.navigation import render_sidebar_navigation
 from dashboard.components.theme import inject_theme
-from src.data.data_loader import (
-    load_rgpd_audit,
-    load_rgpd_consents,
-)
 
 st.set_page_config(
     page_title="RGPD — LyonFlowFull",
@@ -70,52 +68,8 @@ st.markdown(
     - Demander l'accès à vos données (il n'y en a pas nominatives)
     - Demander la suppression (les comptes ne sont pas nominatifs)
     - Porter réclamation auprès de la CNIL
-
-    ### Contact DPO
-
-    Pour toute question RGPD : **dpo@lyonflowfull.fr**
     """
 )
-
-st.divider()
-st.markdown("### 📊 Activité RGPD (registre Article 30 — données temps réel)")
-
-# Consents summary
-consents_df = load_rgpd_consents(force_mock=False)
-if not consents_df.empty:
-    cols = st.columns(len(consents_df))
-    for col, (_, row) in zip(cols, consents_df.iterrows()):
-        with col:
-            granted_pct = (row["granted_count"] / row["total"] * 100) if row["total"] else 0
-            st.metric(
-                label=row["consent_type"],
-                value=f"{int(row['granted_count'])} / {int(row['total'])}",
-                delta=f"{granted_pct:.0f}% acceptation",
-                delta_color="normal" if granted_pct >= 50 else "inverse",
-            )
-
-# Audit log
-audit_df = load_rgpd_audit(limit=50)
-if not audit_df.empty:
-    st.markdown("##### 🔍 Dernières actions (audit log)")
-    # Cacher IP complete par défaut (RGPD)
-    display_df = audit_df.copy()
-    if "ip_address" in display_df.columns:
-        # IPv4 : 192.168.1.42 → 192.168.1.xxx
-        # IPv6 : 2001:0db8:85a3:0000:0000:8a2e:0370:7334 → 2001:0db8:85a3:0000:0000:8a2e:0370:xxxx
-        display_df["ip_address"] = (
-            display_df["ip_address"]
-            .astype(str)
-            .str.replace(r"(\d+\.\d+\.\d+\.)\d+", r"\1xxx", regex=True)  # IPv4
-            .str.replace(
-                r"([0-9a-fA-F]+:[0-9a-fA-F]+:[0-9a-fA-F]+:[0-9a-fA-F]+:[0-9a-fA-F]+:[0-9a-fA-F]+:)([0-9a-fA-F]+)(:[0-9a-fA-F]+)",
-                r"\1xxxx\3",
-                regex=True,
-            )  # IPv6 (7 premiers groupes + 4 derniers hex cachés)
-        )
-    st.dataframe(display_df, use_container_width=True, hide_index=True)
-else:
-    st.info("Aucun log d'audit disponible — DB non connectée ou table vide.")
 
 st.divider()
 st.caption("LyonFlowFull v0.6.1 — conforme RGPD")

@@ -27,12 +27,16 @@ def render_otp_heatmap(otp_data: dict | None = None, days: int = 1, height: int 
         df = cached_otp_heatmap_data(force_mock=False)
         if not df.empty:
             # Reconstruit le format {line_id: {date: [otp_per_hour]}}
+            # Sprint 11+ — on garde un dict parallèle ``line_labels`` pour
+            # afficher ``"L66"`` plutôt que ``"ActIV:Line::66:SYTRAL"``.
             otp_data = {}
+            line_labels: dict[str, str] = {}
             for _, row in df.iterrows():
                 line_id = row["line_id"]
                 date = str(row.get("date", ""))
                 if line_id not in otp_data:
                     otp_data[line_id] = {}
+                line_labels[line_id] = row.get("line_label") or line_id
                 # On a (line_id, date, hour, otp_pct) → on agrège par date
                 if date not in otp_data[line_id]:
                     otp_data[line_id][date] = [0.0] * 24
@@ -42,6 +46,8 @@ def render_otp_heatmap(otp_data: dict | None = None, days: int = 1, height: int 
             # Si la vue est vide, le widget affiche un message et return.
             st.info("Aucune donnée OTP — gold.mv_otp_heatmap est vide.")
             return
+    else:
+        line_labels = {}  # mode pré-calculé : pas de labels dispo
 
     # Calculer la moyenne
     # Sprint 8 — tri par nombre de dates observées (proxy activité),
@@ -49,8 +55,11 @@ def render_otp_heatmap(otp_data: dict | None = None, days: int = 1, height: int 
     def _n_dates(lid: str) -> int:
         return len(otp_data.get(lid, {}))
 
-    lines = sorted(otp_data.keys(), key=_n_dates, reverse=True)
-    dates = sorted(otp_data[lines[0]].keys()) if lines else []
+    lines_raw = sorted(otp_data.keys(), key=_n_dates, reverse=True)
+    # Sprint 11+ — affiche le libellé lisible sur l'axe Y
+    # (le ``line_id`` brut reste la clé interne du dict).
+    lines = [line_labels.get(lid, lid) for lid in lines_raw]
+    dates = sorted(otp_data[lines_raw[0]].keys()) if lines_raw else []  
 
     if days == 1:
         selected_dates = dates[:1]
@@ -63,7 +72,7 @@ def render_otp_heatmap(otp_data: dict | None = None, days: int = 1, height: int 
     # les dates présentes (au lieu d'inventer un OTP à 85%).
     z_data = []
     text_data = []
-    for line_id in lines:
+    for line_id in lines_raw:  # itère sur la clé brute (``ActIV:Line::...``)
         row = []
         text_row = []
         for h in range(24):
@@ -71,7 +80,7 @@ def render_otp_heatmap(otp_data: dict | None = None, days: int = 1, height: int 
                 otp_data[line_id][d][h]
                 for d in selected_dates
                 if d in otp_data[line_id] and h < len(otp_data[line_id][d])
-            ]
+            ]  
             if values:
                 avg = sum(values) / len(values)
                 row.append(round(avg, 1))
@@ -120,6 +129,9 @@ def render_otp_heatmap(otp_data: dict | None = None, days: int = 1, height: int 
         # Fallback
         df = pd.DataFrame(z_data, index=lines, columns=[f"{h}h" for h in range(24)])
         st.dataframe(df.style.background_gradient(cmap="RdYlGn", vmin=60, vmax=98), height=height)
+        # line_labels pour le mode pré-calculé (pas utilisé ici, mais on garde la var
+        # pour ne pas casser le scope)
+        _ = line_labels
 
 
 def render_otp_heatmap_mini(otp_data: dict | None = None, height: int = 200) -> None:

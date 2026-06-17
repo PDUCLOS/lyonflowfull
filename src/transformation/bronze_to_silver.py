@@ -216,7 +216,7 @@ def _transform_velov() -> int:
                 SELECT id, fetched_at, raw_data
                 FROM bronze.velov
                 ORDER BY fetched_at DESC
-                LIMIT 5000
+                LIMIT 200
             """)
         rows = cur.fetchall()
 
@@ -352,7 +352,12 @@ def _transform_tcl_vehicles() -> int:
                 SELECT id, fetched_at, raw_data
                 FROM bronze.tcl_vehicles
                 ORDER BY fetched_at DESC
-                LIMIT 5000
+                -- Sprint 11+ (2026-06-17) — réduit de 5000 → 200 (~16h de
+                -- fetches @5min). La lecture de 5000 SIRI JSON (~2.5 Go en
+                -- mémoire Python) OOM-kill le worker Airflow (6 Go de
+                -- memory limit) avant la fin de la tâche. 200 couvre
+                -- largement toute fenêtre roulante 15-min.
+                LIMIT 200
             """)
         rows = cur.fetchall()
 

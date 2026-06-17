@@ -49,7 +49,8 @@
 #         air_quality 72 records + chantiers 428 records débloqués
 #       - Refacto xgboost_speed.py : schéma v0.3.1 (lag_h1/h2/h3, delta_h1, rolling_mean_h1)
 # - Docs : docs/VPS_HARDENING.md, docs/MONITORING.md, docs/CONTROLE_VPS_VS_CLOUD_DEMO.md,
-#   SPRINT_VPS-5_REPORT.md, SPRINT_VPS-6_REPORT.md, SPRINT_VPS-8_REPORT.md, PLAN_NO_MOCK_VPS.md
+#   archive/sprints/SPRINT_VPS-5_REPORT.md, archive/sprints/SPRINT_VPS-6_REPORT.md,
+#   archive/sprints/SPRINT_VPS-8_REPORT.md, PLAN_NO_MOCK_VPS.md
 # - Healthcheck : scripts/healthcheck-vps.sh (Sprint 8+, 20 checks : containers + DB + endpoints)
 #
 # Dette technique connue (Sprint 9+) :
@@ -165,5 +166,5 @@
 # - Issue tracker : GitHub Issues
 # - CI : GitHub Actions (.github/workflows/ci.yml)
 # - Docs : /docs/ (README, ARCHITECTURE, DEPLOYMENT, DATA_GOVERNANCE, RUNBOOK, MONITORING)
-# - Rapports sprint : /SPRINT_*.md (8 rapports)
+# - Rapports sprint : /archive/sprints/SPRINT_*.md (8 rapports archivés)
 # - Healthcheck : scripts/healthcheck-vps.sh (20 checks)

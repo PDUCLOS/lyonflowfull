@@ -642,10 +642,12 @@ def load_bottlenecks_top(force_mock: bool = False) -> list[dict]:
 
     Reconstruit le format ``BOTTLENECKS_TOP_10`` mock depuis le DataFrame
     ``load_bottlenecks_summary``.
+
+    Sprint 11+ (2026-06-17) — utilise ``line_label`` et ``road_label``
+    (calculés par ``get_bottlenecks_summary``) au lieu de mocks hardcodés.
     """
-    # En attendant la vraie table gold.bottlenecks_summary_agg, on utilise
-    # les données de load_bottlenecks_summary (MOCK_INFRA_BOTTLENECKS)
     from src.data.data_loader import load_bottlenecks_summary
+    from src.data.db_query import clean_line_label
 
     df = load_bottlenecks_summary(force_mock=force_mock)
     if df.empty:
@@ -653,17 +655,22 @@ def load_bottlenecks_top(force_mock: bool = False) -> list[dict]:
 
     bottlenecks = []
     for i, row in df.head(10).iterrows():
+        # Sprint 11+ — utilise les colonnes nettoyées si dispo, sinon fallback DB raw
+        zone = row.get("road_label") or clean_line_label(row.get("road_name"))
+        if not zone or zone == "—":
+            zone = clean_line_label(row.get("road_name", "—"))
+        lines_impacted_raw = row.get("line_label") or clean_line_label(row.get("line_ref"))
         bottlenecks.append(
             {
                 "rank": int(row.get("bottleneck_id", i + 1)),
-                "zone": row.get("road_name", "—"),
-                "lines_impacted": ["C3", "C13"],  # approximation mock
+                "zone": zone,
+                "lines_impacted": [lines_impacted_raw] if lines_impacted_raw else [],
                 "voyageurs_jour": int(row.get("voyageurs_jour", 5000 + i * 1000)),
                 "gain_min": 5 + i,
                 "cout_M_euros": round(2.5 - i * 0.15, 2),
                 "roi_mois": 18 + i * 3,
                 "delai_mois": 6 + i * 2,
-                "description": f"Amélioration #{i + 1} du bottleneck {row.get('road_name', '—')}",
+                "description": f"Amélioration #{i + 1} du bottleneck {zone}",
             }
         )
     return bottlenecks

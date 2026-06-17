@@ -294,11 +294,21 @@ services:
     environment:
       <<: *common-env
       PYTHONPATH: /opt/airflow
-      AIRFLOW__CORE__EXECUTOR: CeleryExecutor
+      # Sprint 11+ (2026-06-17) — passage à LocalExecutor + modèle path.
+      # Le worker Celery ne se connectait jamais au broker (il cherchait
+      # AMQP sur localhost au lieu de Redis). Avec LocalExecutor, le
+      # scheduler exécute les tasks directement via subprocess — plus
+      # besoin du worker, et la RAM économisée (1G worker + 5G oom-kill
+      # prevention) est allouée au scheduler (3G) pour absorber les
+      # transforms Bronze→Silver (JSON SIRI ~200 rows) + xgboost training.
+      AIRFLOW__CORE__EXECUTOR: LocalExecutor
       AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/airflow
-      AIRFLOW__CELERY__BROKER_URL: redis://redis:6379/0
-      AIRFLOW__CELERY__RESULT_BACKEND: db+postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/airflow
-    command: scheduler
+      # Sprint 11+ — modèles ML persistés sur airflow_data (uid 50000 OK)
+      # au lieu de /app/models (root-only). Sans ce var, train_one() fait
+      # mkdir('/app') → PermissionError → DAG failed silencieux.
+      LYONFLOW_MODELS_DIR: /opt/airflow/data/models
+    command: >
+      bash -c "mkdir -p /opt/airflow/data/models && airflow scheduler"
     volumes:
       - ./dags:/opt/airflow/dags
       - ./src:/opt/airflow/src
@@ -309,7 +319,11 @@ services:
       resources:
         limits:
           cpus: "0.5"
-          memory: 768M
+          # Sprint 11+ (2026-06-17) — 768M → 3G (OOM-kill prevention).
+          # Le scheduler lance les tasks via LocalExecutor (subprocess).
+          # Mémoire pic observée : ~2G pendant les transforms Bronze→Silver
+          # parallèles + xgboost training. 3G laisse du headroom.
+          memory: 3G
 
   # ---------------------------------------------------------------------------
   # Airflow worker
@@ -325,12 +339,18 @@ services:
     environment:
       <<: *common-env
       PYTHONPATH: /opt/airflow
+      # Sprint 11+ (2026-06-17) — modèles ML persistés sur le volume
+      # airflow_data (writable par uid 50000), pas /app qui n'existe pas
+      # dans le worker. Sans ce var, ``XGBoostSpeedModel.save()`` écrivait
+      # sur /app/models → PermissionError → inférence impossible.
+      LYONFLOW_MODELS_DIR: /opt/airflow/data/models
       AIRFLOW__CORE__EXECUTOR: CeleryExecutor
       AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/airflow
       AIRFLOW__CELERY__BROKER_URL: redis://redis:6379/0
       AIRFLOW__CELERY__RESULT_BACKEND: db+postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/airflow
       AIRFLOW__CELERY__WORKER_CONCURRENCY: "2"
-    command: celery worker
+    command: >
+      bash -c "mkdir -p /opt/airflow/data/models && airflow celery worker"
     volumes:
       - ./dags:/opt/airflow/dags
       - ./src:/opt/airflow/src
@@ -339,8 +359,13 @@ services:
     deploy:
       resources:
         limits:
-          cpus: "2.0"
-          memory: 6G
+          cpus: "1.0"
+          # Sprint 11+ (2026-06-17) — 6G → 1G.
+          # Worker réellement utilisé = ~300 MiB (juste le heartbeat
+          # Celery + import des DAGs). 6G était du gaspillage pur.
+          # La RAM économisée (5G) est allouée au scheduler (2G) et
+          # laisse du headroom pour les autres containers.
+          memory: 1G
 
   # ---------------------------------------------------------------------------
   # FastAPI (REST endpoints)

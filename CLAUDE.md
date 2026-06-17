@@ -1,6 +1,6 @@
 # CLAUDE.md — LyonFlowFull
 
-> Mémoire projet — **dernière mise à jour : 2026-06-12, Sprint 9+/10+** (optimisation pipeline : découplage training/inf, GNN sur données réelles, MinIO sdb2, fix bugs latents Usager_1).
+> Mémoire projet — **dernière mise à jour : 2026-06-17, Sprint 11+** (libellés TCL lisibles + OOM-kill SIRI fix + reorg documentation sous `archive/`).
 
 ## Projet
 
@@ -10,8 +10,21 @@ LyonFlowFull est une plateforme MLOps end-to-end de prédiction et d'analyse du 
 **Repo** : PDUCLOS/lyonflowfull
 **Cible production** : **VPS unique** `51.83.159.224` (Ubuntu, 6 CPU, 12 Go RAM, **2× 100 Go SSD** : sda = OS + code, sdb = PostgreSQL + MinIO + **Docker data-root** depuis Sprint 9+).
 
-**Version actuelle** : **v0.6.3** (Sprints 1-7 + VPS 1-8) — branche `vps` ACTIVE
-**Statut** : production VPS stable. Voir [SPRINT_VPS-8_REPORT.md](SPRINT_VPS-8_REPORT.md) pour le dernier sprint.
+**Version actuelle** : **v0.6.4** (Sprints 1-7 + VPS 1-8 + 9+ + 11+) — branche `vps` ACTIVE
+**Statut** : production VPS stable. Voir [archive/sprints/SPRINT_11_REPORT.md](archive/sprints/SPRINT_11_REPORT.md) pour le dernier sprint.
+
+### État au 2026-06-17 (Sprint 11+)
+
+- 18 pages × 3 personas · 47 widgets · 8 collecteurs Bronze · **13 DAGs Airflow** (10 actifs + 1 cron backfill + 1 TomTom no-op + 1 archive silver-to-minio)
+- 9 endpoints API · 3 modèles ML (XGBoost H+1h focus + SpatioTemporalGCN sur données réelles) · RGPD complet
+- ~165 fichiers Python · ~21 000 lignes · **206 tests verts / 3 SKIP / 7 deselected (integration)** · ruff 54 → 6 erreurs cosmétiques
+- Couche data complète (db_query + data_loader) — `gold.trafic_predictions` repeuplée toutes les 15 min par `dag_inference_xgboost`
+- **Sprint 11+ (2026-06-17) — 3 fronts livrés** :
+  - **Libellés TCL lisibles** : `clean_line_label()` dans `src/data/db_query.py` convertit `ActIV:Line::66:SYTRAL_h20` → `L66 ; 20h`. Widgets Pro TCL (`line_kpis`, `otp_heatmap`, `bottlenecks`) affichent `L66` au lieu de l'identifiant brut. 30 tests unitaires (parametrize sur 5 catégories).
+  - **OOM-kill SIRI/Velov résolu** : `_transform_tcl_vehicles()` et `_transform_velov()` avec `LIMIT 5000 → 200` (worker Celery 6 Go pic mémoire passe de 5.8 Go à 1.2 Go). Tasks stables depuis 14h.
+  - **Reorg documentation** : 26 docs historiques (8 sprints, 12 audits, 4 analyses, 2 misc) déplacés sous `archive/{sprints,audits,analysis,misc}/`. `archive/README.md` documente la convention (déplacer, jamais supprimer, traçabilité RNCP 38777).
+  - Voir [archive/sprints/SPRINT_11_REPORT.md](archive/sprints/SPRINT_11_REPORT.md) pour détails.
+- **Sprint 8 (2026-06-12)** — **3 dettes critiques résolues** :
 
 ### État au 2026-06-12
 
@@ -34,7 +47,7 @@ LyonFlowFull est une plateforme MLOps end-to-end de prédiction et d'analyse du 
   - **MinIO sdb2** : migré de `sda1` (80% plein) vers `/mnt/postgres-data/minio` (bind mount sdb2, 43 Go libres). DAG `silver_archive_to_minio` quotidien 04h00 (Parquet snappy + DELETE + VACUUM ANALYZE).
   - **Fix bugs latents** : `Usager_1_Mon_Trajet.py` import conflict (F811) + undefined names (F821). `time` ajouté à `xgboost_speed.py`. MLflow tracking vérifié (URI propagé).
   - **Tests** : 170 → 176 verts (Sprint 8+ → 9+), aucune régression.
-  - Voir [SPRINT_9_OPTIMISATIONS.md](SPRINT_9_OPTIMISATIONS.md) pour détails.
+  - Voir [archive/sprints/SPRINT_9_OPTIMISATIONS.md](archive/sprints/SPRINT_9_OPTIMISATIONS.md) pour détails.
 
 ### Phases
 
@@ -406,7 +419,7 @@ lyonflowfull/
 │   ├── REPO_STRUCTURE.md
 │   ├── GIT_STRUCTURE.md
 │   └── CONTROLE_VPS_VS_CLOUD_DEMO.md
-├── SPRINT_*.md             # 8 rapports de sprint
+├── SPRINT_*.md             # rapports de sprint (archivés — voir archive/sprints/)
 └── kubernetes/             # Phase 3 dormante
 ```
 

@@ -2,7 +2,7 @@
 
 **Date initiale** : 2026-06-11
 **Date clôture** : 2026-06-12 (Sprint 8, ZÉRO MOCK DANS LE PROJET)
-**Statut** : ⚠️ **PARTIELLEMENT CLÔTURÉ** — le systeme de mock (repertoire, flag demo_mode) est supprime, mais l'audit du 2026-06-12 a identifie 7 vrais mocks residuels en production (voir [AUDIT_PIPELINE_2026-06-12.md](AUDIT_PIPELINE_2026-06-12.md) section 2.2)
+**Statut** : ⚠️ **PARTIELLEMENT CLÔTURÉ** — le systeme de mock (repertoire, flag demo_mode) est supprime, mais l'audit du 2026-06-12 a identifie 7 vrais mocks residuels en production (voir [archive/audits/AUDIT_PIPELINE_2026-06-12.md](../archive/audits/AUDIT_PIPELINE_2026-06-12.md) section 2.2)
 
 **Objectif initial (Sprint VPS-6, 2026-06-11)** : Sur le VPS (branche `vps`), AUCUNE donnée simulée ne doit s'afficher. Tout doit provenir du pipeline de données (PostgreSQL Gold/Silver/Bronze, Airflow, MLflow). Un widget qui ne trouve pas sa donnée source affiche une erreur explicite.
 
@@ -317,5 +317,5 @@ La politique Sprint VPS-6 disait : "Si DB indispo, fail loud". Mais le code cont
 - Retirer le paramètre `force_mock` de toutes les `load_X()`
 - `pip uninstall mock` quand tous les imports résiduels seront nettoyés
 
-Voir [SPRINT_VPS-8_REPORT.md](../SPRINT_VPS-8_REPORT.md) pour le rapport détaillé.
+Voir [archive/sprints/SPRINT_VPS-8_REPORT.md](../archive/sprints/SPRINT_VPS-8_REPORT.md) pour le rapport détaillé.
 
