@@ -14,7 +14,6 @@ from __future__ import annotations
 
 import streamlit as st
 
-from src.data.data_loader import _is_demo_mode
 from src.data.exceptions import DashboardDataError
 
 # Icônes par type de lieu
@@ -54,11 +53,6 @@ def render_lieux_velov_map(
             ``db_query.get_lieux_with_velov()``.
         height: hauteur de la carte en pixels.
     """
-    if _is_demo_mode():
-        st.info("🟡 Mode démo — carte lieux × Vélov indisponible. "
-                "Connecter la DB pour voir le rendu réel.")
-        return
-
     if lieux_with_velov is None:
         try:
             from src.data.db_query import get_lieux_with_velov
@@ -84,17 +78,44 @@ def render_lieux_velov_map(
 
     m = folium.Map(location=[center_lat, center_lon], zoom_start=12, tiles="CartoDB positron")
 
-    n_paires = 0
-    n_dist_warn = 0  # bornes à > 300m
-
+    # Markers lieux + polylines vers la borne Vélov la plus proche + markers bornes.
+    # Sprint 9+ (2026-06-17) — fix carte jamais rendue : la boucle précédente
+    # ne faisait que du st.markdown et n'ajoutait rien à `m`. Maintenant on
+    # peuple la carte et on appelle st_folium() à la fin.
     for lieu in lieux_with_velov:
         icon = _TYPE_ICON.get(lieu["lieu_type"], "📍")
-        st.markdown(f"**{icon} {lieu['lieu_name']}** ({lieu['lieu_type']})")
+        folium.Marker(
+            [lieu["lieu_lat"], lieu["lieu_lon"]],
+            popup=folium.Popup(_lieu_popup_html(lieu), max_width=320),
+            tooltip=f"{icon} {lieu['lieu_name']}",
+            icon=folium.Icon(color="blue", icon="info-sign"),
+        ).add_to(m)
         for b in lieu.get("bornes", []):
-            st.caption(
-                f"  🚲 {b['velov_name']} — {int(b['distance_m'])}m — "
-                f"{b['num_bikes_available']} vélos, {b['num_docks_available']} docks"
-            )
+            color = _distance_color(b["distance_m"])
+            # Polyline lieu → borne
+            folium.PolyLine(
+                locations=[
+                    [lieu["lieu_lat"], lieu["lieu_lon"]],
+                    [b.get("velov_lat") or b.get("lat"), b.get("velov_lon") or b.get("lon")],
+                ],
+                color=color,
+                weight=2.5,
+                opacity=0.7,
+                dash_array="5, 8",
+            ).add_to(m)
+            # Marker borne Vélov
+            borne_lat = b.get("velov_lat") or b.get("lat")
+            borne_lon = b.get("velov_lon") or b.get("lon")
+            if borne_lat is not None and borne_lon is not None:
+                folium.Marker(
+                    [borne_lat, borne_lon],
+                    popup=folium.Popup(_borne_popup_html(lieu, b), max_width=300),
+                    tooltip=f"🚲 {b.get('velov_name', '?')}",
+                    icon=folium.Icon(color="green", icon="bicycle", prefix="fa"),
+                ).add_to(m)
+
+    from streamlit_folium import st_folium
+    st_folium(m, width=None, height=height, returned_objects=[])
 
 
 def _lieu_popup_html(lieu: dict) -> str:
@@ -132,9 +153,6 @@ def _borne_popup_html(lieu: dict, b: dict) -> str:
     <div style='font-family:sans-serif;'>
         <div style='font-size:0.85rem;font-weight:600;'>
             🚲 {b['velov_name']}
-        </div>
-        <div style='font-size:0.7rem;opacity:0.7;margin-top:0.2rem;'>
-            Relié à <b>{lieu['lieu_name']}</b>
         </div>
         <div style='font-size:0.7rem;opacity:0.7;margin-top:0.2rem;'>
             Relié à <b>{lieu['lieu_name']}</b>

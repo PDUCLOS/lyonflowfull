@@ -25,6 +25,7 @@ import logging
 
 import pandas as pd
 
+from src.data.exceptions import DashboardDataError
 from src.db.connection import execute_query, execute_scalar, test_connection
 
 logger = logging.getLogger(__name__)
@@ -264,6 +265,68 @@ def get_velov_stations_geo() -> pd.DataFrame:
     """
     df = _df_from_query(query)
     return df
+
+
+def get_nearest_velov_stations(
+    lat: float,
+    lon: float,
+    k: int = 3,
+    require_bikes: int = 0,
+    require_docks: int = 0,
+) -> list[dict]:
+    """Top-k stations Vélov les plus proches d'un point GPS.
+
+    Sprint 9+ (2026-06-17) — extrait de l'inline SQL d'Usager_1_Mon_Trajet.py
+    (page widget qui contournait la couche data). Wrapper autour de la
+    fonction SQL ``referentiel.nearest_velov_stations(lat, lon, k,
+    require_bikes, require_docks)``.
+
+    Args:
+        lat: latitude WGS84 du point de référence.
+        lon: longitude WGS84 du point de référence.
+        k: nombre de stations à retourner.
+        require_bikes: nb vélos min dispo (0 = peu importe).
+        require_docks: nb docks min dispo (0 = peu importe).
+
+    Returns:
+        Liste de dicts ``[{station_id, station_name, lat, lon,
+        bikes_available, stands_available, distance_m, is_active}, ...]``
+        triés par ``distance_m`` croissant. Liste vide si aucune station.
+
+    Raises:
+        DashboardDataError: si PostgreSQL ne répond pas.
+    """
+    if not _is_db_available():
+        raise DashboardDataError(
+            source="referentiel.nearest_velov_stations",
+            detail="PostgreSQL indisponible",
+        )
+    rows = execute_query(
+        """
+        SELECT station_id, station_name, lat, lon,
+               num_bikes_available AS bikes_available,
+               num_docks_available AS stands_available,
+               distance_m, is_active
+        FROM referentiel.nearest_velov_stations(
+            %s::double precision, %s::double precision,
+            %s, %s, %s
+        )
+        """,
+        (lat, lon, k, require_bikes, require_docks),
+    )
+    return [
+        {
+            "station_id": str(r["station_id"]),
+            "name": r["station_name"],
+            "lat": r["lat"],
+            "lon": r["lon"],
+            "bikes_available": r["bikes_available"],
+            "stands_available": r["stands_available"],
+            "distance_m": int(r["distance_m"]),
+            "is_active": r["is_active"],
+        }
+        for r in rows
+    ]
 
 
 def get_velov_predictions(horizon_minutes: int = 30, limit: int = 500) -> pd.DataFrame:

@@ -51,6 +51,7 @@ from src.data.db_query import (
     _is_db_available,
     get_infrastructure_bottlenecks,
     get_latest_traffic,
+    get_nearest_velov_stations,
     get_predictions_vs_actuals,
     get_rgpd_audit_log,
     get_rgpd_consents_summary,
@@ -295,6 +296,35 @@ def load_velov_stations(force_mock: bool = False) -> list[dict]:
         }
         for i, row in df.iterrows()
     ]
+
+
+def load_nearest_velov_stations(
+    lat: float,
+    lon: float,
+    k: int = 3,
+    require_bikes: int = 0,
+    require_docks: int = 0,
+) -> list[dict]:
+    """Top-k stations Vélov les plus proches d'un point GPS.
+
+    Sprint 9+ (2026-06-17) — extrait de l'inline SQL d'Usager_1_Mon_Trajet.py.
+    Wrapper cache-friendly au-dessus de ``db_query.get_nearest_velov_stations``.
+
+    Args:
+        lat, lon: GPS du point de référence.
+        k: nombre de stations.
+        require_bikes, require_docks: filtres dispo (0 = pas de filtre).
+
+    Returns:
+        Liste de dicts ``[{station_id, name, lat, lon, bikes_available,
+        stands_available, distance_m, is_active}, ...]``.
+
+    Raises:
+        DashboardDataError: si PostgreSQL ne répond pas.
+    """
+    return get_nearest_velov_stations(
+        lat=lat, lon=lon, k=k, require_bikes=require_bikes, require_docks=require_docks,
+    )
 
 
 def load_velov_predictions(horizon_minutes: int = 30, force_mock: bool = False) -> pd.DataFrame:

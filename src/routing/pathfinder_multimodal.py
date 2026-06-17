@@ -11,8 +11,8 @@ Toutes les coordonnées viennent du pipeline (jamais de mock en prod) :
 * Graphe routier : ``src.routing.graph.build_routing_graph`` (Dijkstra)
 * Distances haversine : fonction SQL ``referentiel.haversine_m``
 
-Mode démo (``LYONFLOW_DEMO_MODE=1``) : retour sans erreur, segments vides.
-Mode prod : lève ``DashboardDataError`` si la DB ne répond pas.
+Sprint 9+ (2026-06-17) — mode démo supprimé (politique Sprint 8 zéro mock).
+Lève ``DashboardDataError`` si la DB ne répond pas.
 
 Usage::
 
@@ -28,7 +28,6 @@ from __future__ import annotations
 import logging
 from dataclasses import dataclass, field
 
-from src.data.data_loader import _is_demo_mode
 from src.data.exceptions import DashboardDataError
 from src.db.connection import execute_query
 
@@ -68,7 +67,7 @@ class VelovItinerary:
     segments: list[VelovSegment] = field(default_factory=list)
     total_distance_m: float = 0.0
     total_duration_min: float = 0.0
-    source: str = "db"  # "db" | "demo"
+    source: str = "db"  # toujours "db" en prod (Sprint 8 — mode démo supprimé)
     # Sprint VPS-6 hotfix (2026-06-11) — alternatives si la borne #1 est
     # vide/pleine. Liste de paires (rank 2, 3) avec mêmes champs que
     # origin_station / dest_station, chargées via v_lieux_velov_smart.
@@ -271,15 +270,8 @@ def plan_velov_trip(
         [2] marche Vélov arrivée → destination
 
     Raises:
-        DashboardDataError: en mode prod, si la DB ne répond pas.
+        DashboardDataError: si la DB ne répond pas.
     """
-    if _is_demo_mode():
-        return VelovItinerary(
-            origin_label=origin_label,
-            destination_label=dest_label,
-            source="demo",
-        )
-
     _require_db_or_raise("silver.velov_clean")
 
     # Sprint VPS-6 hotfix 2 (2026-06-11) — Smart routing : on récupère
@@ -536,18 +528,6 @@ def plan_car_trip(
           "source": "db" | "demo" | "unavailable",
         }
     """
-    if _is_demo_mode():
-        return {
-            "origin_label": origin_label,
-            "destination_label": dest_label,
-            "total_length_m": 0.0,
-            "total_duration_min": 0.0,
-            "average_speed_kmh": 0.0,
-            "horizon_minutes": horizon_minutes,
-            "segments": [],
-            "source": "demo",
-        }
-
     _require_db_or_raise("silver.trafic_boucles_clean")
 
     try:

@@ -36,8 +36,8 @@ render_sidebar_navigation()
 st.title("⭐ Mes favoris")
 render_data_status_banner()
 st.caption(
-    "ℹ️ Demo session — les favoris sont stockés dans la session Streamlit. "
-    "Backend persistant (table user_favorites) prévu apres release auth."
+    "ℹ️ Les favoris sont stockés dans la session Streamlit. "
+    "Backend persistant (table user_favorites) prévu Sprint 10+."
 )
 
 # Compteurs

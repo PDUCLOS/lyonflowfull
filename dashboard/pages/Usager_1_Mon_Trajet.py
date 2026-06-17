@@ -90,8 +90,8 @@ if st.session_state.get("results_loaded"):
     from dashboard.components.widgets.usager.velov_trip import (
         _resolve_lieu,
     )
+    from src.data.data_loader import load_nearest_velov_stations
     from src.data.exceptions import DashboardDataError
-    from src.db.connection import execute_query
 
     # === 0. Carte globale lieux × Vélov proches (Sprint VPS-6 hotfix) ===
     # 21 lieux emblématiques reliés à leur borne Vélov la plus proche.
@@ -120,33 +120,14 @@ if st.session_state.get("results_loaded"):
     with ctx1:
         render_weather_widget()
     with ctx2:
-        # Vélov proches de la destination (3 stations)
+        # Vélov proches de la destination (3 stations) — passe par la
+        # couche data (Sprint 9+). Avant : inline SQL `execute_query` qui
+        # contournait data_loader + data_cache + DashboardDataError.
         if dest_coords is not None:
             try:
-                rows = execute_query(
-                    """
-                    SELECT station_id, station_name, lat, lon,
-                           num_bikes_available AS bikes_available,
-                           num_docks_available AS stands_available,
-                           distance_m, is_active
-                    FROM referentiel.nearest_velov_stations(
-                        %s::double precision, %s::double precision,
-                        3, 0, 0
-                    )
-                    """,
-                    (dest_coords[1], dest_coords[0]),  # lat, lon
+                stations_dest = load_nearest_velov_stations(
+                    lat=dest_coords[1], lon=dest_coords[0], k=3,
                 )
-                stations_dest = [
-                    {
-                        "station_id": str(r["station_id"]),
-                        "name": r["station_name"],
-                        "lat": r["lat"], "lon": r["lon"],
-                        "bikes_available": r["bikes_available"],
-                        "stands_available": r["stands_available"],
-                        "distance_m": int(r["distance_m"]),
-                    }
-                    for r in rows
-                ]
                 if stations_dest:
                     st.caption(f"🚲 3 stations Vélov les plus proches de **{search['destination']}** :")
                     render_velov_widget(stations=stations_dest, max_stations=3)

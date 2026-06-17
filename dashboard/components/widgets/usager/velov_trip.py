@@ -88,9 +88,8 @@ def render_velov_trip(
             st.error(f"⚠️ {e}")
             return
 
-    if itin.source == "demo":
-        st.info("🟡 Mode démo — données Vélov non chargées. Connecter la DB pour voir le trajet réel.")
-        return
+    # Sprint 9+ (2026-06-17) — viré le check `itin.source == "demo"` :
+    # plan_velov_trip() ne retourne plus source="demo" (mode démo supprimé).
 
     if not itin.segments:
         st.warning(
