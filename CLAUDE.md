@@ -8,7 +8,7 @@ LyonFlowFull est une plateforme MLOps end-to-end de prédiction et d'analyse du 
 
 **Auteur** : Patrice DUCLOS — Senior Data Analyst, Jedha RNCP 38777 (Architecte en IA)
 **Repo** : PDUCLOS/lyonflowfull
-**Cible production** : **VPS unique** `51.83.159.224` (Ubuntu, 6 CPU, 12 Go RAM, **2× 100 Go SSD** : sda = OS + services, sdb = PostgreSQL + MinIO).
+**Cible production** : **VPS unique** `51.83.159.224` (Ubuntu, 6 CPU, 12 Go RAM, **2× 100 Go SSD** : sda = OS + code, sdb = PostgreSQL + MinIO + **Docker data-root** depuis Sprint 9+).
 
 **Version actuelle** : **v0.6.3** (Sprints 1-7 + VPS 1-8) — branche `vps` ACTIVE
 **Statut** : production VPS stable. Voir [SPRINT_VPS-8_REPORT.md](SPRINT_VPS-8_REPORT.md) pour le dernier sprint.
@@ -52,7 +52,8 @@ Voir [AGENTS.md](AGENTS.md) pour les conventions et la mémoire projet.
 - **Pas de changement de repo/commit/push sans accord explicite de l'utilisateur**
 - **Déploiement : VPS unique (51.83.159.224)** — branche `vps` = cible production
 - **Pas de merge `kubernetes` ni `cloud-demo` dans `vps` ou `main`** (dormantes, futur AWS/GCP)
-- **🔴 BACKUP OFFSITE OBLIGATOIRE** (Sprint VPS-2) — Ne JAMAIS laisser de backup persistant sur sdb. Stream pur vers Google Drive via rclone ou serveur SSH distant. Cf. `scripts/backup-offsite.sh`. Disque sda1 à 80% (19 Go libres sur 96 Go) — surveiller.
+- **🔴 BACKUP OFFSITE OBLIGATOIRE** (Sprint VPS-2) — Ne JAMAIS laisser de backup persistant sur sdb. Stream pur vers Google Drive via rclone ou serveur SSH distant. Cf. `scripts/backup-offsite.sh`. Disque sda1 à 64% (35 Go libres sur 96 Go) après migration Docker data-root Sprint 9+.
+- **🔴 DOCKER DATA-ROOT SUR SDB** (Sprint 9+ 2026-06-17) — `/etc/docker/daemon.json` = `{"data-root": "/mnt/postgres-data/docker"}`. **NE PAS revenir à /var/lib/docker** sans migration formelle — risque saturation sda1. Toutes les images + containers + volumes Docker sont sur sdb (29 Go).
 - Langue : français pour pipeline/docs, anglais pour code modèle
 - **SQL paramétré partout**, zéro f-string dans les requêtes (`psycopg2 %s`)
 - **🔴 ZÉRO MOCK DANS LE PROJET** (Sprint 8, 2026-06-12) — Variable d'env `LYONFLOW_DEMO_MODE=0` obligatoire en prod. Toute source de données indisponible (PostgreSQL, Airflow, MLflow) lève `DashboardDataError` et le widget affiche `st.error`. Mode démo **supprimé** (helper `_is_demo_mode()` retourne toujours `False` — déprécié, à retirer Sprint 9+). Plan détaillé : [docs/PLAN_NO_MOCK_VPS.md](docs/PLAN_NO_MOCK_VPS.md).
@@ -317,7 +318,7 @@ Branche `vps` = source de vérité du déploiement actif.
 
 - **`/opt/lyonflow/logs/`** doit être `chown 50000:0` récursivement après chaque `rsync` frais. Sinon le worker Celery crash en boucle sur `PermissionError` (Sprint VPS-5).
 - **DNS `lyonflowfull.fr` mort** (NXDOMAIN) + cert TLS Let's Encrypt expiré → accès par IP `https://51.83.159.224` (warning cert self-signed).
-- **Disque sda1 à 80%** (19 Go libres) — migration des volumes Airflow/MLflow/Grafana/Prometheus vers sdb recommandée (Sprint 8+ à faire).
+- **Disque sda1 à 64%** (35 Go libres) après migration Docker data-root (Sprint 9+). Plus de migration à prévoir pour le moment.
 - **Cache Python .pyc** dans les containers Airflow : purger `find /opt/airflow -name __pycache__ -type d -exec rm -rf {} +` après chaque modification de `src/`. Sinon les DAGs chargent l'ancienne version (Sprint 8+ leçon apprise).
 - **Mapping `dim_spatial_grid_mapping.properties_twgid`** (entiers ou strings) ≠ `traffic_features_live.channel_id` (format LYO000xx) — **Sprint 8+ : backfill via h3-py résout lat/lon mais le mapping d'identité est toujours à réconcilier**.
 
