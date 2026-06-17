@@ -42,8 +42,8 @@ def render_model_registry() -> None:
 
     with loading_wrapper("Chargement registry MLflow…", "📊"):
         try:
-            summary = cached_mlflow_experiment_summary(force_mock=False)
-            models = cached_mlflow_models(force_mock=False)
+            summary = cached_mlflow_experiment_summary()
+            models = cached_mlflow_models()
         except DashboardDataError as e:
             empty_state(
                 icon="🟡",
@@ -67,7 +67,7 @@ def render_model_registry() -> None:
         )
     else:
         st.warning(
-            "🟡 **MLflow non accessible** — affichage fallback mock (mode démo). "
+            "🟡 **MLflow non accessible** — aucun modèle à afficher. "
             "Pour activer en prod : démarrer le service `mlflow` (docker compose) "
             "et recharger cette page."
         )
@@ -125,12 +125,12 @@ def render_model_registry() -> None:
                     icon = {"stable": "🟢", "moderate": "🟡", "significant": "🔴"}.get(status, "⚪")
                     st.markdown(f"- {icon} **{col}** : PSI = {psi:.3f} ({status})")
 
-    # Tableau (Sprint 9 — utilise la variable `models` MLflow ou mock)
+    # Tableau (Sprint 9+ — utilise la variable `models` lue depuis MLflow live)
     _render_model_registry_table(models)
 
 
 def _render_model_registry_table(models: list[dict]) -> None:
-    """Tableau des modèles trackés (MLflow ou mock)."""
+    """Tableau des modèles trackés (MLflow live)."""
     st.markdown("---")
     header_cols = st.columns([2.5, 1, 1, 1, 1.5, 1.2, 1])
     with header_cols[0]:
@@ -310,8 +310,8 @@ def render_model_registry_status() -> None:
             """
         )
 
-    # Note Sprint 9 : le tableau détaillé des modèles est rendu par
-    # `render_model_registry()` (au-dessus), qui lit MLflow live + fallback mock.
+    # Note Sprint 9+ : le tableau détaillé des modèles est rendu par
+    # `render_model_registry()` (au-dessus), qui lit MLflow live.
     # On évite la duplication ici.
 
 
@@ -324,7 +324,7 @@ def render_metrics_comparison() -> None:
     from src.data.exceptions import DashboardDataError
 
     try:
-        models = cached_mlflow_models(force_mock=False)
+        models = cached_mlflow_models()
     except DashboardDataError as e:
         st.error(f"⚠️ {e}")
         return
@@ -590,8 +590,8 @@ def render_velov_model_analysis() -> None:
         st.warning(f"Imports indisponibles : {e}")
         return
 
-    pred_30 = cached_velov_predictions(horizon_minutes=30, force_mock=False)
-    pred_60 = cached_velov_predictions(horizon_minutes=60, force_mock=False)
+    pred_30 = cached_velov_predictions(horizon_minutes=30)
+    pred_60 = cached_velov_predictions(horizon_minutes=60)
     stations = get_velov_stations_geo()
     n_stations_total = len(stations) if not stations.empty else 0
 

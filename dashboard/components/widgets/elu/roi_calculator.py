@@ -18,7 +18,7 @@ def render_roi_calculator(line_id: str | None = None) -> None:
     """
     st.markdown("##### 🧮 Calculateur ROI")
 
-    bottlenecks = cached_bottlenecks_top(force_mock=False)
+    bottlenecks = cached_bottlenecks_top()
     if not bottlenecks:
         st.info("Aucun bottleneck disponible.")
         return

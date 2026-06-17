@@ -65,7 +65,7 @@ render_news_section()
 
 st.markdown("---")
 
-# Bouton PDF synthèse — données live (fallback mock auto via data_loader)
+# Bouton PDF synthèse — données live via data_loader (Sprint 8 — fail loud si DB indispo)
 st.markdown("##### 📄 Génération rapport PDF")
 kpis_dict = cached_elu_kpis_dict()
 bottlenecks_top = cached_bottlenecks_top()

@@ -22,7 +22,7 @@ from dashboard.components.data_cache import (
 
 def _build_predictions_lookup(horizon_minutes: int) -> dict[str, int]:
     """Retourne un dict {station_id: predicted_bikes} pour l'horizon donné."""
-    df = cached_velov_predictions(horizon_minutes=horizon_minutes, force_mock=False)
+    df = cached_velov_predictions(horizon_minutes=horizon_minutes)
     if df.empty or "station_id" not in df.columns:
         return {}
     latest = (
@@ -42,7 +42,7 @@ def render_velov_widget(stations: list | None = None, max_stations: int = 3) -> 
         max_stations: nombre max de stations à afficher.
     """
     if stations is None:
-        stations = cached_velov_stations(force_mock=False)
+        stations = cached_velov_stations()
 
     stations = stations[:max_stations]
 

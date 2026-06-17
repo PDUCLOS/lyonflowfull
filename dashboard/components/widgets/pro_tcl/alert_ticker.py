@@ -18,7 +18,7 @@ def render_alert_ticker(alerts: list | None = None) -> None:
         alerts: liste d'alertes. Si None, charge via data_loader.
     """
     if alerts is None:
-        df = cached_recent_alerts(force_mock=False)
+        df = cached_recent_alerts()
         alerts = df.to_dict("records") if not df.empty else []
 
     if not alerts:

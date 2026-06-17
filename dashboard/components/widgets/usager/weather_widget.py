@@ -26,7 +26,7 @@ def render_weather_widget(weather: dict | None = None) -> None:
     """
     if weather is None:
         try:
-            df = cached_weather_hourly(force_mock=False)
+            df = cached_weather_hourly()
         except DashboardDataError as e:
             st.error(f"⚠️ {e}")
             return
@@ -106,16 +106,21 @@ def render_weather_widget(weather: dict | None = None) -> None:
 
 
 def _weather_icon(label: str) -> str:
-    """Map libellé météo → emoji."""
-    mapping = {
-        "Ensoleillé": "☀️",
-        "Nuageux": "☁️",
-        "Pluvieux": "🌧️",
-        "Brouillard": "🌫️",
-        "Orageux": "⛈️",
-        "Neige": "❄️",
-    }
-    return mapping.get(label, "☀️")
+    """Map libellé météo → emoji (helper local pour _wmo_to_label)."""
+    return _LABEL_TO_EMOJI.get(label, "☀️")
+
+
+# Mapping label FR → emoji (utilisé par _wmo_to_label pour les codes
+# déjà en label direct, et par _weather_icon). Synchronisé avec
+# _WMO_CODE_MAP.
+_LABEL_TO_EMOJI: dict[str, str] = {
+    "Ensoleillé": "☀️",
+    "Nuageux": "☁️",
+    "Pluvieux": "🌧️",
+    "Brouillard": "🌫️",
+    "Orageux": "⛈️",
+    "Neige": "❄️",
+}
 
 
 # WMO Weather interpretation codes (Open-Meteo / WMO 4677).

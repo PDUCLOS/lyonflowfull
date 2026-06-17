@@ -20,7 +20,7 @@ def render_line_selector(multiselect: bool = True, key_suffix: str = "") -> list
     Returns:
         Liste des line_id sélectionnés.
     """
-    tcl_lines = cached_tcl_lines(force_mock=False)
+    tcl_lines = cached_tcl_lines()
     options = [(line["id"], f"{line['icon']} {line['name']}") for line in tcl_lines]
 
     if multiselect:

@@ -19,7 +19,7 @@ def render_project_selector(key_suffix: str = "default") -> dict | None:
     Returns:
         Dict aménagement sélectionné ou None.
     """
-    df = cached_amenagements_passes(force_mock=False)
+    df = cached_amenagements_passes()
     amenagements = df.to_dict("records") if not df.empty else []
     if not amenagements:
         st.info("Aucun aménagement passé disponible.")

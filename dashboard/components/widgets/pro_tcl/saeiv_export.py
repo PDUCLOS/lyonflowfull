@@ -41,7 +41,7 @@ def render_saeiv_export(report_config: dict | None = None) -> None:
         line_ids = (report_config or {}).get("lines") or None
         try:
             kpis_dict = cached_line_kpis(
-                line_ids=tuple(line_ids) if line_ids else None, force_mock=False
+                line_ids=tuple(line_ids) if line_ids else None
             )
         except DashboardDataError as e:
             st.error(f"⚠️ KPIs lignes indisponibles — {e}")
@@ -62,7 +62,7 @@ def render_saeiv_export(report_config: dict | None = None) -> None:
 
         # 2. Bottlenecks (live via cached_bottlenecks_top)
         try:
-            bottlenecks_top = cached_bottlenecks_top(force_mock=False)
+            bottlenecks_top = cached_bottlenecks_top()
         except DashboardDataError as e:
             st.error(f"⚠️ Bottlenecks indisponibles — {e}")
             return

@@ -22,7 +22,7 @@ def render_traffic_widget(traffic: dict | None = None) -> None:
         traffic: dict de données. Si None, charge via DB Gold (fail loud si indispo).
     """
     if traffic is None:
-        traffic = cached_traffic(force_mock=False)
+        traffic = cached_traffic()
 
     avg = traffic.get("average_speed_kmh", 0)
     level = traffic.get("congestion_level", "—")

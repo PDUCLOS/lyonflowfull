@@ -74,7 +74,7 @@ def render_line_kpis(
         kpis_dict: dict pré-calculé. Si None, charge via DB Gold (fail loud).
     """
     if kpis_dict is None:
-        kpis_dict = cached_line_kpis(force_mock=False)
+        kpis_dict = cached_line_kpis()
 
     if line_ids is None:
         line_ids = list(kpis_dict.keys())

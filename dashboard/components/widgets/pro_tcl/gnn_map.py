@@ -74,7 +74,7 @@ def _load_merged(horizon: int, limit: int = 500) -> pd.DataFrame | None:
     Returns:
         DataFrame mergée ou None si données absentes/erreur.
     """
-    mapping_df = cached_spatial_mapping(force_mock=False)
+    mapping_df = cached_spatial_mapping()
     if mapping_df.empty:
         return None
 

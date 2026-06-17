@@ -54,8 +54,8 @@ def _load_stations_with_predictions(horizon_minutes: int = 30) -> pd.DataFrame:
         return stations
 
     # Prédictions H+30 et H+1h (peut être vide si DAG pas tourné)
-    pred_30 = cached_velov_predictions(horizon_minutes=30, force_mock=False)
-    pred_60 = cached_velov_predictions(horizon_minutes=60, force_mock=False)
+    pred_30 = cached_velov_predictions(horizon_minutes=30)
+    pred_60 = cached_velov_predictions(horizon_minutes=60)
 
     # Garder la prédiction la plus récente par station
     if not pred_30.empty and "station_id" in pred_30.columns:

@@ -84,7 +84,7 @@ def render_map_painter(height: int = 400) -> dict:
 
     except ImportError:
         st.warning("⚠️ Folium non disponible — fallback selectbox")
-        bottlenecks = cached_bottlenecks_top(force_mock=False)
+        bottlenecks = cached_bottlenecks_top()
         zones = [b.get("zone", "—") for b in bottlenecks]
         if not zones:
             return {"selected_zone": None}

@@ -30,7 +30,7 @@ def render_bottleneck_map(height: int = 500) -> None:
         "Gare de Vaise": (45.7798, 4.8058),
     }
 
-    bottlenecks = cached_bottlenecks_top(force_mock=False)
+    bottlenecks = cached_bottlenecks_top()
     if not bottlenecks:
         st.info("Aucun bottleneck disponible.")
         return

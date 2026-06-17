@@ -17,7 +17,7 @@ def render_line_comparison(line_ids: list | None = None) -> None:
     Args:
         line_ids: lignes à comparer. Si None, toutes.
     """
-    kpis_dict = cached_line_kpis(force_mock=False)
+    kpis_dict = cached_line_kpis()
     if line_ids is None:
         line_ids = list(kpis_dict.keys())
 

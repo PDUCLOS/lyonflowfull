@@ -39,7 +39,7 @@ def render_network_map(buses: list | None = None, height: int = 400) -> None:
     """
     if buses is None:
         try:
-            df = cached_buses_positions(force_mock=False)
+            df = cached_buses_positions()
         except DashboardDataError as e:
             st.error(f"⚠️ {e}")
             return

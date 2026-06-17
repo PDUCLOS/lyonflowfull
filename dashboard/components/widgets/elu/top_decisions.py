@@ -18,7 +18,7 @@ def render_top_decisions(n: int = 5) -> None:
     """
     st.markdown(f"##### 🎯 Top {n} décisions à arbitrer")
 
-    bottlenecks = cached_bottlenecks_top(force_mock=False)
+    bottlenecks = cached_bottlenecks_top()
     for i, b in enumerate(bottlenecks[:n], 1):
         zone = b.get("zone", "—")
         lignes = ", ".join(b.get("lines_impacted", []))

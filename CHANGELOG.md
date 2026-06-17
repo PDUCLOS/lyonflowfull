@@ -5,6 +5,48 @@ Toutes les modifications notables de ce projet sont documentées ici.
 Le format suit [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/),
 et ce projet adhère au [Semantic Versioning](https://semver.org/lang/fr/).
 
+## [0.6.5] - 2026-06-17 — Nettoyage final audits Pro TCL + Usager (branche `vps`)
+
+Complète les 30 items des trackers
+[archive/audits/AUDIT_PRO_TCL_FIXES.md](archive/audits/AUDIT_PRO_TCL_FIXES.md)
+(14 items) et [archive/audits/AUDIT_USAGER_FIXES.md](archive/audits/AUDIT_USAGER_FIXES.md)
+(16 items). La majorité des corrections avait déjà été livrée dans les
+Sprints 8+ à 11+ — cette release finit le ménage.
+
+### Changed
+- **`dashboard/components/widgets/pro_tcl/model_monitoring.py`** :
+  nettoyage des 3 dernières mentions "fallback mock (mode démo)" /
+  "(MLflow ou mock)" dans les docstrings + bandeau d'avertissement MLflow
+  (UX : "MLflow non accessible — aucun modèle à afficher" au lieu de
+  "affichage fallback mock (mode démo)").
+- **`dashboard/components/widgets/usager/weather_widget.py`** :
+  refacto `_weather_icon()` → utilise une constante `_LABEL_TO_EMOJI`
+  au niveau module (au lieu d'un dict reconstruit à chaque appel).
+- **`dashboard/pages/Elu_1_Synthese.py:68`** + **`Elu_5_Rapport.py:56`** :
+  mise à jour des commentaires "fallback mock auto via data_loader" →
+  "fail loud si DB indispo" (Sprint 8 — déjà effectif, juste le
+  commentaire qui datait).
+
+### Removed
+- **`force_mock=False` removed from 26 dashboard files** : tous les
+  appels `cached_*(force_mock=False)` nettoyés. Le param reste dans
+  les signatures `cached_*()` de `dashboard/components/data_cache.py`
+  pour rétro-compat (mais n'est plus jamais passé en argument).
+  Économie : 35 lignes de bruit de code, lecture plus claire.
+
+### Documentation
+- Les **2 trackers d'audit** dans `archive/audits/` (snapshot du
+  2026-06-17) restent intacts pour traçabilité RNCP 38777. Cette
+  release ferme **100% des 30 items** listés (cf. résumé ci-dessous).
+
+### Résumé trackers
+| Tracker | Items | Statut |
+|---------|-------|--------|
+| `AUDIT_PRO_TCL_FIXES.md` | 14 | ✅ 100% résolus (Sprints 8+ à 11+ + cette release) |
+| `AUDIT_USAGER_FIXES.md` | 16 | ✅ 100% résolus (Sprints 8+ à 11+ + cette release) |
+
+**Tests** : 198 verts, 0 régression. Ruff clean sur les fichiers touchés.
+
 ## [0.6.4] - 2026-06-17 — Sprint 11+ : libellés TCL lisibles + reorg docs (branche `vps`)
 
 Voir [archive/sprints/SPRINT_11_REPORT.md](archive/sprints/SPRINT_11_REPORT.md)

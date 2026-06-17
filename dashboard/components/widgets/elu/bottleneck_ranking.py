@@ -17,7 +17,7 @@ def render_bottleneck_ranking(top_n: int | None = None) -> None:
     Args:
         top_n: nombre de bottlenecks à afficher. None = tous.
     """
-    bottlenecks = cached_bottlenecks_top(force_mock=False)
+    bottlenecks = cached_bottlenecks_top()
     if top_n:
         bottlenecks = bottlenecks[:top_n]
 

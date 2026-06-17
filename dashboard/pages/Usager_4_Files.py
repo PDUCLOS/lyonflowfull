@@ -189,7 +189,7 @@ try:
 
     with st.spinner("Chargement des prédictions H+1h…"):
         df_pred = load_traffic_predictions_for_map(horizon_minutes=60, limit=2000)  # Sprint 8+ : focus H+1h
-        df_geo = cached_spatial_mapping(force_mock=False)
+        df_geo = cached_spatial_mapping()
 
     if df_pred.empty or df_geo.empty:
         st.info("Données de prédiction ou de géométrie indisponibles (DB down ou vide).")

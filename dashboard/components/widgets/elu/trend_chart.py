@@ -17,7 +17,7 @@ def render_trend_chart(kpi_key: str = "part_modale_tc") -> None:
     Args:
         kpi_key: clé du KPI dans KPI_12_MONTHS.
     """
-    kpis = cached_elu_kpis_dict(force_mock=False)
+    kpis = cached_elu_kpis_dict()
     kpi = kpis.get(kpi_key)
     if not kpi:
         st.warning(f"KPI '{kpi_key}' inconnu.")

@@ -303,7 +303,7 @@ def render_alerts_feed() -> None:
     from dashboard.components.data_cache import cached_recent_alerts
 
     try:
-        alerts = cached_recent_alerts(hours=24, limit=20, force_mock=False)
+        alerts = cached_recent_alerts(hours=24, limit=20)
     except DashboardDataError as e:
         st.error(f"⚠️ {e}")
         return
@@ -326,7 +326,7 @@ def render_alerts_feed() -> None:
 
     with st.expander("📜 Historique alertes (7 derniers jours)", expanded=False):
         try:
-            history = cached_recent_alerts(hours=24 * 7, limit=50, force_mock=False)
+            history = cached_recent_alerts(hours=24 * 7, limit=50)
         except DashboardDataError as e:
             st.caption(f"⚠️ Historique indisponible — {e}")
             return

@@ -12,7 +12,7 @@ from dashboard.components.data_cache import cached_elu_kpis_dict
 
 def render_executive_summary() -> None:
     """Affiche un bloc narratif synthétisant la situation."""
-    kpis = cached_elu_kpis_dict(force_mock=False)
+    kpis = cached_elu_kpis_dict()
     pm = kpis.get("part_modale_tc", {}).get("current", 0)
     ponc = kpis.get("ponctualite", {}).get("current", 0)
     co2 = kpis.get("co2_evite_tonnes", {}).get("current", 0) or 0

@@ -140,13 +140,13 @@ from src.data.exceptions import DashboardDataError  # noqa: E402
 n_lines = "—"
 n_stations_velov = "—"
 try:
-    n_lines_raw = cached_tcl_lines(force_mock=False)
+    n_lines_raw = cached_tcl_lines()
     n_lines = len(n_lines_raw) if n_lines_raw else 0
 except DashboardDataError as e:
     st.error(f"⚠️ Lignes TCL : {e}")
 
 try:
-    n_stations_velov_raw = cached_velov_stations(force_mock=False)
+    n_stations_velov_raw = cached_velov_stations()
     n_stations_velov = len(n_stations_velov_raw) if n_stations_velov_raw else 0
 except DashboardDataError as e:
     st.error(f"⚠️ Stations Vélov : {e}")

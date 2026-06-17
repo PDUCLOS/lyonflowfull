@@ -24,7 +24,7 @@ def render_otp_heatmap(otp_data: dict | None = None, days: int = 1, height: int 
     """
     if otp_data is None:
         # Charge depuis la DB (Gold mv_otp_grid) — fail loud si indispo
-        df = cached_otp_heatmap_data(force_mock=False)
+        df = cached_otp_heatmap_data()
         if not df.empty:
             # Reconstruit le format {line_id: {date: [otp_per_hour]}}
             # Sprint 11+ — on garde un dict parallèle ``line_labels`` pour
@@ -59,7 +59,7 @@ def render_otp_heatmap(otp_data: dict | None = None, days: int = 1, height: int 
     # Sprint 11+ — affiche le libellé lisible sur l'axe Y
     # (le ``line_id`` brut reste la clé interne du dict).
     lines = [line_labels.get(lid, lid) for lid in lines_raw]
-    dates = sorted(otp_data[lines_raw[0]].keys()) if lines_raw else []  
+    dates = sorted(otp_data[lines_raw[0]].keys()) if lines_raw else []
 
     if days == 1:
         selected_dates = dates[:1]
@@ -80,7 +80,7 @@ def render_otp_heatmap(otp_data: dict | None = None, days: int = 1, height: int 
                 otp_data[line_id][d][h]
                 for d in selected_dates
                 if d in otp_data[line_id] and h < len(otp_data[line_id][d])
-            ]  
+            ]
             if values:
                 avg = sum(values) / len(values)
                 row.append(round(avg, 1))

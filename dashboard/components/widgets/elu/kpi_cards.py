@@ -13,7 +13,7 @@ from dashboard.components.data_cache import cached_elu_kpis_dict
 
 def render_kpi_cards() -> None:
     """Affiche les 5 KPI cards ronds avec deltas colorés."""
-    kpis = cached_elu_kpis_dict(force_mock=False)
+    kpis = cached_elu_kpis_dict()
     kpi_keys = list(kpis.keys())
     # Adapter le nb de colonnes au nb de KPIs (sinon clés 6+ silencieusement perdues)
     if not kpi_keys:

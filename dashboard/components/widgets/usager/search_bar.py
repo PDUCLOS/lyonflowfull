@@ -29,7 +29,7 @@ _TYPE_ICON = {
 
 def render_search_bar() -> dict[str, typing.Any]:
     """Affiche la barre de recherche trajet, élégante et ergonomique."""
-    addresses = cached_lyon_addresses_with_coords(force_mock=False)
+    addresses = cached_lyon_addresses_with_coords()
     # Préparer les options pour la selectbox
     addr_options = [f"{_TYPE_ICON.get(a['type'], '📍')} {a['name']}" for a in addresses]
 
