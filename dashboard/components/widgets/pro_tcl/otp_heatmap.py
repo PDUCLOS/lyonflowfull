@@ -58,16 +58,29 @@ def render_otp_heatmap(otp_data: dict | None = None, days: int = 1, height: int 
         selected_dates = dates[:days]
 
     # Construire la matrice : lignes × heures
+    # Sprint 9+ (2026-06-17) — viré le fallback magique ``[85.0] * 24`` qui
+    # masquait l'absence de données. Quand une date manque, on moyenne sur
+    # les dates présentes (au lieu d'inventer un OTP à 85%).
     z_data = []
     text_data = []
     for line_id in lines:
         row = []
         text_row = []
         for h in range(24):
-            values = [otp_data[line_id].get(d, [85.0] * 24)[h] for d in selected_dates]
-            avg = sum(values) / len(values) if values else 85.0
-            row.append(round(avg, 1))
-            text_row.append(f"{avg:.0f}%")
+            values = [
+                otp_data[line_id][d][h]
+                for d in selected_dates
+                if d in otp_data[line_id] and h < len(otp_data[line_id][d])
+            ]
+            if values:
+                avg = sum(values) / len(values)
+                row.append(round(avg, 1))
+                text_row.append(f"{avg:.0f}%")
+            else:
+                # Pas de données : None (Plotly affichera un trou dans la heatmap)
+                # plutôt qu'un faux 85%.
+                row.append(None)
+                text_row.append("—")
         z_data.append(row)
         text_data.append(text_row)
 

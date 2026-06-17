@@ -67,7 +67,7 @@ def render_correlation_matrix(line_id: str | None = None) -> None:
     if not df.empty:
         segments = _bottlenecks_to_segments(df)
     else:
-        st.info("Aucun segment瓶颈 — gold.infrastructure_bottlenecks est vide.")
+        st.info("Aucun segment bottleneck — gold.infrastructure_bottlenecks est vide.")
         return
 
     if line_id:

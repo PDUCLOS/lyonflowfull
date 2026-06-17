@@ -25,7 +25,7 @@ render_data_status_banner()
 
 st.caption(
     "Vue opérateur : statut DAGs Airflow · 6 health checks · fraîcheur des 8 sources Bronze. "
-    "Mode mock pour démo — Sprint 6+ : branchement Airflow API + PostgreSQL."
+    "Source : Airflow REST API + PostgreSQL Gold · Sprint 8+"
 )
 
 render_pipeline_management_page()

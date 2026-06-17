@@ -45,7 +45,7 @@ def render_segment_table(line_id: str | None = None, height: int = 400) -> None:
             })
     else:
         # Sprint 8 (2026-06-12) — viré le fallback SEGMENTS (mock).
-        st.info("Aucun segment瓶颈 — gold.infrastructure_bottlenecks est vide.")
+        st.info("Aucun segment bottleneck — gold.infrastructure_bottlenecks est vide.")
         return
 
     if line_id:

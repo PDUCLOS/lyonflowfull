@@ -916,13 +916,12 @@ def load_mlflow_models(
 ) -> list[dict]:
     """Liste les modèles trackés dans un experiment MLflow.
 
-    Mode prod (Sprint VPS-6+) : retourne la liste des runs MLflow. Si MLflow
-    ne répond pas, lève ``DashboardDataError``.
-
-    Mode démo : retourne ``_FALLBACK_MOCK_MODELS``.
+    Sprint VPS-6+ (2026-06-11) — retourne la liste des runs MLflow. Si MLflow
+    ne répond pas, lève ``DashboardDataError``. Plus de fallback mock depuis
+    Sprint 8 (politique "zéro mock").
 
     Raises:
-        DashboardDataError: en mode prod, si MLflow ne répond pas.
+        DashboardDataError: si MLflow ne répond pas.
     """
     from src.ml.mlflow_integration import list_registered_models
 
@@ -938,7 +937,8 @@ def load_mlflow_models(
         # MLflow répond mais pas de runs : situation légitime
         return []
 
-    # Convertir en format compatible MOCK_MODELS pour les widgets
+    # Conversion des runs MLflow en format dict consommé par les widgets
+    # (Sprint 9+ : plus de référence à MOCK_MODELS — fallback viré).
     out = []
     for r in runs:
         out.append(
@@ -955,77 +955,6 @@ def load_mlflow_models(
             }
         )
     return out
-
-
-# Fallback MLflow models (utilisé quand le serveur est down)
-_FALLBACK_MOCK_MODELS: list[dict] = [
-    {
-        "name": "xgboost_speed_h5",
-        "version": "1.2.0",
-        "stage": "Production",
-        "metrics": {"mae": 1.96, "rmse": 2.45, "r2": 0.947},
-        "trained_at": "—",
-        "n_training_samples": 1_245_000,
-        "feature_count": 14,
-        "drift_status": "ok",
-        "note": "MLflow non accessible — fallback mock",
-    },
-    {
-        "name": "xgboost_speed_h60",
-        "version": "1.2.0",
-        "stage": "Production",
-        "metrics": {"mae": 2.43, "rmse": 3.12, "r2": 0.929},
-        "trained_at": "—",
-        "n_training_samples": 1_245_000,
-        "feature_count": 14,
-        "drift_status": "ok",
-        "note": "MLflow non accessible — fallback mock",
-    },
-    {
-        "name": "xgboost_speed_h180",
-        "version": "1.2.0",
-        "stage": "Production",
-        "metrics": {"mae": 2.42, "rmse": 3.08, "r2": 0.922},
-        "trained_at": "—",
-        "n_training_samples": 1_245_000,
-        "feature_count": 14,
-        "drift_status": "ok",
-        "note": "MLflow non accessible — fallback mock",
-    },
-    {
-        "name": "xgboost_speed_h360",
-        "version": "1.2.0",
-        "stage": "Production",
-        "metrics": {"mae": 2.33, "rmse": 2.97, "r2": 0.917},
-        "trained_at": "—",
-        "n_training_samples": 1_245_000,
-        "feature_count": 14,
-        "drift_status": "warning",
-        "note": "MLflow non accessible — fallback mock",
-    },
-    {
-        "name": "xgboost_velov_h30",
-        "version": "1.0.0",
-        "stage": "Production",
-        "metrics": {"mae": 4.20, "rmse": 5.31, "r2": 0.331},
-        "trained_at": "—",
-        "n_training_samples": 13_824,
-        "feature_count": 11,
-        "drift_status": "ok",
-        "note": "MLflow non accessible — fallback mock",
-    },
-    {
-        "name": "stgcn_gnn_h60",
-        "version": "0.3.0",
-        "stage": "Staging",
-        "metrics": {"mae": 2.78, "rmse": 3.45, "r2": 0.924},
-        "trained_at": "—",
-        "n_training_samples": 245_000,
-        "feature_count": 5,
-        "drift_status": "ok",
-        "note": "MLflow non accessible — fallback mock",
-    },
-]
 
 
 def load_mlflow_experiment_summary(

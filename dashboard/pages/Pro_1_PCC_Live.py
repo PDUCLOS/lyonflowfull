@@ -119,4 +119,4 @@ st.markdown("---")
 st.markdown("##### 📈 KPIs par ligne")
 render_line_kpis()
 
-st.caption("PCC Live · Mode démonstration · Données simulées · Sprint 6+ : branchement PostgreSQL Gold")
+st.caption("PCC Live · Source : PostgreSQL Gold · Sprint 8+")

@@ -6,10 +6,10 @@ Affiche :
 - Fraîcheur des données (Bronze ingestion times par source)
 - Boutons trigger manuel
 
-Sprint VPS-6 (2026-06-11) — fail loud en prod :
-* Mode démo (``LYONFLOW_DEMO_MODE=1``) : fallback ``MOCK_DAGS``/``MOCK_FRESHNESS``
-  préservé (Airflow indispo autorisé).
+Sprint 9+ (2026-06-17) — fail loud strict :
 * Mode prod : Airflow indispo → ``DashboardDataError`` propagé.
+* Plus de branche ``_is_demo_mode()`` (helper déprécié, retourne toujours False).
+* Alertes feed branché sur ``gold.alerts`` (vue matérialisée Sprint 9+).
 """
 
 from __future__ import annotations
@@ -18,7 +18,6 @@ import streamlit as st
 
 from dashboard.components.colors import COLORS
 from src.data.airflow_client import get_dags_status, is_airflow_available, trigger_dag
-from src.data.data_loader import _is_demo_mode
 from src.data.exceptions import DashboardDataError
 from src.monitoring.health_checks import run_all_checks
 
@@ -79,18 +78,16 @@ def render_pipeline_status() -> None:
     """Affiche le statut complet des pipelines."""
     st.markdown("##### 📊 Statut global")
 
-    if not is_airflow_available() and not _is_demo_mode():
+    # Sprint 9+ — viré la branche `_is_demo_mode()` (helper déprécié,
+    # retournait toujours False depuis Sprint 8). Comportement unique :
+    # Airflow indispo → st.error + return.
+    if not is_airflow_available():
         st.error(
             "🔴 **Airflow REST API non joignable** — le statut DAGs est indisponible. "
             "Vérifiez que le service Airflow tourne et que "
             "`AIRFLOW_HOST`/`AIRFLOW_ADMIN_PASSWORD` sont corrects dans `.env`."
         )
         return
-    if not is_airflow_available() and _is_demo_mode():
-        st.warning(
-            "🟡 Airflow REST API non joignable — affichage en **mode démo** "
-            "(fallback MOCK_DAGS autorisé quand `LYONFLOW_DEMO_MODE=1`)."
-        )
 
     try:
         dags = _cached_dags()
@@ -187,6 +184,10 @@ def render_health_panel() -> None:
     """Affiche les 6 health checks du module monitoring."""
     st.markdown("##### 💓 Health checks (quotidien 04h15)")
 
+    # Sprint 9+ — viré toute la branche mock (results=None + fallback
+    # `if not results: if _is_demo_mode(): results = [...]`). Le helper
+    # `_is_demo_mode()` est déprécié et retournait toujours False depuis
+    # Sprint 8 : le bloc MOCK_HEALTH_RESULTS était donc du dead code.
     with st.spinner("Exécution des 6 health checks..."):
         try:
             results = run_all_checks()
@@ -194,59 +195,16 @@ def render_health_panel() -> None:
             st.error(f"⚠️ {e}")
             return
         except Exception as e:
-            if _is_demo_mode():
-                st.info(f"Mode démo — health checks indisponibles ({e})")
-                results = None
-            else:
-                st.error(
-                    f"🔴 Health checks indisponibles ({e}). "
-                    "Vérifier que PostgreSQL répond et que le DAG "
-                    "data_quality_daily a tourné."
-                )
-                return
+            st.error(
+                f"🔴 Health checks indisponibles ({e}). "
+                "Vérifier que PostgreSQL répond et que le DAG "
+                "data_quality_daily a tourné."
+            )
+            return
 
     if not results:
-        if _is_demo_mode():
-            # Fallback mock (mode démo uniquement)
-            results = [
-            {
-                "name": "bronze_freshness",
-                "status": "ok",
-                "details": "Bronze trafic: 4 min",
-                "metric_value": 4.0,
-                "threshold": 30.0,
-                "timestamp": "2026-06-06T15:00:00",
-            },
-            {
-                "name": "bronze_volume",
-                "status": "ok",
-                "details": "522k records/24h",
-                "metric_value": 522000,
-                "threshold": 1000,
-            },
-            {
-                "name": "silver_nulls",
-                "status": "ok",
-                "details": "Nulls vitesse: 0.2%",
-                "metric_value": 0.2,
-                "threshold": 5.0,
-            },
-            {"name": "silver_doublons", "status": "ok", "details": "0 doublons", "metric_value": 0, "threshold": 0},
-            {
-                "name": "predictions_presentes",
-                "status": "ok",
-                "details": "124 prédictions/2h",
-                "metric_value": 124,
-                "threshold": 100,
-            },
-            {
-                "name": "drift_baseline",
-                "status": "warning",
-                "details": "1 rapport drift (à analyser)",
-                "metric_value": 1,
-                "threshold": 1,
-            },
-        ]
+        st.info("Aucun health check disponible (DAG data_quality_daily pas encore tourné).")
+        return
 
     # Normaliser: CheckResult dataclass OU dict mock
     def _as_dict(r):
@@ -335,18 +293,52 @@ def render_data_freshness() -> None:
 
 
 def render_alerts_feed() -> None:
-    """Affiche le feed des alertes récentes."""
+    """Affiche le feed des alertes récentes.
+
+    Sprint 9+ (2026-06-17) — branché sur ``get_recent_alerts()``
+    (rgpd.audit_log + chantiers). Plus de mock hardcodé.
+    """
     st.markdown("##### 🚨 Alertes récentes (24h)")
 
-    # En prod : query rgpd.audit_log WHERE action LIKE 'alert%' OR severity = 'critical'
-    # Mock : feed vide + quelques exemples
-    st.info("Aucune alerte critique dans les dernières 24h.")
+    from dashboard.components.data_cache import cached_recent_alerts
+
+    try:
+        alerts = cached_recent_alerts(hours=24, limit=20, force_mock=False)
+    except DashboardDataError as e:
+        st.error(f"⚠️ {e}")
+        return
+
+    if alerts.empty:
+        st.info("Aucune alerte critique dans les dernières 24h.")
+    else:
+        # Affiche les alertes réelles par ordre antéchronologique
+        for _, row in alerts.head(10).iterrows():
+            severity = str(row.get("severity", "—") or "—")
+            icon = {"Critical": "🔴", "Warning": "🟡", "Info": "🔵"}.get(severity, "⚪")
+            alert_time = row.get("alert_time", "—")
+            title = str(row.get("title", "—") or "—")
+            action = str(row.get("action", "") or "")
+            line_ref = str(row.get("line_ref", "Toutes") or "Toutes")
+            st.markdown(
+                f"- {icon} **{alert_time}** — {title} "
+                f"`{line_ref}`{f' — _{action}_' if action else ''}"
+            )
 
     with st.expander("📜 Historique alertes (7 derniers jours)", expanded=False):
-        st.caption("• 2026-06-06 04:15 — health_check: drift_baseline ⚠️ (warning)")
-        st.caption("• 2026-06-05 14:50 — collect_bronze: velov ⚠️ (timeout 30s, retry OK)")
-        st.caption("• 2026-06-04 03:00 — purge_bronze: 142 lignes supprimées ✅")
-        st.caption("• 2026-06-03 18:22 — alert_velov: station 1001 (Part-Dieu) < 3 vélos ✅")
+        try:
+            history = cached_recent_alerts(hours=24 * 7, limit=50, force_mock=False)
+        except DashboardDataError as e:
+            st.caption(f"⚠️ Historique indisponible — {e}")
+            return
+        if history.empty:
+            st.caption("Aucun historique d'alerte sur 7 jours.")
+        else:
+            for _, row in history.head(30).iterrows():
+                severity = str(row.get("severity", "—") or "—")
+                icon = {"Critical": "🔴", "Warning": "🟡", "Info": "🔵"}.get(severity, "⚪")
+                alert_time = row.get("alert_time", "—")
+                title = str(row.get("title", "—") or "—")
+                st.caption(f"• {icon} {alert_time} — {title}")
 
 
 def _trigger_dag(dag_id: str) -> None:

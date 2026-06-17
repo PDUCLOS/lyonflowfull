@@ -16,7 +16,13 @@ def test_config_loads_defaults():
     from src.config import get_settings
 
     s = get_settings()
-    assert s.app_version == "0.1.0"
+    # Sprint 9+ (2026-06-17) — assertion non-versionnée pour ne plus casser
+    # à chaque bump. On vérifie juste que la version est non vide + format semver.
+    assert s.app_version
+    parts = s.app_version.split(".")
+    assert len(parts) == 3 and all(p.isdigit() for p in parts), (
+        f"app_version doit être semver (X.Y.Z), got: {s.app_version}"
+    )
     assert s.db.host is not None
     assert s.mlflow.tracking_uri is not None
 

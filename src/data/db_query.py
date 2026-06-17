@@ -363,6 +363,56 @@ def get_infrastructure_bottlenecks(top: int = 30) -> pd.DataFrame:
     return df
 
 
+def get_bottlenecks_summary(top: int = 50) -> pd.DataFrame:
+    """Résumé des bottlenecks infrastructure pour les pages Élu (rank + zone + voyageurs).
+
+    Sprint 9+ (2026-06-17) — Fonction manquante qui crashait
+    ``load_bottlenecks_summary`` / ``load_bottlenecks_top``. Lit la table réelle
+    ``gold.infrastructure_bottlenecks`` (v0.3.1) et expose un alias
+    rétro-compatible pour ``load_bottlenecks_top`` (qui consomme
+    ``bottleneck_id``, ``road_name``, ``voyageurs_jour``).
+
+    Mapping schéma v0.3.1 → contrat widget Élu ::
+        * ``id``               → ``bottleneck_id``
+        * ``segment_id``       → ``road_name`` (identifiant segment routier)
+        * ``line_ref``         → ``line_ref`` (ligne TCL impactée)
+        * ``bus_delay_seconds``→ ``avg_bus_delay_s`` (s)
+        * ``traffic_speed_kmh``→ ``avg_traffic_speed_kmh`` (km/h)
+        * ``n_observations``   → ``voyageurs_jour`` proxy (n_obs agrégées,
+                                 utilisé comme dénominateur d'impact par Élu)
+        * ``lat``, ``lon``     → géoloc
+        * ``diagnosis``        → étiquette diagnostic
+
+    Args:
+        top: nombre max de lignes retournées (défaut 50).
+
+    Returns:
+        DataFrame: bottleneck_id, road_name, line_ref, diagnosis,
+        avg_bus_delay_s, avg_traffic_speed_kmh, n_observations,
+        voyageurs_jour, lat, lng, computed_at.
+        Vide si DB indisponible (la couche data_loader remonte alors
+        ``DashboardDataError`` via ``_require_db_or_raise``).
+    """
+    query = """
+        SELECT id            AS bottleneck_id,
+               segment_id    AS road_name,
+               line_ref,
+               diagnosis,
+               bus_delay_seconds AS avg_bus_delay_s,
+               traffic_speed_kmh AS avg_traffic_speed_kmh,
+               traffic_congestion,
+               n_observations,
+               n_observations AS voyageurs_jour,
+               lat, lon AS lng,
+               computed_at
+        FROM gold.infrastructure_bottlenecks
+        ORDER BY bus_delay_seconds DESC NULLS LAST
+        LIMIT %s
+    """
+    df = _df_from_query(query, (top,))
+    return df
+
+
 # =============================================================================
 # Spatial (Gold)
 # =============================================================================
