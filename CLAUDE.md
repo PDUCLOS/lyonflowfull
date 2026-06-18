@@ -1,6 +1,6 @@
 # CLAUDE.md — LyonFlowFull
 
-> Mémoire projet — **dernière mise à jour : 2026-06-17, Sprint 11+** (libellés TCL lisibles + OOM-kill SIRI fix + reorg documentation sous `archive/`).
+> Mémoire projet — **dernière mise à jour : 2026-06-18, Sprint 12+ (v0.6.5)** (cleanup final audits Pro TCL + Usager : suppression `force_mock` des 35 calls sites, libellés "mode démo" → "MLflow live", ruff clean).
 
 ## Projet
 
@@ -10,8 +10,8 @@ LyonFlowFull est une plateforme MLOps end-to-end de prédiction et d'analyse du 
 **Repo** : PDUCLOS/lyonflowfull
 **Cible production** : **VPS unique** `51.83.159.224` (Ubuntu, 6 CPU, 12 Go RAM, **2× 100 Go SSD** : sda = OS + code, sdb = PostgreSQL + MinIO + **Docker data-root** depuis Sprint 9+).
 
-**Version actuelle** : **v0.6.4** (Sprints 1-7 + VPS 1-8 + 9+ + 11+) — branche `vps` ACTIVE
-**Statut** : production VPS stable. Voir [archive/sprints/SPRINT_11_REPORT.md](archive/sprints/SPRINT_11_REPORT.md) pour le dernier sprint.
+**Version actuelle** : **v0.6.5** (Sprints 1-7 + VPS 1-8 + 9+ + 11+ + 12+) — branche `vps` ACTIVE
+**Statut** : production VPS stable. Voir [archive/sprints/SPRINT_11_REPORT.md](archive/sprints/SPRINT_11_REPORT.md) pour le détail du dernier sprint formel (Sprint 12+ = sprint de finition d'audits, pas de rapport dédié — voir `CHANGELOG.md`).
 
 ### État au 2026-06-17 (Sprint 11+)
 
@@ -24,7 +24,19 @@ LyonFlowFull est une plateforme MLOps end-to-end de prédiction et d'analyse du 
   - **OOM-kill SIRI/Velov résolu** : `_transform_tcl_vehicles()` et `_transform_velov()` avec `LIMIT 5000 → 200` (worker Celery 6 Go pic mémoire passe de 5.8 Go à 1.2 Go). Tasks stables depuis 14h.
   - **Reorg documentation** : 26 docs historiques (8 sprints, 12 audits, 4 analyses, 2 misc) déplacés sous `archive/{sprints,audits,analysis,misc}/`. `archive/README.md` documente la convention (déplacer, jamais supprimer, traçabilité RNCP 38777).
   - Voir [archive/sprints/SPRINT_11_REPORT.md](archive/sprints/SPRINT_11_REPORT.md) pour détails.
-- **Sprint 8 (2026-06-12)** — **3 dettes critiques résolues** :
+
+### État au 2026-06-18 (Sprint 12+ — v0.6.5)
+
+- 18 pages × 3 personas · 47 widgets · 8 collecteurs Bronze · 13 DAGs Airflow
+- 9 endpoints API · 3 modèles ML · RGPD complet · ~165 fichiers Python · ~21 000 lignes
+- **198 tests verts / 0 régression** · ruff clean
+- **Sprint 12+ (2026-06-18, commit `862d991`) — Cleanup final audits Pro TCL + Usager** :
+  - **UX "mode démo"** : `model_monitoring.py` 3 docstrings "MLflow ou mock" → "MLflow live" + bandeau warning MLflow reformulé
+  - **Commentaires obsolètes** : `Elu_1_Synthese.py:68` + `Elu_5_Rapport.py:56` corrigés ("fallback mock auto" → "fail loud si DB indispo")
+  - **Code cleanup `force_mock`** : 35 calls sites dans **26 fichiers dashboard/** nettoyés (`force_mock=False` viré, param conservé dans signatures pour rétro-compat)
+  - **Weather widget** : `_weather_icon()` utilise `_LABEL_TO_EMOJI` constant module-level
+  - **Ruff** : 2 trailing whitespace W291 auto-fixées
+  - **Trackers d'audit fermés** : 100% des 30 items des `archive/audits/AUDIT_PRO_TCL_FIXES.md` (14) + `AUDIT_USAGER_FIXES.md` (16) — majorité déjà livrée dans les Sprints 8+ à 11+, ce sprint finit le ménage
 
 ### État au 2026-06-12
 
@@ -163,7 +175,7 @@ Pour chaque mode (voiture, bus/tram, vélov, marche, métro) :
 | Grand Lyon chantiers | 1x/jour | `bronze.chantiers` | ✅ 428 records (Sprint 8 fix) |
 | Vitesse limite ref | 1x/semaine | `bronze.vitesse_limite_ref` | ✅ |
 | Pistes cyclables + GTFS | 1x/semaine | `bronze.infra_ref` | ✅ |
-| TomTom Traffic Flow | */15 min | `bronze.tomtom_traffic` | ⏸ NO-OP (module incomplet, réactivation Sprint 12+) |
+| TomTom Traffic Flow | */15 min | `bronze.tomtom_traffic` | ⏸ NO-OP (module incomplet, réactivation Sprint 13+) |
 
 Tables référentielles (peuplées mensuellement) :
 - `bronze.calendrier_scolaire` (Zone A, data.education.gouv.fr)
@@ -222,7 +234,7 @@ Chaque table Bronze : `fetched_at TIMESTAMPTZ` + `raw_data JSONB` + colonnes ext
 :05  Transform bronze → silver (5 parallèles)
 :15  Transform silver → gold (3 domaines parallèles)
 :20  dag_live_speed_retrain (Sprint VPS-5, focus H+1h) — train XGBoost H+1h + INSERT gold.trafic_predictions
-*/30  Idem, toutes les 30 min (cf. v0.6.3 — focus H+1h)
+*/30  Idem, toutes les 30 min (cf. v0.6.5 — focus H+1h)
 */5   backfill_dim_spatial_lat_lon (Sprint 8 cron, idempotent)
 :25  Retrain XGBoost trafic (legacy, 4 horizons, ~10 min)
 :50  Retrain Vélov (2 horizons : H+30min, H+1h, ~5 min)
@@ -299,7 +311,7 @@ Le widget `dashboard/components/widgets/pro_tcl/line_kpis.py` expose :
 | Orbit DLT challenger | Conflit schedule, complexité sans gain |
 | AR(1) predictor fallback | Dead code |
 | Ray cluster HPO | Optuna local suffit |
-| **TomTom API** | Module incomplet (helpers sans classe). **No-op Sprint 8**, réactivation Sprint 12+ (dette : coder `TomTomTrafficFlow(DataCollector)`) |
+| **TomTom API** | Module incomplet (helpers sans classe). **No-op Sprint 8**, réactivation Sprint 13+ (dette : coder `TomTomTrafficFlow(DataCollector)`) |
 | **Mode démo / mocks** | **VIRÉ Sprint 8**. Politique "zéro mock" — `src/data/mock/` → `tests/fixtures/mock_data/`. Cleanup `_is_demo_mode` (7× F401) en cours Sprint 9+ |
 
 ---
@@ -445,7 +457,7 @@ lyonflowfull/
 | `LYON_DEFAULT_SPEED` | non (30.0) | Vitesse imputation fallback |
 | `LYON_LATITUDE` | non (45.7640) | Latitude centre Lyon (collecteurs Open-Meteo, chantiers) |
 | `LYON_LONGITUDE` | non (4.8357) | Longitude centre Lyon |
-| `TOMTOM_API_KEY` | non | TomTom free tier (Sprint 12+ réactivation) |
+| `TOMTOM_API_KEY` | non | TomTom free tier (Sprint 13+ réactivation) |
 
 ---
 
