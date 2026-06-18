@@ -36,33 +36,33 @@ TTL_STATIC = 600
 
 
 @st.cache_data(ttl=TTL_REALTIME, show_spinner=False)
-def cached_traffic(force_mock: bool = False) -> dict[str, Any]:
-    return dl.load_traffic(force_mock=force_mock)
+def cached_traffic() -> dict[str, Any]:
+    return dl.load_traffic()
 
 
 @st.cache_data(ttl=TTL_REALTIME, show_spinner=False)
-def cached_traffic_timeseries(node_idx: int, hours: int = 4, force_mock: bool = False) -> pd.DataFrame:
-    return dl.load_traffic_timeseries(node_idx=node_idx, hours=hours, force_mock=force_mock)
+def cached_traffic_timeseries(node_idx: int, hours: int = 4) -> pd.DataFrame:
+    return dl.load_traffic_timeseries(node_idx=node_idx, hours=hours)
 
 
 @st.cache_data(ttl=TTL_REALTIME, show_spinner=False)
-def cached_velov_stations(force_mock: bool = False) -> list[dict]:
-    return dl.load_velov_stations(force_mock=force_mock)
+def cached_velov_stations() -> list[dict]:
+    return dl.load_velov_stations()
 
 
 @st.cache_data(ttl=TTL_FAST, show_spinner=False)
-def cached_velov_predictions(horizon_minutes: int = 60, force_mock: bool = False) -> pd.DataFrame:  # Sprint 8+ : focus H+1h
-    return dl.load_velov_predictions(horizon_minutes=horizon_minutes, force_mock=force_mock)
+def cached_velov_predictions(horizon_minutes: int = 60) -> pd.DataFrame:
+    return dl.load_velov_predictions(horizon_minutes=horizon_minutes)
 
 
 @st.cache_data(ttl=TTL_REALTIME, show_spinner=False)
-def cached_buses_positions(limit: int = 200, force_mock: bool = False) -> pd.DataFrame:
-    return dl.load_buses_positions(limit=limit, force_mock=force_mock)
+def cached_buses_positions(limit: int = 200) -> pd.DataFrame:
+    return dl.load_buses_positions(limit=limit)
 
 
 @st.cache_data(ttl=TTL_FAST, show_spinner=False)
-def cached_bus_delays(line_ref: str | None = None, days: int = 7, force_mock: bool = False) -> pd.DataFrame:
-    return dl.load_bus_delays(line_ref=line_ref, days=days, force_mock=force_mock)
+def cached_bus_delays(line_ref: str | None = None, days: int = 7) -> pd.DataFrame:
+    return dl.load_bus_delays(line_ref=line_ref, days=days)
 
 
 # =============================================================================
@@ -71,54 +71,54 @@ def cached_bus_delays(line_ref: str | None = None, days: int = 7, force_mock: bo
 
 
 @st.cache_data(ttl=TTL_FAST, show_spinner=False)
-def cached_infra_bottlenecks(top: int = 15, force_mock: bool = False) -> pd.DataFrame:
-    return dl.load_infra_bottlenecks(top=top, force_mock=force_mock)
+def cached_infra_bottlenecks(top: int = 15) -> pd.DataFrame:
+    return dl.load_infra_bottlenecks(top=top)
 
 
 @st.cache_data(ttl=TTL_FAST, show_spinner=False)
-def cached_bottlenecks_summary(force_mock: bool = False) -> pd.DataFrame:
-    return dl.load_bottlenecks_summary(force_mock=force_mock)
+def cached_bottlenecks_summary() -> pd.DataFrame:
+    return dl.load_bottlenecks_summary()
 
 
 @st.cache_data(ttl=TTL_FAST, show_spinner=False)
-def cached_bottlenecks_top(force_mock: bool = False) -> list[dict]:
-    return dl.load_bottlenecks_top(force_mock=force_mock)
+def cached_bottlenecks_top() -> list[dict]:
+    return dl.load_bottlenecks_top()
 
 
 @st.cache_data(ttl=TTL_FAST, show_spinner=False)
-def cached_predictions_vs_actuals(limit: int = 200, force_mock: bool = False) -> pd.DataFrame:
-    return dl.load_predictions_vs_actuals(limit=limit, force_mock=force_mock)
+def cached_predictions_vs_actuals(limit: int = 200) -> pd.DataFrame:
+    return dl.load_predictions_vs_actuals(limit=limit)
 
 
 @st.cache_data(ttl=TTL_SLOW, show_spinner=False)
-def cached_city_synthesis(force_mock: bool = False) -> dict:
-    return dl.load_city_synthesis(force_mock=force_mock)
+def cached_city_synthesis() -> dict:
+    return dl.load_city_synthesis()
 
 
 @st.cache_data(ttl=TTL_FAST, show_spinner=False)
-def cached_elu_kpis_dict(force_mock: bool = False) -> dict:
-    return dl.load_elu_kpis_dict(force_mock=force_mock)
+def cached_elu_kpis_dict() -> dict:
+    return dl.load_elu_kpis_dict()
 
 
 @st.cache_data(ttl=TTL_FAST, show_spinner=False)
-def cached_line_kpis(line_ids: tuple[str, ...] | None = None, force_mock: bool = False) -> dict:
+def cached_line_kpis(line_ids: tuple[str, ...] | None = None) -> dict:
     line_ids_list = list(line_ids) if line_ids else None
-    return dl.load_line_kpis(line_ids=line_ids_list, force_mock=force_mock)
+    return dl.load_line_kpis(line_ids=line_ids_list)
 
 
 @st.cache_data(ttl=TTL_FAST, show_spinner=False)
-def cached_otp_heatmap_data(force_mock: bool = False) -> pd.DataFrame:
-    return dl.load_otp_heatmap_data(force_mock=force_mock)
+def cached_otp_heatmap_data() -> pd.DataFrame:
+    return dl.load_otp_heatmap_data()
 
 
 @st.cache_data(ttl=TTL_FAST, show_spinner=False)
-def cached_correlation_matrix(limit: int = 50, force_mock: bool = False) -> pd.DataFrame:
-    return dl.load_correlation_matrix(limit=limit, force_mock=force_mock)
+def cached_correlation_matrix(limit: int = 50) -> pd.DataFrame:
+    return dl.load_correlation_matrix(limit=limit)
 
 
 @st.cache_data(ttl=TTL_FAST, show_spinner=False)
-def cached_segments(limit: int = 200, force_mock: bool = False) -> pd.DataFrame:
-    return dl.load_segments(limit=limit, force_mock=force_mock)
+def cached_segments(limit: int = 200) -> pd.DataFrame:
+    return dl.load_segments(limit=limit)
 
 
 # =============================================================================
@@ -127,23 +127,23 @@ def cached_segments(limit: int = 200, force_mock: bool = False) -> pd.DataFrame:
 
 
 @st.cache_data(ttl=TTL_FAST, show_spinner=False)
-def cached_weather_hourly(hours: int = 24, force_mock: bool = False) -> pd.DataFrame:
-    return dl.load_weather_hourly(hours=hours, force_mock=force_mock)
+def cached_weather_hourly(hours: int = 24) -> pd.DataFrame:
+    return dl.load_weather_hourly(hours=hours)
 
 
 @st.cache_data(ttl=TTL_REALTIME, show_spinner=False)
-def cached_recent_alerts(hours: int = 24, limit: int = 50, force_mock: bool = False) -> pd.DataFrame:
-    return dl.load_recent_alerts(hours=hours, limit=limit, force_mock=force_mock)
+def cached_recent_alerts(hours: int = 24, limit: int = 50) -> pd.DataFrame:
+    return dl.load_recent_alerts(hours=hours, limit=limit)
 
 
 @st.cache_data(ttl=TTL_SLOW, show_spinner=False)
-def cached_amenagements_passes(limit: int = 50, force_mock: bool = False) -> pd.DataFrame:
-    return dl.load_amenagements_passes(limit=limit, force_mock=force_mock)
+def cached_amenagements_passes(limit: int = 50) -> pd.DataFrame:
+    return dl.load_amenagements_passes(limit=limit)
 
 
 @st.cache_data(ttl=TTL_SLOW, show_spinner=False)
-def cached_kpis_12_months(force_mock: bool = False) -> pd.DataFrame:
-    return dl.load_kpis_12_months(force_mock=force_mock)
+def cached_kpis_12_months() -> pd.DataFrame:
+    return dl.load_kpis_12_months()
 
 
 # =============================================================================
@@ -152,13 +152,13 @@ def cached_kpis_12_months(force_mock: bool = False) -> pd.DataFrame:
 
 
 @st.cache_data(ttl=TTL_SLOW, show_spinner=False)
-def cached_rgpd_audit(limit: int = 50, force_mock: bool = False) -> pd.DataFrame:
-    return dl.load_rgpd_audit(limit=limit, force_mock=force_mock)
+def cached_rgpd_audit(limit: int = 50) -> pd.DataFrame:
+    return dl.load_rgpd_audit(limit=limit)
 
 
 @st.cache_data(ttl=TTL_SLOW, show_spinner=False)
-def cached_rgpd_consents(force_mock: bool = False) -> pd.DataFrame:
-    return dl.load_rgpd_consents(force_mock=force_mock)
+def cached_rgpd_consents() -> pd.DataFrame:
+    return dl.load_rgpd_consents()
 
 
 # =============================================================================
@@ -167,28 +167,28 @@ def cached_rgpd_consents(force_mock: bool = False) -> pd.DataFrame:
 
 
 @st.cache_data(ttl=TTL_STATIC, show_spinner=False)
-def cached_tcl_lines(force_mock: bool = False) -> list[dict]:
-    return dl.load_tcl_lines(force_mock=force_mock)
+def cached_tcl_lines() -> list[dict]:
+    return dl.load_tcl_lines()
 
 
 @st.cache_data(ttl=TTL_STATIC, show_spinner=False)
-def cached_lyon_addresses(force_mock: bool = False) -> list[str]:
-    return dl.load_lyon_addresses(force_mock=force_mock)
+def cached_lyon_addresses() -> list[str]:
+    return dl.load_lyon_addresses()
 
 
 @st.cache_data(ttl=TTL_STATIC, show_spinner=False)
-def cached_lyon_addresses_with_coords(force_mock: bool = False) -> list[dict]:
+def cached_lyon_addresses_with_coords() -> list[dict]:
     """Adresses Lyon avec coords GPS (pour cartes, markers)."""
-    return dl.load_lyon_addresses_with_coords(force_mock=force_mock)
+    return dl.load_lyon_addresses_with_coords()
 
 
 @st.cache_data(ttl=TTL_STATIC, show_spinner=False)
-def cached_spatial_mapping(force_mock: bool = False) -> pd.DataFrame:
-    return dl.load_spatial_mapping(force_mock=force_mock)
+def cached_spatial_mapping() -> pd.DataFrame:
+    return dl.load_spatial_mapping()
 
 
 @st.cache_data(ttl=TTL_SLOW, show_spinner=False)
-def cached_traffic_predictions_for_map(horizon_minutes: int = 60, limit: int = 500) -> pd.DataFrame:  # Sprint 8+ : focus H+1h
+def cached_traffic_predictions_for_map(horizon_minutes: int = 60, limit: int = 500) -> pd.DataFrame:
     """Cache les prédictions trafic pour la carte GNN.
 
     Args typés explicitement (pas *args/**kwargs) pour garantir le hashage
@@ -199,13 +199,13 @@ def cached_traffic_predictions_for_map(horizon_minutes: int = 60, limit: int = 5
 
 
 @st.cache_data(ttl=TTL_SLOW, show_spinner=False)
-def cached_mlflow_models(force_mock: bool = False) -> list[dict]:
-    return dl.load_mlflow_models(force_mock=force_mock)
+def cached_mlflow_models() -> list[dict]:
+    return dl.load_mlflow_models()
 
 
 @st.cache_data(ttl=TTL_SLOW, show_spinner=False)
-def cached_mlflow_experiment_summary(force_mock: bool = False) -> dict:
-    return dl.load_mlflow_experiment_summary(force_mock=force_mock)
+def cached_mlflow_experiment_summary() -> dict:
+    return dl.load_mlflow_experiment_summary()
 
 
 def clear_all_caches() -> None:

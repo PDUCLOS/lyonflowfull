@@ -1,15 +1,7 @@
-"""Page Usager — Files (file manager simple).
+"""Page Usager — Files & carte trafic.
 
-Upload/download de fichiers via Streamlit. Stockage local dans /uploads/.
-
-Note : page accessible à tous les personas (pas dans la navigation YAML par
-défaut, mais ouverte via /Usager_4_Files pour usage interne).
-
-Sprint VPS-6 — Ajout de la "super carte" du trafic Lyon (style caro
-Architect-IA-final-project) : pydeck scatterplot des prédictions gold.trafic_predictions
-colorées par vitesse. Permet de visualiser l'état du réseau sans quitter la page.
-
-Sprint 6+ : déplacer vers Pro TCL "Import données" si usage réel.
+Upload/download de fichiers via Streamlit + carte trafic temps reel
+(pydeck scatterplot gold.trafic_predictions).
 """
 
 from __future__ import annotations
@@ -20,6 +12,7 @@ from pathlib import Path
 
 import streamlit as st
 
+from dashboard.components.auto_refresh import setup_auto_refresh
 from dashboard.components.data_status import render_data_status_banner
 from dashboard.components.navigation import render_sidebar_navigation
 from dashboard.components.persona_guard import apply_persona_guard
@@ -47,6 +40,7 @@ st.set_page_config(
 apply_persona_guard(expected_persona="usager")
 inject_theme()
 render_sidebar_navigation()
+setup_auto_refresh()
 
 st.title("📁 Files — Partage de fichiers")
 render_data_status_banner()

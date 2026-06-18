@@ -4,9 +4,11 @@ from __future__ import annotations
 
 import streamlit as st
 
+from dashboard.components.auto_refresh import setup_auto_refresh
 from dashboard.components.data_status import render_data_status_banner
 from dashboard.components.navigation import render_sidebar_navigation
 from dashboard.components.theme import inject_theme
+from src.config import get_settings
 
 st.set_page_config(
     page_title="À propos — LyonFlowFull",
@@ -16,6 +18,7 @@ st.set_page_config(
 
 inject_theme()
 render_sidebar_navigation()
+setup_auto_refresh()
 
 st.title("ℹ️ À propos de LyonFlowFull")
 render_data_status_banner()
@@ -57,7 +60,7 @@ st.markdown(
     Docker Compose · Nginx
 
     ---
-
-    *LyonFlowFull v0.6.1 — 2026-06-16*
     """
 )
+
+st.caption(f"LyonFlowFull v{get_settings().app_version}")

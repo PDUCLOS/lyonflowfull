@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import streamlit as st
 
+from dashboard.components.auto_refresh import setup_auto_refresh
 from dashboard.components.data_status import render_data_status_banner
 from dashboard.components.navigation import render_sidebar_navigation
 from dashboard.components.persona_guard import apply_persona_guard
@@ -24,6 +25,7 @@ st.set_page_config(
 apply_persona_guard(expected_persona="pro_tcl")
 inject_theme()
 render_sidebar_navigation()
+setup_auto_refresh()
 
 st.title("Corrélation bus × trafic routier")
 render_data_status_banner()

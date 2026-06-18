@@ -96,13 +96,13 @@ def test_load_bottlenecks_top_raises_when_no_db() -> None:
 def test_load_tcl_lines_raises_when_no_db() -> None:
     """load_tcl_lines lit gold.tcl_vehicle_realtime en DB, fail loud."""
     with pytest.raises(DashboardDataError):
-        data_loader.load_tcl_lines(force_mock=False)
+        data_loader.load_tcl_lines()
 
 
 def test_load_lyon_addresses_raises_when_no_db() -> None:
     """load_lyon_addresses : DB obligatoire (referentiel.lieux_lyon)."""
     with pytest.raises(DashboardDataError):
-        data_loader.load_lyon_addresses(force_mock=False)
+        data_loader.load_lyon_addresses()
 
 
 # =============================================================================
@@ -113,5 +113,5 @@ def test_load_lyon_addresses_raises_when_no_db() -> None:
 def test_load_kpis_12_months_raises_explicit() -> None:
     """load_kpis_12_months : pas de fallback (Sprint 8)."""
     with pytest.raises(DashboardDataError) as exc_info:
-        data_loader.load_kpis_12_months(force_mock=False)
+        data_loader.load_kpis_12_months()
     assert "kpis" in str(exc_info.value).lower() or "month" in str(exc_info.value).lower()

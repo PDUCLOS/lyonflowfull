@@ -1,6 +1,6 @@
 # CLAUDE.md — LyonFlowFull
 
-> Mémoire projet — **dernière mise à jour : 2026-06-18, Sprint 12+ (v0.6.5)** (cleanup final audits Pro TCL + Usager : suppression `force_mock` des 35 calls sites, libellés "mode démo" → "MLflow live", ruff clean).
+> Mémoire projet — **dernière mise à jour : 2026-06-18, Sprint 13 (v0.6.6)** (audit cohérence pipeline : version unique, auto-refresh persona, nettoyage complet `force_mock` + `_is_demo_mode`, cross-persona widgets, script `coherence-check.sh`).
 
 ## Projet
 
@@ -10,8 +10,8 @@ LyonFlowFull est une plateforme MLOps end-to-end de prédiction et d'analyse du 
 **Repo** : PDUCLOS/lyonflowfull
 **Cible production** : **VPS unique** `51.83.159.224` (Ubuntu, 6 CPU, 12 Go RAM, **2× 100 Go SSD** : sda = OS + code, sdb = PostgreSQL + MinIO + **Docker data-root** depuis Sprint 9+).
 
-**Version actuelle** : **v0.6.5** (Sprints 1-7 + VPS 1-8 + 9+ + 11+ + 12+) — branche `vps` ACTIVE
-**Statut** : production VPS stable. Voir [archive/sprints/SPRINT_11_REPORT.md](archive/sprints/SPRINT_11_REPORT.md) pour le détail du dernier sprint formel (Sprint 12+ = sprint de finition d'audits, pas de rapport dédié — voir `CHANGELOG.md`).
+**Version actuelle** : **v0.6.6** (Sprints 1-7 + VPS 1-8 + 9+ + 11+ + 12+ + 13) — branche `vps` ACTIVE
+**Statut** : production VPS stable. Voir [archive/sprints/SPRINT_11_REPORT.md](archive/sprints/SPRINT_11_REPORT.md) pour le détail du dernier sprint formel.
 
 ### État au 2026-06-17 (Sprint 11+)
 
@@ -24,6 +24,19 @@ LyonFlowFull est une plateforme MLOps end-to-end de prédiction et d'analyse du 
   - **OOM-kill SIRI/Velov résolu** : `_transform_tcl_vehicles()` et `_transform_velov()` avec `LIMIT 5000 → 200` (worker Celery 6 Go pic mémoire passe de 5.8 Go à 1.2 Go). Tasks stables depuis 14h.
   - **Reorg documentation** : 26 docs historiques (8 sprints, 12 audits, 4 analyses, 2 misc) déplacés sous `archive/{sprints,audits,analysis,misc}/`. `archive/README.md` documente la convention (déplacer, jamais supprimer, traçabilité RNCP 38777).
   - Voir [archive/sprints/SPRINT_11_REPORT.md](archive/sprints/SPRINT_11_REPORT.md) pour détails.
+
+### État au 2026-06-18 (Sprint 13 — v0.6.6)
+
+- 18 pages × 3 personas · 47 widgets · 8 collecteurs Bronze · 13 DAGs Airflow
+- 9 endpoints API · 3 modèles ML · RGPD complet · ~165 fichiers Python · ~21 000 lignes
+- **203 tests verts / 4 SKIP / 7 deselected** · ruff clean (6 cosmétiques pré-existantes)
+- **Sprint 13 (2026-06-18) — Audit cohérence pipeline + UX** :
+  - **Version unique** : source de vérité `src/config.py` (`get_settings().app_version`). Sidebar, A_Propos, RGPD, Usager_1 — tous importent dynamiquement. Zéro version hardcodée dans le dashboard.
+  - **Auto-refresh par persona** : `dashboard/components/auto_refresh.py` + `streamlit-autorefresh`. Pro TCL 30s, Usager 60s, Élu 300s. Câblé dans les 18 pages.
+  - **Nettoyage complet `force_mock`** : suppression de `_is_demo_mode()`, `_maybe_force_mock()`, `_demo_mode_cache` dans `data_loader.py`. Param `force_mock` viré de ~60 signatures (data_loader + data_cache). Docstrings nettoyées dans 5 widgets.
+  - **Cross-persona widgets** : `dashboard/components/widgets/common/__init__.py` re-exporte `render_traffic_map_compact`. `Usager_1` et `Elu_1` importent depuis `widgets.common` (plus de dépendance directe Pro TCL → Usager).
+  - **Script cohérence** : `scripts/coherence-check.sh` (12 checks) + target `make coherence-check`. Vérifie : version unique, zéro mock, auto-refresh, cross-persona, TTL cohérence.
+  - **`pyproject.toml`** : version `0.6.6`, dépendance `streamlit-autorefresh>=1.0.0`
 
 ### État au 2026-06-18 (Sprint 12+ — v0.6.5)
 

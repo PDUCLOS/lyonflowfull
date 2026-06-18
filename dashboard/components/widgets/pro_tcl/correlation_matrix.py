@@ -60,10 +60,6 @@ def render_correlation_matrix(line_id: str | None = None) -> None:
         st.error(f"⚠️ {e}")
         return
 
-    # Sprint 8 (2026-06-12) — viré le fallback mock. Si la DB renvoie
-    # un df vide, on affiche l'info. Pas de mock en prod, pas de mock
-    # en démo (les données viennent de la DB toujours, via les helpers
-    # db_query.py — eux peuvent avoir un fallback gracieux).
     if not df.empty:
         segments = _bottlenecks_to_segments(df)
     else:

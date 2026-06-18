@@ -176,7 +176,7 @@ class Settings(BaseSettings):
     )
 
     app_env: str = Field(default="development", alias="APP_ENV")
-    app_version: str = "0.6.1"
+    app_version: str = "0.6.6"
     debug: bool = False
 
     db: DatabaseSettings = DatabaseSettings()

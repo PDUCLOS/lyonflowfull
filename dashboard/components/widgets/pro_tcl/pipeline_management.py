@@ -29,7 +29,7 @@ from src.monitoring.health_checks import run_all_checks
 
 @st.cache_data(ttl=30, show_spinner=False)
 def _cached_dags() -> list[dict]:
-    """Liste des DAGs Airflow. Fail loud (Sprint 8 — viré fallback mock)."""
+    """Liste des DAGs Airflow. Fail loud si Airflow indispo."""
     try:
         dags = get_dags_status()
     except DashboardDataError:
@@ -45,7 +45,7 @@ def _cached_dags() -> list[dict]:
 
 @st.cache_data(ttl=60, show_spinner=False)
 def _cached_freshness() -> list[dict]:
-    """Fraîcheur live des sources Bronze. Fail loud (Sprint 8 — viré fallback mock)."""
+    """Fraîcheur live des sources Bronze. Fail loud si DB indispo."""
     from src.data.db_query import _is_db_available, get_bronze_source_counts
 
     if not _is_db_available():

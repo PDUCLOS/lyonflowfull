@@ -12,9 +12,11 @@ from __future__ import annotations
 
 import streamlit as st
 
+from dashboard.components.auto_refresh import setup_auto_refresh
 from dashboard.components.data_status import render_data_status_banner
 from dashboard.components.navigation import render_sidebar_navigation
 from dashboard.components.theme import inject_theme
+from src.config import get_settings
 
 st.set_page_config(
     page_title="RGPD — LyonFlowFull",
@@ -24,6 +26,7 @@ st.set_page_config(
 
 inject_theme()
 render_sidebar_navigation()
+setup_auto_refresh()
 
 st.title("🔒 RGPD & Conformité")
 render_data_status_banner()
@@ -72,4 +75,4 @@ st.markdown(
 )
 
 st.divider()
-st.caption("LyonFlowFull v0.6.1 — conforme RGPD")
+st.caption(f"LyonFlowFull v{get_settings().app_version} — conforme RGPD")

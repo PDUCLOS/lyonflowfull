@@ -8,7 +8,7 @@
         test-smoke coverage build up down restart logs ps shell-db shell-api \
         shell-streamlit backup restore clean seed-users docs \
         deploy-vps rollback-vps tag-vps certbot-init certbot-renew \
-        healthcheck-vps check-deploy-env tls-status \
+        healthcheck-vps coherence-check check-deploy-env tls-status \
         monitoring-up monitoring-down monitoring-status monitoring-logs
 
 # Variables
@@ -166,6 +166,9 @@ clean-docker:  ## ⚠️ Nettoie volumes Docker (data perte !)
 # -----------------------------------------------------------------------------
 check-deploy-env:  ## Vérifie .deploy.env (perms 600, vars critiques) avant deploy
 	./scripts/check-deploy-env.sh .deploy.env
+
+coherence-check:  ## Verifie invariants code (version, zero-mock, auto-refresh, imports)
+	@bash scripts/coherence-check.sh
 
 healthcheck-vps:  ## Healthcheck post-deploy (HTTP + DB + nginx)
 	@echo "==[ HTTP /api/health ]=="

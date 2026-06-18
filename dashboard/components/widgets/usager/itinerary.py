@@ -27,7 +27,6 @@ logger = logging.getLogger(__name__)
 def _resolve_address(text: str) -> tuple[float, float] | None:
     """Résout une adresse texte → (lon, lat) via la DB (referentiel.lieux_lyon).
 
-    Sprint 8 (2026-06-12) — viré le fallback mock lyon_addresses.
     La DB est l'unique source. Si DB indispo, DashboardDataError.
     """
     from src.data.db_query import _is_db_available, execute_query

@@ -137,4 +137,6 @@ def render_sidebar_navigation() -> None:
             clear_current_persona_auth()
             st.switch_page("Accueil.py")
 
-        st.caption("LyonFlowFull v0.3.0")
+        from src.config import get_settings
+
+        st.caption(f"LyonFlowFull v{get_settings().app_version}")

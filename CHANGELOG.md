@@ -5,6 +5,45 @@ Toutes les modifications notables de ce projet sont documentées ici.
 Le format suit [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/),
 et ce projet adhère au [Semantic Versioning](https://semver.org/lang/fr/).
 
+## [0.6.6] - 2026-06-18 — Sprint 13 : audit cohérence pipeline + UX (branche `vps`)
+
+Audit complet de cohérence du dashboard (18 pages × 3 personas). Élimine le
+drift de version, ajoute l'auto-refresh par persona, et finit le nettoyage
+`force_mock` / `_is_demo_mode` dans la couche data.
+
+### Ajouté
+- **Auto-refresh par persona** : `dashboard/components/auto_refresh.py` utilise
+  `streamlit-autorefresh`. Intervalles : Pro TCL 30s, Usager 60s, Élu 300s —
+  lus depuis `config/personas.yaml`. Câblé dans les **18 pages**.
+- **`dashboard/components/widgets/common/__init__.py`** : couche de re-export
+  cross-persona. `render_traffic_map_compact` partagé entre Usager et Élu sans
+  dépendance directe à `widgets/pro_tcl/`.
+- **`scripts/coherence-check.sh`** : 12 checks automatisés (version unique,
+  zéro mock, auto-refresh, cross-persona, TTL cohérence). Target `make coherence-check`.
+- **Dépendance `streamlit-autorefresh>=1.0.0`** dans `requirements.txt`.
+- **5 tests** ajoutés (`test_deprecated_functions_removed` + nettoyage fixtures).
+
+### Changed
+- **Version unique** : `src/config.py` → `0.6.6`. Sidebar (`navigation.py`),
+  `A_Propos.py`, `9_RGPD_Conformite.py`, `Usager_1_Mon_Trajet.py` importent
+  tous `get_settings().app_version`. Zéro version hardcodée dans le dashboard.
+- **`src/data/data_loader.py`** : suppression complète de `_is_demo_mode()`,
+  `_maybe_force_mock()`, `_demo_mode_cache`. Param `force_mock` retiré de ~29
+  signatures + appels internes.
+- **`dashboard/components/data_cache.py`** : `force_mock` retiré de 24
+  fonctions wrapper + appels `dl.load_*()`.
+- **5 widgets** : commentaires historiques "mock" nettoyés (itinerary, velov_trip,
+  model_monitoring, correlation_matrix, pipeline_management).
+- **`Pro_7_Model_Monitoring.py`** : docstring "fallback mock" → "fail loud".
+- **`Usager_4_Files.py`** : docstring "page interne" nettoyée.
+
+### Removed
+- `_is_demo_mode()`, `_maybe_force_mock()`, `_demo_mode_cache` (dead code depuis Sprint 8)
+- `force_mock` param de ~60 signatures dans `data_loader.py` + `data_cache.py`
+- Toute version hardcodée (v0.3.0, v0.6.1, v0.6.5) dans le dashboard
+
+**Tests** : 203 verts, 4 skipped, 7 deselected, 0 régression. Ruff clean (6 cosmétiques pré-existantes).
+
 ## [0.6.5] - 2026-06-17 — Nettoyage final audits Pro TCL + Usager (branche `vps`)
 
 Complète les 30 items des trackers

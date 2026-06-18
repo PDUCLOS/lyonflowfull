@@ -4,11 +4,13 @@ from __future__ import annotations
 
 import streamlit as st
 
+from dashboard.components.auto_refresh import setup_auto_refresh
 from dashboard.components.data_cache import cached_bottlenecks_top, cached_elu_kpis_dict
 from dashboard.components.data_status import render_data_status_banner
 from dashboard.components.navigation import render_sidebar_navigation
 from dashboard.components.persona_guard import apply_persona_guard
 from dashboard.components.theme import inject_theme
+from dashboard.components.widgets.common import render_traffic_map_compact
 from dashboard.components.widgets.elu import (
     render_executive_summary,
     render_kpi_cards,
@@ -17,7 +19,6 @@ from dashboard.components.widgets.elu import (
     render_top_decisions,
     render_trend_chart,
 )
-from dashboard.components.widgets.pro_tcl import render_traffic_map_compact
 
 st.set_page_config(
     page_title="Synthèse exécutive — Élu · LyonFlowFull",
@@ -28,6 +29,7 @@ st.set_page_config(
 apply_persona_guard(expected_persona="elu")
 inject_theme()
 render_sidebar_navigation()
+setup_auto_refresh()
 
 # Pattern défensif : pm.is_widget_visible() pour chaque widget utilisé dans la page.
 

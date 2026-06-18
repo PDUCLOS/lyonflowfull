@@ -12,11 +12,12 @@ from __future__ import annotations
 
 import streamlit as st
 
+from dashboard.components.auto_refresh import setup_auto_refresh
 from dashboard.components.data_status import render_data_status_banner
 from dashboard.components.navigation import render_sidebar_navigation
 from dashboard.components.persona_guard import apply_persona_guard
 from dashboard.components.theme import inject_theme
-from dashboard.components.widgets.pro_tcl import render_traffic_map_compact
+from dashboard.components.widgets.common import render_traffic_map_compact
 from dashboard.components.widgets.usager import (
     render_itinerary_result,
     render_lieux_velov_map,
@@ -28,6 +29,7 @@ from dashboard.components.widgets.usager import (
     render_velov_widget,
     render_weather_widget,
 )
+from src.config import get_settings
 from src.data.exceptions import DashboardDataError
 
 st.set_page_config(
@@ -39,6 +41,7 @@ st.set_page_config(
 apply_persona_guard(expected_persona="usager")
 inject_theme()
 render_sidebar_navigation()
+setup_auto_refresh()
 
 # Pattern défensif : chaque widget peut vérifier sa visibilité via pm.is_widget_visible()
 # (cf. dashboard/components/colors.py pour la liste des widgets par persona)
@@ -239,6 +242,6 @@ if st.session_state.get("results_loaded"):
     # la carte voiture. Sinon on l'invite à le faire.
 
     st.caption(
-        "LyonFlowFull · v0.6.x · Sprint VPS-6 (2026-06-11) — "
+        f"LyonFlowFull · v{get_settings().app_version} — "
         "Zéro mock : 100% pipeline (PostgreSQL, Airflow, MLflow)"
     )

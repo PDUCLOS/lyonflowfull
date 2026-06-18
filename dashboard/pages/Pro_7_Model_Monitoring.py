@@ -1,21 +1,19 @@
 """Page Pro TCL — Model Monitoring (MLflow Registry + drift + GNN map).
 
-Sprint 9 — Dashboard PRÉPARÉ mais DÉSACTIVÉ par défaut.
-
-Lit les modèles depuis MLflow Tracking Server (live). Si le serveur
-n'est pas joignable, fallback gracieux sur mock data + bandeau
-"MLflow non accessible" pour transparence.
+Lit les modeles depuis MLflow Tracking Server (live). Si le serveur
+n'est pas joignable, leve DashboardDataError (fail loud, zero mock).
 
 Activation :
 1. Set ``LYONFLOW_DASHBOARD_MODEL_MONITORING=true`` dans .env
-2. Démarrer le serveur MLflow (Docker compose : service ``mlflow``)
-3. Reload cette page — le dashboard passe en mode live
+2. Demarrer le serveur MLflow (Docker compose : service ``mlflow``)
+3. Reload cette page
 """
 
 from __future__ import annotations
 
 import streamlit as st
 
+from dashboard.components.auto_refresh import setup_auto_refresh
 from dashboard.components.data_status import render_data_status_banner
 from dashboard.components.navigation import render_sidebar_navigation
 from dashboard.components.persona_guard import apply_persona_guard
@@ -33,6 +31,7 @@ st.set_page_config(
 apply_persona_guard(expected_persona="pro_tcl")
 inject_theme()
 render_sidebar_navigation()
+setup_auto_refresh()
 
 st.title("🧠 Model Monitoring")
 render_data_status_banner()

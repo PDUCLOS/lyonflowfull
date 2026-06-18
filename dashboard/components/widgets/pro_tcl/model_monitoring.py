@@ -28,7 +28,6 @@ def render_model_registry() -> None:
     """Affiche la liste des modèles dans le registry."""
     st.markdown("##### 📚 Model Registry")
 
-    # Sprint 9+ — charge les modèles depuis MLflow live. Plus de fallback mock.
     from dashboard.components.data_cache import (
         cached_mlflow_experiment_summary,
         cached_mlflow_models,
@@ -319,7 +318,6 @@ def render_metrics_comparison() -> None:
     """Affiche la comparaison des métriques entre modèles."""
     st.markdown("##### 📊 Comparaison métriques (XGBoost vs GNN)")
 
-    # Sprint 9+ — sources live MLflow uniquement, plus de fallback mock.
     from dashboard.components.data_cache import cached_mlflow_models
     from src.data.exceptions import DashboardDataError
 

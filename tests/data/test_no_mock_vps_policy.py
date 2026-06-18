@@ -1,41 +1,24 @@
-"""Sprint 8 (2026-06-12) — Politique "zéro mock dans le projet".
-
-Avant (Sprint VPS-6) : politique "fail loud en prod, mock toléré en
-démo". Le code avait un mode ``_is_demo_mode()`` qui retournait des
-données mock si la DB était down.
-
-Maintenant (Sprint 8) : politique "zéro mock dans le projet". Pas de
-mode démo, pas de fallback mock. Si DB indispo, DashboardDataError.
+"""Sprint 8+ — Politique "zéro mock dans le projet".
 
 Ce module vérifie :
-1. ``_is_demo_mode()`` retourne TOUJOURS False (la fonction existe
-   encore pour la compatibilité).
-2. ``_maybe_force_mock()`` retourne TOUJOURS False.
-3. Aucune référence à ``src.data.mock.*`` dans ``src/``.
-4. Le module ``src/data/mock/`` n'existe plus.
+1. Aucune référence à ``src.data.mock.*`` dans ``src/``.
+2. Le module ``src/data/mock/`` n'existe plus.
+3. Aucun widget dashboard n'importe ``src.data.mock``.
+4. Les fonctions deprecated ``_is_demo_mode`` et ``_maybe_force_mock``
+   ont été supprimées du data_loader (Sprint 12+).
 """
 from __future__ import annotations
 
-import os
-import subprocess
 from pathlib import Path
 
 
-def test_is_demo_mode_always_false() -> None:
-    """_is_demo_mode() retourne TOUJOURS False depuis Sprint 8."""
-    from src.data.data_loader import _is_demo_mode
+def test_deprecated_functions_removed() -> None:
+    """_is_demo_mode() et _maybe_force_mock() sont supprimées (Sprint 12+)."""
+    import src.data.data_loader as dl
 
-    # Même avec LYONFLOW_DEMO_MODE=1, on doit retourner False.
-    os.environ["LYONFLOW_DEMO_MODE"] = "1"
-    assert _is_demo_mode() is False, "_is_demo_mode() doit retourner False"
-
-
-def test_maybe_force_mock_always_false() -> None:
-    """_maybe_force_mock() retourne TOUJOURS False depuis Sprint 8."""
-    from src.data.data_loader import _maybe_force_mock
-
-    assert _maybe_force_mock(False) is False
-    assert _maybe_force_mock(True) is False  # même avec force_mock=True
+    assert not hasattr(dl, "_is_demo_mode"), "_is_demo_mode doit être supprimée"
+    assert not hasattr(dl, "_maybe_force_mock"), "_maybe_force_mock doit être supprimée"
+    assert not hasattr(dl, "_demo_mode_cache"), "_demo_mode_cache doit être supprimée"
 
 
 def test_no_mock_directory_in_src() -> None:
@@ -83,11 +66,3 @@ def test_widgets_have_no_mock_imports() -> None:
         assert "src.data.mock" not in content, (
             f"{py_file} importe encore src.data.mock — c'est interdit (Sprint 8)"
         )
-
-
-def test_data_loader_no_mock_returns_empty() -> None:
-    """Si DB indispo, data_loader retourne {} ou pd.DataFrame() vide, pas un mock."""
-    from src.data.data_loader import _is_demo_mode
-
-    # Mode démo n'a plus d'effet : _is_demo_mode est TOUJOURS False.
-    assert _is_demo_mode() is False
