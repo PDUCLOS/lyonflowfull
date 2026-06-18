@@ -18,6 +18,7 @@ from __future__ import annotations
 
 import streamlit as st
 
+from dashboard.components.colors import COLORS
 from src.data.exceptions import DashboardDataError
 from src.routing.pathfinder_multimodal import (
     VelovItinerary,
