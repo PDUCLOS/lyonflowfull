@@ -32,6 +32,7 @@ Calcul budget (free tier 2500 req/jour) :
 
 from __future__ import annotations
 
+import json
 import logging
 import os
 import time
@@ -46,6 +47,7 @@ from tenacity import (
 )
 
 from src.config import get_settings
+from src.ingestion.base import DataCollector, FetchResult
 
 logger = logging.getLogger(__name__)
 
@@ -382,3 +384,102 @@ def health() -> dict:
         "daily_reset_date": _daily_reset_date,
         "tiles_configured": len(LYON_TILES),
     }
+
+
+# -----------------------------------------------------------------------------
+# DataCollector ABC wrapper (Sprint 13+ — 2026-06-18)
+# -----------------------------------------------------------------------------
+# Sprint 8 (2026-06-12) avait désactivé le DAG parce que "le module n'a
+# jamais eu de classe DataCollector conforme". On aligne maintenant sur
+# le pattern unifié des 7 autres collecteurs : TomTomTrafficFlow hérite
+# de DataCollector, fetch_raw() appelle collect_lyon_tiles(), et _save_raw()
+# insère via save_lyon_tiles_to_bronze(). Le DataCollector.run() fait le
+# reste (compteurs, last_success_at, error handling).
+# -----------------------------------------------------------------------------
+
+
+class TomTomTrafficFlow(DataCollector):
+    """Collecteur TomTom Traffic Flow — wrapper DataCollector.
+
+    Hérite de DataCollector (pattern unifié). fetch_raw() interroge les
+    12 tuiles Lyon via ``collect_lyon_tiles()`` (cache process + quota
+    journalier). save_lyon_tiles_to_bronze() persiste en
+    ``bronze.tomtom_traffic``. Le DataCollector.run() fait le reste
+    (compteurs, error handling, GDrive backup).
+
+    Sprint 13+ (2026-06-18) — Réactivation Sprint 8 du no-op.
+    """
+
+    def __init__(self):
+        super().__init__(
+            source="tomtom_traffic_flow",
+            bronze_table="tomtom_traffic",
+            timeout=30,
+            max_retries=3,
+        )
+
+    def fetch_raw(self) -> FetchResult:
+        """Récupère TomTom Flow pour les 12 tuiles Lyon.
+
+        Returns:
+            FetchResult avec ``raw_data`` = liste de dicts TomTom
+            (``current_speed_kmh, free_flow_speed_kmh, ratio,
+            confidence, current_travel_time_s, free_flow_travel_time_s,
+            tile_key, lat, lon, fetched_at``).
+
+        Raises:
+            CollectorError: si la clé API est absente (no-op silencieux
+                en fait, juste log warning + 0 records).
+        """
+        api_key = get_api_key()
+        if not api_key:
+            # Pas une erreur : on veut que le DAG tourne même sans clé
+            # (cas dev/test). Le log warning suffit.
+            logger.warning(
+                "TOMTOM_API_KEY non configuré — TomTomTrafficFlow fetch_raw() no-op. "
+                "Inscrivez-vous sur https://developer.tomtom.com/ (free tier "
+                "2500 req/jour) et ajoutez TOMTOM_API_KEY=... dans .env"
+            )
+            return FetchResult(
+                source=self.source,
+                fetched_at=datetime.now(UTC),
+                raw_data=[],
+                n_records=0,
+            )
+
+        # collect_lyon_tiles() gère cache + quota + rate-limit 200ms
+        results = collect_lyon_tiles()
+        return FetchResult(
+            source=self.source,
+            fetched_at=datetime.now(UTC),
+            raw_data=results,
+            n_records=len(results),
+        )
+
+    def _save_raw(self, result: FetchResult) -> None:
+        """Override pour bypasser le INSERT JSONB par défaut du base.py.
+
+        Le base.py insère (fetched_at, raw_data JSONB) dans bronze.<table>.
+        Notre table a un schéma columnar (lat, lon, current_speed_kmh, ...),
+        pas un JSONB blob. Donc on délègue à save_lyon_tiles_to_bronze()
+        qui fait le bon INSERT via execute_batch.
+        """
+        if result.n_records == 0 or not result.raw_data:
+            logger.warning(
+                f"Collector {self.source} : 0 records, skip INSERT Bronze "
+                "(idempotence — Sprint 8 fix)."
+            )
+            return
+
+        n_inserted = save_lyon_tiles_to_bronze(result.raw_data)
+        logger.info(
+            f"Collector {self.source} : {n_inserted}/{result.n_records} lignes "
+            f"insérées dans bronze.{self.bronze_table}"
+        )
+
+        # GDrive backup (optionnel, comme base.py)
+        try:
+            raw_json = json.dumps(result.raw_data, ensure_ascii=False, default=str)
+            self._save_to_gdrive(result, raw_json)
+        except Exception as e:
+            logger.warning(f"GDrive backup failed for {self.source}: {e}")

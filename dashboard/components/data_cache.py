@@ -208,6 +208,23 @@ def cached_mlflow_experiment_summary() -> dict:
     return dl.load_mlflow_experiment_summary()
 
 
+# =============================================================================
+# TomTom coherence (Sprint 13+, 2026-06-18)
+# =============================================================================
+
+
+@st.cache_data(ttl=TTL_REALTIME, show_spinner=False)
+def cached_tomtom_coherence(limit: int = 500) -> pd.DataFrame:
+    """Cohérence TomTom ↔ capteurs Grand Lyon (dernière heure)."""
+    return dl.load_tomtom_coherence(limit=limit)
+
+
+@st.cache_data(ttl=TTL_FAST, show_spinner=False)
+def cached_tomtom_gl_drift(limit: int = 200) -> pd.DataFrame:
+    """Capteurs GL suspectés HS (24h, agrégé)."""
+    return dl.load_tomtom_gl_drift(limit=limit)
+
+
 def clear_all_caches() -> None:
     """Vide tous les caches Streamlit (utilisable depuis un bouton 'refresh')."""
     st.cache_data.clear()

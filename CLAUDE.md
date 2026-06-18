@@ -1,6 +1,6 @@
 # CLAUDE.md — LyonFlowFull
 
-> Mémoire projet — **dernière mise à jour : 2026-06-18, Sprint 13 (v0.6.6)** (audit cohérence pipeline : version unique, auto-refresh persona, nettoyage complet `force_mock` + `_is_demo_mode`, cross-persona widgets, script `coherence-check.sh`).
+> Mémoire projet — **dernière mise à jour : 2026-06-18, Sprint 13+ (v0.6.7)** (TomTom Niveau 1 réactivé : ingestion Bronze + vue SQL cohérence spatiale + widget Pro_TCL "Cohérence sources vitesse" + détecteur capteurs HS).
 
 ## Projet
 
@@ -10,8 +10,27 @@ LyonFlowFull est une plateforme MLOps end-to-end de prédiction et d'analyse du 
 **Repo** : PDUCLOS/lyonflowfull
 **Cible production** : **VPS unique** `51.83.159.224` (Ubuntu, 6 CPU, 12 Go RAM, **2× 100 Go SSD** : sda = OS + code, sdb = PostgreSQL + MinIO + **Docker data-root** depuis Sprint 9+).
 
-**Version actuelle** : **v0.6.6** (Sprints 1-7 + VPS 1-8 + 9+ + 11+ + 12+ + 13) — branche `vps` ACTIVE
-**Statut** : production VPS stable. Voir [archive/sprints/SPRINT_11_REPORT.md](archive/sprints/SPRINT_11_REPORT.md) pour le détail du dernier sprint formel.
+**Version actuelle** : **v0.6.7** (Sprints 1-7 + VPS 1-8 + 9+ + 11+ + 12+ + 13 + 13+) — branche `vps` ACTIVE
+**Statut** : production VPS stable. Voir [archive/sprints/SPRINT_11_REPORT.md](archive/sprints/SPRINT_11_REPORT.md) pour le détail du dernier sprint formel (Sprint 13+ = extension sans rapport dédié, voir CHANGELOG.md).
+
+### État au 2026-06-18 (Sprint 13+ — v0.6.7 — TomTom Niveau 1)
+
+- 18 pages × 3 personas · **48 widgets** (+1 coherence_scatter) · **8 collecteurs Bronze** (TomTom réactivé) · **13 DAGs Airflow** (10 actifs + 1 cron backfill + 1 archive silver + 1 **TomTom actif**)
+- 9 endpoints API · 3 modèles ML · RGPD complet · ~165 fichiers Python · ~21 000 lignes
+- **218 tests verts (+15 nouveaux) / 10 SKIP / 7 deselected** · ruff clean
+- **Sprint 13+ (2026-06-18) — TomTom Niveau 1 (cross-validation sources)** :
+  - **Dette Sprint 8 résolue** : DAG `collect_tomtom_traffic` sort du no-op. Nouvelle classe `TomTomTrafficFlow(DataCollector)` wrappe les fonctions existantes (`collect_lyon_tiles()` + `save_lyon_tiles_to_bronze()`). `*/15 min`, `retries=0`. Quota free tier 2500 req/jour largement respecté (1152 req/jour).
+  - **Vue SQL `gold.v_coherence_tomtom_vs_grandlyon`** (migration 14) : JOIN spatial PostGIS `ST_DWithin < 200 m` entre tuiles TomTom (12 tuiles 0.02°) et capteurs `gold.channels_ref`. Pour chaque paire (tile_key, channel_id) calcule `delta_kmh`, `ratio_diff`, `status` (ok | minor_drift | drift | no_data).
+  - **Vue SQL `gold.v_tomtom_gl_drift`** (migration 14) : capteurs avec ≥ 60% drift sur 24h → candidats "capteur HS". C'est le **détecteur automatique de capteurs en panne** côté Grand Lyon.
+  - **Widget Pro_TCL `coherence_scatter`** : 4 KPI cards par status + scatter Plotly TomTom vs GL avec ligne y=x + heatmap top 20 deltas + tableau capteurs HS suspects. Câblé dans `Pro_3_Correlation.py` (sous la matrice bus × trafic).
+  - **Helpers DB** : `get_tomtom_coherence()` + `get_tomtom_gl_drift()` (db_query) + `load_tomtom_coherence()` + `load_tomtom_gl_drift()` (data_loader, fail loud via `DashboardDataError` — politique zéro mock Sprint 8). Caches Streamlit `cached_tomtom_coherence` (30s) + `cached_tomtom_gl_drift` (60s).
+  - **Câblage ingestion** : `TomTomTrafficFlow` importé + ajouté à `REALTIME_COLLECTORS` dans `src/ingestion/__init__.py`. Pattern unifié avec les 7 autres collecteurs Bronze.
+  - **Tests** : 10 nouveaux tests (4 class `TestTomTomTrafficFlowNoKey`, 4 `TestTomTomTrafficFlowWithKey`, 3 `TestTomTomTrafficFlowImports` + 6 coherence helpers + 5 widget smoke) = **+15 verts**.
+
+### Roadmap TomTom (3 niveaux, voir CHANGELOG.md pour décision utilisateur)
+- ✅ **Niveau 1** (Sprint 13+) : ingestion propre + cohérence sources + détecteur HS
+- ⏸ **Niveau 2** (Sprint 14, ~1 sem) : backtest engine — MAE croisé XGBoost vs TomTom (oracle externe). Drift detection Evidently.
+- ⏸ **Niveau 3** (Sprint 15+, optionnel) : TomTom Routing API pour routing voiture temps réel. Payant, gain UX marginal vs Niveau 2.
 
 ### État au 2026-06-17 (Sprint 11+)
 
@@ -105,7 +124,7 @@ Voir [AGENTS.md](AGENTS.md) pour les conventions et la mémoire projet.
 
 | Couche | Technologie |
 |--------|-------------|
-| Orchestration | Apache Airflow 2.9 (**10 DAGs actifs** + 1 cron backfill + 1 archive silver + 1 no-op TomTom) |
+| Orchestration | Apache Airflow 2.9 (**10 DAGs actifs** + 1 cron backfill + 1 archive silver + 1 TomTom */15) |
 | Base de données | PostgreSQL 16 + PostGIS (3 schémas : bronze/silver/gold + referentiel) |
 | ML Tracking / Registry | MLflow 2.12 |
 | ML Trafic (spatial) | ST-GRU-GNN (PyTorch Geometric) — **daily 03h** |
@@ -188,7 +207,7 @@ Pour chaque mode (voiture, bus/tram, vélov, marche, métro) :
 | Grand Lyon chantiers | 1x/jour | `bronze.chantiers` | ✅ 428 records (Sprint 8 fix) |
 | Vitesse limite ref | 1x/semaine | `bronze.vitesse_limite_ref` | ✅ |
 | Pistes cyclables + GTFS | 1x/semaine | `bronze.infra_ref` | ✅ |
-| TomTom Traffic Flow | */15 min | `bronze.tomtom_traffic` | ⏸ NO-OP (module incomplet, réactivation Sprint 13+) |
+| TomTom Traffic Flow | */15 min | `bronze.tomtom_traffic` | ✅ ACTIF (Sprint 13+, classe `TomTomTrafficFlow(DataCollector)`) — cross-validation Grand Lyon |
 
 Tables référentielles (peuplées mensuellement) :
 - `bronze.calendrier_scolaire` (Zone A, data.education.gouv.fr)
@@ -324,7 +343,7 @@ Le widget `dashboard/components/widgets/pro_tcl/line_kpis.py` expose :
 | Orbit DLT challenger | Conflit schedule, complexité sans gain |
 | AR(1) predictor fallback | Dead code |
 | Ray cluster HPO | Optuna local suffit |
-| **TomTom API** | Module incomplet (helpers sans classe). **No-op Sprint 8**, réactivation Sprint 13+ (dette : coder `TomTomTrafficFlow(DataCollector)`) |
+| **TomTom API** | Réactivé Sprint 13+ (v0.6.7). Classe `TomTomTrafficFlow(DataCollector)` wrappe `collect_lyon_tiles()` + `save_lyon_tiles_to_bronze()`. DAG `collect_tomtom_traffic` tourne */15 min sur 12 tuiles Lyon (1152 req/jour, free tier 2500). Vue `gold.v_coherence_tomtom_vs_grandlyon` (migration 14) fait le JOIN spatial PostGIS `ST_DWithin < 200 m` pour la cross-validation vs boucles inductives Grand Lyon. Détecteur automatique de capteurs HS via `gold.v_tomtom_gl_drift`. |
 | **Mode démo / mocks** | **VIRÉ Sprint 8**. Politique "zéro mock" — `src/data/mock/` → `tests/fixtures/mock_data/`. Cleanup `_is_demo_mode` (7× F401) en cours Sprint 9+ |
 
 ---
@@ -470,7 +489,7 @@ lyonflowfull/
 | `LYON_DEFAULT_SPEED` | non (30.0) | Vitesse imputation fallback |
 | `LYON_LATITUDE` | non (45.7640) | Latitude centre Lyon (collecteurs Open-Meteo, chantiers) |
 | `LYON_LONGITUDE` | non (4.8357) | Longitude centre Lyon |
-| `TOMTOM_API_KEY` | non | TomTom free tier (Sprint 13+ réactivation) |
+| `TOMTOM_API_KEY` | non (mais recommandé) | TomTom free tier (2500 req/jour). Sprint 13+ : ingestion active si clé configurée, no-op gracieux sinon (log warning, 0 rows). |
 
 ---
 

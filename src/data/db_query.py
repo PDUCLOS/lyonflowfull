@@ -1049,6 +1049,60 @@ def get_tomtom_latest(limit: int = 100) -> pd.DataFrame:
     return _df_from_query(query, (limit,))
 
 
+def get_tomtom_coherence(limit: int = 500) -> pd.DataFrame:
+    """Cohérence TomTom ↔ capteurs Grand Lyon (Sprint 13+, 2026-06-18).
+
+    Vue ``gold.v_coherence_tomtom_vs_grandlyon`` : pour chaque tuile
+    TomTom récente, trouve les capteurs Grand Lyon à moins de 200 m
+    et calcule le delta de vitesse.
+
+    Args:
+        limit: nb max de paires (tile_key, channel_id) retournées.
+
+    Returns:
+        DataFrame avec colonnes ``tile_key, channel_id, site_name,
+        distance_m, tomtom_speed_kmh, gl_speed_kmh, delta_kmh,
+        ratio_diff, tomtom_confidence, fetched_at, status``
+        (``status`` ∈ {ok, minor_drift, drift, no_data}).
+    """
+    query = """
+        SELECT tile_key, channel_id, site_name, distance_m,
+               tomtom_speed_kmh, gl_speed_kmh, delta_kmh, ratio_diff,
+               tomtom_confidence, fetched_at, status
+        FROM gold.v_coherence_tomtom_vs_grandlyon
+        ORDER BY ABS(delta_kmh) DESC NULLS LAST
+        LIMIT %s
+    """
+    return _df_from_query(query, (limit,))
+
+
+def get_tomtom_gl_drift(limit: int = 200) -> pd.DataFrame:
+    """Capteurs Grand Lyon suspectés HS (Sprint 13+, 2026-06-18).
+
+    Vue ``gold.v_tomtom_gl_drift`` : capteurs dont >= 60% des paires
+    TomTom proches sont en drift (delta > 20 km/h) sur 24h. Utile
+    pour le détecteur de capteurs HS du widget Pro_TCL.
+
+    Args:
+        limit: nb max de capteurs retournés (triés par n_drift DESC).
+
+    Returns:
+        DataFrame avec colonnes ``channel_id, site_name, n_pairs,
+        n_ok, n_minor_drift, n_drift, drift_ratio, avg_abs_delta_kmh,
+        max_abs_delta_kmh, sensor_health``
+        (``sensor_health`` ∈ {healthy, watch, suspect, no_data}).
+    """
+    query = """
+        SELECT channel_id, site_name, n_pairs, n_ok, n_minor_drift,
+               n_drift, drift_ratio, avg_abs_delta_kmh,
+               max_abs_delta_kmh, sensor_health
+        FROM gold.v_tomtom_gl_drift
+        ORDER BY n_drift DESC, n_pairs DESC
+        LIMIT %s
+    """
+    return _df_from_query(query, (limit,))
+
+
 # =============================================================================
 # Lieux × Vélov proches (Sprint VPS-6, 2026-06-11)
 # =============================================================================

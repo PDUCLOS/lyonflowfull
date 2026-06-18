@@ -873,6 +873,47 @@ def get_tomtom_health() -> dict:
         return {"error": str(e)}
 
 
+def load_tomtom_coherence(limit: int = 500) -> pd.DataFrame:
+    """Cohérence TomTom ↔ capteurs Grand Lyon (Sprint 13+, 2026-06-18).
+
+    Vue ``gold.v_coherence_tomtom_vs_grandlyon`` (migration 14). Pour
+    chaque tuile TomTom (12 tuiles Lyon, 0.02°), trouve les capteurs
+    Grand Lyon à < 200 m et calcule le delta de vitesse.
+
+    Returns:
+        DataFrame avec colonnes ``tile_key, channel_id, site_name,
+        distance_m, tomtom_speed_kmh, gl_speed_kmh, delta_kmh,
+        ratio_diff, tomtom_confidence, fetched_at, status``.
+
+    Raises:
+        DashboardDataError: en mode prod, si PostgreSQL ne répond pas.
+    """
+    _require_db_or_raise("gold.v_coherence_tomtom_vs_grandlyon")
+    from src.data.db_query import get_tomtom_coherence
+
+    return get_tomtom_coherence(limit=limit)
+
+
+def load_tomtom_gl_drift(limit: int = 200) -> pd.DataFrame:
+    """Capteurs Grand Lyon suspectés HS (Sprint 13+, 2026-06-18).
+
+    Vue ``gold.v_tomtom_gl_drift`` : capteurs avec >= 60% des paires
+    TomTom proches en drift (delta > 20 km/h) sur 24h.
+
+    Returns:
+        DataFrame avec colonnes ``channel_id, site_name, n_pairs,
+        n_ok, n_minor_drift, n_drift, drift_ratio, avg_abs_delta_kmh,
+        max_abs_delta_kmh, sensor_health``.
+
+    Raises:
+        DashboardDataError: en mode prod, si PostgreSQL ne répond pas.
+    """
+    _require_db_or_raise("gold.v_tomtom_gl_drift")
+    from src.data.db_query import get_tomtom_gl_drift
+
+    return get_tomtom_gl_drift(limit=limit)
+
+
 def load_mlflow_models(
     experiment: str = "lyonflow-traffic",
     max_results: int = 50,

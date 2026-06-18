@@ -5,6 +5,51 @@ Toutes les modifications notables de ce projet sont documentées ici.
 Le format suit [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/),
 et ce projet adhère au [Semantic Versioning](https://semver.org/lang/fr/).
 
+## [0.6.7] - 2026-06-18 — Sprint 13+ : TomTom Niveau 1 réactivé + cross-validation (branche `vps`)
+
+Réactive TomTom Traffic Flow comme **deuxième source indépendante de vitesse
+routière** (vs boucles inductives Grand Lyon) et livre le premier niveau de
+validation croisée : ingestion Bronze stable + vue SQL de cohérence spatiale +
+widget Pro_TCL "Cohérence sources vitesse" avec détecteur de capteurs HS.
+
+### Ajouté
+- **Classe `TomTomTrafficFlow(DataCollector)`** dans `src/ingestion/tomtom_traffic.py`.
+  Wrapper conforme au pattern des 7 autres collecteurs (Sprint 8 fix no-op).
+- **DAG `collect_tomtom_traffic` RÉACTIVÉ** (`dags/bronze/collect_tomtom_traffic.py`) :
+  passe du no-op au vrai `TomTomTrafficFlow().run()` via PythonOperator, `*/15 min`,
+  `retries=0`. Quota free tier 2500 req/jour largement respecté (1152 req/jour).
+- **Migration SQL 14** `scripts/sql/migration_14_gold_coherence_tomtom_v2.sql` :
+  - Vue `gold.v_coherence_tomtom_vs_grandlyon` — JOIN spatial PostGIS `ST_DWithin`
+    TomTom ↔ capteurs `gold.channels_ref` < 200 m. Calcule `delta_kmh`,
+    `ratio_diff`, `status` (ok|minor_drift|drift|no_data).
+  - Vue `gold.v_tomtom_gl_drift` — capteurs avec ≥ 60% drift sur 24h
+    (= candidats "capteur HS" à investiguer côté Grand Lyon).
+- **Helpers DB** : `get_tomtom_coherence()` + `get_tomtom_gl_drift()`
+  dans `src/data/db_query.py` ; wrappers `load_tomtom_coherence()` +
+  `load_tomtom_gl_drift()` dans `src/data/data_loader.py` (fail loud
+  via `DashboardDataError` — politique zéro mock Sprint 8).
+- **Widget Pro_TCL `coherence_scatter.py`** :
+  - 4 KPI cards par status (ok / minor_drift / drift / no_data)
+  - Scatter Plotly TomTom_speed vs GL_speed (ligne y=x en pointillés)
+  - Top 20 pires deltas (barres horizontales)
+  - Tableau des capteurs GL suspectés HS (depuis `v_tomtom_gl_drift`)
+- **Cache Streamlit** : `cached_tomtom_coherence` (TTL 30s) +
+  `cached_tomtom_gl_drift` (TTL 60s) dans `dashboard/components/data_cache.py`.
+- **Câblage page** : section "Cohérence TomTom × Grand Lyon" ajoutée à
+  `dashboard/pages/Pro_3_Correlation.py` (sous la matrice bus × trafic).
+
+### Changed
+- `src/ingestion/__init__.py` : TomTom décommenté + ajouté à `REALTIME_COLLECTORS`
+  (cohérent avec les 7 autres collecteurs Bronze temps réel).
+- `src/data/db_query.py` : 3 nouveaux helpers SQL (sprint 13+) — pas de
+  changement sur les helpers existants.
+
+### Fixed
+- **Dette Sprint 8** : DAG `collect_tomtom_traffic` sort du no-op
+  ("le module n'a jamais eu de classe DataCollector conforme" — résolu).
+
+**Tests** : 218 verts (+15 nouveaux), 10 skipped, 7 deselected. Ruff clean.
+
 ## [0.6.6] - 2026-06-18 — Sprint 13 : audit cohérence pipeline + UX (branche `vps`)
 
 Audit complet de cohérence du dashboard (18 pages × 3 personas). Élimine le

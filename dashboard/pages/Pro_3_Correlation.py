@@ -11,6 +11,7 @@ from dashboard.components.persona_guard import apply_persona_guard
 from dashboard.components.theme import inject_theme
 from dashboard.components.widgets.pro_tcl import (
     render_cause_analysis,
+    render_coherence_scatter,
     render_correlation_matrix,
     render_line_selector,
     render_segment_table,
@@ -75,4 +76,15 @@ with col2:
     else:
         render_cause_analysis(None)
 
-st.caption("Corrélation bus × trafic · Données : SIRI Lite + boucles Grand Lyon")
+st.markdown("---")
+
+# Sprint 13+ (2026-06-18) — Cross-validation TomTom ↔ Grand Lyon
+# Détecte les capteurs HS (delta > 20 km/h vs source indépendante GPS flottes).
+st.markdown("##### Cohérence TomTom × Grand Lyon (cross-validation sources)")
+render_coherence_scatter()
+
+st.caption(
+    "Corrélation bus × trafic · Données : SIRI Lite + boucles Grand Lyon. "
+    "Cohérence TomTom × GL · Données : TomTom Flow (DAG collect_tomtom_traffic */15) + "
+    "jointure spatiale gold.channels_ref < 200 m (PostGIS ST_DWithin)."
+)
