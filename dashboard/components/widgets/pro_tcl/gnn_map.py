@@ -69,17 +69,21 @@ def _check_gnn_model(horizon: int) -> dict:
 
 
 def _load_merged(horizon: int, limit: int = 500) -> pd.DataFrame | None:
-    """Charge mapping H3 + prédictions et joint sur ``axis_key`` ↔ ``channel_id``.
+    """Charge prédictions trafic avec coordonnées pour le rendu carte.
 
-    Returns:
-        DataFrame mergée ou None si données absentes/erreur.
+    Les prédictions (``gold.trafic_predictions``) contiennent déjà ``lat``
+    et ``lon`` — pas besoin de jointure avec ``dim_spatial_grid_mapping``.
     """
-    mapping_df = cached_spatial_mapping()
-    if mapping_df.empty:
-        return None
-
     preds_df = load_traffic_predictions(horizon_minutes=horizon, limit=limit)
     if preds_df.empty:
+        return None
+
+    if "lat" in preds_df.columns and "lon" in preds_df.columns:
+        valid = preds_df.dropna(subset=["lat", "lon"])
+        return valid if not valid.empty else None
+
+    mapping_df = cached_spatial_mapping()
+    if mapping_df.empty:
         return None
 
     if "axis_key" in preds_df.columns and "channel_id" in mapping_df.columns:
@@ -104,7 +108,7 @@ def _render_pydeck(merged: pd.DataFrame, height: int, zoom: float = 11.0) -> str
         import pydeck as pdk
     except ImportError:
         st.warning("Pydeck non installé — fallback liste tabulaire.")
-        fallback_cols = [c for c in ["axis_key", "lat", "lng", "speed_pred", "model_version"] if c in merged.columns]
+        fallback_cols = [c for c in ["axis_key", "lat", "lon", "speed_pred", "model_version"] if c in merged.columns]
         st.dataframe(merged[fallback_cols].head(50), use_container_width=True, hide_index=True)
         return "?"
 
@@ -122,7 +126,7 @@ def _render_pydeck(merged: pd.DataFrame, height: int, zoom: float = 11.0) -> str
     layer = pdk.Layer(
         "ScatterplotLayer",
         data=merged,
-        get_position=["lng", "lat"],
+        get_position=["lon", "lat"],
         get_color="color",
         get_radius=100,
         pickable=True,

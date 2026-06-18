@@ -462,12 +462,15 @@ def _transform_meteo() -> int:
                     cur.execute(
                         """
                             INSERT INTO silver.meteo_hourly
-                                (measurement_time, temperature_c, humidity_pct,
-                                 rain_mm, wind_kmh, weather_code)
+                                (measurement_time, temperature_c, humidity,
+                                 rain_mm, wind_speed_10m, weather_code)
                             VALUES (%s, %s, %s, %s, %s, %s)
                             ON CONFLICT (measurement_time) DO UPDATE
-                            SET temperature_c = EXCLUDED.temperature_c,
-                                rain_mm = EXCLUDED.rain_mm
+                            SET temperature_c  = EXCLUDED.temperature_c,
+                                humidity       = EXCLUDED.humidity,
+                                rain_mm        = EXCLUDED.rain_mm,
+                                wind_speed_10m = EXCLUDED.wind_speed_10m,
+                                weather_code   = EXCLUDED.weather_code
                         """,
                         (
                             t,
