@@ -70,104 +70,115 @@ if st.session_state.get("results_loaded"):
     from dashboard.components.widgets.usager.velov_trip import _resolve_lieu
     from src.data.data_loader import load_nearest_velov_stations
 
+    modes = search.get("modes", [])
+    has_velov = any("Vélov" in m for m in modes)
+    has_voiture = any("Voiture" in m for m in modes)
+
     origin_coords = _resolve_lieu(search["origin"])
     dest_coords = _resolve_lieu(search["destination"])
 
-    # ── Contexte : météo + Vélov destination ─────────────────────────────
+    # ── Contexte : météo (toujours) + Vélov destination (si mode actif) ──
     st.markdown("##### 🌤 Conditions actuelles")
-    ctx1, ctx2 = st.columns(2)
-    with ctx1:
+    if has_velov:
+        ctx1, ctx2 = st.columns(2)
+        with ctx1:
+            render_weather_widget()
+        with ctx2:
+            if dest_coords is not None:
+                try:
+                    stations_dest = load_nearest_velov_stations(
+                        lat=dest_coords[1], lon=dest_coords[0], k=3,
+                    )
+                    if stations_dest:
+                        st.caption(f"🚲 Stations Vélov proches de **{search['destination']}** :")
+                        render_velov_widget(stations=stations_dest, max_stations=3)
+                    else:
+                        st.info(f"Aucune station Vélov proche de {search['destination']}.")
+                except DashboardDataError as e:
+                    st.error(f"⚠️ {e}")
+            else:
+                render_velov_widget(max_stations=3)
+    else:
         render_weather_widget()
-    with ctx2:
-        if dest_coords is not None:
+
+    # ── Trafic routier (si Voiture sélectionné) ──────────────────────────
+    if has_voiture:
+        st.markdown("##### 🚦 État du trafic routier")
+        render_traffic_widget()
+
+        st.markdown("##### 🗺️ Carte du trafic — H+1h")
+        render_traffic_map_compact(height=320, horizon_minutes=60, key_suffix="usager")
+
+    # ── Trajet Vélov (si Vélov sélectionné) ──────────────────────────────
+    if has_velov:
+        st.markdown("---")
+        st.markdown("### 🚲 Trajet Vélov + marche")
+
+        if origin_coords and dest_coords:
             try:
-                stations_dest = load_nearest_velov_stations(
-                    lat=dest_coords[1], lon=dest_coords[0], k=3,
+                render_velov_trip(
+                    origin=search["origin"],
+                    destination=search["destination"],
+                    origin_coords=origin_coords,
+                    dest_coords=dest_coords,
                 )
-                if stations_dest:
-                    st.caption(f"🚲 Stations Vélov proches de **{search['destination']}** :")
-                    render_velov_widget(stations=stations_dest, max_stations=3)
-                else:
-                    st.info(f"Aucune station Vélov proche de {search['destination']}.")
             except DashboardDataError as e:
                 st.error(f"⚠️ {e}")
         else:
-            render_velov_widget(max_stations=3)
+            st.warning(
+                f"Impossible de résoudre les coordonnées GPS : "
+                f"{search['origin']} → {origin_coords}, "
+                f"{search['destination']} → {dest_coords}"
+            )
 
-    # ── Trafic routier ───────────────────────────────────────────────────
-    st.markdown("##### 🚦 État du trafic routier")
-    render_traffic_widget()
+    # ── Itinéraire voiture (si Voiture sélectionné) ──────────────────────
+    if has_voiture:
+        st.markdown("---")
+        st.markdown("### 🛣️ Itinéraire voiture")
 
-    st.markdown("##### 🗺️ Carte du trafic — H+1h")
-    render_traffic_map_compact(height=320, horizon_minutes=60, key_suffix="usager")
+        itin_col1, itin_col2 = st.columns([3, 1])
+        with itin_col1:
+            st.markdown(
+                f"""
+                <div style="background:var(--bg-card);padding:0.8rem 1rem;border-radius:6px;
+                            border-left:4px solid #4CAF50;display:flex;align-items:center;
+                            gap:0.6rem;font-size:0.95rem;">
+                    <span style="background:#4CAF50;color:white;padding:0.2rem 0.6rem;
+                                 border-radius:12px;font-size:0.75rem;font-weight:600;">🟢 DÉPART</span>
+                    <span style="font-weight:600;">{search["origin"]}</span>
+                    <span style="opacity:0.4;margin:0 0.5rem;">→</span>
+                    <span style="background:#F44336;color:white;padding:0.2rem 0.6rem;
+                                 border-radius:12px;font-size:0.75rem;font-weight:600;">🔴 ARRIVÉE</span>
+                    <span style="font-weight:600;">{search["destination"]}</span>
+                </div>
+                """,
+                unsafe_allow_html=True,
+            )
 
-    # ── Trajet Vélov ─────────────────────────────────────────────────────
-    st.markdown("---")
-    st.markdown("### 🚲 Trajet Vélov + marche")
-
-    if origin_coords and dest_coords:
-        try:
-            render_velov_trip(
+        if st.button(
+            "🚗 Calculer l'itinéraire",
+            type="primary",
+            use_container_width=True,
+            key="itin_calc_btn",
+        ):
+            render_itinerary_result(
                 origin=search["origin"],
                 destination=search["destination"],
-                origin_coords=origin_coords,
-                dest_coords=dest_coords,
+                horizon_minutes=60,
             )
+
+    # ── Cartes informatives Vélov (si Vélov sélectionné) ─────────────────
+    if has_velov:
+        st.markdown("---")
+
+        st.markdown("##### 🗺️ Couverture Vélov des lieux emblématiques")
+        try:
+            render_lieux_velov_map(height=400)
         except DashboardDataError as e:
             st.error(f"⚠️ {e}")
-    else:
-        st.warning(
-            f"Impossible de résoudre les coordonnées GPS : "
-            f"{search['origin']} → {origin_coords}, "
-            f"{search['destination']} → {dest_coords}"
-        )
 
-    # ── Itinéraire voiture ───────────────────────────────────────────────
-    st.markdown("---")
-    st.markdown("### 🛣️ Itinéraire voiture")
-
-    itin_col1, itin_col2 = st.columns([3, 1])
-    with itin_col1:
-        st.markdown(
-            f"""
-            <div style="background:var(--bg-card);padding:0.8rem 1rem;border-radius:6px;
-                        border-left:4px solid #4CAF50;display:flex;align-items:center;
-                        gap:0.6rem;font-size:0.95rem;">
-                <span style="background:#4CAF50;color:white;padding:0.2rem 0.6rem;
-                             border-radius:12px;font-size:0.75rem;font-weight:600;">🟢 DÉPART</span>
-                <span style="font-weight:600;">{search["origin"]}</span>
-                <span style="opacity:0.4;margin:0 0.5rem;">→</span>
-                <span style="background:#F44336;color:white;padding:0.2rem 0.6rem;
-                             border-radius:12px;font-size:0.75rem;font-weight:600;">🔴 ARRIVÉE</span>
-                <span style="font-weight:600;">{search["destination"]}</span>
-            </div>
-            """,
-            unsafe_allow_html=True,
-        )
-
-    if st.button(
-        "🚗 Calculer l'itinéraire",
-        type="primary",
-        use_container_width=True,
-        key="itin_calc_btn",
-    ):
-        render_itinerary_result(
-            origin=search["origin"],
-            destination=search["destination"],
-            horizon_minutes=60,
-        )
-
-    # ── Cartes informatives ──────────────────────────────────────────────
-    st.markdown("---")
-
-    st.markdown("##### 🗺️ Couverture Vélov des lieux emblématiques")
-    try:
-        render_lieux_velov_map(height=400)
-    except DashboardDataError as e:
-        st.error(f"⚠️ {e}")
-
-    st.markdown("##### 🚲 Toutes les stations Vélo'v")
-    render_velov_map_compact(height=320, key_suffix="usager")
+        st.markdown("##### 🚲 Toutes les stations Vélo'v")
+        render_velov_map_compact(height=320, key_suffix="usager")
 
     st.markdown("---")
 
