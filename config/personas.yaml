@@ -182,18 +182,6 @@ navigation:
       icon: "🔔"
       file: "Usager_2_Alertes.py"
       description: "Notifications proactives sur tes trajets habituels"
-    - group: "Mobilité"
-      group_icon: "🚦"
-      label: "Mes favoris"
-      icon: "⭐"
-      file: "Usager_3_Favoris.py"
-      description: "Tes trajets récurrents sauvegardés"
-    - group: "Mes données"
-      group_icon: "📁"
-      label: "Files"
-      icon: "📁"
-      file: "Usager_4_Files.py"
-      description: "Téléversement de fichiers GPX, CSV, etc."
 
   pro_tcl:
     - group: "Opérations live"

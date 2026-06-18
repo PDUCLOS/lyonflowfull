@@ -105,17 +105,6 @@ def test_pro_pcc_live_selectbox_h1h():
     assert "horizon_default=30" not in src, "Pro PCC Live utilise encore horizon_default=30"
 
 
-def test_usager_files_h1h():
-    """Page Usager_4_Files : load_traffic_predictions_for_map(horizon_minutes=60)."""
-    with open(
-        "/Users/patriceduclos/Documents/Lyonfull/dashboard/pages/Usager_4_Files.py"
-    ) as f:
-        src = f.read()
-    assert "horizon_minutes=60" in src, "Usager_4_Files doit utiliser horizon_minutes=60"
-    assert "horizon_minutes=30" not in src or "# Sprint 8+" in src.split("horizon_minutes=30")[0][-200:], (
-        "Usager_4_Files utilise encore horizon_minutes=30"
-    )
-
 
 def test_data_cache_defaults_h1h():
     """cached_velov_predictions et cached_traffic_predictions_for_map defaults = 60."""

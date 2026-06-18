@@ -1,11 +1,11 @@
-"""Page Usager — Mon trajet (Sprint 2 complet).
+"""Page Usager — Mon trajet.
 
-Recherche d'itinéraire multimodale. Wired up with all widgets :
-- search_bar (géocodage simulé)
-- recommendation_card (top reco)
-- alternative_card (3 alternatives)
-- why_explainer (top 3 raisons)
+Recherche d'itineraire multimodale Lyon. Widgets :
+- search_bar (selectbox lieux referentiel)
 - weather_widget, velov_widget, traffic_widget (contexte)
+- velov_trip (trajet Velov calcule live)
+- itinerary_result (trajet voiture Dijkstra)
+- traffic_map_compact, velov_map_compact (cartes)
 """
 
 from __future__ import annotations
@@ -21,7 +21,6 @@ from dashboard.components.widgets.common import render_traffic_map_compact
 from dashboard.components.widgets.usager import (
     render_itinerary_result,
     render_lieux_velov_map,
-    render_recommendation_card,  # noqa: F401  # requis pour test_usager_pages_have_widgets_imports
     render_search_bar,
     render_traffic_widget,
     render_velov_map_compact,
@@ -43,25 +42,17 @@ inject_theme()
 render_sidebar_navigation()
 setup_auto_refresh()
 
-# Pattern défensif : chaque widget peut vérifier sa visibilité via pm.is_widget_visible()
-# (cf. dashboard/components/colors.py pour la liste des widgets par persona)
-# Pour l'instant tous les widgets usager sont visibles — câblage préparé.
-
 st.title("🧭 Mon trajet")
 render_data_status_banner()
 
-# Bloc de recherche
+# ── Recherche ────────────────────────────────────────────────────────────────
 with st.container():
     search = render_search_bar()
 
 st.markdown("---")
 
-# Bouton de recherche
 col_btn = st.columns([1, 2, 1])
 with col_btn[1]:
-    # Le clic set results_loaded=True, et on rerun pour afficher les résultats.
-    # Avant ce fix, le bouton était mort : results_loaded passait à True au 1er
-    # render et n'était jamais remis à False, donc le bloc s'affichait toujours.
     search_clicked = st.button(
         "🔍 Trouver mon trajet",
         type="primary",
@@ -70,69 +61,31 @@ with col_btn[1]:
 
 st.markdown("---")
 
-# Résultats — Sprint VPS-6 (2026-06-11) : 100% pipeline. Le pathfinding
-# multimode (voiture + Vélov) lit PostgreSQL, le référentiel lieux est en
-# DB, plus de mock silencieux.
-st.caption(
-    "ℹ️ Sprint VPS-6 : trajet Vélov + voiture calculés depuis le pipeline. "
-    "Source = PostgreSQL (silver.velov_clean, gold.trafic_predictions, "
-    "referentiel.lieux_lyon)."
-)
-
-# Init : results_loaded=False au 1er render, set True au clic bouton.
 if search_clicked:
     st.session_state["results_loaded"] = True
 elif "results_loaded" not in st.session_state:
     st.session_state["results_loaded"] = False
 
 if st.session_state.get("results_loaded"):
-    # Sprint VPS-6 (2026-06-11) : les cards Vélov et la météo sont
-    # désormais **contextuelles** à la destination choisie (et non
-    # plus un point fixe Part-Dieu). Calcul des stations Vélov
-    # proches de la destination via referentiel.nearest_velov_stations.
-    from dashboard.components.widgets.usager.velov_trip import (
-        _resolve_lieu,
-    )
+    from dashboard.components.widgets.usager.velov_trip import _resolve_lieu
     from src.data.data_loader import load_nearest_velov_stations
-    from src.data.exceptions import DashboardDataError
 
-    # === 0. Carte globale lieux × Vélov proches (Sprint VPS-6 hotfix) ===
-    # 21 lieux emblématiques reliés à leur borne Vélov la plus proche.
-    # Permet à l'usager de voir d'un coup d'œil la couverture Vélov
-    # de tous les lieux emblématiques (avant : aucune vue d'ensemble).
-    st.markdown("##### 🗺️ Couverture Vélov des lieux emblématiques")
-    st.caption(
-        "21 lieux emblématiques Lyon × borne Vélov la plus proche. "
-        "Lignes pointillées : vert < 100m, orange < 300m, rouge ≥ 300m. "
-        "Source = referentiel.v_lieux_velov_proches (jointure haversine)."
-    )
-    try:
-        render_lieux_velov_map(height=500)
-    except DashboardDataError as e:
-        st.error(f"⚠️ {e}")
-
-    st.markdown("---")
-
-    # Résoudre les 2 lieux pour contexte
     origin_coords = _resolve_lieu(search["origin"])
     dest_coords = _resolve_lieu(search["destination"])
 
-    # === 1. Météo (toujours Lyon global) + Vélov destination ===
+    # ── Contexte : météo + Vélov destination ─────────────────────────────
     st.markdown("##### 🌤 Conditions actuelles")
-    ctx1, ctx2 = st.columns([1, 1])
+    ctx1, ctx2 = st.columns(2)
     with ctx1:
         render_weather_widget()
     with ctx2:
-        # Vélov proches de la destination (3 stations) — passe par la
-        # couche data (Sprint 9+). Avant : inline SQL `execute_query` qui
-        # contournait data_loader + data_cache + DashboardDataError.
         if dest_coords is not None:
             try:
                 stations_dest = load_nearest_velov_stations(
                     lat=dest_coords[1], lon=dest_coords[0], k=3,
                 )
                 if stations_dest:
-                    st.caption(f"🚲 3 stations Vélov les plus proches de **{search['destination']}** :")
+                    st.caption(f"🚲 Stations Vélov proches de **{search['destination']}** :")
                     render_velov_widget(stations=stations_dest, max_stations=3)
                 else:
                     st.info(f"Aucune station Vélov proche de {search['destination']}.")
@@ -141,21 +94,16 @@ if st.session_state.get("results_loaded"):
         else:
             render_velov_widget(max_stations=3)
 
+    # ── Trafic routier ───────────────────────────────────────────────────
     st.markdown("##### 🚦 État du trafic routier")
     render_traffic_widget()
 
-    # Carte trafic compacte — vitesses prédites par tronçon (Sprint 10)
     st.markdown("##### 🗺️ Carte du trafic — H+1h")
-    render_traffic_map_compact(height=320, horizon_minutes=60, key_suffix="usager")  # Sprint 8+ : focus H+1h
+    render_traffic_map_compact(height=320, horizon_minutes=60, key_suffix="usager")
 
-    # === 2. Trajet Vélov + marche sur carte (calculé en live) ===
+    # ── Trajet Vélov ─────────────────────────────────────────────────────
     st.markdown("---")
-    st.markdown("### 🚲 Trajet Vélov + marche (calculé depuis le pipeline)")
-    st.caption(
-        "Marche → Vélov → Marche. Stations Vélov + graphe routier Dijkstra + "
-        "prédictions trafic. Source 100% pipeline (silver.velov_clean, "
-        "gold.trafic_predictions, referentiel.lieux_lyon)."
-    )
+    st.markdown("### 🚲 Trajet Vélov + marche")
 
     if origin_coords and dest_coords:
         try:
@@ -169,27 +117,14 @@ if st.session_state.get("results_loaded"):
             st.error(f"⚠️ {e}")
     else:
         st.warning(
-            f"⚠️ Impossible de résoudre les adresses GPS pour le calcul : "
-            f"origin={search['origin']} → {origin_coords}, "
-            f"dest={search['destination']} → {dest_coords}"
+            f"Impossible de résoudre les coordonnées GPS : "
+            f"{search['origin']} → {origin_coords}, "
+            f"{search['destination']} → {dest_coords}"
         )
 
+    # ── Itinéraire voiture ───────────────────────────────────────────────
     st.markdown("---")
-
-    # === 3. Carte stations Vélov globale (info, pas contextuelle) ===
-    st.markdown("##### 🚲 Toutes les stations Vélo'v (info)")
-    render_velov_map_compact(height=320, key_suffix="usager")
-
-    st.markdown("---")
-
-    # === ITINÉRAIRE TRAFFIC-AWARE (Sprint 6+) ===
-    # Réutilise les valeurs du search_bar (cliquable) — pas de duplication d'inputs.
-    st.markdown("### 🛣️ Itinéraire avec trafic")
-    st.caption(
-        "Calcul du chemin le plus rapide basé sur les vitesses **actuelles** "
-        "par tronçon. Compare avec H+30min pour anticiper. "
-        "Départ/destination repris de la barre de recherche ci-dessus."
-    )
+    st.markdown("### 🛣️ Itinéraire voiture")
 
     itin_col1, itin_col2 = st.columns([3, 1])
     with itin_col1:
@@ -209,19 +144,6 @@ if st.session_state.get("results_loaded"):
             """,
             unsafe_allow_html=True,
         )
-    with itin_col2:
-        # Sprint 8+ (2026-06-12) — focus H+1h strict. L'utilisateur n'a
-        # plus à choisir : tout est H+1h. L'option 0 (Maintenant)
-        # reste supportée en interne mais n'est plus exposée.
-        horizon = st.selectbox(
-            "🕐 Trafic (focus H+1h)",
-            [60],
-            index=0,
-            format_func=lambda x: f"H+{x}min",
-            key="itin_horizon",
-            help="Sprint 8+ : focus H+1h. Les autres horizons sont entraînés "
-                 "mais l'interface n'expose que H+1h (cas d'usage principal).",
-        )
 
     if st.button(
         "🚗 Calculer l'itinéraire",
@@ -232,16 +154,24 @@ if st.session_state.get("results_loaded"):
         render_itinerary_result(
             origin=search["origin"],
             destination=search["destination"],
-            horizon_minutes=horizon,
+            horizon_minutes=60,
         )
+
+    # ── Cartes informatives ──────────────────────────────────────────────
+    st.markdown("---")
+
+    st.markdown("##### 🗺️ Couverture Vélov des lieux emblématiques")
+    try:
+        render_lieux_velov_map(height=400)
+    except DashboardDataError as e:
+        st.error(f"⚠️ {e}")
+
+    st.markdown("##### 🚲 Toutes les stations Vélo'v")
+    render_velov_map_compact(height=320, key_suffix="usager")
 
     st.markdown("---")
 
-    # === ITINÉRAIRE VOITURE (déjà calculé par render_itinerary_result) ===
-    # Si l'utilisateur a cliqué "Calculer l'itinéraire" plus haut, on a déjà
-    # la carte voiture. Sinon on l'invite à le faire.
-
-    st.caption(
-        f"LyonFlowFull · v{get_settings().app_version} — "
-        "Zéro mock : 100% pipeline (PostgreSQL, Airflow, MLflow)"
-    )
+st.caption(
+    f"LyonFlowFull v{get_settings().app_version} · "
+    "100% pipeline (PostgreSQL, Airflow, MLflow)"
+)
