@@ -758,6 +758,7 @@ def get_weather_hourly(hours: int = 24) -> pd.DataFrame:
             weather_code::text AS condition_label
         FROM silver.meteo_hourly
         WHERE measurement_time >= NOW() - make_interval(hours => %s)
+          AND measurement_time <= NOW() + INTERVAL '1 hour'
         ORDER BY measurement_time DESC
     """
     return _df_from_query(query, (hours,))
