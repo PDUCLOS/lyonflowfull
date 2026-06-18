@@ -179,120 +179,86 @@ def _render_map(
     origin_coords: tuple[float, float],
     dest_coords: tuple[float, float],
 ) -> None:
-    """Affiche la carte Folium avec polyline par segment."""
+    """Affiche la carte Folium avec segments colorés par vitesse trafic.
+
+    origin_coords / dest_coords = (lon, lat) from DB.
+    Folium expects [lat, lon].
+    """
     try:
         import folium
         from streamlit_folium import st_folium
 
-        # Centre sur le milieu de l'itinéraire
-        all_lons = (
-            [origin_coords[0], dest_coords[0]]
-            + [s.start_lon for s in itinerary.segments]
-            + [s.end_lon for s in itinerary.segments]
-        )
-        all_lats = (
-            [origin_coords[1], dest_coords[1]]
-            + [s.start_lat for s in itinerary.segments]
-            + [s.end_lat for s in itinerary.segments]
-        )
+        o_lat, o_lon = origin_coords[1], origin_coords[0]
+        d_lat, d_lon = dest_coords[1], dest_coords[0]
+
+        node_latlons = [(seg.start_lat, seg.start_lon) for seg in itinerary.segments]
+        all_lats = [o_lat, d_lat] + [p[0] for p in node_latlons]
+        all_lons = [o_lon, d_lon] + [p[1] for p in node_latlons]
+
         center_lat = sum(all_lats) / len(all_lats)
         center_lon = sum(all_lons) / len(all_lons)
 
-        m = folium.Map(location=[center_lat, center_lon], zoom_start=13, tiles="CartoDB positron")
+        m = folium.Map(location=[center_lat, center_lon], zoom_start=14, tiles="CartoDB positron")
 
-        # Markers
         folium.Marker(
-            origin_coords,
-            popup=f"🟢 {itinerary.origin_node}",
+            [o_lat, o_lon],
+            popup="🟢 Départ",
             icon=folium.Icon(color="green", icon="play"),
         ).add_to(m)
         folium.Marker(
-            dest_coords,
-            popup=f"🔴 {itinerary.destination_node}",
+            [d_lat, d_lon],
+            popup="🔴 Arrivée",
             icon=folium.Icon(color="red", icon="stop"),
         ).add_to(m)
 
-        # Sprint 10+ (2026-06-12) : snap-to-roads via Overpass API
-        # On projette chaque nœud H3 sur la rue OSM la plus proche (rayon
-        # 30m). Si Overpass down, fallback gracieux sur le point original.
-        try:
-            from src.routing.snap_to_roads import snap_path_to_roads
-            raw_points = [origin_coords[::-1]]  # (lon, lat) for snap_to_road
-            for seg in itinerary.segments:
-                raw_points.append((seg.start_lon, seg.start_lat))
-                raw_points.append((seg.end_lon, seg.end_lat))
-            raw_points.append(dest_coords[::-1])
-            snapped = snap_path_to_roads(raw_points, radius_m=30.0)
-            snap_label = " (Sprint 10+ snap-to-roads ✓)"
-        except Exception as e:
-            logger.warning(f"Snap-to-roads failed: {e} — fallback H3 brut")
-            snapped = None
-            snap_label = " (H3 brut, snap-to-roads indispo)"
+        # Full path: origin → node₀ → node₁ → … → destination
+        full_path = [(o_lat, o_lon)] + node_latlons + [(d_lat, d_lon)]
 
-        # Polyligne continue reliant tous les nœuds du chemin (Sprint 9+)
-        # Avant (Sprint 8) : 1 PolyLine par segment = traits dispersés
-        # (les nœuds H3 ne sont pas sur les vraies rues, donc les segments
-        # paraissent décousus). Maintenant : on relie start→end→start→end
-        # en une seule polyligne colorée par la vitesse dominante.
-        poly_locations: list[tuple[float, float]] = [tuple(origin_coords)]
-        for seg in itinerary.segments:
-            poly_locations.append((seg.start_lat, seg.start_lon))
-            poly_locations.append((seg.end_lat, seg.end_lon))
-        poly_locations.append(tuple(dest_coords))
-
-        # Si snap-to-roads a réussi, on trace la polyligne snappée en BLEU continu
-        # et on garde les segments H3 par-dessus en couleurs.
-        if snapped:
-            snapped_locations = [(lat, lon) for lon, lat in snapped]
-            folium.PolyLine(
-                locations=snapped_locations,
-                color="#1f77b4",
-                weight=5,
-                opacity=0.9,
-                popup=f"🛣️ Tracé snappé sur rues OSM{snap_label}",
-            ).add_to(m)
-
-        # Polyligne principale (bleu par défaut, épaisseur 4) — fallback H3
-        folium.PolyLine(
-            locations=[[lat, lon] for lat, lon in poly_locations],
-            color="#888",
-            weight=3,
-            opacity=0.5,
-            dash_array="2 4",  # pointillé fin = H3 brut
-            popup=f"🛣️ {len(itinerary.segments)} tronçons H3 — Sprint 9+",
-        ).add_to(m)
-
-        # Polylines colorées par tronçon (overlay, opacité réduite)
-        for seg in itinerary.segments:
+        # Draw colored segments between consecutive points
+        for i in range(len(full_path) - 1):
+            p1, p2 = full_path[i], full_path[i + 1]
+            seg_idx = min(i, len(itinerary.segments) - 1)
+            seg = itinerary.segments[seg_idx]
             color = _speed_to_color(seg.speed_kmh)
+
             folium.PolyLine(
-                locations=[
-                    [seg.start_lat, seg.start_lon],
-                    [seg.end_lat, seg.end_lon],
-                ],
+                locations=[list(p1), list(p2)],
                 color=color,
                 weight=6,
-                opacity=0.9,
+                opacity=0.85,
                 popup=(
-                    f"<b>{seg.channel_id}</b><br>"
-                    f"📏 {seg.length_m:.0f} m<br>"
-                    f"🚗 {seg.speed_kmh:.0f} km/h<br>"
-                    f"🕐 {seg.duration_s / 60:.1f} min"
+                    f"🚗 <b>{seg.speed_kmh:.0f} km/h</b><br>"
+                    f"📏 {seg.length_m:.0f} m · 🕐 {seg.duration_s:.0f}s"
                 ),
             ).add_to(m)
 
-        # Markers aux nœuds H3 (visualiser le maillage)
+        # Small colored circle at each node
         for i, seg in enumerate(itinerary.segments):
+            color = _speed_to_color(seg.speed_kmh)
             folium.CircleMarker(
                 location=[seg.start_lat, seg.start_lon],
-                radius=3,
-                color="#888",
+                radius=5,
+                color=color,
                 fill=True,
-                fill_opacity=0.5,
-                tooltip=f"nœud H3 #{i} · {seg.channel_id}",
+                fill_color=color,
+                fill_opacity=0.9,
+                tooltip=f"#{i + 1} · {seg.speed_kmh:.0f} km/h",
             ).add_to(m)
 
+        m.fit_bounds(
+            [[min(all_lats) - 0.003, min(all_lons) - 0.003],
+             [max(all_lats) + 0.003, max(all_lons) + 0.003]],
+        )
+
         st_folium(m, width=None, height=400, returned_objects=[])
+
+        st.markdown(
+            "**Légende trafic** : "
+            "🟢 Fluide (>40 km/h) · "
+            "🟡 Modéré (25-40) · "
+            "🟠 Dense (15-25) · "
+            "🔴 Bloqué (<15)"
+        )
 
     except ImportError:
         st.warning("⚠️ folium non disponible — affichage liste uniquement")

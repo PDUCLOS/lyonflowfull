@@ -16,7 +16,18 @@ from dataclasses import dataclass, field
 
 import networkx as nx
 
+import math
+
 from src.routing.graph import build_routing_graph, get_nearest_node, get_node_speed
+
+
+def _haversine_m(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
+    r = 6_371_000
+    p1, p2 = math.radians(lat1), math.radians(lat2)
+    dp = math.radians(lat2 - lat1)
+    dl = math.radians(lon2 - lon1)
+    a = math.sin(dp / 2) ** 2 + math.cos(p1) * math.cos(p2) * math.sin(dl / 2) ** 2
+    return 2 * r * math.asin(math.sqrt(a))
 
 logger = logging.getLogger(__name__)
 
@@ -61,21 +72,10 @@ def shortest_path(
     weight_attr: str = "length_m",
     speed_attr: str = "current_speed_kmh",
 ) -> Itinerary | None:
-    """Calcule le plus court chemin traffic-aware.
+    """Calcule le plus court chemin traffic-aware via A*.
 
-    Le poids effectif de chaque arête est :
-        weight_eff = length / speed * 3.6  (pour avoir secondes : m / (km/h * 1000/3600))
-
-    Args:
-        graph: graphe routier (NetworkX).
-        origin_node: channel_id d'origine.
-        destination_node: channel_id de destination.
-        horizon_minutes: 0 = vitesse actuelle, >0 = vitesse prédite.
-        weight_attr: attribut d'arête pour la distance (défaut: length_m).
-        speed_attr: attribut de nœud pour la vitesse (défaut: current_speed_kmh).
-
-    Returns:
-        Itinerary avec segments détaillés, ou None si pas de chemin.
+    Utilise A* avec heuristique haversine (distance géographique vers
+    la destination) pour produire des routes géographiquement cohérentes.
     """
     if origin_node not in graph:
         logger.warning(f"Origin node {origin_node} pas dans le graphe")
@@ -84,38 +84,51 @@ def shortest_path(
         logger.warning(f"Destination node {destination_node} pas dans le graphe")
         return None
 
-    # Calcul des poids traffic-aware
     weighted = _build_traffic_aware_graph(graph, horizon_minutes)
 
+    dest_data = graph.nodes[destination_node]
+    dest_lat, dest_lon = dest_data["start_lat"], dest_data["start_lon"]
+    max_speed_ms = 50.0 * 1000 / 3600  # 50 km/h upper bound → admissible heuristic
+
+    def _heuristic(u: str, _v: str) -> float:
+        u_data = graph.nodes[u]
+        dist = _haversine_m(u_data["start_lat"], u_data["start_lon"], dest_lat, dest_lon)
+        return dist / max_speed_ms
+
     try:
-        path_nodes = nx.shortest_path(weighted, origin_node, destination_node, weight="travel_time_s")
+        path_nodes = nx.astar_path(
+            weighted, origin_node, destination_node,
+            heuristic=_heuristic, weight="travel_time_s",
+        )
     except nx.NetworkXNoPath:
         logger.warning(f"Pas de chemin entre {origin_node} et {destination_node}")
         return None
 
-    # Construire l'itinéraire détaillé
+    # Build segments from EDGES (u→v) — proper start/end coordinates
     segments = []
     total_length = 0.0
     total_duration = 0.0
 
-    for node_id in path_nodes:
-        data = graph.nodes[node_id]
-        speed = get_node_speed(graph, node_id, horizon_minutes)
-        length = data.get("length_m", 0)
-        # duration en secondes : length_m / (speed_kmh * 1000/3600)
-        duration = (length / (speed * 1000 / 3600)) if speed > 0 else 0
-        total_length += length
+    for i in range(len(path_nodes) - 1):
+        u, v = path_nodes[i], path_nodes[i + 1]
+        edge_data = weighted[u][v]
+        u_data = graph.nodes[u]
+        v_data = graph.nodes[v]
+        edge_length = edge_data.get("length_m", 50.0)
+        speed = edge_data.get("weighted_speed_kmh", 30.0)
+        duration = (edge_length / (speed * 1000 / 3600)) if speed > 0 else 0
+        total_length += edge_length
         total_duration += duration
         segments.append(
             ItinerarySegment(
-                channel_id=node_id,
-                length_m=length,
+                channel_id=f"{u}→{v}",
+                length_m=edge_length,
                 speed_kmh=speed,
                 duration_s=duration,
-                start_lon=data["start_lon"],
-                start_lat=data["start_lat"],
-                end_lon=data["end_lon"],
-                end_lat=data["end_lat"],
+                start_lon=u_data["start_lon"],
+                start_lat=u_data["start_lat"],
+                end_lon=v_data["start_lon"],
+                end_lat=v_data["start_lat"],
             )
         )
 
@@ -136,17 +149,12 @@ def shortest_path(
 def _build_traffic_aware_graph(graph: nx.Graph, horizon_minutes: int) -> nx.Graph:
     """Construit un graphe pondéré par le temps de trajet traffic-aware."""
     weighted = graph.copy()
-    for u, v, _data in weighted.edges(data=True):
+    for u, v, data in weighted.edges(data=True):
         speed_u = get_node_speed(graph, u, horizon_minutes)
         speed_v = get_node_speed(graph, v, horizon_minutes)
-        # On prend la vitesse la plus défavorable (plus conservative)
         speed = min(speed_u, speed_v) if (speed_u and speed_v) else (speed_u or speed_v or 30.0)
-        # length_m entre u et v (approximation : moyenne des deux)
-        length_u = graph.nodes[u].get("length_m", 0)
-        length_v = graph.nodes[v].get("length_m", 0)
-        avg_length = (length_u + length_v) / 2
-        # Travel time en secondes
-        travel_time = (avg_length / (speed * 1000 / 3600)) if speed > 0 else 0
+        edge_length = data.get("length_m", 50.0)
+        travel_time = (edge_length / (speed * 1000 / 3600)) if speed > 0 else 0
         weighted[u][v]["travel_time_s"] = travel_time
         weighted[u][v]["weighted_speed_kmh"] = speed
     return weighted

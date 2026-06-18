@@ -184,11 +184,19 @@ def _build_graph_from_db(
     for r in edges_rows:
         u, v = int(r["node_u"]), int(r["node_v"])
         if u in G.nodes and v in G.nodes:
-            # Distance haversine pour l'arête (approx edge weight)
             u_data, v_data = G.nodes[u], G.nodes[v]
             d = _haversine_m_local(u_data["start_lat"], u_data["start_lon"],
                                   v_data["start_lat"], v_data["start_lon"])
             G.add_edge(u, v, via="h3_adjacency", length_m=d)
+
+    # Keep only the largest connected component so get_nearest_node
+    # never returns an isolated node with no path to the destination.
+    if G.number_of_nodes() > 0:
+        largest_cc = max(nx.connected_components(G), key=len)
+        isolated = set(G.nodes) - largest_cc
+        if isolated:
+            logger.info(f"Routing graph: dropping {len(isolated)} isolated nodes, keeping {len(largest_cc)}")
+            G.remove_nodes_from(isolated)
 
     return G
 
@@ -267,7 +275,12 @@ def _build_mock_graph() -> nx.Graph:
         ("MOCK_C14_S01", "MOCK_C13_S01"),
     ]
     for u, v in adjacencies:
-        G.add_edge(u, v, via="mock")
+        u_data, v_data = G.nodes[u], G.nodes[v]
+        d = _haversine_m_local(
+            u_data["start_lat"], u_data["start_lon"],
+            v_data["start_lat"], v_data["start_lon"],
+        )
+        G.add_edge(u, v, via="mock", length_m=max(d, 50.0))
 
     return G
 
