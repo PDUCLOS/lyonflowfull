@@ -15,7 +15,7 @@ mkdir -p "$CERT_DIR"
 openssl req -x509 -nodes -days "$DAYS" -newkey rsa:2048 \
     -keyout "$CERT_DIR/privkey.pem" \
     -out "$CERT_DIR/fullchain.pem" \
-    -subj "/CN=${HOST}/O=LyonFlow-self-signed"
+    -subj "/CN=${HOST}/O=LyonFlowFull-self-signed"
 
 chmod 644 "$CERT_DIR/fullchain.pem"
 chmod 600 "$CERT_DIR/privkey.pem"

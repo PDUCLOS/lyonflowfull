@@ -246,7 +246,7 @@ services:
         --username $${AIRFLOW_ADMIN_USERNAME}
         --password $${AIRFLOW_ADMIN_PASSWORD}
         --firstname Admin
-        --lastname LyonFlow
+        --lastname LyonFlowFull
         --role Admin
         --email admin@lyonflow.fr
       "

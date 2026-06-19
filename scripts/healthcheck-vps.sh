@@ -42,7 +42,7 @@ check_warn() {
     fi
 }
 
-echo "=== LyonFlow VPS Healthcheck (Sprint 15+) ==="
+echo "=== LyonFlowFull VPS Healthcheck (Sprint 15+) ==="
 echo ""
 
 # 1. Containers (docker ps, pas docker compose exec)

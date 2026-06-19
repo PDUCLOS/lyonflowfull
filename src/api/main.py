@@ -320,7 +320,7 @@ async def list_models(api_key: None = Depends(verify_api_key)):
 @app.post("/api/v1/predict/traffic", response_model=PredictTrafficResponse, tags=["predict"])
 async def predict_traffic(req: PredictTrafficRequest, api_key: None = Depends(verify_api_key)):
     """Prédit la vitesse trafic pour un nœud et un horizon.
-    
+
     EXPLICATION MÉTIER (Analyse) :
     Cette route est appelée par le Dashboard (Persona Pro TCL) pour afficher la carte de prédiction.
     Depuis le Sprint 8, le modèle ML s'attend à recevoir un identifiant `channel_id` de type texte
@@ -439,7 +439,7 @@ async def itinerary(req: ItineraryRequest, api_key: None = Depends(verify_api_ke
     Plutôt que d'utiliser de simples distances, ce endpoint appelle `compute_itinerary()`
     (basé sur l'algorithme de Dijkstra) pour trouver le chemin le plus rapide sur le
     graphe de la Métropole de Lyon.
-    
+
     Si `horizon_minutes` > 0, Dijkstra n'utilise pas la vitesse instantanée mais
     les vitesses futures issues des prédictions du modèle XGBoost, ce qui permet un
     itinéraire "anticipatif" ("traffic-aware").
@@ -543,7 +543,7 @@ class LoginResponse(BaseModel):
 @app.post("/api/v1/auth/login", response_model=LoginResponse, tags=["auth"])
 async def login(req: LoginRequest, request: Request):
     """Login utilisateur (persona protégé).
-    
+
     EXPLICATION MÉTIER (Analyse) :
     Cette méthode authentifie les utilisateurs de type 'Pro TCL' et 'Élu'.
     - L'accès base de données interroge `gold.app_users`.
