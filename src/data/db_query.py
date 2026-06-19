@@ -23,6 +23,7 @@ from __future__ import annotations
 
 import logging
 import re
+from typing import cast
 
 import pandas as pd
 
@@ -150,7 +151,7 @@ def get_latest_traffic(limit: int = 100) -> pd.DataFrame:
     Returns:
         DataFrame avec colonnes: measurement_time, node_idx, channel_id,
         speed_kmh, importance_code. Vide si DB down (mock fallback).
-        
+
     EXPLICATION MÉTIER (Analyse) :
     Cette méthode est au cœur de l'affichage temps réel.
     Note sur la politique Zéro Mock (Sprint 8) : auparavant, si la base de données
@@ -217,7 +218,7 @@ def get_traffic_predictions(horizon_minutes: int = 60, limit: int = 200) -> pd.D
             color, vitesse_limite_kmh, label, model_version, lat, lon.
         Pour rétro-compat, expose aussi ``predicted_speed`` (= speed_pred)
         et ``prediction_timestamp`` (= calculated_at).
-        
+
     EXPLICATION MÉTIER (Analyse) :
     Le schéma de la table `gold.trafic_predictions` a évolué au Sprint 5 (v0.3.1).
     Plutôt que d'utiliser des minutes, la table partitionne les données en "heures"
@@ -728,7 +729,7 @@ def get_bronze_source_counts(hours: int = 1) -> pd.DataFrame:
                 {
                     "source": label,
                     "table": f"bronze.{table}",
-                    "n_rows": int(count or 0),
+                    "n_rows": cast(int, count or 0),
                     "last_fetch": pd.Timestamp(last) if last else None,
                 }
             )
@@ -1567,6 +1568,7 @@ def get_line_kpis(line_ids: list[str] | None = None) -> dict:
     """
     if not _is_db_available():
         return {}
+    params: tuple = ()
     if line_ids:
         query = """
             SELECT line_ref, otp_pct, retard_moyen_s, freq_vehicules_par_h,
@@ -1583,7 +1585,6 @@ def get_line_kpis(line_ids: list[str] | None = None) -> dict:
             FROM gold.mv_line_kpis_live
             ORDER BY line_ref
         """
-        params = ()
     try:
         rows = execute_query(query, params)
     except Exception as e:

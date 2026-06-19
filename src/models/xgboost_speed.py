@@ -70,13 +70,15 @@ class XGBoostSpeedModel:
     """Modèle XGBoost multi-horizon pour prédiction vitesse trafic."""
 
     def __init__(self, model_dir: str | None = None):
-        # Une seule assignation de model_dir
-        self.model_dir = Path(model_dir or os.getenv("LYONFLOW_MODELS_DIR", "/app/models"))
+        # Une seule assignation de model_dir.
+        # Double `or` pour que mypy comprenne que le résultat est toujours str.
+        resolved_dir = model_dir or os.getenv("LYONFLOW_MODELS_DIR") or "/app/models"
+        self.model_dir = Path(resolved_dir)
         self.models: dict[int, xgb.XGBRegressor] = {}  # horizon_minutes → model
 
     def load(self, horizons: list[int] | None = None) -> None:
         """Charge les modèles depuis MLflow (si dispo) ou depuis le disque local.
-        
+
         EXPLICATION MÉTIER (Analyse) :
         Ce modèle est intégré avec MLflow pour le suivi des expérimentations et le
         registre de modèles (Model Registry). Au démarrage ou lors d'une prédiction,
@@ -136,7 +138,7 @@ class XGBoostSpeedModel:
 
         Returns:
             Dict avec métriques {'mae', 'rmse', 'r2'}.
-            
+
         EXPLICATION MÉTIER (Analyse) :
         C'est ici que l'entraînement du modèle a lieu (souvent déclenché par le DAG Airflow).
         On sépare chronologiquement les données : les 80% les plus anciens pour l'entraînement,
@@ -269,7 +271,7 @@ class XGBoostSpeedModel:
 
         Returns:
             Dict avec predicted_speed, confidence_low/high.
-            
+
         EXPLICATION MÉTIER (Analyse) :
         La prédiction à H+1h se base sur les "lags" (vitesse il y a 5, 10, 15 min),
         et sur des facteurs exogènes (heure de la journée encodée en sinus/cosinus, météo).

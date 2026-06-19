@@ -41,7 +41,9 @@ class XGBoostVelovModel:
     """Modèle XGBoost pour prédire le nombre de vélos disponibles."""
 
     def __init__(self, model_dir: str | None = None):
-        self.model_dir = Path(model_dir or os.getenv("LYONFLOW_MODELS_DIR", "/app/models"))
+        # Double `or` pour que mypy comprenne que le résultat est toujours str.
+        resolved_dir = model_dir or os.getenv("LYONFLOW_MODELS_DIR") or "/app/models"
+        self.model_dir = Path(resolved_dir)
         self.models: dict[int, xgb.Booster] = {}
 
     def load(self, horizons: list[int] | None = None) -> None:

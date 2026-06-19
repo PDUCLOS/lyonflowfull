@@ -45,7 +45,9 @@ class STGCNWrapper:
         model_dir: str | None = None,
     ):
         self.horizon_min = horizon_min
-        self.model_dir = Path(model_dir or os.getenv("LYONFLOW_MODELS_DIR", "/app/models"))
+        # Double `or` pour que mypy comprenne que le résultat est toujours str.
+        resolved_dir = model_dir or os.getenv("LYONFLOW_MODELS_DIR") or "/app/models"
+        self.model_dir = Path(resolved_dir)
         self._model = None
         self._config: dict | None = None
         self._is_loaded = False
@@ -69,13 +71,14 @@ class STGCNWrapper:
             return False
 
         try:
-            import torch  # type: ignore[import-untyped]
+            import torch
 
             from training.stgcn.model import build_module
 
             ckpt = torch.load(model_path, map_location="cpu", weights_only=True)
             self._config = ckpt["config"]
             self._model = build_module(_config_to_stgcn_config(self._config))
+            assert self._model is not None  # narrow pour mypy
             self._model.load_state_dict(ckpt["state_dict"])
             self._model.eval()
             self._is_loaded = True
@@ -106,8 +109,9 @@ class STGCNWrapper:
             return None
 
         try:
-            import torch  # type: ignore[import-untyped]
+            import torch
 
+            assert self._model is not None  # narrow pour mypy (load() OK ci-dessus)
             with torch.no_grad():
                 x = torch.from_numpy(features).float()
                 ei = torch.from_numpy(edge_index).long()

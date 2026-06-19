@@ -14,6 +14,7 @@ from __future__ import annotations
 import logging
 from dataclasses import dataclass
 from datetime import UTC, datetime
+from typing import cast
 
 from src.db import execute_query, execute_scalar
 
@@ -48,7 +49,7 @@ def check_bronze_freshness(max_age_minutes: int = 30) -> CheckResult:
     """  # noqa: F841
     # En pratique, on ferait une UNION par table
     age = execute_scalar("SELECT EXTRACT(EPOCH FROM (NOW() - MAX(fetched_at)))/60 FROM bronze.trafic_boucles")
-    age = float(age or 999)
+    age = cast(float, age or 999)
     status = "ok" if age < max_age_minutes else "warning" if age < max_age_minutes * 2 else "critical"
     return CheckResult(
         name="bronze_freshness",
@@ -131,7 +132,7 @@ def check_silver_doublons() -> CheckResult:
         FROM silver.trafic_boucles_clean
         WHERE measurement_time > NOW() - INTERVAL '1 hour'
     """
-    n = int(execute_scalar(query) or 0)
+    n = cast(int, execute_scalar(query) or 0)
     status = "ok" if n == 0 else "warning" if n < 10 else "critical"
     return CheckResult(
         name="silver_doublons",
@@ -145,11 +146,12 @@ def check_silver_doublons() -> CheckResult:
 
 def check_predictions_presentes() -> CheckResult:
     """Vérifie qu'on a des prédictions récentes en Gold."""
-    n = int(
+    n = cast(
+        int,
         execute_scalar(
             "SELECT COUNT(*) FROM gold.trafic_predictions WHERE calculated_at > NOW() - INTERVAL '2 hours'"
         )
-        or 0
+        or 0,
     )
     status = "ok" if n > 100 else "warning" if n > 0 else "critical"
     return CheckResult(
@@ -166,7 +168,7 @@ def check_drift_evidently() -> CheckResult:
     """Compare distribution J-7 vs J via Evidently (placeholder simple)."""
     # En production : utiliser Evidently DataDriftPreset
     # Pour MVP : on check que la table drift_reports est alimentée
-    n = int(execute_scalar("SELECT COUNT(*) FROM gold.model_drift_reports") or 0)
+    n = cast(int, execute_scalar("SELECT COUNT(*) FROM gold.model_drift_reports") or 0)
     status = "ok" if n > 0 else "warning"
     return CheckResult(
         name="drift_baseline",

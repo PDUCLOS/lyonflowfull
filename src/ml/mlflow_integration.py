@@ -55,7 +55,8 @@ import logging
 import os
 from collections.abc import Generator
 from contextlib import contextmanager
-from typing import Any
+from datetime import datetime
+from typing import Any, cast
 
 logger = logging.getLogger(__name__)
 
@@ -80,10 +81,10 @@ def is_tracking_server_reachable() -> bool:
     if not is_mlflow_available():
         return False
     try:
-        from mlflow.tracking import MlflowClient  # type: ignore[import-untyped]
+        from mlflow.tracking import MlflowClient
 
         client = MlflowClient()
-        client.list_experiments()  # throws si serveur down
+        client.search_experiments()  # throws si serveur down (MLflow 2.x : list_experiments → search_experiments)
         return True
     except Exception:  # pragma: no cover
         return False
@@ -132,7 +133,7 @@ class MLflowTracker:
     ):
         self.experiment_name = experiment_name
         self.tracking_uri = tracking_uri or get_tracking_uri()
-        self._mlflow = None
+        self._mlflow: Any = None
         self._run = None
         self._noop = False
         self._initialize()
@@ -328,7 +329,7 @@ def list_registered_models(experiment: str | None = None, max_results: int = 50)
             ),
         )
     try:
-        from mlflow.tracking import MlflowClient  # type: ignore[import-untyped]
+        from mlflow.tracking import MlflowClient
 
         client = MlflowClient()
         models = client.search_registered_models(max_results=max_results)
@@ -442,8 +443,9 @@ def get_experiment_summary(experiment: str = DEFAULT_EXPERIMENT) -> dict:
             "available": is_tracking_server_reachable(),
         }
     model_names = sorted({r["model_name"] for r in runs if r.get("model_name")})
+    # r.get("trained_at") est Any — on filtre None explicitement pour que max() accepte
     latest_ts = max(
-        (r.get("trained_at") for r in runs if r.get("trained_at")),
+        (cast(datetime, r["trained_at"]) for r in runs if r.get("trained_at") is not None),
         default=None,
     )
     return {

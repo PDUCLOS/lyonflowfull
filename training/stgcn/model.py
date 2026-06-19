@@ -47,7 +47,7 @@ class STGCNImportError(ImportError):
 def _try_import_torch() -> tuple[object | None, str | None]:
     """Tente d'importer torch. Retourne (module, error_message)."""
     try:
-        import torch  # type: ignore[import-untyped]
+        import torch
 
         return torch, None
     except ImportError as e:
@@ -57,7 +57,7 @@ def _try_import_torch() -> tuple[object | None, str | None]:
 def _try_import_torch_geometric() -> tuple[object | None, str | None]:
     """Tente d'importer torch_geometric.nn.GCNConv."""
     try:
-        from torch_geometric.nn import GCNConv  # type: ignore[import-untyped]
+        from torch_geometric.nn import GCNConv
 
         return GCNConv, None
     except ImportError as e:
@@ -247,7 +247,6 @@ def _expand_edge_index(edge_index, batch_size: int, num_nodes: int):
     Si batch_size=1, retourne edge_index tel quel. Sinon, ajoute un offset
     de ``i * num_nodes`` à chaque edge du batch i.
     """
-    torch = None
     try:
         import torch
     except ImportError:  # pragma: no cover

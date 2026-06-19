@@ -153,6 +153,10 @@ warn_unused_ignores = true
 warn_redundant_casts = true
 no_implicit_optional = true
 check_untyped_defs = false
+# Sprint 15+ mypy-clean : training/ et src/ sont des packages déclarés via __init__.py,
+# mais on garde explicit_package_bases par sécurité (mypy sait que chaque racine est un
+# package et ne tente plus de résoudre les fichiers en modules top-level).
+explicit_package_bases = true
 
 [[tool.mypy.overrides]]
 module = "tests.*"

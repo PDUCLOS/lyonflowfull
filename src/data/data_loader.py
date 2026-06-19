@@ -731,7 +731,7 @@ def load_lyon_addresses_with_coords() -> list[dict]:
 import time as _time  # noqa: E402
 
 _LIEUX_CACHE_TTL_S = 60
-_lieux_cache: dict[str, tuple[float, object]] = {}
+_lieux_cache: dict[str, tuple[float, list[Any]]] = {}
 
 
 def _load_lyon_addresses_cached() -> list[str]:

@@ -64,7 +64,7 @@ def _parse_grandlyon_vitesse(raw: object) -> float | None:
         return None
     if not isinstance(raw, str):
         try:
-            return float(raw)
+            return float(raw)  # type: ignore[arg-type]  # mypy: raw est Any après le isinstance check
         except (TypeError, ValueError):
             return None
     s = raw.strip()

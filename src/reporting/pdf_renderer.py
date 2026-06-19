@@ -148,7 +148,7 @@ def generate_pdf(html: str) -> bytes:
     """
     # Essai 1 : WeasyPrint
     try:
-        from weasyprint import HTML  # type: ignore
+        from weasyprint import HTML
 
         pdf_bytes = HTML(string=html).write_pdf()
         if pdf_bytes and len(pdf_bytes) > 100:
@@ -160,8 +160,8 @@ def generate_pdf(html: str) -> bytes:
     try:
         from io import BytesIO
 
-        from reportlab.lib.pagesizes import A4  # type: ignore
-        from reportlab.pdfgen import canvas  # type: ignore
+        from reportlab.lib.pagesizes import A4
+        from reportlab.pdfgen import canvas
 
         buffer = BytesIO()
         c = canvas.Canvas(buffer, pagesize=A4)

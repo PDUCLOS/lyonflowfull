@@ -46,6 +46,7 @@ from __future__ import annotations
 import logging
 import os
 from enum import StrEnum
+from typing import Any
 
 logger = logging.getLogger(__name__)
 
@@ -151,13 +152,16 @@ class XGBoostModelHandle:
 
     model_kind = ModelKind.XGBOOST
     display_name = "XGBoost (Champion)"
+    _model: Any  # XGBoostSpeedModel — import local dans load() pour éviter cycles
 
     def __init__(self, horizon_min: int, model_dir: str | None = None):
         from pathlib import Path
 
         self.horizon_min = horizon_min
-        self.model_dir = Path(model_dir or os.getenv("LYONFLOW_MODELS_DIR", "/app/models"))
-        self._model = None
+        # Double `or` pour que mypy comprenne que le résultat est toujours str.
+        resolved_dir = model_dir or os.getenv("LYONFLOW_MODELS_DIR") or "/app/models"
+        self.model_dir = Path(resolved_dir)
+        self._model: Any = None
 
     def is_available(self) -> bool:
         """Vérifie que le modèle existe sur disque + xgboost installé."""
@@ -186,6 +190,7 @@ class XGBoostModelHandle:
         if self._model is None and not self.load():
             return None
         try:
+            assert self._model is not None  # narrow pour mypy
             return self._model.predict(features)
         except Exception as e:  # pragma: no cover
             logger.exception("XGBoost prediction failed: %s", e)

@@ -24,6 +24,7 @@ import os
 import time
 from dataclasses import asdict
 from pathlib import Path
+from typing import Any
 
 import numpy as np
 
@@ -294,15 +295,17 @@ class STGCNTrainer:
 
                     # Val
                     model.eval()
-                    val_preds, val_targets = [], []
+                    val_preds: list[np.ndarray] = []
+                    val_targets: list[np.ndarray] = []
                     with torch.no_grad():
                         for xb, yb in val_loader:
                             pred = model(xb, edge_index_t).squeeze(-1)
                             val_preds.append(pred.numpy())
                             val_targets.append(yb.numpy())
-                    val_preds = np.concatenate(val_preds, axis=0)
-                    val_targets = np.concatenate(val_targets, axis=0)
-                    metrics = compute_metrics(val_preds, val_targets)
+                    val_preds_arr = np.concatenate(val_preds, axis=0)
+                    val_targets_arr = np.concatenate(val_targets, axis=0)
+                    metrics = compute_metrics(val_preds_arr, val_targets_arr)
+                    # metrics reste dict[str, float] — pas d'enrichissement ici
                     scheduler.step(metrics["mae"])
                     elapsed = time.time() - t0
 
@@ -347,12 +350,15 @@ class STGCNTrainer:
                 # Final metrics
                 model.eval()
                 with torch.no_grad():
-                    val_preds, val_targets = [], []
+                    final_preds: list[np.ndarray] = []
+                    final_targets: list[np.ndarray] = []
                     for xb, yb in val_loader:
                         pred = model(xb, edge_index_t).squeeze(-1)
-                        val_preds.append(pred.numpy())
-                        val_targets.append(yb.numpy())
-                final_metrics = compute_metrics(np.concatenate(val_preds), np.concatenate(val_targets))
+                        final_preds.append(pred.numpy())
+                        final_targets.append(yb.numpy())
+                final_metrics: dict[str, Any] = dict(
+                    compute_metrics(np.concatenate(final_preds), np.concatenate(final_targets))
+                )
 
                 # Save model
                 model_path = self.model_dir / f"stgcn_h{horizon_min}.pt"

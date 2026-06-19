@@ -117,7 +117,7 @@ def _archive_one_table(table: str, cutoff: datetime) -> dict:
     # les %s manuellement avant l'appel.
     df = pl.read_database_uri(
         query=f"SELECT * FROM silver.{table} WHERE transformed_at < %s ORDER BY transformed_at",
-        uri=get_settings().db.url,  # type: ignore[arg-type]
+        uri=get_settings().db.url,
         execute_options={"parameters": [cutoff]},
         engine="adbc",
     )
