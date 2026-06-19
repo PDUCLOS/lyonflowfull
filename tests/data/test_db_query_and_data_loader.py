@@ -32,8 +32,18 @@ from src.data.exceptions import DashboardDataError
 
 @pytest.fixture(autouse=True)
 def disable_db(monkeypatch):
-    """Force ``_is_db_available = False`` pour ces tests (pas de DB locale)."""
+    """Force ``_is_db_available = False`` pour ces tests (pas de DB locale).
+
+    IMPORTANT : il faut patcher dans DEUX modules. ``data_loader`` importe
+    ``_is_db_available`` via ``from src.data.db_query import _is_db_available``
+    (cf. data_loader.py:39-40), ce qui crée une seconde référence dans
+    l'espace de nom de ``data_loader``. Patch uniquement ``db_query`` ne
+    suffit pas en CI où la Postgres service est UP — le test vérifie que
+    ``load_X()`` lève ``DashboardDataError`` quand la DB est indispo, donc
+    les DEUX références doivent retourner False.
+    """
     monkeypatch.setattr(db_query, "_is_db_available", lambda: False)
+    monkeypatch.setattr(data_loader, "_is_db_available", lambda: False)
     db_query.reset_db_cache()
     yield
     db_query.reset_db_cache()

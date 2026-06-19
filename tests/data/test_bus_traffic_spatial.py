@@ -27,8 +27,16 @@ from src.data.exceptions import DashboardDataError
 
 @pytest.fixture(autouse=True)
 def disable_db(monkeypatch):
-    """Force ``_is_db_available = False`` pour ces tests."""
+    """Force ``_is_db_available = False`` pour ces tests.
+
+    Patch dans DEUX modules (db_query + data_loader) car data_loader
+    importe ``_is_db_available`` via ``from ... import`` ce qui crée une
+    seconde référence. Sans le patch data_loader, les load_X() ne lèvent
+    pas ``DashboardDataError`` quand le monkeypatch db_query est bypass
+    (cf. test_db_query_and_data_loader.py pour l'explication complète).
+    """
     monkeypatch.setattr(db_query, "_is_db_available", lambda: False)
+    monkeypatch.setattr(data_loader, "_is_db_available", lambda: False)
     db_query.reset_db_cache()
     yield
     db_query.reset_db_cache()

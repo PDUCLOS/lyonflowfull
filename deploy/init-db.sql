@@ -2432,13 +2432,29 @@ CREATE TABLE IF NOT EXISTS silver.chantiers_actifs (
     date_fin        DATE,
     lat             DOUBLE PRECISION,
     lon             DOUBLE PRECISION,
-    is_active       BOOLEAN GENERATED ALWAYS AS (
-        date_debut <= CURRENT_DATE AND (date_fin IS NULL OR date_fin >= CURRENT_DATE)
-    ) STORED,
+    -- is_active : calculé par trigger ci-dessous (CURRENT_DATE est volatile,
+    -- donc incompatible avec GENERATED ALWAYS AS (...) STORED qui exige
+    -- une expression IMMUTABLE — cf. Postgres 16 durcissement).
+    is_active       BOOLEAN,
     raw_data        JSONB,
     CONSTRAINT silver_chantiers_uniq UNIQUE (chantier_id, fetched_at)
 );
 CREATE INDEX IF NOT EXISTS idx_silver_chantiers_active ON silver.chantiers_actifs (is_active, date_fin);
+
+-- Trigger BEFORE INSERT OR UPDATE : recalcule is_active à partir des dates.
+CREATE OR REPLACE FUNCTION silver.compute_chantier_is_active() RETURNS TRIGGER
+    LANGUAGE plpgsql
+    AS $$
+BEGIN
+    NEW.is_active := (NEW.date_debut <= CURRENT_DATE
+                      AND (NEW.date_fin IS NULL OR NEW.date_fin >= CURRENT_DATE));
+    RETURN NEW;
+END;
+$$;
+DROP TRIGGER IF EXISTS trg_silver_chantiers_is_active ON silver.chantiers_actifs;
+CREATE TRIGGER trg_silver_chantiers_is_active
+    BEFORE INSERT OR UPDATE ON silver.chantiers_actifs
+    FOR EACH ROW EXECUTE FUNCTION silver.compute_chantier_is_active();
 
 --
 -- Gold tables added by migrate_realign_v0.3.1

@@ -21,8 +21,13 @@ from src.data.exceptions import DashboardDataError
 
 @pytest.fixture(autouse=True)
 def disable_db(monkeypatch):
-    """Force ``_is_db_available = False`` pour ces tests (pas de DB locale)."""
+    """Force ``_is_db_available = False`` pour ces tests (pas de DB locale).
+
+    Patch dans DEUX modules (db_query + data_loader) — voir
+    tests/data/test_db_query_and_data_loader.py pour l'explication.
+    """
     monkeypatch.setattr(db_query, "_is_db_available", lambda: False)
+    monkeypatch.setattr(data_loader, "_is_db_available", lambda: False)
     db_query.reset_db_cache()
     yield
     db_query.reset_db_cache()
