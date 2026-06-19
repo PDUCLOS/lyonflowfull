@@ -8,6 +8,7 @@
 
 from dashboard.components.widgets.pro_tcl.alert_ticker import render_alert_ticker
 from dashboard.components.widgets.pro_tcl.before_after_chart import render_before_after_chart
+from dashboard.components.widgets.pro_tcl.bus_traffic_spatial import render_bus_traffic_spatial
 from dashboard.components.widgets.pro_tcl.cause_analysis import render_cause_analysis
 from dashboard.components.widgets.pro_tcl.coherence_scatter import render_coherence_scatter
 from dashboard.components.widgets.pro_tcl.correlation_matrix import render_correlation_matrix
@@ -37,6 +38,7 @@ from dashboard.components.widgets.pro_tcl.segment_table import render_segment_ta
 __all__ = [
     "render_alert_ticker",
     "render_before_after_chart",
+    "render_bus_traffic_spatial",
     "render_cause_analysis",
     "render_coherence_scatter",
     "render_correlation_matrix",

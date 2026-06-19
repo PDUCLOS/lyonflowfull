@@ -1171,6 +1171,53 @@ def load_multimodal_grid_diagnosis_counts() -> pd.DataFrame:
     return df
 
 
+def load_bus_traffic_spatial(
+    line_ref: str | None = None,
+    limit: int = 5000,
+) -> pd.DataFrame:
+    """Corrélation bus × trafic spatialisée (Sprint 15+, Axe 3, 2026-06-19).
+
+    Vue matérialisée ``gold.mv_bus_traffic_spatial`` (migration 18). Chaque
+    ligne = 1 triplet (line_ref, heure, zone 0.001°) avec le retard bus ET
+    la vitesse trafic de la MÊME zone géographique.
+
+    Raises:
+        DashboardDataError: si PostgreSQL ne répond pas ou MV vide.
+    """
+    _require_db_or_raise("gold.mv_bus_traffic_spatial")
+    from src.data.db_query import get_bus_traffic_spatial
+
+    df = get_bus_traffic_spatial(line_ref=line_ref, limit=limit)
+    if df.empty:
+        raise DashboardDataError(
+            source="gold.mv_bus_traffic_spatial",
+            detail="Vue matérialisée vide. Vérifier que la migration 18 "
+            "a été appliquée et que le DAG refresh a tourné (*/15 min).",
+        )
+    return df
+
+
+def load_bus_traffic_spatial_diagnosis_counts(
+    line_ref: str | None = None,
+) -> pd.DataFrame:
+    """Distribution des diagnostics spatialisés (Sprint 15+, Axe 3).
+
+    Raises:
+        DashboardDataError: si PostgreSQL ne répond pas ou MV vide.
+    """
+    _require_db_or_raise("gold.mv_bus_traffic_spatial")
+    from src.data.db_query import get_bus_traffic_spatial_diagnosis_counts
+
+    df = get_bus_traffic_spatial_diagnosis_counts(line_ref=line_ref)
+    if df.empty:
+        raise DashboardDataError(
+            source="gold.mv_bus_traffic_spatial",
+            detail="Vue matérialisée vide — pas de diagnostic spatialisé. "
+            "Vérifier migration 18 + DAG refresh.",
+        )
+    return df
+
+
 def load_mlflow_models(
     experiment: str = "lyonflow-traffic",
     max_results: int = 50,

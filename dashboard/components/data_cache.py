@@ -254,6 +254,31 @@ def cached_multimodal_grid_diagnosis_counts() -> pd.DataFrame:
 
 
 # =============================================================================
+# Bus × trafic spatialisé (Sprint 15+, Axe 3 — migration 18)
+# =============================================================================
+
+
+@st.cache_data(ttl=TTL_FAST, show_spinner=False)
+def cached_bus_traffic_spatial(
+    line_ref: str | None = None, limit: int = 5000
+) -> pd.DataFrame:
+    """Corrélation bus × trafic spatialisée (Sprint 15+, Axe 3).
+
+    MV ``gold.mv_bus_traffic_spatial`` : JOIN spatial 0.001° (~100 m).
+    TTL 60s = 1 cycle de refresh DAG (*/15 min).
+    """
+    return dl.load_bus_traffic_spatial(line_ref=line_ref, limit=limit)
+
+
+@st.cache_data(ttl=TTL_FAST, show_spinner=False)
+def cached_bus_traffic_spatial_diagnosis_counts(
+    line_ref: str | None = None,
+) -> pd.DataFrame:
+    """Distribution diagnostics spatialisés (Sprint 15+, Axe 3)."""
+    return dl.load_bus_traffic_spatial_diagnosis_counts(line_ref=line_ref)
+
+
+# =============================================================================
 # Transport en commun (Sprint 14, 2026-06-19)
 # =============================================================================
 

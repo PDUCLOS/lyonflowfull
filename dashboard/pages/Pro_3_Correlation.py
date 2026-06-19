@@ -10,6 +10,7 @@ from dashboard.components.navigation import render_sidebar_navigation
 from dashboard.components.persona_guard import apply_persona_guard
 from dashboard.components.theme import inject_theme
 from dashboard.components.widgets.pro_tcl import (
+    render_bus_traffic_spatial,
     render_cause_analysis,
     render_coherence_scatter,
     render_correlation_matrix,
@@ -79,6 +80,14 @@ with col2:
 
 st.markdown("---")
 
+# Sprint 15+ (2026-06-19) — Axe 3 du SPEC_OPTIMISATION_INTERDEPENDANCES
+# Corrélation bus × trafic SPATIALISÉE (JOIN par zone 0.001° ≈ 100 m).
+# Coexiste avec la matrice globale (Option B, non-breaking).
+st.markdown("##### Corrélation bus × trafic spatialisée (JOIN zone ≈ 100 m)")
+render_bus_traffic_spatial(line_id=target_line)
+
+st.markdown("---")
+
 # Sprint 13+ (2026-06-18) — Cross-validation TomTom ↔ Grand Lyon
 # Détecte les capteurs HS (delta > 20 km/h vs source indépendante GPS flottes).
 st.markdown("##### Cohérence TomTom × Grand Lyon (cross-validation sources)")
@@ -95,9 +104,11 @@ render_multimodal_heatmap()
 
 st.caption(
     "Corrélation bus × trafic · Données : SIRI Lite + boucles Grand Lyon. "
-    "Cohérence TomTom × GL · Données : TomTom Flow (DAG collect_tomtom_traffic */15) + "
-    "jointure spatiale gold.channels_ref < 200 m (PostGIS ST_DWithin). "
-    "Grille multimodale · Données : fusion gold.traffic_features_live × "
+    "Corrélation spatialisée · JOIN zone 0.001° (~100 m) dans "
+    "gold.mv_bus_traffic_spatial (migration 18, refresh */15). "
+    "Cohérence TomTom × GL · TomTom Flow + jointure spatiale "
+    "gold.channels_ref < 200 m (PostGIS ST_DWithin). "
+    "Grille multimodale · fusion gold.traffic_features_live × "
     "gold.tcl_vehicle_realtime × silver.velov_clean × silver.meteo_hourly "
     "sur gold.mv_multimodal_grid (refresh */10)."
 )

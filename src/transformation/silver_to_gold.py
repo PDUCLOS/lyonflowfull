@@ -25,7 +25,8 @@ def transform_silver_to_gold(target: str = "all", dry_run: bool = False) -> dict
 
     Args:
         target: 'traffic' | 'velov' | 'bus_delay' | 'tcl_realtime'
-            | 'bottleneck' | 'multimodal_grid' | 'all'
+            | 'bottleneck' | 'multimodal_grid'
+            | 'bus_traffic_spatial' | 'all'
         dry_run: log uniquement.
 
     Returns:
@@ -47,11 +48,9 @@ def transform_silver_to_gold(target: str = "all", dry_run: bool = False) -> dict
     if target in ("bottleneck", "all"):
         results["bottleneck"] = _build_infrastructure_bottlenecks()
     if target in ("multimodal_grid", "all"):
-        # Refresh MV (pas d'INSERT — REFRESH MATERIALIZED VIEW CONCURRENTLY
-        # nécessite l'index unique idx_mv_multimodal_grid_latlon — créé dans
-        # migration 017). Si la MV n'existe pas encore (migration pas
-        # appliquée), on log un warning sans planter.
         results["multimodal_grid"] = _refresh_multimodal_grid()
+    if target in ("bus_traffic_spatial", "all"):
+        results["bus_traffic_spatial"] = _refresh_bus_traffic_spatial()
     return results
 
 
@@ -495,4 +494,31 @@ def _refresh_multimodal_grid() -> int:
         cur.execute("SELECT COUNT(*) FROM gold.mv_multimodal_grid")
         n = int(cur.fetchone()[0])
     logger.info("gold.mv_multimodal_grid: %d cellules refreshed", n)
+    return n
+
+
+def _refresh_bus_traffic_spatial() -> int:
+    """Refresh ``gold.mv_bus_traffic_spatial`` (Sprint 15+, Axe 3).
+
+    JOIN spatial bus x trafic par zone 0.001 deg (~100 m). Requiert
+    l'index unique ``idx_mv_bus_traffic_spatial_pk`` de migration 018.
+    """
+    with raw_connection() as conn, conn.cursor() as cur:
+        cur.execute(
+            """
+            SELECT 1 FROM pg_matviews
+            WHERE schemaname = 'gold' AND matviewname = 'mv_bus_traffic_spatial'
+            """
+        )
+        if cur.fetchone() is None:
+            logger.warning(
+                "gold.mv_bus_traffic_spatial absente — migration 018 non appliquée."
+            )
+            return 0
+        cur.execute(
+            "REFRESH MATERIALIZED VIEW CONCURRENTLY gold.mv_bus_traffic_spatial"
+        )
+        cur.execute("SELECT COUNT(*) FROM gold.mv_bus_traffic_spatial")
+        n = int(cur.fetchone()[0])
+    logger.info("gold.mv_bus_traffic_spatial: %d zones refreshed", n)
     return n

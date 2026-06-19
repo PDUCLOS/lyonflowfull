@@ -48,6 +48,10 @@ def _run_multimodal_grid() -> dict[str, int]:
     return transform_silver_to_gold(target="multimodal_grid")
 
 
+def _run_bus_traffic_spatial() -> dict[str, int]:
+    return transform_silver_to_gold(target="bus_traffic_spatial")
+
+
 default_args = {
     "owner": "lyonflow",
     "retries": 1,
@@ -58,7 +62,7 @@ with DAG(
     dag_id="transform_silver_to_gold",
     description=(
         "Silver → Gold (traffic + velov + tcl_realtime + bus_delay + bottleneck "
-        "+ multimodal_grid) — toutes les 10 min"
+        "+ multimodal_grid + bus_traffic_spatial) — toutes les 10 min"
     ),
     default_args=default_args,
     schedule_interval="*/10 * * * *",
@@ -106,8 +110,20 @@ with DAG(
         execution_timeout=timedelta(minutes=2),
     )
 
+    # Sprint 15+ (2026-06-19) — Axe 3 : correlation bus x trafic spatialisee.
+    # JOIN spatial 0.001° (~100 m) : retard bus corrélé au trafic de la MÊME
+    # zone. Coexiste avec bottleneck (Option B, non-breaking).
+    bus_traffic_spatial = PythonOperator(
+        task_id="refresh_mv_bus_traffic_spatial",
+        python_callable=_run_bus_traffic_spatial,
+        execution_timeout=timedelta(minutes=3),
+    )
+
     # Bottleneck dépend des deux : bus_delay (intra-jour) et traffic (lat/lon pour la carte)
     [traffic, velov, tcl_realtime, bus_delay] >> bottleneck
 
     # La grille multimodale dépend de toutes les sources (traffic + TCL + Vélov)
     [traffic, velov, tcl_realtime] >> multimodal_grid
+
+    # La corrélation spatialisée dépend de TCL (positions GPS) et traffic (capteurs)
+    [tcl_realtime, traffic] >> bus_traffic_spatial

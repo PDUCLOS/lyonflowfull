@@ -113,6 +113,77 @@ avec recommandation selon critère choisi (temps ou coût).
 **Tests** : 265 verts (Sprint 15+ multimodal + comparateur, +7 test_multimodal_grid.py),
 11 skipped, 14 deselected. Ruff clean sur les 8 fichiers du PR.
 
+### Axe 3 (Sprint 15+) — Couplage bus × trafic spatialisé
+
+Deuxième livraison de `docs/SPEC_OPTIMISATION_INTERDEPENDANCES.md` :
+**JOIN spatial PostGIS** entre positions temps réel des véhicules TCL
+(`gold.tcl_vehicle_realtime`) et trafic routier (`gold.traffic_features_live`)
+sur grille **0.001° ≈ 100 m** + bucket horaire.
+
+Corrige la lacune structurelle de `_BOTTLENECK_SQL` qui faisait le JOIN
+bus × trafic par **heure globale** (le retard du bus L12 à 8h était
+corrélé au trafic **moyen** de tout Lyon, pas au trafic local du
+tronçon Part-Dieu ↔ Gerland).
+
+#### Ajouté
+- **Migration 18** `scripts/sql/migration_018_bus_traffic_spatial.sql` :
+  - Vue matérialisée `gold.mv_bus_traffic_spatial` (DROP IF EXISTS +
+    CREATE MATERIALIZED VIEW — pattern idempotent).
+  - Agrège `gold.tcl_vehicle_realtime` (avg_delay_sec, n_obs,
+    n_delayed) × `gold.traffic_features_live` (avg_speed, n_sensors)
+    par (line_ref, hour, lat3, lon3) avec jointure gauche sur la
+    zone spatio-temporelle (résolution 0.001° ≈ 100 m).
+  - **Diagnostic dominant** 4 états : `infra` (bus retard + trafic
+    bouché), `operations` (bus retard + trafic fluide), `bus_lane_ok`
+    (bus à l'heure + trafic bouché = voie bus fonctionnelle), `ok`.
+  - **Score congestion** `traffic_congestion` ∈ [0, 1] :
+    `1 - LEAST(avg_speed / 50, 1)` (50 km/h = vitesse max fluide).
+  - 3 index : unique `(line_ref, hour, lat, lon)` (requis pour
+    REFRESH CONCURRENTLY), `diagnosis`, `line_ref`.
+- **Helpers DB** : `get_bus_traffic_spatial(limit)` +
+  `get_bus_traffic_spatial_diagnosis_counts()` dans `src/data/db_query.py`
+  (pattern `_df_from_query`).
+- **Wrappers fail-loud** : `load_bus_traffic_spatial(limit)` +
+  `load_bus_traffic_spatial_diagnosis_counts()` dans
+  `src/data/data_loader.py` — lèvent `DashboardDataError` si DB indispo
+  OU si la MV est vide (> 30 min = DAG refresh qui n'a pas tourné).
+- **Cache Streamlit** : `cached_bus_traffic_spatial` (TTL 60s) +
+  `cached_bus_traffic_spatial_diagnosis_counts` dans
+  `dashboard/components/data_cache.py`.
+- **Widget `dashboard/components/widgets/pro_tcl/bus_traffic_spatial.py`** :
+  - 4 KPI cards (infra / operations / bus_lane_ok / ok)
+  - Scatter Plotly `bus_delay_sec` (X) × `traffic_speed_kmh` (Y)
+    coloré par diagnosis + ligne médiane retard 120s en pointillés
+  - Tableau top zones infra avec line_ref + zone GPS + retard + vitesse
+  - Fail loud via DashboardDataError → `st.error(...)` côté page.
+- **Câblage page** : section "Couplage bus × trafic spatialisé" ajoutée
+  à `dashboard/pages/Pro_3_Correlation.py` (entre la matrice globale
+  et le scatter TomTom × GL — zéro impact sur les widgets existants).
+- **DAG refresh** : nouvelle tâche `refresh_mv_bus_traffic_spatial` dans
+  `dags/transforms/transform_silver_to_gold.py` (toutes les 15 min,
+  REFRESH CONCURRENTLY grâce à l'index unique, dépend de
+  `tcl_realtime + traffic`). Fail-safe si migration 18 pas appliquée
+  (warning clair, ne plante pas le DAG).
+- `src/transformation/silver_to_gold.py` : target `bus_traffic_spatial`
+  ajouté à `transform_silver_to_gold()` + helper
+  `_refresh_bus_traffic_spatial()` (vérifie MV existe avant refresh).
+
+#### Changed
+- `dashboard/components/widgets/pro_tcl/__init__.py` : export
+  `render_bus_traffic_spatial` (ajouté à `__all__`).
+- `dashboard/pages/Pro_3_Correlation.py` : import `render_bus_traffic_spatial`
+  + section dédiée.
+
+#### Notes
+- **Option B (non-breaking)** : la MV coexiste avec
+  `gold.infrastructure_bottlenecks`. Le widget `bus_traffic_spatial.py`
+  lit cette MV ; `correlation_matrix.py` continue de lire l'ancienne.
+  Bascule vers Option A (remplacement) après ≥ 7 jours de validation
+  sur données réelles.
+
+**Tests** : 273 verts (+11 nouveaux test_bus_traffic_spatial.py),
+3 skipped, 9 deselected. Ruff clean sur les 9 fichiers du PR.
+
 ## [0.6.7] - 2026-06-18 — Sprint 13+ : TomTom Niveau 1 réactivé + cross-validation (branche `vps`)
 
 Réactive TomTom Traffic Flow comme **deuxième source indépendante de vitesse

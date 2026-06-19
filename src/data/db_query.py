@@ -943,6 +943,94 @@ def get_multimodal_grid_diagnosis_counts() -> pd.DataFrame:
 
 
 # =============================================================================
+# Bus × trafic spatialisé (Sprint 15+, Axe 3 — migration 18)
+# =============================================================================
+
+
+def get_bus_traffic_spatial(
+    line_ref: str | None = None,
+    limit: int = 5000,
+) -> pd.DataFrame:
+    """Corrélation bus × trafic spatialisée (Sprint 15+, 2026-06-19).
+
+    Vue matérialisée ``gold.mv_bus_traffic_spatial`` (migration 18). Chaque
+    ligne = 1 triplet (line_ref, heure, zone 0.001°) avec le retard bus ET
+    la vitesse trafic dans la MÊME zone géographique (~100 m).
+
+    Args:
+        line_ref: filtre optionnel sur une ligne TCL.
+        limit: nb max de lignes retournées.
+
+    Returns:
+        DataFrame avec colonnes : ``line_ref, hour, lat, lon,
+        bus_delay_sec, bus_observations, bus_delayed_count,
+        traffic_speed_kmh, traffic_sensors, diagnosis,
+        traffic_congestion, computed_at``.
+    """
+    if line_ref:
+        query = """
+            SELECT line_ref, hour, lat, lon,
+                   bus_delay_sec, bus_observations, bus_delayed_count,
+                   traffic_speed_kmh, traffic_sensors,
+                   diagnosis, traffic_congestion, computed_at
+            FROM gold.mv_bus_traffic_spatial
+            WHERE line_ref = %s
+            ORDER BY bus_delay_sec DESC
+            LIMIT %s
+        """
+        return _df_from_query(query, (line_ref, limit))
+    query = """
+        SELECT line_ref, hour, lat, lon,
+               bus_delay_sec, bus_observations, bus_delayed_count,
+               traffic_speed_kmh, traffic_sensors,
+               diagnosis, traffic_congestion, computed_at
+        FROM gold.mv_bus_traffic_spatial
+        ORDER BY bus_delay_sec DESC
+        LIMIT %s
+    """
+    return _df_from_query(query, (limit,))
+
+
+def get_bus_traffic_spatial_diagnosis_counts(
+    line_ref: str | None = None,
+) -> pd.DataFrame:
+    """Distribution des diagnostics spatialisés (Sprint 15+, 2026-06-19).
+
+    Pour le bandeau KPI du widget ``bus_traffic_spatial`` : compte les
+    zones par diagnostic.
+
+    Returns:
+        DataFrame ``{diagnosis, n_zones, avg_delay, avg_speed, pct_zones}``.
+    """
+    if line_ref:
+        query = """
+            SELECT diagnosis,
+                   COUNT(*)::int AS n_zones,
+                   ROUND(AVG(bus_delay_sec)::numeric, 1) AS avg_delay,
+                   ROUND(AVG(traffic_speed_kmh)::numeric, 1) AS avg_speed,
+                   ROUND((100.0 * COUNT(*) / SUM(COUNT(*)) OVER ())::numeric, 1)
+                       AS pct_zones
+            FROM gold.mv_bus_traffic_spatial
+            WHERE line_ref = %s
+            GROUP BY diagnosis
+            ORDER BY n_zones DESC
+        """
+        return _df_from_query(query, (line_ref,))
+    query = """
+        SELECT diagnosis,
+               COUNT(*)::int AS n_zones,
+               ROUND(AVG(bus_delay_sec)::numeric, 1) AS avg_delay,
+               ROUND(AVG(traffic_speed_kmh)::numeric, 1) AS avg_speed,
+               ROUND((100.0 * COUNT(*) / SUM(COUNT(*)) OVER ())::numeric, 1)
+                   AS pct_zones
+        FROM gold.mv_bus_traffic_spatial
+        GROUP BY diagnosis
+        ORDER BY n_zones DESC
+    """
+    return _df_from_query(query)
+
+
+# =============================================================================
 # Référentiel lieux × transports × calendrier (Sprint VPS-6, 2026-06-11)
 # =============================================================================
 # Ces 3 tables sont créées par :
