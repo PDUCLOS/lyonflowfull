@@ -333,7 +333,10 @@ async def predict_traffic(req: PredictTrafficRequest, api_key: None = Depends(ve
         # Récupération channel_id via mapping node_idx
         from src.db import execute_query
         from src.models.xgboost_speed import XGBoostSpeedModel
-        mapping = execute_query("SELECT properties_twgid FROM gold.dim_spatial_grid_mapping WHERE node_idx = %s", (req.node_idx,))
+
+        mapping = execute_query(
+            "SELECT properties_twgid FROM gold.dim_spatial_grid_mapping WHERE node_idx = %s", (req.node_idx,)
+        )
         if not mapping:
             raise HTTPException(status_code=404, detail=f"Nœud {req.node_idx} inconnu")
         channel_id = str(mapping[0]["properties_twgid"])

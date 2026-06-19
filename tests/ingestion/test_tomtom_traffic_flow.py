@@ -9,6 +9,7 @@ module ``src.ingestion.tomtom_traffic``) suit le pattern unifié des
 3. _save_raw() avec 0 records → skip INSERT Bronze (idempotence Sprint 8)
 4. run() expose n_requests/n_failures et last_success_at
 """
+
 from __future__ import annotations
 
 import os
@@ -68,10 +69,14 @@ class TestTomTomTrafficFlowWithKey:
         # Mock collect_lyon_tiles pour éviter l'appel HTTP réel
         fake_results = [
             {
-                "lat": 45.76, "lon": 4.85,
-                "current_speed_kmh": 35.0, "free_flow_speed_kmh": 50.0,
-                "ratio": 0.7, "confidence": 0.95,
-                "current_travel_time_s": 120, "free_flow_travel_time_s": 80,
+                "lat": 45.76,
+                "lon": 4.85,
+                "current_speed_kmh": 35.0,
+                "free_flow_speed_kmh": 50.0,
+                "ratio": 0.7,
+                "confidence": 0.95,
+                "current_travel_time_s": 120,
+                "free_flow_travel_time_s": 80,
                 "tile_key": "45.7600_4.8500",
                 "fetched_at": "2026-06-18T15:00:00+00:00",
             },
@@ -86,16 +91,22 @@ class TestTomTomTrafficFlowWithKey:
         monkeypatch.setenv("TOMTOM_API_KEY", "fake-test-key")
         fake_results = [
             {
-                "lat": 45.76, "lon": 4.85,
-                "current_speed_kmh": 35.0, "free_flow_speed_kmh": 50.0,
-                "ratio": 0.7, "confidence": 0.95,
-                "current_travel_time_s": 120, "free_flow_travel_time_s": 80,
+                "lat": 45.76,
+                "lon": 4.85,
+                "current_speed_kmh": 35.0,
+                "free_flow_speed_kmh": 50.0,
+                "ratio": 0.7,
+                "confidence": 0.95,
+                "current_travel_time_s": 120,
+                "free_flow_travel_time_s": 80,
                 "tile_key": "45.7600_4.8500",
                 "fetched_at": "2026-06-18T15:00:00+00:00",
             },
         ]
-        with patch("src.ingestion.tomtom_traffic.collect_lyon_tiles", return_value=fake_results), \
-             patch("src.ingestion.tomtom_traffic.save_lyon_tiles_to_bronze", return_value=1) as mock_save:
+        with (
+            patch("src.ingestion.tomtom_traffic.collect_lyon_tiles", return_value=fake_results),
+            patch("src.ingestion.tomtom_traffic.save_lyon_tiles_to_bronze", return_value=1) as mock_save,
+        ):
             c = TomTomTrafficFlow()
             result = c.run()
 

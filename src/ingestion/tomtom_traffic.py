@@ -79,10 +79,16 @@ TILE_SIZE_DEG = 0.02
 LYON_TILES: list[tuple[float, float]] = [
     (lat, lon)
     for lat in [
-        45.74, 45.76, 45.78, 45.80,  # sud → nord
+        45.74,
+        45.76,
+        45.78,
+        45.80,  # sud → nord
     ]
     for lon in [
-        4.83, 4.85, 4.87, 4.89,  # ouest → est
+        4.83,
+        4.85,
+        4.87,
+        4.89,  # ouest → est
     ]
 ]
 
@@ -168,10 +174,7 @@ def _query_tomtom_flow(lat: float, lon: float, api_key: str) -> dict:
     Documentation TomTom :
     https://developer.tomtom.com/traffic-api/documentation/traffic-flow/flow-segment-data
     """
-    url = (
-        "https://api.tomtom.com/traffic/services/4/flowSegmentData/"
-        "absolute/10/json"
-    )
+    url = "https://api.tomtom.com/traffic/services/4/flowSegmentData/absolute/10/json"
     params = {"point": f"{lat},{lon}", "key": api_key}
     with httpx.Client(timeout=10.0) as client:
         r = client.get(url, params=params)
@@ -218,7 +221,8 @@ def get_flow(lat: float, lon: float, use_cache: bool = True) -> dict | None:
     if _daily_request_count >= DAILY_QUOTA:
         logger.warning(
             "TomTom quota journalier épuisé (%d/%d), fallback None",
-            _daily_request_count, DAILY_QUOTA,
+            _daily_request_count,
+            DAILY_QUOTA,
         )
         return None
 
@@ -304,10 +308,14 @@ def save_lyon_tiles_to_bronze(results: list[dict]) -> int:
 
     rows = [
         (
-            r["lat"], r["lon"],
-            r["current_speed_kmh"], r["free_flow_speed_kmh"],
-            r["ratio"], r["confidence"],
-            r["current_travel_time_s"], r["free_flow_travel_time_s"],
+            r["lat"],
+            r["lon"],
+            r["current_speed_kmh"],
+            r["free_flow_speed_kmh"],
+            r["ratio"],
+            r["confidence"],
+            r["current_travel_time_s"],
+            r["free_flow_travel_time_s"],
             r["tile_key"],
             r["fetched_at"],
         )
@@ -340,8 +348,10 @@ def save_lyon_tiles_to_bronze(results: list[dict]) -> int:
 
 
 def get_live_flow_for_bbox(
-    min_lat: float, min_lon: float,
-    max_lat: float, max_lon: float,
+    min_lat: float,
+    min_lon: float,
+    max_lat: float,
+    max_lon: float,
     use_cache: bool = True,
 ) -> list[dict]:
     """Renvoie les points TomTom Flow dans une bounding box.
@@ -474,16 +484,12 @@ class TomTomTrafficFlow(DataCollector):
         qui fait le bon INSERT via execute_batch.
         """
         if result.n_records == 0 or not result.raw_data:
-            logger.warning(
-                f"Collector {self.source} : 0 records, skip INSERT Bronze "
-                "(idempotence — Sprint 8 fix)."
-            )
+            logger.warning(f"Collector {self.source} : 0 records, skip INSERT Bronze (idempotence — Sprint 8 fix).")
             return
 
         n_inserted = save_lyon_tiles_to_bronze(result.raw_data)
         logger.info(
-            f"Collector {self.source} : {n_inserted}/{result.n_records} lignes "
-            f"insérées dans bronze.{self.bronze_table}"
+            f"Collector {self.source} : {n_inserted}/{result.n_records} lignes insérées dans bronze.{self.bronze_table}"
         )
 
         # GDrive backup (optionnel, comme base.py)

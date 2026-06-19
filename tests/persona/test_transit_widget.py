@@ -53,12 +53,7 @@ def test_transit_widget_disclaimer_mentions_gtfs_phase1():
     Lut directement dans le source pour ne pas dépendre du rendu Streamlit.
     """
     widget_path = (
-        Path(__file__).resolve().parents[2]
-        / "dashboard"
-        / "components"
-        / "widgets"
-        / "usager"
-        / "transit_trip.py"
+        Path(__file__).resolve().parents[2] / "dashboard" / "components" / "widgets" / "usager" / "transit_trip.py"
     )
     source = widget_path.read_text(encoding="utf-8")
 
@@ -81,12 +76,7 @@ def test_search_bar_segmented_control_has_3_modes_no_marche():
     ne pas matcher les éventuelles mentions "Marche" dans les commentaires.
     """
     search_bar_path = (
-        Path(__file__).resolve().parents[2]
-        / "dashboard"
-        / "components"
-        / "widgets"
-        / "usager"
-        / "search_bar.py"
+        Path(__file__).resolve().parents[2] / "dashboard" / "components" / "widgets" / "usager" / "search_bar.py"
     )
     source = search_bar_path.read_text(encoding="utf-8")
 
@@ -101,20 +91,13 @@ def test_search_bar_segmented_control_has_3_modes_no_marche():
     assert '"🚗 Voiture"' in segmented_content
 
     # Marche ABSENT dans la liste
-    assert "Marche" not in segmented_content, (
-        "Mode Marche doit avoir été retiré de la liste (Sprint 14)"
-    )
+    assert "Marche" not in segmented_content, "Mode Marche doit avoir été retiré de la liste (Sprint 14)"
 
 
 def test_search_bar_default_is_tc():
     """Default du segmented control = Transport en commun (Sprint 15+)."""
     search_bar_path = (
-        Path(__file__).resolve().parents[2]
-        / "dashboard"
-        / "components"
-        / "widgets"
-        / "usager"
-        / "search_bar.py"
+        Path(__file__).resolve().parents[2] / "dashboard" / "components" / "widgets" / "usager" / "search_bar.py"
     )
     source = search_bar_path.read_text(encoding="utf-8")
 
@@ -127,12 +110,7 @@ def test_search_bar_returns_modes_in_dict():
     """render_search_bar retourne un dict avec la clé 'modes'."""
     # Test statique : la signature retourne un dict contenant 'modes'
     search_bar_path = (
-        Path(__file__).resolve().parents[2]
-        / "dashboard"
-        / "components"
-        / "widgets"
-        / "usager"
-        / "search_bar.py"
+        Path(__file__).resolve().parents[2] / "dashboard" / "components" / "widgets" / "usager" / "search_bar.py"
     )
     source = search_bar_path.read_text(encoding="utf-8")
 
@@ -146,12 +124,7 @@ def test_search_bar_segmented_control_is_single_select():
     Patrice : « je veux un single select » — clé précise de l'interface.
     """
     search_bar_path = (
-        Path(__file__).resolve().parents[2]
-        / "dashboard"
-        / "components"
-        / "widgets"
-        / "usager"
-        / "search_bar.py"
+        Path(__file__).resolve().parents[2] / "dashboard" / "components" / "widgets" / "usager" / "search_bar.py"
     )
     source = search_bar_path.read_text(encoding="utf-8")
 
@@ -170,12 +143,7 @@ def test_search_bar_segmented_control_required():
     « Trouver mon trajet » (cf. doc Streamlit : clic sur option active = no-op).
     """
     search_bar_path = (
-        Path(__file__).resolve().parents[2]
-        / "dashboard"
-        / "components"
-        / "widgets"
-        / "usager"
-        / "search_bar.py"
+        Path(__file__).resolve().parents[2] / "dashboard" / "components" / "widgets" / "usager" / "search_bar.py"
     )
     source = search_bar_path.read_text(encoding="utf-8")
 
@@ -193,12 +161,7 @@ def test_search_bar_label_modes_au_pluriel():
     Patrice : formulation exacte demandée.
     """
     search_bar_path = (
-        Path(__file__).resolve().parents[2]
-        / "dashboard"
-        / "components"
-        / "widgets"
-        / "usager"
-        / "search_bar.py"
+        Path(__file__).resolve().parents[2] / "dashboard" / "components" / "widgets" / "usager" / "search_bar.py"
     )
     source = search_bar_path.read_text(encoding="utf-8")
 
@@ -206,10 +169,7 @@ def test_search_bar_label_modes_au_pluriel():
         r"st\.segmented_control\(\s*['\"]Modes de transport autorisés['\"]",
         source,
     )
-    assert m is not None, (
-        "Label doit être 'Modes de transport autorisés' "
-        "(formulation exacte demandée par Patrice)"
-    )
+    assert m is not None, "Label doit être 'Modes de transport autorisés' (formulation exacte demandée par Patrice)"
 
 
 def test_search_bar_no_defensive_fallback():
@@ -219,24 +179,16 @@ def test_search_bar_no_defensive_fallback():
     set. Donc ``modes = [selected_mode]`` suffit, pas de ``if/else`` autour.
     """
     search_bar_path = (
-        Path(__file__).resolve().parents[2]
-        / "dashboard"
-        / "components"
-        / "widgets"
-        / "usager"
-        / "search_bar.py"
+        Path(__file__).resolve().parents[2] / "dashboard" / "components" / "widgets" / "usager" / "search_bar.py"
     )
     source = search_bar_path.read_text(encoding="utf-8")
 
     # Simplification : ``modes = [selected_mode]`` direct, sans fallback
     assert "modes = [selected_mode]" in source, (
-        "modes doit être une simple affectation [selected_mode] "
-        "(required=True + default = pas de cas vide possible)"
+        "modes doit être une simple affectation [selected_mode] (required=True + default = pas de cas vide possible)"
     )
     # Pas de branche défensive ``if not selected_mode`` ni ``if selected_mode else``
-    assert "if not selected_mode" not in source, (
-        "Branche défensive 'if not selected_mode' superflue avec required=True"
-    )
+    assert "if not selected_mode" not in source, "Branche défensive 'if not selected_mode' superflue avec required=True"
     assert "if selected_mode else" not in source, (
         "Branche défensive 'if selected_mode else' superflue avec required=True"
     )

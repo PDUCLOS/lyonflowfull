@@ -367,10 +367,7 @@ def render_alerts_feed() -> None:
             title = str(row.get("title", "—") or "—")
             action = str(row.get("action", "") or "")
             line_ref = str(row.get("line_ref", "Toutes") or "Toutes")
-            st.markdown(
-                f"- {icon} **{alert_time}** — {title} "
-                f"`{line_ref}`{f' — _{action}_' if action else ''}"
-            )
+            st.markdown(f"- {icon} **{alert_time}** — {title} `{line_ref}`{f' — _{action}_' if action else ''}")
 
     with st.expander("📜 Historique alertes (7 derniers jours)", expanded=False):
         try:

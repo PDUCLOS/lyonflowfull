@@ -82,11 +82,16 @@ class TestTomTomCache:
         """Si la valeur est en cache, pas d'appel API."""
         key = tt._tile_key(45.76, 4.85)
         cached_value = {
-            "current_speed_kmh": 30.0, "free_flow_speed_kmh": 50.0,
-            "ratio": 0.6, "confidence": 1.0,
-            "current_travel_time_s": 120, "free_flow_travel_time_s": 60,
-            "fetched_at": "2026-06-11T00:00:00", "tile_key": key,
-            "lat": 45.76, "lon": 4.85,
+            "current_speed_kmh": 30.0,
+            "free_flow_speed_kmh": 50.0,
+            "ratio": 0.6,
+            "confidence": 1.0,
+            "current_travel_time_s": 120,
+            "free_flow_travel_time_s": 60,
+            "fetched_at": "2026-06-11T00:00:00",
+            "tile_key": key,
+            "lat": 45.76,
+            "lon": 4.85,
         }
         tt._cache_set(key, cached_value)
         # Avec use_cache=True, on doit avoir un hit
@@ -111,6 +116,7 @@ class TestTomTomQuota:
         # _reset_daily_quota_if_needed compare avec la date du jour — on
         # aligne _daily_reset_date sur aujourd'hui pour ne pas être reset.
         from datetime import UTC, datetime
+
         today = datetime.now(UTC).strftime("%Y-%m-%d")
         monkeypatch.setattr("src.ingestion.tomtom_traffic._daily_reset_date", today)
         monkeypatch.setattr("src.ingestion.tomtom_traffic._daily_request_count", 500)
@@ -119,6 +125,7 @@ class TestTomTomQuota:
     def test_quota_exhausted_returns_none(self, monkeypatch):
         """Quota épuisé → get_flow retourne None (avec clé configurée)."""
         from datetime import UTC, datetime
+
         today = datetime.now(UTC).strftime("%Y-%m-%d")
         monkeypatch.setattr("src.ingestion.tomtom_traffic._daily_reset_date", today)
         monkeypatch.setattr("src.ingestion.tomtom_traffic._daily_request_count", tt.DAILY_QUOTA)

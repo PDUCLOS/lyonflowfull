@@ -214,7 +214,12 @@ def clear_stuck_dag_run(dag_id: str, dag_run_id: str) -> bool:
         )
         ok = r.status_code in (200, 201)
         if ok:
-            logger.info("clear_stuck_dag_run(%s, %s): %d tasks cleared", dag_id, dag_run_id, len(r.json().get("task_instances", [])))
+            logger.info(
+                "clear_stuck_dag_run(%s, %s): %d tasks cleared",
+                dag_id,
+                dag_run_id,
+                len(r.json().get("task_instances", [])),
+            )
         else:
             logger.warning("clear_stuck_dag_run(%s, %s): HTTP %d — %s", dag_id, dag_run_id, r.status_code, r.text[:200])
         return ok

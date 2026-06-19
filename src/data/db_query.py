@@ -714,6 +714,7 @@ def get_bronze_source_counts(hours: int = 1) -> pd.DataFrame:
     # Sprint 8 — viré le fallback mock. Si DB indispo, le caller doit catch.
     if not _is_db_available():
         from src.data.exceptions import DashboardDataError
+
         raise DashboardDataError(source="bronze_source_counts", detail="PostgreSQL indisponible")
 
     rows = []

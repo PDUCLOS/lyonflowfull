@@ -10,6 +10,7 @@ respectent la politique zéro mock de Sprint 8 :
 
 Voir ``docs/SPEC_OPTIMISATION_INTERDEPENDANCES.md`` (Axe 3, 2026-06-19).
 """
+
 from __future__ import annotations
 
 import sys
@@ -108,9 +109,11 @@ def test_widget_diagnosis_counts_with_data() -> None:
         _diagnosis_counts,
     )
 
-    df = pd.DataFrame({
-        "diagnosis": ["infra", "infra", "ok", "operations", "bus_lane_ok"],
-    })
+    df = pd.DataFrame(
+        {
+            "diagnosis": ["infra", "infra", "ok", "operations", "bus_lane_ok"],
+        }
+    )
     counts = _diagnosis_counts(df)
     assert counts["infra"] == 2
     assert counts["ok"] == 1

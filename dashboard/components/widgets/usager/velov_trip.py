@@ -28,8 +28,8 @@ from src.routing.pathfinder_multimodal import (
 
 # Couleurs des polylines par mode
 _MODE_COLOR = {
-    "walk": "#9E9E9E",         # gris — marche
-    "cycle": "#1976D2",        # bleu — Vélov
+    "walk": "#9E9E9E",  # gris — marche
+    "cycle": "#1976D2",  # bleu — Vélov
     "destination": "#9E9E9E",  # gris — marche vers destination
 }
 
@@ -65,10 +65,7 @@ def render_velov_trip(
             return
 
     if not origin_coords or not dest_coords:
-        st.error(
-            f"❌ Adresses non résolues. Origin={origin!r} → {origin_coords}, "
-            f"Dest={destination!r} → {dest_coords}"
-        )
+        st.error(f"❌ Adresses non résolues. Origin={origin!r} → {origin_coords}, Dest={destination!r} → {dest_coords}")
         return
 
     origin_lon, origin_lat = origin_coords
@@ -235,8 +232,8 @@ def _render_single_station_card(
         mech_elec_html = (
             '<div style="font-size:0.7rem;opacity:0.65;margin-top:0.3rem;'
             'line-height:1.4;">'
-            f'├── 🔧 {m} mécaniques<br/>└── ⚡ {e} électriques'
-            '</div>'
+            f"├── 🔧 {m} mécaniques<br/>└── ⚡ {e} électriques"
+            "</div>"
         )
 
     bikes_str = f"{int(n_bikes)} vélos" if n_bikes is not None else "N/A"
@@ -331,8 +328,11 @@ def _render_velov_map(
 
     # Markers Vélov aux stations utilisées
     for seg in itin.segments:
-        if seg.mode in ("cycle",) or (seg.mode == "walk" and "Vélov" in seg.notes) \
-                or (seg.mode == "destination" and seg.from_label and seg.from_label != "Destination"):
+        if (
+            seg.mode in ("cycle",)
+            or (seg.mode == "walk" and "Vélov" in seg.notes)
+            or (seg.mode == "destination" and seg.from_label and seg.from_label != "Destination")
+        ):
             if seg.n_bikes_depart is not None or seg.n_docks_arrive is not None:
                 popup = (
                     f"🚲 <b>{seg.to_label if seg.mode == 'walk' else seg.from_label}</b><br/>"
@@ -388,7 +388,7 @@ def _render_velov_segments(itin: VelovItinerary) -> None:
                         <div style="font-size:0.8rem;opacity:0.7;">
                             📏 {seg.distance_m:.0f} m · 🕐 {seg.duration_min} min{extras}
                         </div>
-                        {f'<div style="font-size:0.75rem;opacity:0.6;font-style:italic;">{seg.notes}</div>' if seg.notes else ''}
+                        {f'<div style="font-size:0.75rem;opacity:0.6;font-style:italic;">{seg.notes}</div>' if seg.notes else ""}
                     </div>
                 </div>
                 """,
@@ -410,9 +410,8 @@ def _render_alternatives_card(
         return
     st.markdown(f"##### 🔄 Alternatives à la borne {role} ({len(alternatives)})")
     st.caption(
-        f"Marche à pied entre bornes voisines — la borne #1 est "
-        f"{'VIDE' if role == 'origin' else 'PLEINE'}"
-        if (role == 'origin' and any(a.get('status') == 'VIDE' for a in alternatives))
+        f"Marche à pied entre bornes voisines — la borne #1 est {'VIDE' if role == 'origin' else 'PLEINE'}"
+        if (role == "origin" and any(a.get("status") == "VIDE" for a in alternatives))
         else "Bornes alternatives avec vélos/docks disponibles."
     )
     cols = st.columns(min(3, len(alternatives)))
@@ -436,10 +435,10 @@ def _render_alternatives_card(
                 f"""
                 <div class="lyonflow-card" style="border-left:4px solid {color};">
                     <div style="font-size:0.85rem;font-weight:600;">
-                        🚲 {alt['velov_name']}
+                        🚲 {alt["velov_name"]}
                     </div>
                     <div style="font-size:0.7rem;opacity:0.7;margin-top:0.2rem;">
-                        {status} · 📏 {int(alt.get('distance_m', 0))}m · 🚶 {walk_min}min
+                        {status} · 📏 {int(alt.get("distance_m", 0))}m · 🚶 {walk_min}min
                     </div>
                     <div style="font-size:1.2rem;font-weight:700;margin:0.3rem 0;color:{color};">
                         🚴 {bikes} vélos
@@ -465,8 +464,8 @@ def _render_velov_maillage(
     """
     edges_drawn = set()  # éviter doublons (a-b == b-a)
     for neighbors, color in (
-        (origin_neighbors, "#1976D2"),    # bleu pour voisines départ
-        (dest_neighbors, "#388E3C"),       # vert pour voisines arrivée
+        (origin_neighbors, "#1976D2"),  # bleu pour voisines départ
+        (dest_neighbors, "#388E3C"),  # vert pour voisines arrivée
     ):
         for n in neighbors:
             sid_a = n.get("station_id_a", "")
@@ -501,15 +500,9 @@ def _render_neighbors_legend(
     """Mini-caption : nombre de voisines à < 200m pour chaque borne."""
     parts = []
     if origin_neighbors:
-        parts.append(
-            f"🚲 Borne départ : {len(origin_neighbors)} voisine(s) à < 200m "
-            f"(maillage actif)"
-        )
+        parts.append(f"🚲 Borne départ : {len(origin_neighbors)} voisine(s) à < 200m (maillage actif)")
     if dest_neighbors:
-        parts.append(
-            f"🚲 Borne arrivée : {len(dest_neighbors)} voisine(s) à < 200m "
-            f"(maillage actif)"
-        )
+        parts.append(f"🚲 Borne arrivée : {len(dest_neighbors)} voisine(s) à < 200m (maillage actif)")
     if parts:
         st.caption(" · ".join(parts))
 
@@ -553,7 +546,7 @@ def _resolve_lieu(text: str) -> tuple[float, float] | None:
         # Skip premier char + espace
         sp = cleaned.find(" ")
         if sp > 0 and sp <= 3:
-            cleaned = cleaned[sp + 1:].strip()
+            cleaned = cleaned[sp + 1 :].strip()
     text_lower = cleaned.lower().strip()
     if not text_lower:
         return None

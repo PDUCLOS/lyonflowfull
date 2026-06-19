@@ -91,7 +91,9 @@ if st.session_state.get("results_loaded"):
             if dest_coords is not None:
                 try:
                     stations_dest = load_nearest_velov_stations(
-                        lat=dest_coords[1], lon=dest_coords[0], k=3,
+                        lat=dest_coords[1],
+                        lon=dest_coords[0],
+                        k=3,
                     )
                     if stations_dest:
                         st.caption(f"🚲 Stations Vélov proches de **{search['destination']}** :")
@@ -198,7 +200,4 @@ if st.session_state.get("results_loaded"):
 
     st.markdown("---")
 
-st.caption(
-    f"LyonFlowFull v{get_settings().app_version} · "
-    "100% pipeline (PostgreSQL, Airflow, MLflow)"
-)
+st.caption(f"LyonFlowFull v{get_settings().app_version} · 100% pipeline (PostgreSQL, Airflow, MLflow)")

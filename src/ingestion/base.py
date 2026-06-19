@@ -171,10 +171,7 @@ class DataCollector(abc.ABC):
         """
         # DB Bronze : skip si pas de données
         if result.n_records == 0 or not result.raw_data:
-            logger.warning(
-                f"Collector {self.source} : 0 records, skip INSERT Bronze "
-                "(Sprint 8 idempotence fix)."
-            )
+            logger.warning(f"Collector {self.source} : 0 records, skip INSERT Bronze (Sprint 8 idempotence fix).")
             # GDrive backup : on garde quand même pour archive
             try:
                 raw_json = json.dumps(result.raw_data or {}, ensure_ascii=False, default=str)

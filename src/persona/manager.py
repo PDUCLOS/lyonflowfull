@@ -98,6 +98,7 @@ def clear_current_persona() -> None:
     clear_current_persona_auth()
     # 2) Ensuite pop le persona_id
     import streamlit as st
+
     st.session_state.pop(_SESSION_KEY, None)
 
 

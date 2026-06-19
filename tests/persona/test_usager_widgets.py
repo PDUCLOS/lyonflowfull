@@ -37,9 +37,15 @@ def test_orphan_widgets_removed():
     """Widgets orphelins (recommendation_card, alternative_card, why_explainer, favorite_list) supprimes."""
     from dashboard.components.widgets import usager
 
-    for removed in ("render_recommendation_card", "render_alternative_card",
-                    "render_why_explainer", "render_why_summary",
-                    "render_favorite_list", "render_recurrent_trip_card", "render_steps"):
+    for removed in (
+        "render_recommendation_card",
+        "render_alternative_card",
+        "render_why_explainer",
+        "render_why_summary",
+        "render_favorite_list",
+        "render_recurrent_trip_card",
+        "render_steps",
+    ):
         assert not hasattr(usager, removed), f"{removed} should be removed"
 
 

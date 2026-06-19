@@ -8,6 +8,7 @@ virées (audit Patrice 2026-06-19, politique "zéro mock" durcie). Pour
 tester du code qui touche la DB, marquer ``@pytest.mark.integration``
 (skippé par défaut via ``pyproject.toml`` ``addopts``).
 """
+
 from __future__ import annotations
 
 import os

@@ -77,16 +77,27 @@ def test_transit_itinerary_direct_feasible_true():
     )
 
     seg = TransitSegment(
-        line_ref="T_1", line_mode="tram", line_label="🚊 Tram 1",
-        stop_origin="X", stop_dest="Y",
-        distance_walk_to_m=100, distance_walk_from_m=50,
-        cadence_min=8.0, wait_estimate_min=4.0, delay_avg_min=0.5,
-        duration_estimate_min=15.0, confidence=0.7,
+        line_ref="T_1",
+        line_mode="tram",
+        line_label="🚊 Tram 1",
+        stop_origin="X",
+        stop_dest="Y",
+        distance_walk_to_m=100,
+        distance_walk_from_m=50,
+        cadence_min=8.0,
+        wait_estimate_min=4.0,
+        delay_avg_min=0.5,
+        duration_estimate_min=15.0,
+        confidence=0.7,
     )
     itin = TransitItinerary(
-        origin_label="X", destination_label="Y",
-        segments=[seg], n_transfers=0,
-        total_duration_min=15.0, total_walk_m=150, total_delay_min=0.5,
+        origin_label="X",
+        destination_label="Y",
+        segments=[seg],
+        n_transfers=0,
+        total_duration_min=15.0,
+        total_walk_m=150,
+        total_delay_min=0.5,
         confidence=0.7,
     )
     assert itin.feasible is True
@@ -101,24 +112,42 @@ def test_transit_itinerary_transfer_feasible_true():
     )
 
     seg1 = TransitSegment(
-        line_ref="C_3", line_mode="bus", line_label="🚌 Bus 3",
-        stop_origin="A", stop_dest="Part-Dieu",
-        distance_walk_to_m=50, distance_walk_from_m=120,
-        cadence_min=10.0, wait_estimate_min=5.0, delay_avg_min=1.0,
-        duration_estimate_min=12.0, confidence=0.6,
+        line_ref="C_3",
+        line_mode="bus",
+        line_label="🚌 Bus 3",
+        stop_origin="A",
+        stop_dest="Part-Dieu",
+        distance_walk_to_m=50,
+        distance_walk_from_m=120,
+        cadence_min=10.0,
+        wait_estimate_min=5.0,
+        delay_avg_min=1.0,
+        duration_estimate_min=12.0,
+        confidence=0.6,
     )
     seg2 = TransitSegment(
-        line_ref="M_B", line_mode="metro", line_label="🚇 Métro B",
-        stop_origin="Part-Dieu", stop_dest="B",
-        distance_walk_to_m=100, distance_walk_from_m=80,
-        cadence_min=5.0, wait_estimate_min=2.5, delay_avg_min=0.8,
-        duration_estimate_min=10.0, confidence=0.8,
+        line_ref="M_B",
+        line_mode="metro",
+        line_label="🚇 Métro B",
+        stop_origin="Part-Dieu",
+        stop_dest="B",
+        distance_walk_to_m=100,
+        distance_walk_from_m=80,
+        cadence_min=5.0,
+        wait_estimate_min=2.5,
+        delay_avg_min=0.8,
+        duration_estimate_min=10.0,
+        confidence=0.8,
     )
     itin = TransitItinerary(
-        origin_label="A", destination_label="B",
+        origin_label="A",
+        destination_label="B",
         segments=[seg1, seg2],
-        transfer_hub="Part-Dieu", n_transfers=1,
-        total_duration_min=25.0, total_walk_m=350, total_delay_min=1.8,
+        transfer_hub="Part-Dieu",
+        n_transfers=1,
+        total_duration_min=25.0,
+        total_walk_m=350,
+        total_delay_min=1.8,
         confidence=0.6,
     )
     assert itin.feasible is True
@@ -198,14 +227,20 @@ def test_estimate_transit_duration_bus_slower_than_metro():
     from src.routing.pathfinder_multimodal import _estimate_transit_duration_min
 
     d_metro = _estimate_transit_duration_min(
-        distance_walk_to_m=100, distance_walk_from_m=100,
-        segment_distance_m=5000, line_mode="metro",
-        cadence_min=4.0, delay_avg_min=0.0,
+        distance_walk_to_m=100,
+        distance_walk_from_m=100,
+        segment_distance_m=5000,
+        line_mode="metro",
+        cadence_min=4.0,
+        delay_avg_min=0.0,
     )
     d_bus = _estimate_transit_duration_min(
-        distance_walk_to_m=100, distance_walk_from_m=100,
-        segment_distance_m=5000, line_mode="bus",
-        cadence_min=10.0, delay_avg_min=0.0,
+        distance_walk_to_m=100,
+        distance_walk_from_m=100,
+        segment_distance_m=5000,
+        line_mode="bus",
+        cadence_min=10.0,
+        delay_avg_min=0.0,
     )
     # Bus : cadence 2x + vitesse 2x plus lente → bus >> metro
     assert d_bus > d_metro * 1.5
@@ -219,14 +254,20 @@ def test_estimate_transit_duration_unknown_mode_uses_default():
     )
 
     d_unknown = _estimate_transit_duration_min(
-        distance_walk_to_m=0, distance_walk_from_m=0,
-        segment_distance_m=1000, line_mode="hyperloop",
-        cadence_min=10.0, delay_avg_min=0.0,
+        distance_walk_to_m=0,
+        distance_walk_from_m=0,
+        segment_distance_m=1000,
+        line_mode="hyperloop",
+        cadence_min=10.0,
+        delay_avg_min=0.0,
     )
     d_tram = _estimate_transit_duration_min(
-        distance_walk_to_m=0, distance_walk_from_m=0,
-        segment_distance_m=1000, line_mode="tram",
-        cadence_min=10.0, delay_avg_min=0.0,
+        distance_walk_to_m=0,
+        distance_walk_from_m=0,
+        segment_distance_m=1000,
+        line_mode="tram",
+        cadence_min=10.0,
+        delay_avg_min=0.0,
     )
     # Tram = 20 km/h, hyperloop = 18 km/h (default) → tram plus rapide
     assert d_tram < d_unknown
@@ -393,10 +434,7 @@ def test_plan_transit_trip_diagnostics_when_no_route():
         assert isinstance(itin.diagnostics, list)
         # Si diagnostics présent, doit mentionner les lieux
         if itin.diagnostics:
-            assert any(
-                "Part-Dieu" in d or "Perrache" in d or "Ligne" in d
-                for d in itin.diagnostics
-                )
+            assert any("Part-Dieu" in d or "Perrache" in d or "Ligne" in d for d in itin.diagnostics)
 
 
 # =============================================================================

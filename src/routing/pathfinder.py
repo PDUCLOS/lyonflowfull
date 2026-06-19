@@ -28,6 +28,7 @@ def _haversine_m(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
     a = math.sin(dp / 2) ** 2 + math.cos(p1) * math.cos(p2) * math.sin(dl / 2) ** 2
     return 2 * r * math.asin(math.sqrt(a))
 
+
 logger = logging.getLogger(__name__)
 
 
@@ -96,8 +97,11 @@ def shortest_path(
 
     try:
         path_nodes = nx.astar_path(
-            weighted, origin_node, destination_node,
-            heuristic=_heuristic, weight="travel_time_s",
+            weighted,
+            origin_node,
+            destination_node,
+            heuristic=_heuristic,
+            weight="travel_time_s",
         )
     except nx.NetworkXNoPath:
         logger.warning(f"Pas de chemin entre {origin_node} et {destination_node}")

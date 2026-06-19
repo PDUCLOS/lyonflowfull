@@ -62,8 +62,7 @@ def test_clear_current_persona_pops_session_key():
 
         # ASSERTIONS
         assert mgr._SESSION_KEY not in fake, (
-            f"BUG REGRESSION : _SESSION_KEY encore présent après "
-            f"clear_current_persona() : {dict(fake)}"
+            f"BUG REGRESSION : _SESSION_KEY encore présent après clear_current_persona() : {dict(fake)}"
         )
         # L'auth du persona courant doit aussi être cleared
         assert fake.get(mgr._SESSION_AUTH_KEY, {}).get("pro_tcl") is None
@@ -138,9 +137,7 @@ def test_navigation_uses_clear_current_persona_not_auth():
     import re
 
     # Cherche un appel direct (avec parenthèse ouvrante)
-    direct_calls = re.findall(
-        r"clear_current_persona_auth\s*\(", content
-    )
+    direct_calls = re.findall(r"clear_current_persona_auth\s*\(", content)
     assert not direct_calls, (
         f"navigation.py contient {len(direct_calls)} appel(s) à "
         f"clear_current_persona_auth() — ce helper ne pop que l'auth, "

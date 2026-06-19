@@ -23,6 +23,7 @@ pour H+1h. Échantillonnage : 1 pas = 5 min (cf. computed_at).
 
 MLflow tracking opt-in via MLFLOW_TRACKING_URI non-vide.
 """
+
 from __future__ import annotations
 
 import logging
@@ -220,6 +221,7 @@ class XGBoostSpeedModel:
         try:
             from src.data.db_query import get_latest_drift_report
             from src.ml.model_card import generate_xgboost_card, save_card
+
             params = {
                 "horizon_min": horizon_minutes,
                 "n_estimators": n_estimators,
@@ -350,6 +352,7 @@ class XGBoostSpeedModel:
         """
         query = """
             SELECT
+                channel_id, channel_hash,
                 speed_kmh, lag_1, lag_2, lag_3,
                 rolling_mean_3,
                 sin_hour, cos_hour,

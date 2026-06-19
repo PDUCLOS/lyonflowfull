@@ -32,6 +32,10 @@ x-common-env: &common-env
   MINIO_BUCKET_GOLD: lyonflow-gold
   REDIS_URL: redis://redis:6379/0
   MLFLOW_TRACKING_URI: http://mlflow:5000
+  # Sprint 10+ MLOps — modèles .pkl persistés dans /tmp/models
+  # (writeable par user airflow, /opt/airflow/data appartient à root).
+  # Mirroré sur sdb2 via deploy script.
+  LYONFLOW_MODELS_DIR: /tmp/models
   # Personas (auth) — lus par src/persona/auth.py
   PERSONA_PRO_TCL_USERNAME: ${PERSONA_PRO_TCL_USERNAME}
   PERSONA_PRO_TCL_PASSWORD: ${PERSONA_PRO_TCL_PASSWORD}

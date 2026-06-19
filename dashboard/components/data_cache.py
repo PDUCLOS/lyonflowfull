@@ -259,9 +259,7 @@ def cached_multimodal_grid_diagnosis_counts() -> pd.DataFrame:
 
 
 @st.cache_data(ttl=TTL_FAST, show_spinner=False)
-def cached_bus_traffic_spatial(
-    line_ref: str | None = None, limit: int = 5000
-) -> pd.DataFrame:
+def cached_bus_traffic_spatial(line_ref: str | None = None, limit: int = 5000) -> pd.DataFrame:
     """Corrélation bus × trafic spatialisée (Sprint 15+, Axe 3).
 
     MV ``gold.mv_bus_traffic_spatial`` : JOIN spatial 0.001° (~100 m).

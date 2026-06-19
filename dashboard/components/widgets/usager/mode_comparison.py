@@ -25,13 +25,13 @@ import streamlit as st
 
 # Couleurs winner/alternatives — cohérent avec colors.py + spec §5.4
 _WINNER_ACCENT = "#4CAF50"  # vert (gagnant)
-_ALT_ACCENT = "#9E9E9E"     # gris (alternatives)
+_ALT_ACCENT = "#9E9E9E"  # gris (alternatives)
 _UNAVAILABLE_ACCENT = "#455A64"  # gris foncé (mode indispo)
 
 _MODE_META = {
-    "tc":      {"icon": "🚌", "label": "Transport en commun", "color": "#1976D2"},
-    "voiture": {"icon": "🚗", "label": "Voiture",             "color": "#FF9800"},
-    "velov":   {"icon": "🚲", "label": "Vélov",               "color": "#43A047"},
+    "tc": {"icon": "🚌", "label": "Transport en commun", "color": "#1976D2"},
+    "voiture": {"icon": "🚗", "label": "Voiture", "color": "#FF9800"},
+    "velov": {"icon": "🚲", "label": "Vélov", "color": "#43A047"},
 }
 
 
@@ -81,7 +81,7 @@ def render_mode_comparison(
                              border-radius:12px;font-size:0.7rem;font-weight:600;">🔴 ARRIVÉE</span>
                 <span style="font-weight:600;">{destination}</span>
                 <span style="margin-left:auto;opacity:0.7;font-size:0.8rem;">
-                    Critère : <b>{'⏱️ Temps' if critere == 'temps' else '💰 Coût'}</b>
+                    Critère : <b>{"⏱️ Temps" if critere == "temps" else "💰 Coût"}</b>
                 </span>
             </div>
             """,
@@ -157,7 +157,7 @@ def _render_mode_card(
                     ⚠️ Indisponible pour ce trajet
                 </div>
                 <div style="font-size:0.7rem;opacity:0.5;margin-top:0.3rem;font-style:italic;">
-                    Source: {result.get('source', '?') if result else 'aucune'}
+                    Source: {result.get("source", "?") if result else "aucune"}
                 </div>
             </div>
             """
@@ -176,34 +176,29 @@ def _render_mode_card(
     winner_badge = (
         f'<span style="background:{_WINNER_ACCENT};color:white;padding:0.25rem 0.7rem;'
         f'border-radius:12px;font-size:0.7rem;font-weight:700;letter-spacing:0.5px;">'
-        f'🏆 RECOMMANDÉ</span>'
+        f"🏆 RECOMMANDÉ</span>"
         if is_winner
-        else ''
+        else ""
     )
-    score_html = (
-        f'<span style="opacity:0.6;font-size:0.7rem;">score: {score:.1f}</span>'
-        if score is not None
-        else ''
-    )
+    score_html = f'<span style="opacity:0.6;font-size:0.7rem;">score: {score:.1f}</span>' if score is not None else ""
 
     calories_html = (
-        f'<div style="font-size:0.85rem;opacity:0.85;margin-top:0.3rem;">'
-        f'🔥 {calories} kcal</div>'
+        f'<div style="font-size:0.85rem;opacity:0.85;margin-top:0.3rem;">🔥 {calories} kcal</div>'
         if mode_key == "velov"
-        else ''
+        else ""
     )
 
     congested_html = (
         f'<div style="font-size:0.75rem;color:{_WINNER_ACCENT};font-weight:600;margin-top:0.3rem;">'
-        f'⚠️ Trafic congestionné</div>'
+        f"⚠️ Trafic congestionné</div>"
         if mode_key == "voiture" and impact.get("is_congested")
-        else ''
+        else ""
     )
 
     st.html(
         f"""
         <div class="lyonflow-card" style="border-left:4px solid {accent};
-                    {'box-shadow:0 4px 16px rgba(76,175,80,0.25);' if is_winner else ''}">
+                    {"box-shadow:0 4px 16px rgba(76,175,80,0.25);" if is_winner else ""}">
             <div style="display:flex;justify-content:space-between;align-items:center;
                         gap:0.5rem;flex-wrap:wrap;">
                 <span style="font-size:1.3rem;font-weight:700;color:{color};">
@@ -262,8 +257,7 @@ def _render_insight(results: dict[str, dict], winner: str) -> None:
             mode_label = _MODE_META.get(winner, {}).get("label", winner)
             voiture_label = _MODE_META.get("voiture", {}).get("label", "voiture")
             insights.append(
-                f"🌿 **{mode_label}** économise **{int(saved_co2)} g de CO2** "
-                f"vs **{voiture_label}** sur ce trajet."
+                f"🌿 **{mode_label}** économise **{int(saved_co2)} g de CO2** vs **{voiture_label}** sur ce trajet."
             )
 
     # Bonus calories Vélov
@@ -302,10 +296,7 @@ def _compute_recommendation(results: dict[str, dict], critere: str) -> dict:
     lui-même testable sans la lib routing). Logique identique à
     ``src.routing.eco_calculator.recommend_mode``.
     """
-    durations = {
-        m: float(r.get("duration_min", 0.0) or 0.0)
-        for m, r in results.items()
-    }
+    durations = {m: float(r.get("duration_min", 0.0) or 0.0) for m, r in results.items()}
     scores: dict[str, float] = {}
     for mode_key, result in results.items():
         if not result.get("feasible", False):
@@ -325,9 +316,6 @@ def _compute_recommendation(results: dict[str, dict], critere: str) -> dict:
         winner = "tc"  # fallback par défaut
 
     mode_label = _MODE_META.get(winner, {}).get("label", winner)
-    explanation = (
-        f"🏆 **{mode_label}** recommandé selon le critère "
-        f"{'⏱️ temps' if critere == 'temps' else '💰 coût'}."
-    )
+    explanation = f"🏆 **{mode_label}** recommandé selon le critère {'⏱️ temps' if critere == 'temps' else '💰 coût'}."
 
     return {"winner": winner, "scores": scores, "explanation": explanation}

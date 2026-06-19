@@ -26,17 +26,29 @@ def test_velov_segment_has_bikes_mechanical_field():
     from src.routing.pathfinder_multimodal import VelovSegment
 
     seg = VelovSegment(
-        mode="cycle", from_label="A", to_label="B",
-        from_lon=4.8, from_lat=45.7, to_lon=4.9, to_lat=45.8,
-        distance_m=1000, duration_min=5,
+        mode="cycle",
+        from_label="A",
+        to_label="B",
+        from_lon=4.8,
+        from_lat=45.7,
+        to_lon=4.9,
+        to_lat=45.8,
+        distance_m=1000,
+        duration_min=5,
         n_bikes_mechanical=7,
     )
     assert seg.n_bikes_mechanical == 7
     # Default None si pas fourni
     seg_default = VelovSegment(
-        mode="cycle", from_label="A", to_label="B",
-        from_lon=4.8, from_lat=45.7, to_lon=4.9, to_lat=45.8,
-        distance_m=1000, duration_min=5,
+        mode="cycle",
+        from_label="A",
+        to_label="B",
+        from_lon=4.8,
+        from_lat=45.7,
+        to_lon=4.9,
+        to_lat=45.8,
+        distance_m=1000,
+        duration_min=5,
     )
     assert seg_default.n_bikes_mechanical is None
 
@@ -46,9 +58,15 @@ def test_velov_segment_has_bikes_electrical_field():
     from src.routing.pathfinder_multimodal import VelovSegment
 
     seg = VelovSegment(
-        mode="cycle", from_label="A", to_label="B",
-        from_lon=4.8, from_lat=45.7, to_lon=4.9, to_lat=45.8,
-        distance_m=1000, duration_min=5,
+        mode="cycle",
+        from_label="A",
+        to_label="B",
+        from_lon=4.8,
+        from_lat=45.7,
+        to_lon=4.9,
+        to_lat=45.8,
+        distance_m=1000,
+        duration_min=5,
         n_bikes_electrical=3,
     )
     assert seg.n_bikes_electrical == 3
@@ -72,12 +90,7 @@ def test_velov_trip_has_render_station_cards_function():
 def test_velov_trip_render_calls_station_cards():
     """render_velov_trip doit appeler _render_station_cards (câblage Sprint 14)."""
     velov_trip_path = (
-        Path(__file__).resolve().parents[2]
-        / "dashboard"
-        / "components"
-        / "widgets"
-        / "usager"
-        / "velov_trip.py"
+        Path(__file__).resolve().parents[2] / "dashboard" / "components" / "widgets" / "usager" / "velov_trip.py"
     )
     source = velov_trip_path.read_text(encoding="utf-8")
 
@@ -95,12 +108,7 @@ def test_velov_trip_render_calls_station_cards():
 def test_velov_station_cards_have_all_4_status_colors():
     """_render_single_station_card doit gérer les 4 statuts (OK, FAIBLE, VIDE, PLEINE)."""
     velov_trip_path = (
-        Path(__file__).resolve().parents[2]
-        / "dashboard"
-        / "components"
-        / "widgets"
-        / "usager"
-        / "velov_trip.py"
+        Path(__file__).resolve().parents[2] / "dashboard" / "components" / "widgets" / "usager" / "velov_trip.py"
     )
     source = velov_trip_path.read_text(encoding="utf-8")
 

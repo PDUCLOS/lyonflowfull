@@ -10,6 +10,7 @@ Après (Sprint 8+) : focus H+1h strict, plus de choix.
 
 Voir `SPRINT_VPS-8_REPORT.md` pour le contexte.
 """
+
 from __future__ import annotations
 
 import inspect
@@ -21,9 +22,7 @@ def test_velov_map_selectbox_h1h_only():
 
     src = inspect.getsource(render_velov_map)
     # Le selectbox ne doit proposer QUE H+1h
-    assert 'labels = {60: "Prédiction H+1h"}' in src, (
-        "velov_map selectbox doit être {60: 'Prédiction H+1h'} uniquement"
-    )
+    assert 'labels = {60: "Prédiction H+1h"}' in src, "velov_map selectbox doit être {60: 'Prédiction H+1h'} uniquement"
     # Pas d'option 0 ou 30 dans le dict labels
     assert "labels = {0:" not in src, "labels ne doit pas contenir l'option 0 (Maintenant)"
     assert "labels = {30:" not in src, "labels ne doit pas contenir l'option 30 (H+30min)"
@@ -40,7 +39,7 @@ def test_traffic_widget_one_card_h1h():
     # Après : 1 card H+1h
     assert "h_plus_1h" in src, "traffic_widget doit afficher H+1h"
     # Format card unique
-    assert 'font-size:1.6rem' in src, "Card H+1h doit être plus grosse (focus)"
+    assert "font-size:1.6rem" in src, "Card H+1h doit être plus grosse (focus)"
 
 
 def test_velov_widget_uses_pred_60():
@@ -66,16 +65,12 @@ def test_gnn_map_horizons_h1h_only():
     """gnn_map._DEFAULT_HORIZONS = (60,) uniquement."""
     from dashboard.components.widgets.pro_tcl.gnn_map import _DEFAULT_HORIZONS
 
-    assert _DEFAULT_HORIZONS == (60,), (
-        f"gnn_map._DEFAULT_HORIZONS doit être (60,), trouvé {_DEFAULT_HORIZONS}"
-    )
+    assert _DEFAULT_HORIZONS == (60,), f"gnn_map._DEFAULT_HORIZONS doit être (60,), trouvé {_DEFAULT_HORIZONS}"
 
 
 def test_model_monitoring_horizons_h1h_only():
     """model_monitoring.horizons = [60] uniquement (pas 6 horizons)."""
-    with open(
-        "/Users/patriceduclos/Documents/Lyonfull/dashboard/components/widgets/pro_tcl/model_monitoring.py"
-    ) as f:
+    with open("/Users/patriceduclos/Documents/Lyonfull/dashboard/components/widgets/pro_tcl/model_monitoring.py") as f:
         src_mm = f.read()
     assert "horizons = [60]" in src_mm, "model_monitoring doit utiliser horizons = [60]"
     assert "horizons = [5, 15, 30, 60, 180, 360]" not in src_mm, (
@@ -85,9 +80,7 @@ def test_model_monitoring_horizons_h1h_only():
 
 def test_usager_mon_trajet_selectbox_h1h():
     """Page Mon Trajet : selectbox horizon = [60] uniquement."""
-    with open(
-        "/Users/patriceduclos/Documents/Lyonfull/dashboard/pages/Usager_1_Mon_Trajet.py"
-    ) as f:
+    with open("/Users/patriceduclos/Documents/Lyonfull/dashboard/pages/Usager_1_Mon_Trajet.py") as f:
         src = f.read()
     assert "[0, 30, 60, 180, 360]" not in src, (
         "Usager_1_Mon_Trajet expose encore [0, 30, 60, 180, 360] — doit être [60]"
@@ -97,13 +90,10 @@ def test_usager_mon_trajet_selectbox_h1h():
 
 def test_pro_pcc_live_selectbox_h1h():
     """Page Pro PCC Live : render_traffic_map horizon_default=60."""
-    with open(
-        "/Users/patriceduclos/Documents/Lyonfull/dashboard/pages/Pro_1_PCC_Live.py"
-    ) as f:
+    with open("/Users/patriceduclos/Documents/Lyonfull/dashboard/pages/Pro_1_PCC_Live.py") as f:
         src = f.read()
     assert "horizon_default=60" in src, "Pro PCC Live doit utiliser horizon_default=60"
     assert "horizon_default=30" not in src, "Pro PCC Live utilise encore horizon_default=30"
-
 
 
 def test_data_cache_defaults_h1h():
@@ -116,10 +106,8 @@ def test_data_cache_defaults_h1h():
     sig1 = inspect.signature(cached_velov_predictions)
     sig2 = inspect.signature(cached_traffic_predictions_for_map)
     assert sig1.parameters["horizon_minutes"].default == 60, (
-        f"cached_velov_predictions default doit être 60, trouvé "
-        f"{sig1.parameters['horizon_minutes'].default}"
+        f"cached_velov_predictions default doit être 60, trouvé {sig1.parameters['horizon_minutes'].default}"
     )
     assert sig2.parameters["horizon_minutes"].default == 60, (
-        f"cached_traffic_predictions_for_map default doit être 60, trouvé "
-        f"{sig2.parameters['horizon_minutes'].default}"
+        f"cached_traffic_predictions_for_map default doit être 60, trouvé {sig2.parameters['horizon_minutes'].default}"
     )

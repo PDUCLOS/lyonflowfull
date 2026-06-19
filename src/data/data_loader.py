@@ -270,7 +270,11 @@ def load_nearest_velov_stations(
         DashboardDataError: si PostgreSQL ne répond pas.
     """
     return get_nearest_velov_stations(
-        lat=lat, lon=lon, k=k, require_bikes=require_bikes, require_docks=require_docks,
+        lat=lat,
+        lon=lon,
+        k=k,
+        require_bikes=require_bikes,
+        require_docks=require_docks,
     )
 
 
@@ -681,7 +685,7 @@ def load_tcl_lines() -> list[dict]:
         out.append(
             {
                 "id": line_id,
-                "name": f"{ 'Tram' if mode=='tram' else 'Métro' if mode=='metro' else 'Bus' } {line_id}",
+                "name": f"{'Tram' if mode == 'tram' else 'Métro' if mode == 'metro' else 'Bus'} {line_id}",
                 "mode": mode,
                 "color": color,
                 "icon": icon,
@@ -742,6 +746,7 @@ def _load_lyon_addresses_cached() -> list[str]:
         return cached[1]
     _require_db_or_raise("referentiel.lieux_lyon")
     from src.data.db_query import get_lieux_lyon_names
+
     result = get_lieux_lyon_names()
     _lieux_cache["names"] = (now, result)
     return result
@@ -755,6 +760,7 @@ def _load_lyon_addresses_with_coords_cached() -> list[dict]:
         return cached[1]
     _require_db_or_raise("referentiel.lieux_lyon")
     from src.data.db_query import get_lieux_lyon_with_coords
+
     result = get_lieux_lyon_with_coords()
     _lieux_cache["coords"] = (now, result)
     return result
@@ -781,9 +787,7 @@ def load_lieux_transports(lieu_id: int | None = None) -> list[dict]:
     return get_lieux_transports(lieu_id=lieu_id)
 
 
-def load_cadence_for_line(
-    line_ref: str, day_type: str | None = None, time_bucket: str | None = None
-) -> list[dict]:
+def load_cadence_for_line(line_ref: str, day_type: str | None = None, time_bucket: str | None = None) -> list[dict]:
     """Cadence observée pour une ligne TCL.
 
     Args:
@@ -1005,9 +1009,7 @@ def load_spatial_mapping() -> pd.DataFrame:
     return get_spatial_mapping()
 
 
-def load_traffic_predictions_for_map(
-    horizon_minutes: int = 60, limit: int = 500
-) -> pd.DataFrame:
+def load_traffic_predictions_for_map(horizon_minutes: int = 60, limit: int = 500) -> pd.DataFrame:
     """Prédictions trafic pour la carte GNN (Sprint 9).
 
     Raises:
@@ -1052,6 +1054,7 @@ def get_tomtom_health() -> dict:
     """
     try:
         from src.ingestion.tomtom_traffic import health as tomtom_health
+
         return tomtom_health()
     except Exception as e:  # pragma: no cover
         return {"error": str(e)}
@@ -1165,8 +1168,7 @@ def load_multimodal_grid_diagnosis_counts() -> pd.DataFrame:
     if df.empty:
         raise DashboardDataError(
             source="gold.mv_multimodal_grid",
-            detail="Vue matérialisée vide — pas de diagnostic à agréger. "
-            "Vérifier le DAG refresh_mv_multimodal_grid.",
+            detail="Vue matérialisée vide — pas de diagnostic à agréger. Vérifier le DAG refresh_mv_multimodal_grid.",
         )
     return df
 
@@ -1212,8 +1214,7 @@ def load_bus_traffic_spatial_diagnosis_counts(
     if df.empty:
         raise DashboardDataError(
             source="gold.mv_bus_traffic_spatial",
-            detail="Vue matérialisée vide — pas de diagnostic spatialisé. "
-            "Vérifier migration 18 + DAG refresh.",
+            detail="Vue matérialisée vide — pas de diagnostic spatialisé. Vérifier migration 18 + DAG refresh.",
         )
     return df
 
@@ -1235,8 +1236,7 @@ def load_network_health_score() -> pd.DataFrame:
     if df.empty:
         raise DashboardDataError(
             source="gold.fn_network_health_score()",
-            detail="Fonction SQL ne retourne aucune ligne. "
-            "Verifier migration 019 appliquee.",
+            detail="Fonction SQL ne retourne aucune ligne. Verifier migration 019 appliquee.",
         )
     return df
 

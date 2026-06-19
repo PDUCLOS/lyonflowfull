@@ -17,6 +17,7 @@ Le helper est utilisé par :func:`get_bottlenecks_summary`,
 colonnes ``line_label`` et ``road_label`` consommées par les widgets
 ``Pro TCL`` (line_kpis, otp_heatmap).
 """
+
 from __future__ import annotations
 
 import sys

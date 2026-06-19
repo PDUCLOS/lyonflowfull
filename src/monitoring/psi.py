@@ -103,10 +103,7 @@ def compute_psi(
     curr_pcts = curr_counts / curr_counts.sum()
 
     # PSI
-    psi = sum(
-        _safe_psi_term(float(r), float(c))
-        for r, c in zip(ref_pcts, curr_pcts, strict=True)
-    )
+    psi = sum(_safe_psi_term(float(r), float(c)) for r, c in zip(ref_pcts, curr_pcts, strict=True))
 
     if psi < 0.1:
         status = "stable"

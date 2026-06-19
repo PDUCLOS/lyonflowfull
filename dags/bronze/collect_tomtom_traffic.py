@@ -18,6 +18,7 @@ Quotas :
   = 1152 req/jour. Marge confortable.
 * retries=0 (politique Sprint VPS-5 — le cycle suivant rattrape).
 """
+
 from __future__ import annotations
 
 import logging
@@ -54,7 +55,9 @@ def _collect_tomtom_flow(**context) -> int:
     n = result.n_records
     logger.info(
         "TomTomTrafficFlow OK : %d tuiles, %d ms, last_success_at=%s",
-        n, result.duration_ms, collector.last_success_at,
+        n,
+        result.duration_ms,
+        collector.last_success_at,
     )
     # Pousse le count dans XCom pour le monitoring downstream
     context["ti"].xcom_push(key="n_records", value=n)

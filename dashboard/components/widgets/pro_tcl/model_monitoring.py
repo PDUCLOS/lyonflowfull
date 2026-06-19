@@ -84,6 +84,7 @@ def render_model_registry() -> None:
     # Sprint 10+ : drift réel depuis gold.model_drift_reports (PAS mock)
     # Lecture du dernier rapport de drift persisté par build_xgb_training_set.
     from src.data.db_query import get_latest_drift_report
+
     latest_drift = get_latest_drift_report()
     if latest_drift:
         n_drift = 1 if latest_drift.get("dataset_drift") else 0
@@ -109,12 +110,12 @@ def render_model_registry() -> None:
         with st.expander("📊 Dernier rapport de drift (PSI)", expanded=False):
             st.markdown(
                 f"""
-                - **Dataset drift** : `{latest_drift.get('dataset_drift')}`
+                - **Dataset drift** : `{latest_drift.get("dataset_drift")}`
                 - **Drift share** : `{drift_share_pct:.1f}%`
-                - **N ref / current** : `{latest_drift.get('n_ref')}` / `{latest_drift.get('n_current')}`
-                - **Période ref** : `{latest_drift.get('ref_from')}` → `{latest_drift.get('ref_to')}`
-                - **Période current** : `{latest_drift.get('current_from')}` → `{latest_drift.get('current_to')}`
-                - **Computed at** : `{latest_drift.get('computed_at')}`
+                - **N ref / current** : `{latest_drift.get("n_ref")}` / `{latest_drift.get("n_current")}`
+                - **Période ref** : `{latest_drift.get("ref_from")}` → `{latest_drift.get("ref_to")}`
+                - **Période current** : `{latest_drift.get("current_from")}` → `{latest_drift.get("current_to")}`
+                - **Computed at** : `{latest_drift.get("computed_at")}`
                 """
             )
             report = latest_drift.get("report", {})
@@ -417,10 +418,7 @@ def render_training_history() -> None:
         except ImportError:
             st.dataframe(history, use_container_width=True, hide_index=True)
     except Exception as e:
-        st.info(
-            f"Historique entraînement indisponible ({e}). "
-            "Branchement MLflow runs history prévu Sprint 10+."
-        )
+        st.info(f"Historique entraînement indisponible ({e}). Branchement MLflow runs history prévu Sprint 10+.")
 
 
 def render_drift_panel() -> None:
@@ -474,9 +472,7 @@ def render_drift_panel() -> None:
             except (TypeError, ValueError):
                 psi = 0.0
             col_status = stats.get("status", "?")
-            col_icon = {"stable": "🟢", "moderate": "🟡", "significant": "🔴"}.get(
-                col_status, "⚪"
-            )
+            col_icon = {"stable": "🟢", "moderate": "🟡", "significant": "🔴"}.get(col_status, "⚪")
             # Sprint 15+ (audit Pro TCL B-08) : escape nom de colonne et
             # status pour éviter que des caractères spéciaux (`<`, `>`, `&`)
             # ne cassent le parsing HTML de Streamlit.

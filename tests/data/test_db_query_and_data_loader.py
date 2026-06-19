@@ -15,6 +15,7 @@ Note : pour tester du code avec une vraie DB, marquer
 (2026-06-19) — la fixture ``mock_db`` qui monkeypatchait
 ``src.db.connection`` a été virée d'un commun accord avec Patrice.
 """
+
 from __future__ import annotations
 
 import sys

@@ -22,6 +22,7 @@ Affiche :
 Si PostgreSQL indispo → fail loud via DashboardDataError.
 Si TomTom pas encore alimenté → message "TomTom pas encore collecté".
 """
+
 from __future__ import annotations
 
 import pandas as pd
@@ -94,28 +95,45 @@ def _scatter_tomtom_vs_gl(df: pd.DataFrame) -> None:
         float(plot_df["gl_speed_kmh"].max()),
         80.0,
     )
-    fig.add_trace(go.Scatter(
-        x=[0, speed_max], y=[0, speed_max],
-        mode="lines",
-        line=dict(color="#9E9E9E", dash="dash", width=1),
-        name="y = x (parfait)",
-        hoverinfo="skip",
-        showlegend=True,
-    ))
+    fig.add_trace(
+        go.Scatter(
+            x=[0, speed_max],
+            y=[0, speed_max],
+            mode="lines",
+            line=dict(color="#9E9E9E", dash="dash", width=1),
+            name="y = x (parfait)",
+            hoverinfo="skip",
+            showlegend=True,
+        )
+    )
 
     # Bandes de tolérance ±10 km/h (status=ok) et ±20 km/h (minor_drift)
-    fig.add_trace(go.Scatter(
-        x=[0, speed_max], y=[10, speed_max + 10],
-        mode="lines", line=dict(color="rgba(76,175,80,0.2)", width=0),
-        fill="tonexty", fillcolor="rgba(76,175,80,0.08)",
-        name="±10 km/h (ok)", hoverinfo="skip", showlegend=True,
-    ))
-    fig.add_trace(go.Scatter(
-        x=[10, speed_max + 10], y=[0, speed_max],
-        mode="lines", line=dict(color="rgba(76,175,80,0.2)", width=0),
-        fill="tonexty", fillcolor="rgba(76,175,80,0.08)",
-        name="±10 km/h (ok)", hoverinfo="skip", showlegend=False,
-    ))
+    fig.add_trace(
+        go.Scatter(
+            x=[0, speed_max],
+            y=[10, speed_max + 10],
+            mode="lines",
+            line=dict(color="rgba(76,175,80,0.2)", width=0),
+            fill="tonexty",
+            fillcolor="rgba(76,175,80,0.08)",
+            name="±10 km/h (ok)",
+            hoverinfo="skip",
+            showlegend=True,
+        )
+    )
+    fig.add_trace(
+        go.Scatter(
+            x=[10, speed_max + 10],
+            y=[0, speed_max],
+            mode="lines",
+            line=dict(color="rgba(76,175,80,0.2)", width=0),
+            fill="tonexty",
+            fillcolor="rgba(76,175,80,0.08)",
+            name="±10 km/h (ok)",
+            hoverinfo="skip",
+            showlegend=False,
+        )
+    )
 
     # Points par status (couleur)
     for status, color in STATUS_COLORS.items():
@@ -124,22 +142,23 @@ def _scatter_tomtom_vs_gl(df: pd.DataFrame) -> None:
         sub = plot_df[plot_df["status"] == status]
         if sub.empty:
             continue
-        fig.add_trace(go.Scatter(
-            x=sub["tomtom_speed_kmh"],
-            y=sub["gl_speed_kmh"],
-            mode="markers",
-            marker=dict(color=color, size=10, opacity=0.75,
-                        line=dict(color="white", width=1)),
-            name=f"{STATUS_LABELS[status]} ({len(sub)})",
-            customdata=sub[["tile_key", "channel_id", "site_name", "delta_kmh"]].values,
-            hovertemplate=(
-                "<b>%{customdata[1]}</b> %{customdata[2]}<br>"
-                "Tuile : %{customdata[0]}<br>"
-                "TomTom : %{x:.1f} km/h<br>"
-                "GL : %{y:.1f} km/h<br>"
-                "Δ : %{customdata[3]:+.1f} km/h<extra></extra>"
-            ),
-        ))
+        fig.add_trace(
+            go.Scatter(
+                x=sub["tomtom_speed_kmh"],
+                y=sub["gl_speed_kmh"],
+                mode="markers",
+                marker=dict(color=color, size=10, opacity=0.75, line=dict(color="white", width=1)),
+                name=f"{STATUS_LABELS[status]} ({len(sub)})",
+                customdata=sub[["tile_key", "channel_id", "site_name", "delta_kmh"]].values,
+                hovertemplate=(
+                    "<b>%{customdata[1]}</b> %{customdata[2]}<br>"
+                    "Tuile : %{customdata[0]}<br>"
+                    "TomTom : %{x:.1f} km/h<br>"
+                    "GL : %{y:.1f} km/h<br>"
+                    "Δ : %{customdata[3]:+.1f} km/h<extra></extra>"
+                ),
+            )
+        )
 
     fig.update_layout(
         title="TomTom (x) vs Grand Lyon (y) — vitesse km/h",
@@ -164,30 +183,34 @@ def _heatmap_delta(df: pd.DataFrame, top_n: int = 20) -> None:
     plot_df["abs_delta"] = plot_df["delta_kmh"].abs()
     plot_df = plot_df.nlargest(top_n, "abs_delta")
 
-    label = (plot_df["channel_id"].astype(str) + " · "
-             + plot_df["site_name"].fillna("?").astype(str))
+    label = plot_df["channel_id"].astype(str) + " · " + plot_df["site_name"].fillna("?").astype(str)
 
     import plotly.graph_objects as go
-    fig = go.Figure(go.Bar(
-        x=plot_df["delta_kmh"],
-        y=label,
-        orientation="h",
-        marker_color=[
-            STATUS_COLORS["drift"] if abs(d) > 20
-            else STATUS_COLORS["minor_drift"] if abs(d) > 10
-            else STATUS_COLORS["ok"]
-            for d in plot_df["delta_kmh"]
-        ],
-        text=[f"{d:+.1f}" for d in plot_df["delta_kmh"]],
-        textposition="outside",
-        hovertemplate=(
-            "<b>%{y}</b><br>"
-            "Δ : %{x:+.1f} km/h<br>"
-            "TomTom : %{customdata[0]:.1f}<br>"
-            "GL : %{customdata[1]:.1f}<extra></extra>"
-        ),
-        customdata=plot_df[["tomtom_speed_kmh", "gl_speed_kmh"]].values,
-    ))
+
+    fig = go.Figure(
+        go.Bar(
+            x=plot_df["delta_kmh"],
+            y=label,
+            orientation="h",
+            marker_color=[
+                STATUS_COLORS["drift"]
+                if abs(d) > 20
+                else STATUS_COLORS["minor_drift"]
+                if abs(d) > 10
+                else STATUS_COLORS["ok"]
+                for d in plot_df["delta_kmh"]
+            ],
+            text=[f"{d:+.1f}" for d in plot_df["delta_kmh"]],
+            textposition="outside",
+            hovertemplate=(
+                "<b>%{y}</b><br>"
+                "Δ : %{x:+.1f} km/h<br>"
+                "TomTom : %{customdata[0]:.1f}<br>"
+                "GL : %{customdata[1]:.1f}<extra></extra>"
+            ),
+            customdata=plot_df[["tomtom_speed_kmh", "gl_speed_kmh"]].values,
+        )
+    )
     fig.update_layout(
         title=f"Top {top_n} paires par |delta| km/h (détection drift)",
         xaxis_title="Delta (TomTom − GL) en km/h",
@@ -208,16 +231,18 @@ def _drift_table(drift_df: pd.DataFrame) -> None:
     rows = []
     for _, r in drift_df.iterrows():
         health = str(r.get("sensor_health", "no_data"))
-        rows.append({
-            "Channel": r.get("channel_id", "?"),
-            "Site": r.get("site_name", "—") or "—",
-            "Paires (24h)": int(r.get("n_pairs", 0) or 0),
-            "En drift": int(r.get("n_drift", 0) or 0),
-            "Ratio drift": f"{float(r.get('drift_ratio', 0) or 0) * 100:.0f} %",
-            "Δ̄ abs (km/h)": f"{float(r.get('avg_abs_delta_kmh', 0) or 0):.1f}",
-            "Δ max (km/h)": f"{float(r.get('max_abs_delta_kmh', 0) or 0):.1f}",
-            "Santé": SENSOR_HEALTH_LABELS.get(health, health),
-        })
+        rows.append(
+            {
+                "Channel": r.get("channel_id", "?"),
+                "Site": r.get("site_name", "—") or "—",
+                "Paires (24h)": int(r.get("n_pairs", 0) or 0),
+                "En drift": int(r.get("n_drift", 0) or 0),
+                "Ratio drift": f"{float(r.get('drift_ratio', 0) or 0) * 100:.0f} %",
+                "Δ̄ abs (km/h)": f"{float(r.get('avg_abs_delta_kmh', 0) or 0):.1f}",
+                "Δ max (km/h)": f"{float(r.get('max_abs_delta_kmh', 0) or 0):.1f}",
+                "Santé": SENSOR_HEALTH_LABELS.get(health, health),
+            }
+        )
     df_disp = pd.DataFrame(rows)
 
     # Badge de couleur sur la colonne Santé via Styler

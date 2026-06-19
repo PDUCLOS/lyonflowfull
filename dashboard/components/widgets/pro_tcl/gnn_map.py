@@ -92,7 +92,10 @@ def _load_merged(horizon: int, limit: int = 500) -> pd.DataFrame | None:
         preds_df = preds_df.copy()
         preds_df["axis_key"] = preds_df["axis_key"].astype(str)
         merged = mapping_df.merge(
-            preds_df, left_on="channel_id", right_on="axis_key", how="inner",
+            preds_df,
+            left_on="channel_id",
+            right_on="axis_key",
+            how="inner",
         )
     elif "node_idx" in preds_df.columns:
         merged = mapping_df.merge(preds_df, on="node_idx", how="inner")
@@ -118,9 +121,7 @@ def _render_pydeck(merged: pd.DataFrame, height: int, zoom: float = 11.0) -> str
 
     model_col = "model_version" if "model_version" in merged.columns else "model_name"
     dominant_model = (
-        merged[model_col].mode().iloc[0]
-        if model_col in merged.columns and not merged[model_col].mode().empty
-        else "?"
+        merged[model_col].mode().iloc[0] if model_col in merged.columns and not merged[model_col].mode().empty else "?"
     )
 
     layer = pdk.Layer(
@@ -200,7 +201,7 @@ def render_traffic_map(
             key=f"traffic_map_horizon_{key_suffix}",
             format_func=lambda x: f"H+{x}min",
             help="Sprint 8+ : focus H+1h. Les autres horizons ne sont plus "
-                 "entraînés (1 modèle au lieu de 4 = -75% compute).",
+            "entraînés (1 modèle au lieu de 4 = -75% compute).",
         )
 
     merged = _load_merged(horizon, limit=500)

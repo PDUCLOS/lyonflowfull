@@ -9,6 +9,7 @@ Ce module vérifie :
 5. La classe ``MockDB`` et la fixture ``mock_db`` ont été virées du
    conftest centralisé (Sprint 15+).
 """
+
 from __future__ import annotations
 
 from pathlib import Path
@@ -51,9 +52,7 @@ def test_no_mock_imports_in_src() -> None:
                 if '"""' in line or "'''" in line:
                     continue
                 # Sinon, c'est un import ou un appel → fail
-                raise AssertionError(
-                    f"{py_file}:{line_no} contient une référence non-doc à src.data.mock :\n  {line}"
-                )
+                raise AssertionError(f"{py_file}:{line_no} contient une référence non-doc à src.data.mock :\n  {line}")
 
 
 def test_widgets_have_no_mock_imports() -> None:
@@ -65,9 +64,7 @@ def test_widgets_have_no_mock_imports() -> None:
         if "__pycache__" in str(py_file):
             continue
         content = py_file.read_text()
-        assert "src.data.mock" not in content, (
-            f"{py_file} importe encore src.data.mock — c'est interdit (Sprint 8)"
-        )
+        assert "src.data.mock" not in content, f"{py_file} importe encore src.data.mock — c'est interdit (Sprint 8)"
 
 
 def test_no_mockdb_in_conftest() -> None:
@@ -82,14 +79,11 @@ def test_no_mockdb_in_conftest() -> None:
     content = conftest_path.read_text()
 
     assert "class MockDB" not in content, (
-        "tests/conftest.py contient encore une classe MockDB — "
-        "politique zéro mock violée"
+        "tests/conftest.py contient encore une classe MockDB — politique zéro mock violée"
     )
     assert "def mock_db" not in content, (
-        "tests/conftest.py contient encore une fixture mock_db — "
-        "politique zéro mock violée"
+        "tests/conftest.py contient encore une fixture mock_db — politique zéro mock violée"
     )
     assert "monkeypatch.setattr" not in content, (
-        "tests/conftest.py contient encore un monkeypatch.setattr — "
-        "le monkeypatch sur src.db.connection est interdit"
+        "tests/conftest.py contient encore un monkeypatch.setattr — le monkeypatch sur src.db.connection est interdit"
     )

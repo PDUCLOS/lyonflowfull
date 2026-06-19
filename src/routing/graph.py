@@ -185,8 +185,7 @@ def _build_graph_from_db(
         u, v = int(r["node_u"]), int(r["node_v"])
         if u in G.nodes and v in G.nodes:
             u_data, v_data = G.nodes[u], G.nodes[v]
-            d = _haversine_m_local(u_data["start_lat"], u_data["start_lon"],
-                                  v_data["start_lat"], v_data["start_lon"])
+            d = _haversine_m_local(u_data["start_lat"], u_data["start_lon"], v_data["start_lat"], v_data["start_lon"])
             G.add_edge(u, v, via="h3_adjacency", length_m=d)
 
     # Keep only the largest connected component so get_nearest_node
@@ -204,6 +203,7 @@ def _build_graph_from_db(
 def _haversine_m_local(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
     """Distance haversine en mètres — version locale (évite round-trip DB)."""
     import math
+
     r = 6_371_000  # m
     p1, p2 = math.radians(lat1), math.radians(lat2)
     dp = math.radians(lat2 - lat1)
@@ -277,8 +277,10 @@ def _build_mock_graph() -> nx.Graph:
     for u, v in adjacencies:
         u_data, v_data = G.nodes[u], G.nodes[v]
         d = _haversine_m_local(
-            u_data["start_lat"], u_data["start_lon"],
-            v_data["start_lat"], v_data["start_lon"],
+            u_data["start_lat"],
+            u_data["start_lon"],
+            v_data["start_lat"],
+            v_data["start_lon"],
         )
         G.add_edge(u, v, via="mock", length_m=max(d, 50.0))
 

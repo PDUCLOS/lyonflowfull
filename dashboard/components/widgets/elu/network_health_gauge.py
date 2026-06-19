@@ -54,10 +54,10 @@ def _render_main_gauge(score: float, diagnosis: str) -> None:
                 "bar": {"color": color, "thickness": 0.4},
                 "bgcolor": "white",
                 "steps": [
-                    {"range": [0, 25], "color": "#FEE2E2"},     # critical red tint
-                    {"range": [25, 50], "color": "#FFEDD5"},    # degraded orange tint
-                    {"range": [50, 75], "color": "#FEF3C7"},    # stressed yellow tint
-                    {"range": [75, 100], "color": "#DCFCE7"},   # healthy green tint
+                    {"range": [0, 25], "color": "#FEE2E2"},  # critical red tint
+                    {"range": [25, 50], "color": "#FFEDD5"},  # degraded orange tint
+                    {"range": [50, 75], "color": "#FEF3C7"},  # stressed yellow tint
+                    {"range": [75, 100], "color": "#DCFCE7"},  # healthy green tint
                 ],
                 "threshold": {
                     "threshold": 75,
@@ -126,15 +126,19 @@ def _render_subgauges(
                 if label == "Météo":
                     # Météo : pénalité 0-15, vert=0, orange=8, rouge=15
                     color = (
-                        COLORS["status_ok"] if raw_value < 5
-                        else COLORS["status_warning"] if raw_value < 12
+                        COLORS["status_ok"]
+                        if raw_value < 5
+                        else COLORS["status_warning"]
+                        if raw_value < 12
                         else COLORS["status_critical"]
                     )
                 else:
                     # Autres : 0-100%, vert < 25, orange < 50, rouge >= 50
                     color = (
-                        COLORS["status_ok"] if raw_value < 25
-                        else COLORS["status_warning"] if raw_value < 50
+                        COLORS["status_ok"]
+                        if raw_value < 25
+                        else COLORS["status_warning"]
+                        if raw_value < 50
                         else COLORS["status_critical"]
                     )
                 bar_color = color
@@ -206,10 +210,7 @@ def render_network_health_gauge() -> None:
     computed_at = row["computed_at"]
 
     # Bannière diagnostic (au-dessus des jauges)
-    st.markdown(
-        f"**{_DIAGNOSIS_LABELS.get(diagnosis, diagnosis)}** · "
-        f"Dernier calcul : {computed_at}"
-    )
+    st.markdown(f"**{_DIAGNOSIS_LABELS.get(diagnosis, diagnosis)}** · Dernier calcul : {computed_at}")
 
     # Layout : jauge principale + 4 sous-jauges côte à côte
     col_main, col_subs = st.columns([1, 2])

@@ -61,11 +61,11 @@ def generate_xgboost_card(
         drift_section = f"""
 ## Drift monitoring (Sprint 10+)
 
-- **Dataset drift** : `{drift_report.get('dataset_drift')}`
-- **Drift share** : `{drift_report.get('drift_share', 0.0) * 100:.1f}%`
-- **N ref / current** : `{drift_report.get('n_ref')}` / `{drift_report.get('n_current')}`
-- **Computed at** : `{drift_report.get('computed_at')}`
-- **Modèle** : `{drift_report.get('model_name')}` (horizon {drift_report.get('horizon_min')}min)
+- **Dataset drift** : `{drift_report.get("dataset_drift")}`
+- **Drift share** : `{drift_report.get("drift_share", 0.0) * 100:.1f}%`
+- **N ref / current** : `{drift_report.get("n_ref")}` / `{drift_report.get("n_current")}`
+- **Computed at** : `{drift_report.get("computed_at")}`
+- **Modèle** : `{drift_report.get("model_name")}` (horizon {drift_report.get("horizon_min")}min)
 """
 
     return f"""# Model Card — {model_name} v{model_version}
@@ -105,11 +105,11 @@ trafic et le module de recommandation multimodal).
 | Champ | Valeur |
 |-------|--------|
 | **Source** | `gold.xgb_training_set` (matérialisé quotidien 02h30) |
-| **N rows** | `{dataset_stats.get('n_rows', 'N/A')}` |
-| **N channels** | `{dataset_stats.get('n_channels', 'N/A')}` |
-| **Période** | `{dataset_stats.get('min_t', 'N/A')}` → `{dataset_stats.get('max_t', 'N/A')}` |
-| **Target mean** | `{dataset_stats.get('mean_target', 0.0):.2f}` km/h |
-| **Target std** | `{dataset_stats.get('std_target', 0.0):.2f}` km/h |
+| **N rows** | `{dataset_stats.get("n_rows", "N/A")}` |
+| **N channels** | `{dataset_stats.get("n_channels", "N/A")}` |
+| **Période** | `{dataset_stats.get("min_t", "N/A")}` → `{dataset_stats.get("max_t", "N/A")}` |
+| **Target mean** | `{dataset_stats.get("mean_target", 0.0):.2f}` km/h |
+| **Target std** | `{dataset_stats.get("std_target", 0.0):.2f}` km/h |
 
 ## Features ({len(feature_cols)})
 
@@ -127,9 +127,9 @@ trafic et le module de recommandation multimodal).
 
 | Metric | Valeur |
 |--------|--------|
-| **MAE** | `{metrics.get('mae', 0.0):.3f}` km/h |
-| **RMSE** | `{metrics.get('rmse', 0.0):.3f}` km/h |
-| **R²** | `{metrics.get('r2', 0.0):.3f}` |
+| **MAE** | `{metrics.get("mae", 0.0):.3f}` km/h |
+| **RMSE** | `{metrics.get("rmse", 0.0):.3f}` km/h |
+| **R²** | `{metrics.get("r2", 0.0):.3f}` |
 
 {drift_section}
 

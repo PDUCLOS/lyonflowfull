@@ -84,6 +84,7 @@ def test_coherence_scatter_exported_from_pro_tcl():
     from dashboard.components.widgets.pro_tcl.coherence_scatter import (
         render_coherence_scatter as r2,
     )
+
     assert r1 is r2
 
 
@@ -93,6 +94,7 @@ def test_coherence_scatter_status_labels_complete():
         STATUS_COLORS,
         STATUS_LABELS,
     )
+
     assert set(STATUS_LABELS.keys()) == {"ok", "minor_drift", "drift", "no_data"}
     assert set(STATUS_COLORS.keys()) == {"ok", "minor_drift", "drift", "no_data"}
     # Tous les labels FR sont non vides
@@ -116,5 +118,6 @@ def test_data_cache_has_coherence_helpers():
         cached_tomtom_coherence,
         cached_tomtom_gl_drift,
     )
+
     assert callable(cached_tomtom_coherence)
     assert callable(cached_tomtom_gl_drift)

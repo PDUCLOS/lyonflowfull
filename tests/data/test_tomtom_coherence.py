@@ -5,6 +5,7 @@ Vérifie que les nouveaux helpers ``get_tomtom_coherence`` et
 la politique zéro mock de Sprint 8 : lèvent ``DashboardDataError``
 quand la DB est indisponible.
 """
+
 from __future__ import annotations
 
 import sys

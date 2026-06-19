@@ -20,6 +20,7 @@ Affiche :
 
 Si PostgreSQL indispo → fail loud via DashboardDataError.
 """
+
 from __future__ import annotations
 
 import pandas as pd
@@ -56,18 +57,25 @@ def _diagnosis_counts(df: pd.DataFrame) -> dict[str, int]:
 
 def _render_kpi_banner(counts: dict[str, int], n_total: int) -> None:
     cards = [
-        ("Infrastructure", counts.get("infra", 0),
-         SPATIAL_DIAGNOSIS_COLORS["infra"],
-         "Bus ET trafic souffrent (même zone)"),
-        ("Exploitation", counts.get("operations", 0),
-         SPATIAL_DIAGNOSIS_COLORS["operations"],
-         "Bus retard, trafic fluide"),
-        ("Voie bus OK", counts.get("bus_lane_ok", 0),
-         SPATIAL_DIAGNOSIS_COLORS["bus_lane_ok"],
-         "Trafic congestionné, bus OK"),
-        ("OK", counts.get("ok", 0),
-         SPATIAL_DIAGNOSIS_COLORS["ok"],
-         f"Sur {n_total} zones analysées"),
+        (
+            "Infrastructure",
+            counts.get("infra", 0),
+            SPATIAL_DIAGNOSIS_COLORS["infra"],
+            "Bus ET trafic souffrent (même zone)",
+        ),
+        (
+            "Exploitation",
+            counts.get("operations", 0),
+            SPATIAL_DIAGNOSIS_COLORS["operations"],
+            "Bus retard, trafic fluide",
+        ),
+        (
+            "Voie bus OK",
+            counts.get("bus_lane_ok", 0),
+            SPATIAL_DIAGNOSIS_COLORS["bus_lane_ok"],
+            "Trafic congestionné, bus OK",
+        ),
+        ("OK", counts.get("ok", 0), SPATIAL_DIAGNOSIS_COLORS["ok"], f"Sur {n_total} zones analysées"),
     ]
     cols = st.columns(4)
     for col, (label, n, color, sub) in zip(cols, cards):
@@ -100,9 +108,7 @@ def _render_scatter(df: pd.DataFrame) -> None:
     import plotly.express as px
 
     plot_df = df.copy()
-    plot_df["diagnosis_label"] = plot_df["diagnosis"].map(
-        lambda d: DIAGNOSIS_LABELS.get(d, d)
-    )
+    plot_df["diagnosis_label"] = plot_df["diagnosis"].map(lambda d: DIAGNOSIS_LABELS.get(d, d))
     plot_df["line_label"] = plot_df["line_ref"].apply(clean_line_label)
 
     fig = px.scatter(
@@ -120,12 +126,16 @@ def _render_scatter(df: pd.DataFrame) -> None:
         height=400,
     )
     fig.add_hline(
-        y=SPEED_THRESHOLD, line_dash="dash", line_color="#999",
+        y=SPEED_THRESHOLD,
+        line_dash="dash",
+        line_color="#999",
         annotation_text=f"Seuil trafic ({SPEED_THRESHOLD} km/h)",
         annotation_position="top right",
     )
     fig.add_vline(
-        x=DELAY_THRESHOLD, line_dash="dash", line_color="#999",
+        x=DELAY_THRESHOLD,
+        line_dash="dash",
+        line_color="#999",
         annotation_text=f"Seuil retard ({DELAY_THRESHOLD}s)",
         annotation_position="top right",
     )
@@ -150,19 +160,19 @@ def _render_top_zones(df: pd.DataFrame, top_n: int = 20) -> None:
     problem_df = problem_df.nlargest(top_n, "bus_delay_sec")
     rows = []
     for _, r in problem_df.iterrows():
-        rows.append({
-            "Ligne": clean_line_label(r.get("line_ref", "?")),
-            "Heure": f"{int(r.get('hour', 0))}h",
-            "Retard (s)": float(r.get("bus_delay_sec", 0)),
-            "Vitesse trafic": float(r.get("traffic_speed_kmh", 0)),
-            "Diagnostic": DIAGNOSIS_LABELS.get(
-                r.get("diagnosis", "ok"), "—"
-            ),
-            "Obs. bus": int(r.get("bus_observations", 0)),
-            "Capteurs": int(r.get("traffic_sensors", 0)),
-            "Lat": float(r.get("lat", 0)),
-            "Lon": float(r.get("lon", 0)),
-        })
+        rows.append(
+            {
+                "Ligne": clean_line_label(r.get("line_ref", "?")),
+                "Heure": f"{int(r.get('hour', 0))}h",
+                "Retard (s)": float(r.get("bus_delay_sec", 0)),
+                "Vitesse trafic": float(r.get("traffic_speed_kmh", 0)),
+                "Diagnostic": DIAGNOSIS_LABELS.get(r.get("diagnosis", "ok"), "—"),
+                "Obs. bus": int(r.get("bus_observations", 0)),
+                "Capteurs": int(r.get("traffic_sensors", 0)),
+                "Lat": float(r.get("lat", 0)),
+                "Lon": float(r.get("lon", 0)),
+            }
+        )
     df_disp = pd.DataFrame(rows)
     df_disp = df_disp.round({"Retard (s)": 0, "Vitesse trafic": 1})
 
@@ -170,10 +180,7 @@ def _render_top_zones(df: pd.DataFrame, top_n: int = 20) -> None:
         for key, label in DIAGNOSIS_LABELS.items():
             if val == label:
                 color = SPATIAL_DIAGNOSIS_COLORS.get(key, "#9E9E9E")
-                return (
-                    f"background-color: {color}; color: white; "
-                    f"font-weight: 600;"
-                )
+                return f"background-color: {color}; color: white; font-weight: 600;"
         return ""
 
     st.dataframe(

@@ -29,10 +29,10 @@ from src.data.exceptions import DashboardDataError
 
 # Couleur par mode TC (segment card)
 _MODE_COLOR = {
-    "metro": "#1976D2",       # bleu
-    "tram": "#43A047",        # vert
-    "bus": "#FB8C00",         # orange
-    "funicular": "#8E24AA",   # violet
+    "metro": "#1976D2",  # bleu
+    "tram": "#43A047",  # vert
+    "bus": "#FB8C00",  # orange
+    "funicular": "#8E24AA",  # violet
 }
 
 
@@ -96,11 +96,11 @@ def _render_transit_banner(itin: dict) -> None:
                     gap:0.6rem;font-size:0.95rem;margin-bottom:1rem;flex-wrap:wrap;">
             <span style="background:#4CAF50;color:white;padding:0.2rem 0.6rem;
                          border-radius:12px;font-size:0.75rem;font-weight:600;">🚌 DÉPART</span>
-            <span style="font-weight:600;">{itin['origin_label']}</span>
+            <span style="font-weight:600;">{itin["origin_label"]}</span>
             <span style="opacity:0.4;margin:0 0.5rem;">→</span>
             <span style="background:#F44336;color:white;padding:0.2rem 0.6rem;
                          border-radius:12px;font-size:0.75rem;font-weight:600;">🔴 ARRIVÉE</span>
-            <span style="font-weight:600;">{itin['destination_label']}</span>
+            <span style="font-weight:600;">{itin["destination_label"]}</span>
             <span style="margin-left:auto;background:{mode_color};color:white;
                          padding:0.2rem 0.6rem;border-radius:12px;
                          font-size:0.7rem;font-weight:600;">{mode_label}</span>
@@ -131,19 +131,13 @@ def _render_transit_kpis(itin: dict) -> None:
         )
     # Confiance globale (ligne discrète)
     conf = float(itin.get("confidence", 0.0))
-    st.caption(
-        f"📊 Confiance globale : {int(conf * 100)}% "
-        f"(basée sur le nombre d'observations des cadences)"
-    )
+    st.caption(f"📊 Confiance globale : {int(conf * 100)}% (basée sur le nombre d'observations des cadences)")
 
 
 def _render_transit_segments(itin: dict) -> None:
     """Cards détaillées par segment TC."""
     segments = itin.get("segments", [])
-    st.markdown(
-        f"##### 🛣️ Détail des {len(segments)} segment"
-        f"{'s' if len(segments) > 1 else ''}"
-    )
+    st.markdown(f"##### 🛣️ Détail des {len(segments)} segment{'s' if len(segments) > 1 else ''}")
 
     for i, seg in enumerate(segments, 1):
         color = _MODE_COLOR.get(seg.get("line_mode", ""), "#666")
@@ -163,11 +157,7 @@ def _render_transit_segments(itin: dict) -> None:
             )
 
         # Carte segment
-        delay_html = (
-            f" · ⚠️ Retard moyen : +{delay_min:.1f} min"
-            if delay_min > 0
-            else " · ✅ Pas de retard notable"
-        )
+        delay_html = f" · ⚠️ Retard moyen : +{delay_min:.1f} min" if delay_min > 0 else " · ✅ Pas de retard notable"
         st.markdown(
             f"""
             <div style="display:flex;align-items:center;gap:0.8rem;
@@ -181,17 +171,17 @@ def _render_transit_segments(itin: dict) -> None:
                 </div>
                 <div style="flex:1;">
                     <div style="font-weight:700;font-size:1.05rem;">
-                        {seg.get('line_label', '?')}
+                        {seg.get("line_label", "?")}
                         <span style="opacity:0.5;font-weight:400;font-size:0.85rem;">
-                            ~{seg.get('duration_estimate_min', 0):.0f} min
+                            ~{seg.get("duration_estimate_min", 0):.0f} min
                         </span>
                     </div>
                     <div style="font-size:0.85rem;opacity:0.85;margin-top:0.1rem;">
-                        <b>{seg.get('stop_origin', '?')}</b> → <b>{seg.get('stop_dest', '?')}</b>
+                        <b>{seg.get("stop_origin", "?")}</b> → <b>{seg.get("stop_dest", "?")}</b>
                     </div>
                     <div style="font-size:0.75rem;opacity:0.65;margin-top:0.25rem;">
-                        ⏱ Fréquence : ~{seg.get('cadence_min', 0):.0f} min
-                        · ⏳ Attente : ~{seg.get('wait_estimate_min', 0):.0f} min
+                        ⏱ Fréquence : ~{seg.get("cadence_min", 0):.0f} min
+                        · ⏳ Attente : ~{seg.get("wait_estimate_min", 0):.0f} min
                         {delay_html}
                         · 📊 Confiance : {confidence_pct}%
                     </div>

@@ -16,6 +16,7 @@ Usage:
     Ce DAG est auto-chargé par Airflow scheduler.
     Fréquence : */5 * * * * (toutes les 5 min)
 """
+
 from __future__ import annotations
 
 import logging
@@ -63,7 +64,9 @@ def _backfill() -> int:
         except Exception as e:
             logger.warning(
                 "[backfill] skip node_idx=%s h3_id=%s: %s",
-                r["node_idx"], r["h3_id"], e,
+                r["node_idx"],
+                r["h3_id"],
+                e,
             )
             skipped += 1
 
@@ -72,9 +75,7 @@ def _backfill() -> int:
         return 0
 
     with raw_connection() as conn, conn.cursor() as cur:
-        cur.execute(
-            "SET search_path TO public, gold, bronze, silver, referentiel, airflow_db, mlflow"
-        )
+        cur.execute("SET search_path TO public, gold, bronze, silver, referentiel, airflow_db, mlflow")
         cur.executemany(
             """
             UPDATE gold.dim_spatial_grid_mapping
@@ -88,7 +89,8 @@ def _backfill() -> int:
 
     logger.info(
         "[backfill] %d rows updated, %d skipped (h3 invalid)",
-        n_updated, skipped,
+        n_updated,
+        skipped,
     )
 
     # Vérification post-cron

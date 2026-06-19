@@ -18,6 +18,7 @@ Usage CLI :
 
 Exit code 0 si OK, 1 si secrets détectés (commit bloqué).
 """
+
 from __future__ import annotations
 
 import re
@@ -30,18 +31,10 @@ SECRET_PATTERNS = {
         r"POSTGRES_PASSWORD\s*=\s*['\"]?([a-zA-Z0-9!@#$%^&*()_+\-=\[\]{};':\"\\|,.<>/?`~]{8,})",
         re.IGNORECASE,
     ),
-    "AIRFLOW_FERNET_KEY": re.compile(
-        r"AIRFLOW_FERNET_KEY\s*=\s*['\"]?([a-zA-Z0-9+/=]{40,})", re.IGNORECASE
-    ),
-    "MLFLOW_TRACKING_PASSWORD": re.compile(
-        r"MLFLOW_TRACKING_PASSWORD\s*=\s*['\"]?([a-zA-Z0-9!@#$%^&*()]{8,})"
-    ),
-    "LYONFLOW_API_KEY": re.compile(
-        r"LYONFLOW_API_KEY\s*=\s*['\"]?([a-zA-Z0-9]{32,})"
-    ),
-    "TOMTOM_API_KEY": re.compile(
-        r"TOMTOM_API_KEY\s*=\s*['\"]?([a-zA-Z0-9]{32,})"
-    ),
+    "AIRFLOW_FERNET_KEY": re.compile(r"AIRFLOW_FERNET_KEY\s*=\s*['\"]?([a-zA-Z0-9+/=]{40,})", re.IGNORECASE),
+    "MLFLOW_TRACKING_PASSWORD": re.compile(r"MLFLOW_TRACKING_PASSWORD\s*=\s*['\"]?([a-zA-Z0-9!@#$%^&*()]{8,})"),
+    "LYONFLOW_API_KEY": re.compile(r"LYONFLOW_API_KEY\s*=\s*['\"]?([a-zA-Z0-9]{32,})"),
+    "TOMTOM_API_KEY": re.compile(r"TOMTOM_API_KEY\s*=\s*['\"]?([a-zA-Z0-9]{32,})"),
     "bcrypt_hash": re.compile(r"\$2[aby]\$\d{2}\$[./A-Za-z0-9]{53}"),
     "private_key": re.compile(r"-----BEGIN (?:RSA |EC |DSA |OPENSSH )?PRIVATE KEY-----"),
     "aws_access_key": re.compile(r"AKIA[0-9A-Z]{16}"),

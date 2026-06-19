@@ -71,8 +71,7 @@ def _build_training_set(**context) -> dict:
     # pattern f-string / ``%`` n'est pas homogène avec le reste du
     # codebase, qui privilégie les paramètres psycopg2 (cf. AGENTS.md).
     execute_query(
-        "DELETE FROM gold.xgb_training_set "
-        "WHERE created_at < NOW() - make_interval(days => %s)",
+        "DELETE FROM gold.xgb_training_set WHERE created_at < NOW() - make_interval(days => %s)",
         (RETENTION_DAYS,),
     )
     logger.info("Purged training set rows older than %d days", RETENTION_DAYS)
@@ -144,8 +143,6 @@ def _build_training_set(**context) -> dict:
         LOOKBACK_DAYS,
     )
 
-
-
     # Step 4 — Stats
     stats = execute_query("""
         SELECT
@@ -202,8 +199,9 @@ def _compute_and_persist_drift(stats_row: dict) -> None:
     """)
 
     if not ref_rows or not curr_rows:
-        logger.warning("Données insuffisantes pour drift detection (ref=%d, curr=%d)",
-                       len(ref_rows or []), len(curr_rows or []))
+        logger.warning(
+            "Données insuffisantes pour drift detection (ref=%d, curr=%d)", len(ref_rows or []), len(curr_rows or [])
+        )
         return
 
     ref_df = pd.DataFrame(ref_rows)
@@ -234,14 +232,20 @@ def _compute_and_persist_drift(stats_row: dict) -> None:
             float(summary.get("drift_share", 0.0)),
             n_ref_total // max(len(drift), 1),  # avg
             n_curr_total // max(len(drift), 1),
-            ref_from, ref_to, curr_from, curr_to,
-            json.dumps({
-                "model_name": "xgboost_speed",
-                "horizon_min": 60,
-                "n_columns_drifted": summary.get("n_columns_drifted", 0),
-                "n_columns_analyzed": summary.get("n_columns_analyzed", 0),
-                "per_column": drift,
-            }, default=str),
+            ref_from,
+            ref_to,
+            curr_from,
+            curr_to,
+            json.dumps(
+                {
+                    "model_name": "xgboost_speed",
+                    "horizon_min": 60,
+                    "n_columns_drifted": summary.get("n_columns_drifted", 0),
+                    "n_columns_analyzed": summary.get("n_columns_analyzed", 0),
+                    "per_column": drift,
+                },
+                default=str,
+            ),
         ),
     )
     logger.info(

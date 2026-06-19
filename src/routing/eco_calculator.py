@@ -141,9 +141,7 @@ def calculate_impact(
             ou si ``distance_km < 0``.
     """
     if mode not in ("voiture", "tc", "velov"):
-        raise ValueError(
-            f"Mode inconnu : {mode!r}. Attendus : 'voiture', 'tc', 'velov'."
-        )
+        raise ValueError(f"Mode inconnu : {mode!r}. Attendus : 'voiture', 'tc', 'velov'.")
     if distance_km < 0:
         raise ValueError(f"distance_km négative : {distance_km}")
 
@@ -249,9 +247,7 @@ def recommend_mode(
         ValueError: si ``critere`` n'est pas ``"temps"`` ou ``"cout"``.
     """
     if critere not in ("temps", "cout"):
-        raise ValueError(
-            f"critere inconnu : {critere!r}. Attendus : 'temps', 'cout'."
-        )
+        raise ValueError(f"critere inconnu : {critere!r}. Attendus : 'temps', 'cout'.")
     if not comparison:
         raise ValueError("comparison vide")
 

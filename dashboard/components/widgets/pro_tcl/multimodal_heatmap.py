@@ -34,6 +34,7 @@ Affiche :
 Si PostgreSQL indispo → fail loud via DashboardDataError. Si vue vide
 (DAG refresh pas encore passé) → message d'attente explicite.
 """
+
 from __future__ import annotations
 
 import pandas as pd
@@ -56,11 +57,11 @@ DIAGNOSIS_LABELS = {
 
 # Couleurs par diagnostic (cohérent avec couleurs bottlenecks carte Folium)
 DIAGNOSIS_COLORS = {
-    "ok": "#4CAF50",                # vert
-    "road_congested": "#FF9800",    # orange
-    "transit_delayed": "#FFC107",   # ambre
-    "saturated": "#F44336",         # rouge
-    "velov_scarce": "#9C27B0",      # violet
+    "ok": "#4CAF50",  # vert
+    "road_congested": "#FF9800",  # orange
+    "transit_delayed": "#FFC107",  # ambre
+    "saturated": "#F44336",  # rouge
+    "velov_scarce": "#9C27B0",  # violet
 }
 
 # Seuils du score (cohérent avec spec section 2.4)
@@ -193,14 +194,10 @@ def _render_kpi_banner(counts: dict[str, int], n_total: int) -> None:
     n_tendu = n_road + n_tc
 
     cards = [
-        ("Saturé", n_saturated, DIAGNOSIS_COLORS["saturated"],
-         "Trafic + TC congestionnés"),
-        ("Tendu", n_tendu, DIAGNOSIS_COLORS["road_congested"],
-         f"Route {n_road} · TC {n_tc}"),
-        ("Vélov scarce", n_velov, DIAGNOSIS_COLORS["velov_scarce"],
-         "Bornes vides ou pleines"),
-        ("Fluide", n_ok, DIAGNOSIS_COLORS["ok"],
-         f"Sur {n_total} cellules Lyon"),
+        ("Saturé", n_saturated, DIAGNOSIS_COLORS["saturated"], "Trafic + TC congestionnés"),
+        ("Tendu", n_tendu, DIAGNOSIS_COLORS["road_congested"], f"Route {n_road} · TC {n_tc}"),
+        ("Vélov scarce", n_velov, DIAGNOSIS_COLORS["velov_scarce"], "Bornes vides ou pleines"),
+        ("Fluide", n_ok, DIAGNOSIS_COLORS["ok"], f"Sur {n_total} cellules Lyon"),
     ]
 
     cols = st.columns(4)
@@ -245,22 +242,24 @@ def _render_top_saturated(df: pd.DataFrame, top_n: int = 15) -> None:
     rows = []
     for _, r in plot_df.iterrows():
         diagnosis = str(r.get("diagnosis", "ok"))
-        rows.append({
-            "Lat": float(r.get("lat", 0)),
-            "Lon": float(r.get("lon", 0)),
-            "Score": float(r.get("score_multimodal", 0)),
-            "Diagnostic": DIAGNOSIS_LABELS.get(diagnosis, diagnosis),
-            "Vitesse (km/h)": float(r.get("avg_speed_kmh", 0) or 0),
-            "% congestion": float(r.get("pct_congestion", 0) or 0),
-            "Retard TCL (s)": float(r.get("avg_delay_sec", 0) or 0),
-            "% TCL retard": float(r.get("pct_delayed", 0) or 0),
-            "Vélov dispo": int(r.get("bikes_available", 0) or 0),
-            "Capteurs": int(r.get("n_sensors", 0) or 0),
-        })
+        rows.append(
+            {
+                "Lat": float(r.get("lat", 0)),
+                "Lon": float(r.get("lon", 0)),
+                "Score": float(r.get("score_multimodal", 0)),
+                "Diagnostic": DIAGNOSIS_LABELS.get(diagnosis, diagnosis),
+                "Vitesse (km/h)": float(r.get("avg_speed_kmh", 0) or 0),
+                "% congestion": float(r.get("pct_congestion", 0) or 0),
+                "Retard TCL (s)": float(r.get("avg_delay_sec", 0) or 0),
+                "% TCL retard": float(r.get("pct_delayed", 0) or 0),
+                "Vélov dispo": int(r.get("bikes_available", 0) or 0),
+                "Capteurs": int(r.get("n_sensors", 0) or 0),
+            }
+        )
     df_disp = pd.DataFrame(rows)
-    df_disp = df_disp.round({"Score": 2, "Vitesse (km/h)": 1,
-                             "% congestion": 1, "Retard TCL (s)": 0,
-                             "% TCL retard": 1})
+    df_disp = df_disp.round(
+        {"Score": 2, "Vitesse (km/h)": 1, "% congestion": 1, "Retard TCL (s)": 0, "% TCL retard": 1}
+    )
 
     def _color_diag(val: str) -> str:
         # Reverse lookup label → diagnosis key

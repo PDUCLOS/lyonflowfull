@@ -30,13 +30,15 @@ def test_plan_velov_trip_still_importable_after_sprint14():
     import dataclasses
 
     fields_before_sprint14 = {
-        "origin_label", "destination_label", "segments",
-        "total_distance_m", "total_duration_min", "source",
+        "origin_label",
+        "destination_label",
+        "segments",
+        "total_distance_m",
+        "total_duration_min",
+        "source",
     }
     actual_fields = {f.name for f in dataclasses.fields(VelovItinerary)}
-    assert fields_before_sprint14.issubset(actual_fields), (
-        f"Champs perdus : {fields_before_sprint14 - actual_fields}"
-    )
+    assert fields_before_sprint14.issubset(actual_fields), f"Champs perdus : {fields_before_sprint14 - actual_fields}"
 
 
 def test_velov_widget_render_velov_trip_still_callable():
@@ -46,8 +48,7 @@ def test_velov_widget_render_velov_trip_still_callable():
     assert hasattr(velov_trip, "render_velov_trip")
     assert callable(velov_trip.render_velov_trip)
     # Le widget expose toujours ses fonctions de rendu legacy
-    for fn in ("_render_velov_summary", "_render_velov_map",
-               "_render_velov_segments", "_render_alternatives_card"):
+    for fn in ("_render_velov_summary", "_render_velov_map", "_render_velov_segments", "_render_alternatives_card"):
         assert hasattr(velov_trip, fn), f"Fonction {fn} doit toujours exister"
 
 
@@ -86,12 +87,7 @@ def test_plan_car_trip_still_importable_after_sprint14():
 
 def test_usager_page_has_has_tc_check():
     """Usager_1_Mon_Trajet.py doit calculer has_tc et afficher la section TC."""
-    page_path = (
-        Path(__file__).resolve().parents[2]
-        / "dashboard"
-        / "pages"
-        / "Usager_1_Mon_Trajet.py"
-    )
+    page_path = Path(__file__).resolve().parents[2] / "dashboard" / "pages" / "Usager_1_Mon_Trajet.py"
     source = page_path.read_text(encoding="utf-8")
 
     # has_tc calculé depuis le multiselect
@@ -101,9 +97,7 @@ def test_usager_page_has_has_tc_check():
 
     # Section if has_tc avec render_transit_trip
     assert "if has_tc:" in source, "Section conditionnelle if has_tc doit exister"
-    assert "render_transit_trip(" in source, (
-        "render_transit_trip doit être appelé dans la section TC"
-    )
+    assert "render_transit_trip(" in source, "render_transit_trip doit être appelé dans la section TC"
 
     # Import de render_transit_trip
     assert "render_transit_trip" in source, "render_transit_trip doit être importé"

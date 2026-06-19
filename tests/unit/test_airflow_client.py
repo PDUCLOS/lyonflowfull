@@ -35,12 +35,8 @@ def test_clear_stuck_dag_run_success():
     """
     from src.data import airflow_client
 
-    resp = _mock_response(
-        200, {"task_instances": [{"task_id": "t1"}, {"task_id": "t2"}]}
-    )
-    with _patch_airflow_available(), patch(
-        "src.data.airflow_client.requests.post", return_value=resp
-    ) as mock_post:
+    resp = _mock_response(200, {"task_instances": [{"task_id": "t1"}, {"task_id": "t2"}]})
+    with _patch_airflow_available(), patch("src.data.airflow_client.requests.post", return_value=resp) as mock_post:
         ok = airflow_client.clear_stuck_dag_run("maintenance_dag", "run_abc123")
 
     assert ok is True
@@ -59,9 +55,7 @@ def test_clear_stuck_dag_run_http_error():
     from src.data import airflow_client
 
     resp = _mock_response(404)
-    with _patch_airflow_available(), patch(
-        "src.data.airflow_client.requests.post", return_value=resp
-    ):
+    with _patch_airflow_available(), patch("src.data.airflow_client.requests.post", return_value=resp):
         ok = airflow_client.clear_stuck_dag_run("dag", "run_x")
 
     assert ok is False
@@ -71,9 +65,10 @@ def test_clear_stuck_dag_run_airflow_down():
     """Si Airflow indispo → False immédiat (pas d'appel HTTP)."""
     from src.data import airflow_client
 
-    with patch(
-        "src.data.airflow_client.is_airflow_available", return_value=False
-    ), patch("src.data.airflow_client.requests.post") as mock_post:
+    with (
+        patch("src.data.airflow_client.is_airflow_available", return_value=False),
+        patch("src.data.airflow_client.requests.post") as mock_post,
+    ):
         ok = airflow_client.clear_stuck_dag_run("dag", "run_x")
 
     assert ok is False
@@ -85,9 +80,7 @@ def test_mark_dag_run_failed_success():
     from src.data import airflow_client
 
     resp = _mock_response(200)
-    with _patch_airflow_available(), patch(
-        "src.data.airflow_client.requests.patch", return_value=resp
-    ) as mock_patch:
+    with _patch_airflow_available(), patch("src.data.airflow_client.requests.patch", return_value=resp) as mock_patch:
         ok = airflow_client.mark_dag_run_failed("maintenance_dag", "run_abc123")
 
     assert ok is True
@@ -102,9 +95,7 @@ def test_mark_dag_run_failed_http_error():
     from src.data import airflow_client
 
     resp = _mock_response(500)
-    with _patch_airflow_available(), patch(
-        "src.data.airflow_client.requests.patch", return_value=resp
-    ):
+    with _patch_airflow_available(), patch("src.data.airflow_client.requests.patch", return_value=resp):
         ok = airflow_client.mark_dag_run_failed("dag", "run_x")
 
     assert ok is False
@@ -114,9 +105,10 @@ def test_mark_dag_run_failed_airflow_down():
     """Si Airflow indispo → False immédiat (pas d'appel HTTP)."""
     from src.data import airflow_client
 
-    with patch(
-        "src.data.airflow_client.is_airflow_available", return_value=False
-    ), patch("src.data.airflow_client.requests.patch") as mock_patch:
+    with (
+        patch("src.data.airflow_client.is_airflow_available", return_value=False),
+        patch("src.data.airflow_client.requests.patch") as mock_patch,
+    ):
         ok = airflow_client.mark_dag_run_failed("dag", "run_x")
 
     assert ok is False
@@ -164,9 +156,7 @@ def test_get_dags_status_includes_last_dag_run_id():
             resp.json.return_value = {}
         return resp
 
-    with _patch_airflow_available(), patch(
-        "src.data.airflow_client.requests.get", side_effect=fake_get
-    ):
+    with _patch_airflow_available(), patch("src.data.airflow_client.requests.get", side_effect=fake_get):
         dags = airflow_client.get_dags_status()
 
     assert len(dags) == 1

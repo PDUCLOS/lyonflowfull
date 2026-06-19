@@ -41,7 +41,7 @@ def _resolve_address(text: str) -> tuple[float, float] | None:
     if cleaned and ord(cleaned[0]) > 0x2700:
         sp = cleaned.find(" ")
         if sp > 0 and sp <= 3:
-            cleaned = cleaned[sp + 1:].strip()
+            cleaned = cleaned[sp + 1 :].strip()
     text_lower = cleaned.lower().strip()
     if not text_lower:
         return None
@@ -97,6 +97,7 @@ def render_itinerary_result(
 
     # Calcul itinéraire
     from dashboard.components.loading_state import empty_state, loading_wrapper
+
     with loading_wrapper("Calcul itinéraire en cours…", "🔍"):
         itinerary = compute_itinerary(
             origin_lon=origin_coords[0],
@@ -111,8 +112,8 @@ def render_itinerary_result(
             icon="🗺️",
             title="Aucun itinéraire trouvé",
             message="Le graphe routier n'est peut-être pas chargé. Vérifie "
-                    "que les données Gold sont à jour ou choisis un autre point "
-                    "d'arrivée.",
+            "que les données Gold sont à jour ou choisis un autre point "
+            "d'arrivée.",
         )
         return
 
@@ -226,10 +227,7 @@ def _render_map(
                 color=color,
                 weight=6,
                 opacity=0.85,
-                popup=(
-                    f"🚗 <b>{seg.speed_kmh:.0f} km/h</b><br>"
-                    f"📏 {seg.length_m:.0f} m · 🕐 {seg.duration_s:.0f}s"
-                ),
+                popup=(f"🚗 <b>{seg.speed_kmh:.0f} km/h</b><br>📏 {seg.length_m:.0f} m · 🕐 {seg.duration_s:.0f}s"),
             ).add_to(m)
 
         # Small colored circle at each node
@@ -246,18 +244,13 @@ def _render_map(
             ).add_to(m)
 
         m.fit_bounds(
-            [[min(all_lats) - 0.003, min(all_lons) - 0.003],
-             [max(all_lats) + 0.003, max(all_lons) + 0.003]],
+            [[min(all_lats) - 0.003, min(all_lons) - 0.003], [max(all_lats) + 0.003, max(all_lons) + 0.003]],
         )
 
         st_folium(m, width=None, height=400, returned_objects=[])
 
         st.markdown(
-            "**Légende trafic** : "
-            "🟢 Fluide (>40 km/h) · "
-            "🟡 Modéré (25-40) · "
-            "🟠 Dense (15-25) · "
-            "🔴 Bloqué (<15)"
+            "**Légende trafic** : 🟢 Fluide (>40 km/h) · 🟡 Modéré (25-40) · 🟠 Dense (15-25) · 🔴 Bloqué (<15)"
         )
 
     except ImportError:

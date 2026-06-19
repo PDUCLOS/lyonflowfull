@@ -65,14 +65,16 @@ with col2:
         if not infra_rows.empty:
             row = infra_rows.iloc[0]
             delay_s = row.get("bus_delay_seconds", 0) or 0
-            render_cause_analysis({
-                "line_id": row.get("line_ref", "?"),
-                "name": row.get("segment_id", "—"),
-                "bus_state": "delayed" if delay_s > 120 else "on_time",
-                "traffic_state": "jammed" if (row.get("traffic_speed_kmh", 50) or 50) < 25 else "fluid",
-                "diagnosis": row.get("diagnosis", "ok"),
-                "delay_min": round(delay_s / 60, 1),
-            })
+            render_cause_analysis(
+                {
+                    "line_id": row.get("line_ref", "?"),
+                    "name": row.get("segment_id", "—"),
+                    "bus_state": "delayed" if delay_s > 120 else "on_time",
+                    "traffic_state": "jammed" if (row.get("traffic_speed_kmh", 50) or 50) < 25 else "fluid",
+                    "diagnosis": row.get("diagnosis", "ok"),
+                    "delay_min": round(delay_s / 60, 1),
+                }
+            )
         else:
             render_cause_analysis(None)
     else:

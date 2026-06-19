@@ -40,16 +40,18 @@ def _bottlenecks_to_segments(df: pd.DataFrame) -> list[dict]:
     for _, row in df.iterrows():
         delay_s = row.get("bus_delay_seconds", 0) or 0
         speed = row.get("traffic_speed_kmh", 50) or 50
-        segments.append({
-            "line_id": row.get("line_ref", "?"),
-            "name": row.get("segment_id", "—"),
-            "bus_state": _bus_state(delay_s),
-            "traffic_state": _traffic_state(speed),
-            "diagnosis": row.get("diagnosis", "ok"),
-            "delay_min": round(delay_s / 60, 1),
-            "lat": row.get("lat", 0) or 0,
-            "lon": row.get("lng", 0) or 0,
-        })
+        segments.append(
+            {
+                "line_id": row.get("line_ref", "?"),
+                "name": row.get("segment_id", "—"),
+                "bus_state": _bus_state(delay_s),
+                "traffic_state": _traffic_state(speed),
+                "diagnosis": row.get("diagnosis", "ok"),
+                "delay_min": round(delay_s / 60, 1),
+                "lat": row.get("lat", 0) or 0,
+                "lon": row.get("lng", 0) or 0,
+            }
+        )
     return segments
 
 

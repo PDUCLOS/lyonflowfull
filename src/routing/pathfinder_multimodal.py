@@ -109,6 +109,7 @@ def _require_db_or_raise(source: str) -> None:
 def _haversine_m(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
     """Distance haversine (mètres) — calcul Python en fallback de la SQL fn."""
     import math
+
     r = 6_371_000  # m
     p1, p2 = math.radians(lat1), math.radians(lat2)
     dp = math.radians(lat2 - lat1)
@@ -141,8 +142,10 @@ def _nearest_velov_station(
 
 
 def _nearest_velov_stations_pair(
-    origin_lat: float, origin_lon: float,
-    dest_lat: float, dest_lon: float,
+    origin_lat: float,
+    origin_lon: float,
+    dest_lat: float,
+    dest_lon: float,
 ) -> dict[str, dict | None]:
     """Batch lookup : 1 round-trip DB pour les 2 stations Vélov (origine + dest).
 
@@ -185,9 +188,7 @@ def _nearest_velov_stations_pair(
     return out
 
 
-def _road_itinerary_between(
-    lon_a: float, lat_a: float, lon_b: float, lat_b: float
-) -> dict | None:
+def _road_itinerary_between(lon_a: float, lat_a: float, lon_b: float, lat_b: float) -> dict | None:
     """Itinéraire routier entre 2 points GPS via Dijkstra (src.routing.pathfinder).
 
     Returns:
@@ -302,6 +303,7 @@ def plan_velov_trip(
     # scoring. Si hors périmètre, fallback sur haversine direct.
     def _nearest_lieu_id(lat: float, lon: float) -> int | None:
         from src.data.db_query import execute_query
+
         rows = execute_query(
             """
             SELECT lieu_id FROM referentiel.lieux_lyon
@@ -404,33 +406,41 @@ def plan_velov_trip(
     if origin_station.get("status") == "VIDE":
         diagnostics.append(
             f"⚠️ Borne de départ {origin_station.get('velov_name')} est VIDE. "
-            f"Alternatives à pied : " + ", ".join(
+            f"Alternatives à pied : "
+            + ", ".join(
                 f"{a.get('velov_name')} ({int(a.get('distance_m', 0))}m, {a.get('num_bikes_available')} vélos)"
-                for a in origin_alts[:2] if a.get("velov_name")
+                for a in origin_alts[:2]
+                if a.get("velov_name")
             )
         )
     if origin_station.get("status") == "PLEINE":
         diagnostics.append(
             f"⚠️ Borne de départ {origin_station.get('velov_name')} est PLEINE. "
-            f"Alternatives à pied : " + ", ".join(
+            f"Alternatives à pied : "
+            + ", ".join(
                 f"{a.get('velov_name')} ({int(a.get('distance_m', 0))}m, {a.get('num_docks_available')} docks)"
-                for a in origin_alts[:2] if a.get("velov_name")
+                for a in origin_alts[:2]
+                if a.get("velov_name")
             )
         )
     if dest_station.get("status") == "VIDE":
         diagnostics.append(
             f"⚠️ Borne d'arrivée {dest_station.get('velov_name')} est VIDE (pas de vélos dispo). "
-            f"Alternatives à pied : " + ", ".join(
+            f"Alternatives à pied : "
+            + ", ".join(
                 f"{a.get('velov_name')} ({int(a.get('distance_m', 0))}m, {a.get('num_bikes_available')} vélos)"
-                for a in dest_alts[:2] if a.get("velov_name")
+                for a in dest_alts[:2]
+                if a.get("velov_name")
             )
         )
     if dest_station.get("status") == "PLEINE":
         diagnostics.append(
             f"⚠️ Borne d'arrivée {dest_station.get('velov_name')} est PLEINE (pas de dock dispo). "
-            f"Alternatives à pied : " + ", ".join(
+            f"Alternatives à pied : "
+            + ", ".join(
                 f"{a.get('velov_name')} ({int(a.get('distance_m', 0))}m, {a.get('num_docks_available')} docks)"
-                for a in dest_alts[:2] if a.get("velov_name")
+                for a in dest_alts[:2]
+                if a.get("velov_name")
             )
         )
     if not origin_alts and origin_station.get("status") in ("VIDE", "PLEINE"):
@@ -451,18 +461,23 @@ def plan_velov_trip(
         distance_m=walk_to,
         duration_min=round(walk_to / 1000.0 / walk_speed_kmh * 60.0, 1),
         n_bikes_depart=origin_station.get("num_bikes_available"),
-        notes="Marche vers la station Vélov" if walk_to <= MAX_WALK_TO_STATION_M
-              else f"⚠️ Marche longue ({int(walk_to)}m) — considérer bus/métro",
+        notes="Marche vers la station Vélov"
+        if walk_to <= MAX_WALK_TO_STATION_M
+        else f"⚠️ Marche longue ({int(walk_to)}m) — considérer bus/métro",
     )
 
     # Segment 2 : Vélov entre les 2 stations
     cycle_dist_m = _haversine_m(
-        float(origin_station["velov_lat"]), float(origin_station["velov_lon"]),
-        float(dest_station["velov_lat"]), float(dest_station["velov_lon"]),
+        float(origin_station["velov_lat"]),
+        float(origin_station["velov_lon"]),
+        float(dest_station["velov_lat"]),
+        float(dest_station["velov_lon"]),
     )
     road = _road_itinerary_between(
-        float(origin_station["velov_lon"]), float(origin_station["velov_lat"]),
-        float(dest_station["velov_lon"]), float(dest_station["velov_lat"]),
+        float(origin_station["velov_lon"]),
+        float(origin_station["velov_lat"]),
+        float(dest_station["velov_lon"]),
+        float(dest_station["velov_lat"]),
     )
     if road and road["total_length_m"] > 0:
         cycle_dist_m = road["total_length_m"]
@@ -499,8 +514,9 @@ def plan_velov_trip(
         distance_m=walk_from,
         duration_min=round(walk_from / 1000.0 / walk_speed_kmh * 60.0, 1),
         n_docks_arrive=dest_station.get("num_docks_available"),
-        notes="Marche vers la destination" if walk_from <= MAX_WALK_TO_STATION_M
-              else f"⚠️ Marche longue ({int(walk_from)}m)",
+        notes="Marche vers la destination"
+        if walk_from <= MAX_WALK_TO_STATION_M
+        else f"⚠️ Marche longue ({int(walk_from)}m)",
     )
 
     total_dist = walk_to + cycle_dist_m + walk_from
@@ -724,7 +740,7 @@ def _resolve_transit_lieu(text: str) -> tuple[int, str, float, float] | None:
     if cleaned and ord(cleaned[0]) > 0x2700:
         sp = cleaned.find(" ")
         if sp > 0 and sp <= 3:
-            cleaned = cleaned[sp + 1:].strip()
+            cleaned = cleaned[sp + 1 :].strip()
     text_lower = cleaned.lower().strip()
     if not text_lower:
         return None
@@ -760,11 +776,7 @@ def _day_type_from_date(dt: datetime) -> str:
     """
     weekday = dt.weekday()  # 0=Monday, 6=Sunday
     md = (dt.month, dt.day)
-    is_vacation = (
-        (md >= (7, 1) and md <= (8, 31))
-        or md >= (12, 15)
-        or md <= (1, 5)
-    )
+    is_vacation = (md >= (7, 1) and md <= (8, 31)) or md >= (12, 15) or md <= (1, 5)
     if is_vacation:
         return "vacation"
     if weekday == 6:
@@ -842,7 +854,9 @@ def _build_transit_segment(
 
     # Cadence : filter exact (line_ref, day_type, time_bucket)
     cadence_rows = get_cadence_for_line(
-        line_ref, day_type=day_type, time_bucket=time_bucket,
+        line_ref,
+        day_type=day_type,
+        time_bucket=time_bucket,
     )
     if cadence_rows:
         cadence_min = float(cadence_rows[0]["cadence_min_per_vehicle"])
@@ -855,15 +869,15 @@ def _build_transit_segment(
         # Fallback : moyenne toutes tranches weekday
         all_cadence = get_cadence_for_line(line_ref, day_type="weekday")
         if all_cadence:
-            cadence_min = float(
-                sum(c["cadence_min_per_vehicle"] for c in all_cadence)
-                / len(all_cadence)
-            )
+            cadence_min = float(sum(c["cadence_min_per_vehicle"] for c in all_cadence) / len(all_cadence))
             confidence = 0.4  # confiance basse (fallback agrégé)
         else:
             # Pas de données du tout : défaut par mode
             cadence_min = {
-                "metro": 5.0, "tram": 10.0, "bus": 12.0, "funicular": 8.0,
+                "metro": 5.0,
+                "tram": 10.0,
+                "bus": 12.0,
+                "funicular": 8.0,
             }.get(line_mode, 10.0)
             confidence = 0.2
 
@@ -879,7 +893,8 @@ def _build_transit_segment(
             else:
                 src = delay_df
             delay_avg_min = max(
-                0.0, float(src["avg_delay_seconds"].mean()) / 60.0,
+                0.0,
+                float(src["avg_delay_seconds"].mean()) / 60.0,
             )
     except Exception:
         # Si la requête échoue (DB ou colonne manquante), on garde 0
@@ -1007,9 +1022,7 @@ def plan_transit_trip(
         )
 
     # 2. Correspondance via hub
-    all_lieux_rows = execute_query(
-        "SELECT lieu_id, name FROM referentiel.lieux_lyon WHERE is_active = TRUE"
-    )
+    all_lieux_rows = execute_query("SELECT lieu_id, name FROM referentiel.lieux_lyon WHERE is_active = TRUE")
     best_itin: TransitItinerary | None = None
     for hub_row in all_lieux_rows:
         hub_id = int(hub_row["lieu_id"])
@@ -1043,20 +1056,23 @@ def plan_transit_trip(
         seg1_dist = _haversine_m(origin_lat, origin_lon, hub_lat, hub_lon)
         seg2_dist = _haversine_m(hub_lat, hub_lon, dest_lat, dest_lon)
         seg1 = _build_transit_segment(
-            origin_by_line[best_o], hub_by_line[best_o], seg1_dist, day_type, time_bucket,
+            origin_by_line[best_o],
+            hub_by_line[best_o],
+            seg1_dist,
+            day_type,
+            time_bucket,
         )
         seg2 = _build_transit_segment(
-            hub_by_line[best_d], dest_by_line[best_d], seg2_dist, day_type, time_bucket,
+            hub_by_line[best_d],
+            dest_by_line[best_d],
+            seg2_dist,
+            day_type,
+            time_bucket,
         )
         total_walk = (
-            seg1.distance_walk_to_m + seg1.distance_walk_from_m
-            + seg2.distance_walk_to_m + seg2.distance_walk_from_m
+            seg1.distance_walk_to_m + seg1.distance_walk_from_m + seg2.distance_walk_to_m + seg2.distance_walk_from_m
         )
-        total_dur = (
-            seg1.duration_estimate_min
-            + seg2.duration_estimate_min
-            + _TRANSFER_PENALTY_MIN
-        )
+        total_dur = seg1.duration_estimate_min + seg2.duration_estimate_min + _TRANSFER_PENALTY_MIN
         total_delay = seg1.delay_avg_min + seg2.delay_avg_min
         confidence = min(seg1.confidence, seg2.confidence)
         itin = TransitItinerary(
@@ -1082,10 +1098,8 @@ def plan_transit_trip(
         origin_label=origin_name,
         destination_label=dest_name,
         diagnostics=[
-            f"Lignes desservant {origin_name} : "
-            f"{', '.join(sorted(set(origin_by_line)))}",
-            f"Lignes desservant {dest_name} : "
-            f"{', '.join(sorted(set(dest_by_line)))}",
+            f"Lignes desservant {origin_name} : {', '.join(sorted(set(origin_by_line)))}",
+            f"Lignes desservant {dest_name} : {', '.join(sorted(set(dest_by_line)))}",
             "Aucune correspondance simple (Phase 1 : 21 lieux, 1 hub max).",
         ],
     )

@@ -4,6 +4,7 @@ Vérifie que le scrubber détecte correctement les secrets
 (DB_PASSWORD, API keys, etc.) et ne flag pas les faux positifs
 (conntenu de test, .env.example, etc.).
 """
+
 from __future__ import annotations
 
 import sys
@@ -33,29 +34,21 @@ def test_patterns_cover_known_secrets():
         "aws_access_key",
         "github_token",
     }
-    assert required.issubset(SECRET_PATTERNS.keys()), (
-        f"Patterns manquants: {required - SECRET_PATTERNS.keys()}"
-    )
+    assert required.issubset(SECRET_PATTERNS.keys()), f"Patterns manquants: {required - SECRET_PATTERNS.keys()}"
 
 
 def test_detect_postgres_password(tmp_path):
     """Détecte POSTGRES_PASSWORD en clair."""
     f = tmp_path / "test.py"
-    f.write_text(
-        'POSTGRES_PASSWORD="my_super_secret_pwd_42"\n'
-    )
+    f.write_text('POSTGRES_PASSWORD="my_super_secret_pwd_42"\n')
     findings = scan_file(f)
-    assert any(p == "POSTGRES_PASSWORD" for p, _, _ in findings), (
-        f"POSTGRES_PASSWORD non détecté, findings={findings}"
-    )
+    assert any(p == "POSTGRES_PASSWORD" for p, _, _ in findings), f"POSTGRES_PASSWORD non détecté, findings={findings}"
 
 
 def test_detect_fernet_key(tmp_path):
     """Détecte AIRFLOW_FERNET_KEY (base64 44+)."""
     f = tmp_path / "test.py"
-    f.write_text(
-        "AIRFLOW_FERNET_KEY=abcDEF1234567890abcDEF1234567890abcDEF12=\n"
-    )
+    f.write_text("AIRFLOW_FERNET_KEY=abcDEF1234567890abcDEF1234567890abcDEF12=\n")
     findings = scan_file(f)
     assert any(p == "AIRFLOW_FERNET_KEY" for p, _, _ in findings)
 
@@ -63,9 +56,7 @@ def test_detect_fernet_key(tmp_path):
 def test_detect_github_token(tmp_path):
     """Détecte GitHub personal access token (ghp_xxx)."""
     f = tmp_path / "test.py"
-    f.write_text(
-        "token = 'ghp_1234567890abcdefghijklmnopqrstuvwxyz123456'\n"
-    )
+    f.write_text("token = 'ghp_1234567890abcdefghijklmnopqrstuvwxyz123456'\n")
     findings = scan_file(f)
     assert any(p == "github_token" for p, _, _ in findings)
 
@@ -73,9 +64,7 @@ def test_detect_github_token(tmp_path):
 def test_detect_private_key(tmp_path):
     """Détecte une clé privée RSA/EC."""
     f = tmp_path / "test.py"
-    f.write_text(
-        "-----BEGIN RSA PRIVATE KEY-----\nMIIEpAIBAAKCAQEA0Z3VS5JJcds3xfn/ygWyF5PBbGPhqUg\n"
-    )
+    f.write_text("-----BEGIN RSA PRIVATE KEY-----\nMIIEpAIBAAKCAQEA0Z3VS5JJcds3xfn/ygWyF5PBbGPhqUg\n")
     findings = scan_file(f)
     assert any(p == "private_key" for p, _, _ in findings)
 
@@ -83,10 +72,7 @@ def test_detect_private_key(tmp_path):
 def test_no_false_positive_env_example(tmp_path):
     """Pas de détection dans .env.example (c'est une doc, pas un secret)."""
     f = tmp_path / ".env.example"
-    f.write_text(
-        "POSTGRES_PASSWORD=demo2026\n"
-        "AIRFLOW_FERNET_KEY=replace_me_with_real_fernet_key_in_prod\n"
-    )
+    f.write_text("POSTGRES_PASSWORD=demo2026\nAIRFLOW_FERNET_KEY=replace_me_with_real_fernet_key_in_prod\n")
     findings = scan_file(f)
     assert findings == [], f"Faux positifs .env.example : {findings}"
 
@@ -94,10 +80,7 @@ def test_no_false_positive_env_example(tmp_path):
 def test_no_false_positive_test_passwords(tmp_path):
     """Pas de détection sur les passwords de test (foo, bar, demo)."""
     f = tmp_path / "test_auth.py"
-    f.write_text(
-        "def test_login():\n"
-        "    assert authenticate('foo', 'bar') == True\n"
-    )
+    f.write_text("def test_login():\n    assert authenticate('foo', 'bar') == True\n")
     findings = scan_file(f)
     assert findings == [], f"Faux positifs tests : {findings}"
 
@@ -105,9 +88,7 @@ def test_no_false_positive_test_passwords(tmp_path):
 def test_no_false_positive_demo_password(tmp_path):
     """Le mot de passe démo hardcodé dans auth.py ne doit pas être flaggé."""
     f = tmp_path / "auth.py"
-    f.write_text(
-        '_DEMO_PASSWORD = "demo2026"  # démo Jedha\n'
-    )
+    f.write_text('_DEMO_PASSWORD = "demo2026"  # démo Jedha\n')
     findings = scan_file(f)
     assert findings == [], f"Faux positifs demo2026 : {findings}"
 

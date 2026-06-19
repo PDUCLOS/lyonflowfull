@@ -8,6 +8,7 @@ Vérifie que :
 * Le widget gère les 4 diagnoses (healthy/stressed/degraded/critical)
   et les sources indisponibles (poids redistribués).
 """
+
 from __future__ import annotations
 
 import sys
@@ -76,9 +77,7 @@ def test_get_network_health_score_returns_empty_when_no_db() -> None:
 
 def test_score_calculation_all_zeros() -> None:
     """Si toutes les composantes sont à 0, le score doit être 100 (parfait)."""
-    score = max(
-        0, min(100, 100 - 0 * 0.3 - 0 * 0.3 - 0 * 0.2 - 0 * 0.2)
-    )
+    score = max(0, min(100, 100 - 0 * 0.3 - 0 * 0.3 - 0 * 0.2 - 0 * 0.2))
     assert score == 100.0
 
 
@@ -88,18 +87,14 @@ def test_score_calculation_min_reachable() -> None:
     pas descendre à 0 avec les poids actuels (0.3+0.3+0.2+0.2=1.0
     mais meteo max 15*0.2=3, donc 100-30-30-20-3=17). Le GREATEST(0,...)
     est une sécurité au cas où les poids changent."""
-    score = max(
-        0, min(100, 100 - 100 * 0.3 - 100 * 0.3 - 100 * 0.2 - 15 * 0.2)
-    )
+    score = max(0, min(100, 100 - 100 * 0.3 - 100 * 0.3 - 100 * 0.2 - 15 * 0.2))
     assert score == 17  # Valeur réelle, pas 0
 
 
 def test_score_calculation_partial() -> None:
     """50% congestion, 30% retard TCL, 20% vélov vides, meteo OK → score = 72."""
     # 100 - 50*0.3 - 30*0.3 - 20*0.2 - 0*0.2 = 100 - 15 - 9 - 4 - 0 = 72
-    score = max(
-        0, min(100, 100 - 50 * 0.3 - 30 * 0.3 - 20 * 0.2 - 0 * 0.2)
-    )
+    score = max(0, min(100, 100 - 50 * 0.3 - 30 * 0.3 - 20 * 0.2 - 0 * 0.2))
     assert score == 72
 
 

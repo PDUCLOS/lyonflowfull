@@ -31,9 +31,9 @@ import streamlit as st
 
 # Couleurs par mode (cohérent avec colors.py + spec §3.1)
 _MODE_ACCENT = {
-    "tc": "#1976D2",      # bleu TCL (cohérent transit_trip.py)
-    "voiture": "#FF9800", # orange voiture (cohérent traffic_widget)
-    "velov": "#43A047",   # vert Vélov (cohérent velov_trip.py)
+    "tc": "#1976D2",  # bleu TCL (cohérent transit_trip.py)
+    "voiture": "#FF9800",  # orange voiture (cohérent traffic_widget)
+    "velov": "#43A047",  # vert Vélov (cohérent velov_trip.py)
 }
 
 _MODE_LABEL = {
@@ -81,8 +81,11 @@ def render_mode_summary(
             </span>
             <span style="opacity:0.85;">📏 {distance_km:.2f} km</span>
             <span style="opacity:0.85;">🕐 {duration_min:.0f} min</span>
-            {f'<span style="opacity:0.85;color:{accent};font-weight:600;">⚠️ Congestionné</span>'
-             if impact.get("is_congested") else ''}
+            {
+            f'<span style="opacity:0.85;color:{accent};font-weight:600;">⚠️ Congestionné</span>'
+            if impact.get("is_congested")
+            else ""
+        }
         </div>
         """,
         unsafe_allow_html=True,
@@ -125,17 +128,12 @@ def render_mode_summary(
         with cols[1]:
             cost = float(impact.get("cost_eur", 0.0))
             help_text = (
-                "Ticket TCL unitaire (SYTRAL 2026)" if mode == "tc"
-                else "Carburant SP95 seul (parking = Phase 2)"
+                "Ticket TCL unitaire (SYTRAL 2026)" if mode == "tc" else "Carburant SP95 seul (parking = Phase 2)"
             )
             st.metric("💰 Coût", f"{cost:.2f} €", help=help_text)
         with cols[2]:
             co2 = float(impact.get("co2_g", 0.0))
-            help_co2 = (
-                "Mix bus/tram/métro (SYTRAL/ADEME)"
-                if mode == "tc"
-                else "193 g CO2/km base (ADEME 2024)"
-            )
+            help_co2 = "Mix bus/tram/métro (SYTRAL/ADEME)" if mode == "tc" else "193 g CO2/km base (ADEME 2024)"
             st.metric("🌿 CO2", f"{int(co2)} g", help=help_co2)
         with cols[3]:
             st.metric("📏 Distance", f"{distance_km:.2f} km")

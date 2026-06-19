@@ -11,6 +11,7 @@ respectent la politique zéro mock de Sprint 8 :
 Voir ``docs/SPEC_OPTIMISATION_INTERDEPENDANCES.md`` (Axe 1, 2026-06-19)
 pour le contexte fonctionnel.
 """
+
 from __future__ import annotations
 
 import sys
