@@ -4,50 +4,28 @@
 # Override du docker-compose.yml principal. Usage :
 #   docker compose -f docker-compose.yml -f docker-compose.monitoring.yml up -d
 #
-# Stack ajoutée :
-#   - prometheus (scrape + retention 30j)
+# Stack active :
 #   - alertmanager (Discord/Slack webhook)
-#   - grafana (dashboards provisionnés)
+#   - grafana (dashboards provisionnés — affiche "no data" sans Prometheus)
 #   - node-exporter (CPU, RAM, disk, load)
 #   - postgres-exporter (PG connections, locks, queries)
 #   - nginx-exporter (requests, 5xx, latency)
-#   - redis-exporter (cache metrics)
+#
+# Sprint 15+ (2026-06-19) : Prometheus + redis-exporter SUPPRIMÉS.
+# - prometheus_data (35 MB) viré, prom/prometheus:v2.54.1 (386 MB) viré.
+# - Les exporters (node/postgres/nginx) + grafana + alertmanager restent UP
+#   mais sans source de données Prometheus → affichent "no data".
+# - Stack monitoring à remettre en place si nécessaire (cf. SPEC monitoring v2).
 #
 # Ports exposés uniquement sur 127.0.0.1 (Nginx fait le reverse proxy public).
 # =============================================================================
 
 services:
   # ---------------------------------------------------------------------------
-  # Prometheus
+  # Prometheus — SUPPRIMÉ Sprint 15+ (2026-06-19)
+  # Raison : config YAML cassée depuis v2.54 (restart-loop), valeur
+  # ajoutée faible vs coût ops (1G RAM + 386 MB image + 35 MB volume).
   # ---------------------------------------------------------------------------
-  prometheus:
-    image: prom/prometheus:v2.54.1
-    container_name: lyonflow-prometheus
-    restart: unless-stopped
-    command:
-      - '--config.file=/etc/prometheus/prometheus.yml'
-      - '--storage.tsdb.path=/prometheus'
-      - '--storage.tsdb.retention.time=30d'
-      - '--storage.tsdb.retention.size=10GB'
-      - '--web.console.libraries=/usr/share/prometheus/console_libraries'
-      - '--web.console.templates=/usr/share/prometheus/consoles'
-      # Sprint 8+4 (2026-06-12) — désactivé : déclenchait des reloads
-      # aléatoires qui faisaient planter Prometheus. Recharger via restart.
-    volumes:
-      - ./monitoring/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
-      - ./monitoring/prometheus/rules:/etc/prometheus/rules:ro
-      - prometheus_data:/prometheus
-    ports:
-      - "127.0.0.1:9090:9090"
-    depends_on:
-      - alertmanager
-    networks:
-      - monitoring
-    deploy:
-      resources:
-        limits:
-          cpus: "0.5"
-          memory: 1G
 
   # ---------------------------------------------------------------------------
   # Alertmanager
@@ -95,8 +73,8 @@ services:
       - grafana_data:/var/lib/grafana
     ports:
       - "127.0.0.1:3000:3000"
-    depends_on:
-      - prometheus
+    # Sprint 15+ — dépendance prometheus virée. Grafana démarre standalone
+    # et affiche "no data" tant que la stack monitoring v2 n'est pas remise.
     networks:
       - monitoring
     deploy:
@@ -138,8 +116,8 @@ services:
       DATA_SOURCE_NAME: "postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}?sslmode=disable"
     ports:
       - "127.0.0.1:9187:9187"
-    depends_on:
-      - prometheus
+    # Sprint 15+ — dépendance prometheus virée. Exporter reste UP mais
+    # sans target Prometheus pour le scrape.
     networks:
       - monitoring
     deploy:
@@ -169,29 +147,15 @@ services:
           memory: 32M
 
   # ---------------------------------------------------------------------------
-  # Redis exporter
+  # Redis exporter — SUPPRIMÉ Sprint 15+ (2026-06-19)
+  # Raison : Redis viré (cf. docker-compose.yml), exporter orphelin.
   # ---------------------------------------------------------------------------
-  redis-exporter:
-    image: oliver006/redis_exporter:v1.62.0
-    container_name: lyonflow-redis-exporter
-    restart: unless-stopped
-    environment:
-      REDIS_ADDR: "redis://redis:6379"
-    ports:
-      - "127.0.0.1:9121:9121"
-    networks:
-      - monitoring
-    deploy:
-      resources:
-        limits:
-          cpus: "0.05"
-          memory: 32M
 
 # ---------------------------------------------------------------------------
 # Volumes
 # ---------------------------------------------------------------------------
 volumes:
-  prometheus_data:
+  # prometheus_data SUPPRIMÉ Sprint 15+ (avec le service prometheus)
   alertmanager_data:
   grafana_data:
 

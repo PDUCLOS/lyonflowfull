@@ -4,12 +4,15 @@
 # Stack complète :
 # - PostgreSQL 16 + PostGIS (Gold layer + Airflow metadata)
 # - MinIO (S3-compatible, optionnel — Google Drive est préféré)
-# - Redis (cache + Celery broker pour Airflow)
 # - MLflow (tracking + registry)
-# - Airflow (orchestration DAGs)
+# - Airflow (orchestration DAGs, LocalExecutor — pas de worker Celery)
 # - Streamlit (dashboard multi-persona)
 # - FastAPI (REST endpoints)
 # - Nginx (reverse proxy public)
+#
+# Sprint 15+ (2026-06-19) : Redis supprimé. LocalExecutor exécute les
+# tasks Airflow en subprocess dans le scheduler. Plus besoin de broker
+# Celery ni de worker dédié.
 #
 # Usage :
 #   docker compose up -d --build        # démarrer
@@ -30,7 +33,8 @@ x-common-env: &common-env
   MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD}
   MINIO_BUCKET_BRONZE: lyonflow-bronze
   MINIO_BUCKET_GOLD: lyonflow-gold
-  REDIS_URL: redis://redis:6379/0
+  # REDIS_URL commenté Sprint 15+ — Redis viré, LocalExecutor n'en a plus besoin.
+  # REDIS_URL: redis://redis:6379/0
   MLFLOW_TRACKING_URI: http://mlflow:5000
   # Sprint 10+ MLOps — modèles .pkl persistés dans /tmp/models
   # (writeable par user airflow, /opt/airflow/data appartient à root).
@@ -102,25 +106,12 @@ services:
           memory: 2.5G
 
   # ---------------------------------------------------------------------------
-  # Redis (cache + Celery broker)
+  # Redis — SUPPRIMÉ Sprint 15+ (2026-06-19)
+  # Raison : Airflow tourne en LocalExecutor depuis Sprint 11+, le
+  # worker Celery ne se connectait jamais au broker. Économie : 58 MB
+  # image + ~150 MB RAM. Pas de regression (LocalExecutor tourne les
+  # tasks en subprocess dans le scheduler).
   # ---------------------------------------------------------------------------
-  redis:
-    image: redis:7-alpine
-    container_name: lyonflow-redis
-    restart: unless-stopped
-    command: redis-server --maxmemory 200mb --maxmemory-policy allkeys-lru
-    healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
-      interval: 10s
-      timeout: 3s
-      retries: 3
-    ports:
-      - "127.0.0.1:6379:6379"
-    deploy:
-      resources:
-        limits:
-          cpus: "0.5"
-          memory: 256M
 
   # ---------------------------------------------------------------------------
   # MinIO (S3-compatible)
@@ -277,15 +268,13 @@ services:
         condition: service_healthy
       minio:
         condition: service_healthy
-      redis:
-        condition: service_healthy
     environment:
       <<: *common-env
       PYTHONPATH: /opt/airflow
-      AIRFLOW__CORE__EXECUTOR: CeleryExecutor
+      # Sprint 15+ — webserver n'exécute pas de tasks (c'est juste l'UI),
+      # mais on aligne l'executor sur le scheduler pour cohérence.
+      AIRFLOW__CORE__EXECUTOR: LocalExecutor
       AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/airflow
-      AIRFLOW__CELERY__BROKER_URL: redis://redis:6379/0
-      AIRFLOW__CELERY__RESULT_BACKEND: db+postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/airflow
       AIRFLOW__WEBSERVER__SECRET_KEY: ${AIRFLOW_SECRET_KEY}
       # Sprint 15+ (2026-06-19) — autoriser Basic Auth sur l'API REST
       # Airflow 2.9 (sinon 403 Forbidden par défaut). Le widget Pro_6
@@ -359,46 +348,12 @@ services:
           memory: 3G
 
   # ---------------------------------------------------------------------------
-  # Airflow worker
+  # Airflow worker — SUPPRIMÉ Sprint 15+ (2026-06-19)
+  # Raison : LocalExecutor exécute les tasks en subprocess dans le scheduler.
+  # Le worker Celery ne se connectait jamais au broker Redis (cherchait
+  # AMQP sur localhost au lieu de redis:6379) et consommait 1G RAM pour rien.
+  # Économie : -1G RAM + image 4.55 GB.
   # ---------------------------------------------------------------------------
-  airflow-worker:
-    build:
-      context: .
-      dockerfile: Dockerfile.airflow
-    container_name: lyonflow-airflow-worker
-    restart: unless-stopped
-    depends_on:
-      - airflow-webserver
-    environment:
-      <<: *common-env
-      PYTHONPATH: /opt/airflow
-      # Sprint 11+ (2026-06-17) — modèles ML persistés sur le volume
-      # airflow_data (writable par uid 50000), pas /app qui n'existe pas
-      # dans le worker. Sans ce var, ``XGBoostSpeedModel.save()`` écrivait
-      # sur /app/models → PermissionError → inférence impossible.
-      LYONFLOW_MODELS_DIR: /opt/airflow/data/models
-      AIRFLOW__CORE__EXECUTOR: CeleryExecutor
-      AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/airflow
-      AIRFLOW__CELERY__BROKER_URL: redis://redis:6379/0
-      AIRFLOW__CELERY__RESULT_BACKEND: db+postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/airflow
-      AIRFLOW__CELERY__WORKER_CONCURRENCY: "2"
-    command: >
-      bash -c "mkdir -p /opt/airflow/data/models && airflow celery worker"
-    volumes:
-      - ./dags:/opt/airflow/dags
-      - ./src:/opt/airflow/src
-      - airflow_data:/opt/airflow/data
-      - ./logs/airflow:/opt/airflow/logs
-    deploy:
-      resources:
-        limits:
-          cpus: "1.0"
-          # Sprint 11+ (2026-06-17) — 6G → 1G.
-          # Worker réellement utilisé = ~300 MiB (juste le heartbeat
-          # Celery + import des DAGs). 6G était du gaspillage pur.
-          # La RAM économisée (5G) est allouée au scheduler (2G) et
-          # laisse du headroom pour les autres containers.
-          memory: 1G
 
   # ---------------------------------------------------------------------------
   # FastAPI (REST endpoints)
