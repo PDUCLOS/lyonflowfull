@@ -5,6 +5,43 @@ Toutes les modifications notables de ce projet sont documentées ici.
 Le format suit [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/),
 et ce projet adhère au [Semantic Versioning](https://semver.org/lang/fr/).
 
+## [0.7.1] - 2026-06-19 — Sprint 15+ : mypy clean (42 → 0 erreurs) + training/stgcn package (branche `vps`)
+
+Sprint dédié **type safety** : résout le `Source file found twice` (root cause
+structurelle) puis fixe les 42 erreurs mypy par catégorie, sans aucun changement
+de logique métier.
+
+**Diagnostic root cause** :
+- `training/` n'avait pas de `__init__.py` → mypy résolvait
+  `training/stgcn/dataset.py` à la fois comme `dataset` (top-level via scan) ET
+  `training.stgcn.dataset`.
+- Solution : `__init__.py` dans `training/` et `training/stgcn/` (+ cohérence
+  Python avec `src/__init__.py` et `src/data/__init__.py`).
+- `pyproject.toml [tool.mypy]` : `explicit_package_bases = true` (sécurité).
+  ⚠️ NE PAS ajouter `mypy_path = "src"` : crée conflit `ingestion` vs
+  `src.ingestion`.
+
+**42 erreurs mypy corrigées en 6 catégories** :
+
+| Catégorie | Compte | Fix pattern |
+|-----------|--------|-------------|
+| `Unused type: ignore` | 12 | Suppression — `ignore_missing_imports=true` rend les `# type: ignore` sur torch/mlflow/weasyprint inutiles |
+| `None has no attribute` | 6 | Annotations `_model: Any` + assertions `is not None` après try/except ImportError ou check `load()` |
+| `Incompatible types` assignment | 8 | Annotations explicites (`list[np.ndarray]`, `dict[str, Any]`, `tuple`), renommage `val_preds_arr` post-concatenate, `final_metrics` permissive |
+| `Argument X incompatible` (Path optional) | 3 | Double `or` : `model_dir or os.getenv(...) or default` (mypy ne narrow pas la default de `os.getenv`) |
+| `int/float from object` | 4 | `cast(int, ...)` / `cast(float, ...)` sur `execute_scalar(...) or 0` (helper DB retourne `object \| None`) |
+| Autres | 2 | `list_experiments()` → `search_experiments()` (API MLflow 2.x, fix de bug réel) + `max()` filter `is not None` + `cast(datetime, ...)` |
+
+**Bonus ruff** : 7× W293 + 1× W291 + F401 cast unused → `ruff --fix --unsafe-fixes`.
+
+**Bilan** :
+- mypy : `Success: no issues found in 82 source files`
+- ruff : `All checks passed`
+- pytest : **301 verts / 4 skipped / 14 deselected** (aucune régression)
+
+**Fichiers** : 19 modifiés, +89/-47 lignes, 4 créés (3 `__init__.py` + structure).
+Commit : `3c7d7b6 feat(sprint15+): mypy clean (42 → 0 erreurs) + training/stgcn devient package`.
+
 ## [0.7.0] - 2026-06-19 — Sprint 15+ : Axe 1 — Grille multimodale (branche `vps`)
 
 Première livraison de `docs/SPEC_OPTIMISATION_INTERDEPENDANCES.md` :

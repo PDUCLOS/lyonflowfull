@@ -13,6 +13,18 @@ LyonFlowFull est une plateforme MLOps end-to-end de prédiction et d'analyse du 
 **Version actuelle** : **v0.7.0** (Sprints 1-7 + VPS 1-8 + 9+ + 11+ + 12+ + 13 + 13+ + 15+) — branche `vps` ACTIVE
 **Statut** : production VPS stable. Voir [archive/sprints/SPRINT_11_REPORT.md](archive/sprints/SPRINT_11_REPORT.md) pour le détail du dernier sprint formel (Sprint 15+ = extension sans rapport dédié, voir CHANGELOG.md).
 
+### État au 2026-06-19 (Sprint 15+ — v0.7.1 — mypy clean + training/stgcn package)
+
+- 18 pages × 3 personas · **51 widgets** · **8 collecteurs Bronze** · **13 DAGs Airflow**
+- ~170 fichiers Python · ~22 000 lignes
+- **301 tests verts / 4 SKIP / 14 deselected** · ruff clean · **mypy clean (82 fichiers, 0 erreur)**
+- **Sprint 15+ v0.7.1 — Type safety** :
+  - **Root cause "Source file found twice"** : `training/` n'avait pas de `__init__.py` → mypy résolvait `training/stgcn/dataset.py` à la fois comme `dataset` ET `training.stgcn.dataset`. Fix : `__init__.py` dans `training/` + `training/stgcn/` (+ cohérence avec `src/__init__.py` + `src/data/__init__.py`).
+  - **`pyproject.toml [tool.mypy]`** : `explicit_package_bases = true` (sécurité).
+  - **42 → 0 erreurs mypy** en 6 catégories : `Unused type: ignore` (12), `None has no attribute` (6), `Incompatible types` (8), `Argument X` Path optional (3), `int/float from object` (4), autres (2 — MLflow API + max type-var).
+  - **Patterns réutilisables** : `cast(int, execute_scalar(...) or 0)`, double `or` pour `Path(model_dir or os.getenv(...) or default)`, assertions `is not None` après try/except.
+  - **Aucun changement de logique métier** — typage pur. 19 fichiers, +89/-47 lignes.
+
 ### État au 2026-06-19 (Sprint 15+ — v0.7.0 — Interdépendances multimodales)
 
 - 18 pages × 3 personas · **51 widgets** (+3 : multimodal_heatmap, bus_traffic_spatial, mode_comparison) · **8 collecteurs Bronze** · **13 DAGs Airflow** (10 actifs + 1 cron backfill + 1 archive silver + 1 TomTom actif)
@@ -530,8 +542,9 @@ lyonflowfull/
 ruff check . --output-format=github
 ruff format --check .
 
-# Type check (non-blocking)
-mypy dags/ training/ src/ --ignore-missing-imports
+# Type check (Sprint 15+ v0.7.1 : mypy clean, plus de --ignore-missing-imports CLI)
+# La config vit dans pyproject.toml [tool.mypy] + explicit_package_bases = true.
+mypy dags/ training/ src/
 
 # Tests (Sprint 8+ : addopts inclut "-m not integration")
 pytest tests/ -v --tb=short
