@@ -279,6 +279,21 @@ def cached_bus_traffic_spatial_diagnosis_counts(
 
 
 # =============================================================================
+# Score santé réseau (Sprint 15+, Axe 5 — migration 019)
+# =============================================================================
+
+
+@st.cache_data(ttl=TTL_REALTIME, show_spinner=False)
+def cached_network_health_score() -> pd.DataFrame:
+    """Score de santé réseau 0-100 temps réel (Sprint 15+, Axe 5).
+
+    Fonction SQL ``gold.fn_network_health_score()`` — pas de MV, calcul
+    live. TTL 30s car c'est le KPI de synthèse exécutive.
+    """
+    return dl.load_network_health_score()
+
+
+# =============================================================================
 # Transport en commun (Sprint 14, 2026-06-19)
 # =============================================================================
 

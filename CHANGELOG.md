@@ -184,6 +184,69 @@ tronçon Part-Dieu ↔ Gerland).
 **Tests** : 273 verts (+11 nouveaux test_bus_traffic_spatial.py),
 3 skipped, 9 deselected. Ruff clean sur les 9 fichiers du PR.
 
+### Axe 5 (Sprint 15+) — Score santé réseau temps réel
+
+Troisième livraison de `docs/SPEC_OPTIMISATION_INTERDEPENDANCES.md` :
+**KPI unique 0-100** synthétisant l'état global du réseau de mobilité
+Lyon (trafic + TCL + Vélov + météo) avec redistribution automatique des
+poids si une source est indisponible (évite le faux "parfait" quand
+un composant tombe).
+
+#### Ajouté
+- **Migration 19** `scripts/sql/migration_019_network_health.sql` :
+  - Fonction SQL `gold.fn_network_health_score()` (DROP + CREATE,
+    idempotent — pas de MV car calcul stateless).
+  - Formule : `100 - pct_congestion × 0.3 - pct_tcl_delayed × 0.3 -
+    pct_velov_empty × 0.2 - meteo_penalty × 0.2` (poids total 1.0).
+  - **Météo** : `precipitation > 5 → 15pts`, `> 1 → 8pts`,
+    `temperature < 0 → 10pts`, `> 35 → 5pts`, sinon 0.
+  - **Redistribution poids** : si `traffic / tcl / velov` indisponible
+    (aucune donnée < 30 min), son poids est mis à 0 et le `scale` =
+    `1 / somme_poids_restants` redistribue sur les sources encore UP.
+  - **Diagnostic** : `healthy > 75`, `stressed > 50`, `degraded > 25`,
+    sinon `critical`. Retourne aussi `traffic_available`,
+    `tcl_available`, `velov_available`, `meteo_available` (booléens)
+    pour le widget.
+- **Helper DB** : `get_network_health_score()` dans `src/data/db_query.py`
+  (pattern `_df_from_query`).
+- **Wrapper fail-loud** : `load_network_health_score()` dans
+  `src/data/data_loader.py` — lève `DashboardDataError` si DB indispo
+  OU si la fonction SQL ne retourne aucune ligne (migration 19 pas
+  appliquée).
+- **Cache Streamlit** : `cached_network_health_score` (TTL 30s —
+  KPI de synthèse exécutive, plus court que les autres caches).
+- **Widget `dashboard/components/widgets/elu/network_health_gauge.py`** :
+  - Jauge Plotly principale (`mode='gauge+number'`) 0-100 colorée
+    par palier (vert > 75, jaune 50-75, orange 25-50, rouge < 25)
+  - 4 sous-jauges (Trafic / TCL / Vélov / Météo) avec valeur courante
+    + couleur proportionnelle au seuil
+  - Bannière diagnostic ("🟢 Réseau fluide" / "🟡 Sous tension" /
+    "🟠 Dégradé" / "🔴 Critique") avec timestamp
+  - Bandeau "Sources indisponibles" listant les composantes down
+    + explication de la redistribution des poids
+  - Fail loud via DashboardDataError → `st.error(...)`
+  - **Sparkline 24h** : TODO Sprint suivant (nécessite table
+    `gold.network_health_history` populée par un DAG */15 min —
+    V1 sans historique, la jauge principale donne déjà le temps réel)
+- **Câblage page** : bandeau en haut de `dashboard/pages/Elu_1_Synthese.py`
+  (juste après le titre et avant le bloc narratif `render_executive_summary`).
+  Visible immédiatement à l'ouverture de la page de synthèse exécutive.
+- `dashboard/components/widgets/elu/__init__.py` : export
+  `render_network_health_gauge` (ajouté à `__all__`).
+
+#### Notes
+- **Min score atteignable = 17** (pas 0) avec la formule actuelle
+  (`100 - 30 - 30 - 20 - 3 = 17`). Le `GREATEST(0, ...)` est une
+  sécurité au cas où les poids changent.
+- **Pas de recalibrage** des poids (0.3/0.3/0.2/0.2) sur données
+  réelles — fait en V2 quand on aura 30 jours d'historique.
+
+**Tests** : 290 verts (+17 nouveaux test_network_health.py :
+fail loud DB indispo, fail loud résultat vide, formule 0/zéro/minimum,
+redistribution poids quand source down, 8 parametrize seuils de
+diagnostic, smoke widget fail loud, signature export).
+Ruff clean sur les 4 fichiers du PR.
+
 ## [0.6.7] - 2026-06-18 — Sprint 13+ : TomTom Niveau 1 réactivé + cross-validation (branche `vps`)
 
 Réactive TomTom Traffic Flow comme **deuxième source indépendante de vitesse

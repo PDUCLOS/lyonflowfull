@@ -14,6 +14,7 @@ from dashboard.components.widgets.common import render_traffic_map_compact
 from dashboard.components.widgets.elu import (
     render_executive_summary,
     render_kpi_cards,
+    render_network_health_gauge,
     render_news_section,
     render_pdf_generator,
     render_top_decisions,
@@ -35,6 +36,12 @@ setup_auto_refresh()
 
 st.title("📈 Synthèse exécutive — Métropole de Lyon")
 render_data_status_banner()
+
+# Bandeau santé réseau (Axe 5, Sprint 15+ — migration 019)
+# Jauge synthétique 0-100 + 4 sous-jauges. Fail loud si DB indispo.
+render_network_health_gauge()
+
+st.markdown("---")
 
 # Bloc narratif
 render_executive_summary()

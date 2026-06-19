@@ -1218,6 +1218,29 @@ def load_bus_traffic_spatial_diagnosis_counts(
     return df
 
 
+def load_network_health_score() -> pd.DataFrame:
+    """Score de sante reseau 0-100 temps reel (Sprint 15+, Axe 5).
+
+    Appelle ``gold.fn_network_health_score()`` (migration 019). Retourne
+    1 ligne avec score, composantes, disponibilite sources, diagnostic.
+
+    Raises:
+        DashboardDataError: si PostgreSQL ne repond pas ou si la fonction
+            SQL n'existe pas encore (migration 019 non appliquee).
+    """
+    _require_db_or_raise("gold.fn_network_health_score()")
+    from src.data.db_query import get_network_health_score
+
+    df = get_network_health_score()
+    if df.empty:
+        raise DashboardDataError(
+            source="gold.fn_network_health_score()",
+            detail="Fonction SQL ne retourne aucune ligne. "
+            "Verifier migration 019 appliquee.",
+        )
+    return df
+
+
 def load_mlflow_models(
     experiment: str = "lyonflow-traffic",
     max_results: int = 50,

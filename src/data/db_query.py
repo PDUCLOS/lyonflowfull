@@ -1031,6 +1031,26 @@ def get_bus_traffic_spatial_diagnosis_counts(
 
 
 # =============================================================================
+# Score santé réseau (Sprint 15+, Axe 5 — migration 019)
+# =============================================================================
+
+
+def get_network_health_score() -> pd.DataFrame:
+    """Score de santé réseau 0-100 temps réel (Sprint 15+, Axe 5).
+
+    Appelle ``gold.fn_network_health_score()`` qui agrège trafic + TCL +
+    Vélov + météo avec redistribution des poids si source indisponible.
+
+    Returns:
+        DataFrame 1 ligne : ``score, pct_congestion, pct_tcl_delayed,
+        pct_velov_empty, meteo_penalty, traffic_available, tcl_available,
+        velov_available, meteo_available, diagnosis, computed_at``.
+    """
+    query = "SELECT * FROM gold.fn_network_health_score()"
+    return _df_from_query(query)
+
+
+# =============================================================================
 # Référentiel lieux × transports × calendrier (Sprint VPS-6, 2026-06-11)
 # =============================================================================
 # Ces 3 tables sont créées par :

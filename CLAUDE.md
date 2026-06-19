@@ -1,6 +1,6 @@
 # CLAUDE.md — LyonFlowFull
 
-> Mémoire projet — **dernière mise à jour : 2026-06-18, Sprint 13+ (v0.6.7)** (TomTom Niveau 1 réactivé : ingestion Bronze + vue SQL cohérence spatiale + widget Pro_TCL "Cohérence sources vitesse" + détecteur capteurs HS).
+> Mémoire projet — **dernière mise à jour : 2026-06-19, Sprint 15+ (v0.7.0)** (Grille multimodale Axe 1 + bus × trafic spatialisé Axe 3 + comparateur modes Usager + spec 7 axes interdépendances).
 
 ## Projet
 
@@ -10,8 +10,29 @@ LyonFlowFull est une plateforme MLOps end-to-end de prédiction et d'analyse du 
 **Repo** : PDUCLOS/lyonflowfull
 **Cible production** : **VPS unique** `51.83.159.224` (Ubuntu, 6 CPU, 12 Go RAM, **2× 100 Go SSD** : sda = OS + code, sdb = PostgreSQL + MinIO + **Docker data-root** depuis Sprint 9+).
 
-**Version actuelle** : **v0.6.7** (Sprints 1-7 + VPS 1-8 + 9+ + 11+ + 12+ + 13 + 13+) — branche `vps` ACTIVE
-**Statut** : production VPS stable. Voir [archive/sprints/SPRINT_11_REPORT.md](archive/sprints/SPRINT_11_REPORT.md) pour le détail du dernier sprint formel (Sprint 13+ = extension sans rapport dédié, voir CHANGELOG.md).
+**Version actuelle** : **v0.7.0** (Sprints 1-7 + VPS 1-8 + 9+ + 11+ + 12+ + 13 + 13+ + 15+) — branche `vps` ACTIVE
+**Statut** : production VPS stable. Voir [archive/sprints/SPRINT_11_REPORT.md](archive/sprints/SPRINT_11_REPORT.md) pour le détail du dernier sprint formel (Sprint 15+ = extension sans rapport dédié, voir CHANGELOG.md).
+
+### État au 2026-06-19 (Sprint 15+ — v0.7.0 — Interdépendances multimodales)
+
+- 18 pages × 3 personas · **51 widgets** (+3 : multimodal_heatmap, bus_traffic_spatial, mode_comparison) · **8 collecteurs Bronze** · **13 DAGs Airflow** (10 actifs + 1 cron backfill + 1 archive silver + 1 TomTom actif)
+- 9 endpoints API · 3 modèles ML · RGPD complet · ~170 fichiers Python · ~22 000 lignes
+- **283 tests verts (+65 nouveaux) / 4 SKIP / 14 deselected** · ruff clean
+- **Sprint 15+ (2026-06-19) — Analyse interdépendances multimodales (Axes 1 + 3)** :
+  - **Spec complète** : `docs/SPEC_OPTIMISATION_INTERDEPENDANCES.md` (7 axes, 883 lignes). Diagnostic lacunes + solutions SQL + widgets + tests + roadmap priorisée.
+  - **Axe 1 — Grille multimodale** (migration 17) : vue matérialisée `gold.mv_multimodal_grid` fusionnant trafic + TCL + Vélov + météo sur grille 0.01° (~1 km). Score multimodal 0-10 par cellule. Widget `multimodal_heatmap.py` : carte Folium rectangles colorés + 4 KPI cards + tableau top saturées. DAG refresh */10 min (REFRESH CONCURRENTLY).
+  - **Axe 3 — Bus × trafic spatialisé** (migration 18) : vue matérialisée `gold.mv_bus_traffic_spatial` avec JOIN spatial 0.001° (~100 m). Corrige le bottleneck global (`_BOTTLENECK_SQL` JOIN par heure globale → JOIN par zone locale). Widget `bus_traffic_spatial.py` : scatter Plotly + KPI + top zones. Option B non-breaking (coexiste avec ancien bottleneck). DAG refresh */15 min.
+  - **Comparateur modes Usager** : spec `docs/SPEC_COMPARATEUR_MODES_USAGER.md`. Migration 16 `referentiel.tarifs_modes`. Eco-calculator (`eco_calculator.py`), widgets `mode_comparison.py` + `mode_summary.py`. Radio "Optimiser pour" (temps/coût) dans search_bar.
+  - **Tests** : +65 tests (multimodal_grid 7 + bus_traffic_spatial 11 + comparateur + fixtures + audit).
+
+### Roadmap interdépendances (7 axes, voir SPEC_OPTIMISATION_INTERDEPENDANCES.md)
+- ✅ **Axe 1** (Sprint 15+) : grille multimodale 0.01° (fusion trafic + TCL + Vélov + météo)
+- ✅ **Axe 3** (Sprint 15+) : bus × trafic spatialisé (JOIN zone 100 m)
+- ✅ **Axe 5** (Sprint 15+) : score santé réseau 0-100 (migration 019 `gold.fn_network_health_score()` + widget jauge Plotly `network_health_gauge.py` en bandeau Élu). Redistribution poids si source indisponible.
+- ⏸ **Axe 6** : qualité données (`data_quality.py`, port LyonTraffic)
+- ⏸ **Axe 4** : report modal Vélov ↔ TC (PostGIS ST_DWithin 300 m, z-score)
+- ⏸ **Axe 2** : propagation congestion (lag cross-correlation Granger simplifié)
+- ⏸ **Axe 7** : météo comme variable d'interaction (impact quantifié par mode)
 
 ### État au 2026-06-18 (Sprint 13+ — v0.6.7 — TomTom Niveau 1)
 
@@ -245,9 +266,16 @@ Chaque table Bronze : `fetched_at TIMESTAMPTZ` + `raw_data JSONB` + colonnes ext
 | Table | Rôle |
 |-------|------|
 | `gold.bus_delay_segments` | Retard agrégé par tronçon/ligne/heure/jour/météo/vacances |
-| `gold.infrastructure_bottlenecks` | Croisement retard bus × congestion trafic → diagnostic infra |
+| `gold.infrastructure_bottlenecks` | Croisement retard bus × congestion trafic → diagnostic infra (JOIN global par heure) |
+| `gold.mv_bus_traffic_spatial` | **Sprint 15+ Axe 3** — JOIN spatial 0.001° bus × trafic (corrige bottleneck global). Option B : coexiste avec l'ancien |
 | `gold.mv_line_kpis_live` | Vue matérialisée KPIs par ligne (155 lignes) — Sprint 7 |
 | `gold.mv_otp_heatmap` | Heatmap OTP triplets (4416 lignes×date×hour) — Sprint 7 |
+
+**Domaine Multimodal** (Sprint 15+) :
+
+| Table | Rôle |
+|-------|------|
+| `gold.mv_multimodal_grid` | **Axe 1** — Grille 0.01° fusionnant trafic + TCL + Vélov + météo. Score multimodal 0-10 + diagnostic |
 
 **Domaine Vélov** :
 
@@ -462,7 +490,9 @@ lyonflowfull/
 │   ├── PROJECT_STATUS_AND_GOALS.md
 │   ├── REPO_STRUCTURE.md
 │   ├── GIT_STRUCTURE.md
-│   └── CONTROLE_VPS_VS_CLOUD_DEMO.md
+│   ├── CONTROLE_VPS_VS_CLOUD_DEMO.md
+│   ├── SPEC_OPTIMISATION_INTERDEPENDANCES.md  # Sprint 15+ : 7 axes optimisation
+│   └── SPEC_COMPARATEUR_MODES_USAGER.md       # Sprint 15+ : comparateur 3 modes
 ├── SPRINT_*.md             # rapports de sprint (archivés — voir archive/sprints/)
 └── kubernetes/             # Phase 3 dormante
 ```

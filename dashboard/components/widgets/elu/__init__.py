@@ -8,6 +8,9 @@ from dashboard.components.widgets.elu.executive_summary import render_executive_
 from dashboard.components.widgets.elu.impact_projection import render_impact_projection
 from dashboard.components.widgets.elu.kpi_cards import render_kpi_cards
 from dashboard.components.widgets.elu.map_painter import render_map_painter
+from dashboard.components.widgets.elu.network_health_gauge import (
+    render_network_health_gauge,
+)
 from dashboard.components.widgets.elu.news_section import render_news_section
 from dashboard.components.widgets.elu.pdf_generator import render_pdf_generator
 from dashboard.components.widgets.elu.project_selector import render_project_selector
@@ -26,6 +29,7 @@ __all__ = [
     "render_impact_projection",
     "render_kpi_cards",
     "render_map_painter",
+    "render_network_health_gauge",
     "render_news_section",
     "render_pdf_generator",
     "render_project_selector",
