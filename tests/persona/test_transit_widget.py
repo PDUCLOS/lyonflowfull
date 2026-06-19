@@ -138,3 +138,105 @@ def test_search_bar_returns_modes_in_dict():
 
     # Le return doit inclure 'modes'
     assert '"modes": modes' in source, "render_search_bar doit retourner modes"
+
+
+def test_search_bar_segmented_control_is_single_select():
+    """Sprint 15+ — single-select (1 mode à la fois).
+
+    Patrice : « je veux un single select » — clé précise de l'interface.
+    """
+    search_bar_path = (
+        Path(__file__).resolve().parents[2]
+        / "dashboard"
+        / "components"
+        / "widgets"
+        / "usager"
+        / "search_bar.py"
+    )
+    source = search_bar_path.read_text(encoding="utf-8")
+
+    m = re.search(
+        r"st\.segmented_control\([^)]*selection_mode\s*=\s*['\"]single['\"]",
+        source,
+        re.DOTALL,
+    )
+    assert m is not None, "selection_mode='single' requis (1 mode à la fois)"
+
+
+def test_search_bar_segmented_control_required():
+    """Sprint 15+ — ``required=True`` : empêche la désélection du mode actif.
+
+    Garantit que ``selected_mode`` est toujours set → pas d'écran vide après
+    « Trouver mon trajet » (cf. doc Streamlit : clic sur option active = no-op).
+    """
+    search_bar_path = (
+        Path(__file__).resolve().parents[2]
+        / "dashboard"
+        / "components"
+        / "widgets"
+        / "usager"
+        / "search_bar.py"
+    )
+    source = search_bar_path.read_text(encoding="utf-8")
+
+    m = re.search(
+        r"st\.segmented_control\([^)]*required\s*=\s*True",
+        source,
+        re.DOTALL,
+    )
+    assert m is not None, "required=True requis (pas d'écran vide possible)"
+
+
+def test_search_bar_label_modes_au_pluriel():
+    """Sprint 15+ — label « Modes de transport autorisés » (pluriel).
+
+    Patrice : formulation exacte demandée.
+    """
+    search_bar_path = (
+        Path(__file__).resolve().parents[2]
+        / "dashboard"
+        / "components"
+        / "widgets"
+        / "usager"
+        / "search_bar.py"
+    )
+    source = search_bar_path.read_text(encoding="utf-8")
+
+    m = re.search(
+        r"st\.segmented_control\(\s*['\"]Modes de transport autorisés['\"]",
+        source,
+    )
+    assert m is not None, (
+        "Label doit être 'Modes de transport autorisés' "
+        "(formulation exacte demandée par Patrice)"
+    )
+
+
+def test_search_bar_no_defensive_fallback():
+    """Sprint 15+ — pas de branche défensive : simplification des 3 cas.
+
+    Avec ``required=True`` + default non vide, ``selected_mode`` est toujours
+    set. Donc ``modes = [selected_mode]`` suffit, pas de ``if/else`` autour.
+    """
+    search_bar_path = (
+        Path(__file__).resolve().parents[2]
+        / "dashboard"
+        / "components"
+        / "widgets"
+        / "usager"
+        / "search_bar.py"
+    )
+    source = search_bar_path.read_text(encoding="utf-8")
+
+    # Simplification : ``modes = [selected_mode]`` direct, sans fallback
+    assert "modes = [selected_mode]" in source, (
+        "modes doit être une simple affectation [selected_mode] "
+        "(required=True + default = pas de cas vide possible)"
+    )
+    # Pas de branche défensive ``if not selected_mode`` ni ``if selected_mode else``
+    assert "if not selected_mode" not in source, (
+        "Branche défensive 'if not selected_mode' superflue avec required=True"
+    )
+    assert "if selected_mode else" not in source, (
+        "Branche défensive 'if selected_mode else' superflue avec required=True"
+    )
