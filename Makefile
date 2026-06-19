@@ -7,7 +7,7 @@
 .PHONY: help install lint format typecheck test test-unit test-integration \
         test-smoke coverage build up down restart logs ps shell-db shell-api \
         shell-streamlit backup restore clean seed-users docs \
-        deploy-vps rollback-vps tag-vps certbot-init certbot-renew \
+        deploy-vps deploy-vps-fast rollback-vps tag-vps certbot-init certbot-renew \
         healthcheck-vps coherence-check check-deploy-env tls-status \
         monitoring-up monitoring-down monitoring-status monitoring-logs
 
@@ -19,6 +19,52 @@ PROJECT := lyonflowfull
 # VPS (override via .deploy.env ou env vars, JAMAIS hardcoder en repo)
 VPS_HOST ?= $(shell [ -f .deploy.env ] && grep -E '^VPS_HOST=' .deploy.env | cut -d= -f2 || echo "ubuntu@example.com")
 SSH_KEY ?= $(shell [ -f .deploy.env ] && grep -E '^VPS_SSH_KEY=' .deploy.env | cut -d= -f2 || echo "~/.ssh/id_rsa")
+
+# Excludes rsync centralisés (alignés sur .gitignore + .dockerignore).
+# IMPORTANT : on n'envoie JAMAIS le .venv/ local vers le VPS :
+#   1) les containers Docker rebuildent leur env depuis requirements.txt
+#   2) les binaires du .venv/ local sont platform-specific (Darwin/arm64 vs Linux/x86_64)
+#      — les envoyer casserait pip et ferait timeout le rsync (~1 Go de bloat).
+# Meme logique pour __pycache__, *.pyc, caches IDE, etc.
+RSYNC_EXCLUDES := \
+    --exclude='.git/' \
+    --exclude='.github/' \
+    --exclude='.env' \
+    --exclude='.env.local' \
+    --exclude='.env.production' \
+    --exclude='.deploy.env' \
+    --exclude='.venv/' \
+    --exclude='venv/' \
+    --exclude='env/' \
+    --exclude='.pytest_cache/' \
+    --exclude='.mypy_cache/' \
+    --exclude='.ruff_cache/' \
+    --exclude='.mavis/' \
+    --exclude='.opencode/' \
+    --exclude='.claude/' \
+    --exclude='.DS_Store' \
+    --exclude='.vscode/' \
+    --exclude='.idea/' \
+    --exclude='__pycache__/' \
+    --exclude='*.pyc' \
+    --exclude='*.pyo' \
+    --exclude='*.egg-info/' \
+    --exclude='*.so' \
+    --exclude='htmlcov/' \
+    --exclude='.coverage' \
+    --exclude='coverage.xml' \
+    --exclude='*.log' \
+    --exclude='uploads/' \
+    --exclude='backups/' \
+    --exclude='postgres_data/' \
+    --exclude='minio_data/' \
+    --exclude='airflow_data/' \
+    --exclude='mlflow_data/' \
+    --exclude='grafana_data/' \
+    --exclude='prometheus_data/' \
+    --exclude='models/*.pt' \
+    --exclude='models/*.pkl' \
+    --exclude='models/*.joblib'
 
 help:  ## Affiche cette aide
 	@echo "LyonFlowFull v0.1.0 — Makefile"
@@ -188,19 +234,10 @@ healthcheck-vps:  ## Healthcheck post-deploy (HTTP + DB + nginx)
 deploy-vps: check-deploy-env  ## Déploie sur le VPS (Sprint VPS-1+VPS-2 : tag + rsync + healthcheck)
 	@echo "==[ Tag version deploy ]=="
 	@$(MAKE) tag-vps
-	@echo "==[ Rsync code (exclude data dirs pour preserver state VPS) ]=="
-	rsync -avz \
-	      --exclude='.git' \
-	      --exclude='.env' \
-	      --exclude='.deploy.env' \
-	      --exclude='uploads/' \
-	      --exclude='backups/' \
-	      --exclude='postgres_data/' \
-	      --exclude='minio_data/' \
-	      --exclude='airflow_data/' \
-	      --exclude='mlflow_data/' \
-	      --exclude='grafana_data/' \
-	      --exclude='prometheus_data/' \
+	@echo "==[ Rsync code (excludes centralisés en tete de Makefile) ]=="
+	@echo "==[ Note: --build rebuild les images Docker — premier deploy lent (~min), ensuite cache ]=="
+	rsync -avz --stats \
+	      $(RSYNC_EXCLUDES) \
 	      -e "ssh -i $(SSH_KEY)" \
 	      ./ $(VPS_HOST):/opt/lyonflow/
 	@echo "==[ Restart stack ]=="
@@ -208,6 +245,21 @@ deploy-vps: check-deploy-env  ## Déploie sur le VPS (Sprint VPS-1+VPS-2 : tag +
 	@echo "==[ Healthcheck post-deploy ]=="
 	ssh -i $(SSH_KEY) $(VPS_HOST) "cd /opt/lyonflow && make healthcheck-vps"
 	@echo "✅ Deploy OK : $$(git describe --tags --abbrev=0)"
+
+# Variante sans rebuild complet — utile quand on a juste besoin de pousser
+# un changement de code (le Dockerfile/requirements.txt n'a pas changé).
+# Beaucoup plus rapide que deploy-vps sur la stack complète.
+deploy-vps-fast: check-deploy-env  ## Déploie SANS rebuild Docker (rsync + restart seulement)
+	@echo "==[ Rsync code rapide (no --build) ]=="
+	rsync -avz --stats --delete \
+	      $(RSYNC_EXCLUDES) \
+	      -e "ssh -i $(SSH_KEY)" \
+	      ./ $(VPS_HOST):/opt/lyonflow/
+	@echo "==[ Restart containers (in-place, no image rebuild) ]=="
+	ssh -i $(SSH_KEY) $(VPS_HOST) "cd /opt/lyonflow && docker compose up -d"
+	@echo "==[ Healthcheck post-deploy ]=="
+	ssh -i $(SSH_KEY) $(VPS_HOST) "cd /opt/lyonflow && make healthcheck-vps"
+	@echo "✅ Deploy fast OK"
 
 rollback-vps:  ## Rollback deploy VPS vers tag précédent (Sprint VPS-2)
 	@PREV=$$(git tag --list 'vps-*' --sort=-version:refname | sed -n '2p'); \
