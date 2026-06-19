@@ -165,6 +165,7 @@ def _fetch_dags_from_airflow() -> list[dict[str, Any]]:
                 "next_run": d.get("next_dagrun") or "—",
                 "description": d.get("description") or "",
                 "paused": d.get("is_paused", False),
+                "last_dag_run_id": last.get("dag_run_id") or "",
             }
         )
     return enriched
@@ -186,4 +187,61 @@ def trigger_dag(dag_id: str) -> bool:
         return r.status_code in (200, 201)
     except Exception as exc:
         logger.warning("trigger_dag(%s) failed: %s", dag_id, exc)
+        return False
+
+
+def clear_stuck_dag_run(dag_id: str, dag_run_id: str) -> bool:
+    """Clear task instances d'un DAG run bloqué (POST /api/v1/dags/{dag_id}/clearTaskInstances).
+
+    Marque toutes les task instances du run comme "cleared" → Airflow les
+    re-schedule automatiquement. Utile pour débloquer un run stuck "running".
+    """
+    if not is_airflow_available():
+        return False
+    base = _airflow_base_url()
+    auth = _airflow_auth()
+    try:
+        r = requests.post(
+            f"{base}/api/v1/dags/{dag_id}/clearTaskInstances",
+            json={
+                "dry_run": False,
+                "dag_run_id": dag_run_id,
+                "reset_dag_runs": True,
+                "only_failed": False,
+            },
+            auth=auth,
+            timeout=10,
+        )
+        ok = r.status_code in (200, 201)
+        if ok:
+            logger.info("clear_stuck_dag_run(%s, %s): %d tasks cleared", dag_id, dag_run_id, len(r.json().get("task_instances", [])))
+        else:
+            logger.warning("clear_stuck_dag_run(%s, %s): HTTP %d — %s", dag_id, dag_run_id, r.status_code, r.text[:200])
+        return ok
+    except Exception as exc:
+        logger.warning("clear_stuck_dag_run(%s, %s) failed: %s", dag_id, dag_run_id, exc)
+        return False
+
+
+def mark_dag_run_failed(dag_id: str, dag_run_id: str) -> bool:
+    """Force un DAG run bloqué en état 'failed' (PATCH /api/v1/dags/{dag_id}/dagRuns/{dag_run_id})."""
+    if not is_airflow_available():
+        return False
+    base = _airflow_base_url()
+    auth = _airflow_auth()
+    try:
+        r = requests.patch(
+            f"{base}/api/v1/dags/{dag_id}/dagRuns/{dag_run_id}",
+            json={"state": "failed"},
+            auth=auth,
+            timeout=5,
+        )
+        ok = r.status_code == 200
+        if ok:
+            logger.info("mark_dag_run_failed(%s, %s): success", dag_id, dag_run_id)
+        else:
+            logger.warning("mark_dag_run_failed(%s, %s): HTTP %d", dag_id, dag_run_id, r.status_code)
+        return ok
+    except Exception as exc:
+        logger.warning("mark_dag_run_failed(%s, %s) failed: %s", dag_id, dag_run_id, exc)
         return False

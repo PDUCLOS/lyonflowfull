@@ -19,7 +19,13 @@ import html
 import streamlit as st
 
 from dashboard.components.colors import COLORS
-from src.data.airflow_client import get_dags_status, is_airflow_available, trigger_dag
+from src.data.airflow_client import (
+    clear_stuck_dag_run,
+    get_dags_status,
+    is_airflow_available,
+    mark_dag_run_failed,
+    trigger_dag,
+)
 from src.data.exceptions import DashboardDataError
 from src.monitoring.health_checks import run_all_checks
 
@@ -178,8 +184,40 @@ def render_dag_list() -> None:
             color = {"success": "🟢", "running": "🔄", "failed": "🔴"}.get(status, "⚪")
             st.markdown(f"{color} {status}")
         with cols[5]:
-            if st.button("▶️ Trigger", key=f"trigger_{dag['dag_id']}", use_container_width=True):
-                _trigger_dag(dag["dag_id"])
+            status = dag.get("last_status", "unknown")
+            dag_id = dag["dag_id"]
+            dag_run_id = dag.get("last_dag_run_id", "")
+            if status == "running" and dag_run_id:
+                col_a, col_b = st.columns(2)
+                with col_a:
+                    if st.button("⏹ Clear", key=f"clear_{dag_id}", use_container_width=True):
+                        if clear_stuck_dag_run(dag_id, dag_run_id):
+                            st.success(f"✅ {dag_id} cleared")
+                            st.cache_data.clear()
+                        else:
+                            st.error("Échec clear")
+                with col_b:
+                    if st.button("❌ Fail", key=f"fail_{dag_id}", use_container_width=True):
+                        if mark_dag_run_failed(dag_id, dag_run_id):
+                            st.success(f"✅ {dag_id} → failed")
+                            st.cache_data.clear()
+                        else:
+                            st.error("Échec mark failed")
+            elif status == "failed" and dag_run_id:
+                col_a, col_b = st.columns(2)
+                with col_a:
+                    if st.button("🔄 Clear", key=f"clear_{dag_id}", use_container_width=True):
+                        if clear_stuck_dag_run(dag_id, dag_run_id):
+                            st.success(f"✅ {dag_id} cleared → re-run")
+                            st.cache_data.clear()
+                        else:
+                            st.error("Échec clear")
+                with col_b:
+                    if st.button("▶️ Trigger", key=f"trigger_{dag_id}", use_container_width=True):
+                        _trigger_dag(dag_id)
+            else:
+                if st.button("▶️ Trigger", key=f"trigger_{dag_id}", use_container_width=True):
+                    _trigger_dag(dag_id)
 
 
 def render_health_panel() -> None:
