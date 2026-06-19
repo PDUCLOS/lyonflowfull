@@ -265,6 +265,12 @@ services:
       AIRFLOW__CELERY__BROKER_URL: redis://redis:6379/0
       AIRFLOW__CELERY__RESULT_BACKEND: db+postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/airflow
       AIRFLOW__WEBSERVER__SECRET_KEY: ${AIRFLOW_SECRET_KEY}
+      # Sprint 15+ (2026-06-19) — autoriser Basic Auth sur l'API REST
+      # Airflow 2.9 (sinon 403 Forbidden par défaut). Le widget Pro_6
+      # Pipeline Management utilise airflow:airflow en Basic Auth pour
+      # lister les DAGs récents. Order important : basic_auth en premier.
+      AIRFLOW__API__AUTH_BACKENDS: "airflow.api.auth.backend.basic_auth,airflow.api.auth.backend.session"
+      AIRFLOW__API__ENABLED: "true"
     command: webserver
     healthcheck:
       test: ["CMD", "curl", "-fsS", "http://localhost:8080/airflow/health"]
