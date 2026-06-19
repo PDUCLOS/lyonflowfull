@@ -1,0 +1,33 @@
+# =============================================================================
+# LyonFlowFull — dépendances TORCH (training GNN — Airflow uniquement)
+# =============================================================================
+# Sprint 15+ QW4 (2026-06-19) — torch extrait de requirements.txt.
+#
+# torch et torch-geometric ne sont utilisés QUE pour :
+#   - dags/ml/retrain_gnn.py (DAG Airflow, daily 03h00 — PAUSED via flag)
+#   - training/stgcn/* (CLI training, lancé via SSH depuis retrain_gnn)
+#
+# Images qui INCLUENT ce fichier :
+#   - Dockerfile.airflow (training GNN embarqué)
+#   - local dev (via requirements.txt qui agrège base + torch)
+#
+# Images qui ne N'ONT PAS BESOIN de torch :
+#   - Dockerfile (API FastAPI — XGBoost uniquement)
+#   - Dockerfile (Streamlit — fallback gracieux si torch absent)
+#
+# Gain mesuré (VPS 51.83.159.224, 2026-06-19) : ~12 GB par image
+# (torch CPU + CUDA wheels + torch-geometric + dépendances transitives
+# type numpy MKL, intel-openmp, fsspec, jinja2, etc.)
+# =============================================================================
+
+# PyTorch (CPU only — pas de GPU sur le VPS)
+torch>=2.1.0
+
+# PyTorch Geometric (GNN convolutions)
+torch-geometric>=2.4.0
+
+# Dépendances transitives souvent manquantes côté slim
+# (torch-geometric ne les déclare pas toutes explicitement)
+numpy>=1.24.0  # déjà dans base mais pinné pour cohérence wheels
+scipy>=1.11.0  # torch-geometric sparse operations
+networkx>=3.2.0  # déjà dans base — graph utilities torch-geometric

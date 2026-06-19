@@ -1,0 +1,112 @@
+# =============================================================================
+# LyonFlowFull — dépendances de BASE (production : API + Streamlit)
+# =============================================================================
+# Sprint 15+ QW4 (2026-06-19) — torch et torch-geometric extraits dans
+# requirements-torch.txt pour réduire la taille des images API et Streamlit.
+#
+# torch n'est utilisé QUE par :
+#   - dags/ml/retrain_gnn.py (Airflow, training GNN)
+#   - training/stgcn/* (GNN training CLI)
+# L'API FastAPI ne sert que XGBoost (src/models/xgboost_*.py). Le dashboard
+# Streamlit a un fallback gracieux si torch manque (STGCNWrapper → None).
+#
+# Cette séparation permet :
+#   - Image API : ~14-19 GB → ~2-3 GB (-12 à -16 GB)
+#   - Image Streamlit : ~14-19 GB → ~3-4 GB
+#   - Image Airflow : inchangée (torch ajouté via requirements-torch.txt)
+# =============================================================================
+
+# Core
+streamlit>=1.32.0
+pyyaml>=6.0
+python-dotenv>=1.0.0
+pydantic>=2.5.0
+pydantic-settings>=2.1.0
+requests>=2.31.0
+pytz>=2023.3
+
+# DB
+psycopg2-binary>=2.9.9
+sqlalchemy>=2.0.0
+geoalchemy2>=0.14.0
+shapely>=2.0.0
+alembic>=1.13.0
+
+# Data + viz
+pandas>=2.0.0
+numpy>=1.24.0
+plotly>=5.18.0
+pydeck>=0.8.0
+folium>=0.15.0
+streamlit-folium>=0.15.0
+streamlit-autorefresh>=1.0.0
+joblib>=1.3.0
+
+# PDF
+weasyprint>=60.0
+reportlab>=4.0.0
+
+# Excel
+openpyxl>=3.1.0
+
+# Geospatial
+geopandas>=0.14.0
+pyproj>=3.6.0
+h3>=4.1.0
+
+# DataFrame vectorisé (mapping LYO↔twgid Sprint 10+)
+polars>=0.20.0
+
+# HTTP + retry
+httpx>=0.25.0
+tenacity>=8.2.0
+
+# Routing (graphe routier, Dijkstra, nearest node)
+networkx>=3.2.0
+
+# Google Drive API (artifacts, file sharing)
+google-api-python-client>=2.100.0
+google-auth>=2.23.0
+google-auth-oauthlib>=1.1.0
+google-auth-httplib2>=0.1.1
+
+# AWS / S3 (backup offsite alt)
+boto3>=1.34.0
+botocore>=1.34.0
+
+# ML (XGBoost + scikit-learn + MLflow — pas de torch ici)
+xgboost>=2.0.0
+scikit-learn>=1.3.0
+mlflow>=2.10.0
+optuna>=3.5.0
+
+# API
+fastapi>=0.110.0
+uvicorn[standard]>=0.27.0
+starlette>=0.36.0
+bcrypt>=4.1.0
+pyjwt>=2.8.0
+prometheus-fastapi-instrumentator>=7.0.0
+prometheus-client>=0.20.0
+
+# Airflow — NE PAS pinner ici (genere resolution-too-deep en CI).
+# apache-airflow est deja installe DANS le container Airflow via son image
+# officielle (apache/airflow:2.9.x). Pour les autres containers (api,
+# streamlit), Airflow n'est pas utilise.
+# Si besoin de tester un DAG en CI/local hors Docker, installer separement :
+#   pip install apache-airflow==2.9.3
+# Protobuf/grpc pinnés pour fix incompatibilité google-cloud-compute (Airflow webserver crash)
+protobuf>=4.25.0,<5.0.0
+grpcio>=1.60.0
+
+# Monitoring
+evidently>=0.4.0
+# litestar pinné : evidently 0.4 demande litestar>=2.19 qui déclenche
+# un backtracking pip sur multipart (5+ min). 2.13 est la dernière
+# compatible sans cette chaîne transitive.
+litestar>=2.13.0,<2.19.0
+
+# Tests
+pytest>=8.0.0
+pytest-cov>=4.1.0
+pytest-asyncio>=0.23.0
