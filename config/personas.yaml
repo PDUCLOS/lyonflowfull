@@ -208,12 +208,6 @@ navigation:
       icon: "🎚"
       file: "Pro_4_Simulateur.py"
       description: "Impact d'ajout de bus sur l'OTP"
-    - group: "Reporting"
-      group_icon: "📊"
-      label: "Export reporting"
-      icon: "📤"
-      file: "Pro_5_Export.py"
-      description: "Vers SAEIV / Hastus / Excel"
     - group: "MLOps"
       group_icon: "⚙️"
       label: "Pipeline Management"
@@ -296,7 +290,6 @@ widgets_catalog:
   - report_builder
   - schedule_picker
   - format_selector
-  - saeiv_export
   - kpi_cards
   - executive_summary
   - trend_chart
@@ -314,5 +307,3 @@ widgets_catalog:
   - template_selector
   - slide_builder
   - benchmark_cities
-  - export_button
-  - export_pdf_button

@@ -24,35 +24,40 @@ def render_cause_analysis(segment: dict | None = None) -> None:
     delay = segment.get("delay_min", 0)
 
     # Diagnostic + recommandation
+    # Sprint 15+ (audit Pro TCL B-10) : la recommandation est injectée
+    # dans un template HTML (``unsafe_allow_html=True``). Le markdown
+    # ``**...**`` et ``- `` ne sont PAS interprétés dans un bloc HTML.
+    # On convertit ici en HTML (``<b>``, ``<br/>• ``) pour que le rendu
+    # final soit correct.
     if diagnosis == "infra":
         cause = "🚗 Trafic congestionné sur le tronçon — la voirie est saturée"
-        recommendation = (
-            "**Action prioritaire :**\n"
-            "- Étude couloir bus dédié (ROI 18 mois sur cette ligne)\n"
-            "- Coordination feux tricolores en faveur des bus\n"
-            "- Plan de délestage VP sur axe parallèle"
+        recommendation_html = (
+            "<b>Action prioritaire :</b><br/>"
+            "• Étude couloir bus dédié (ROI 18 mois sur cette ligne)<br/>"
+            "• Coordination feux tricolores en faveur des bus<br/>"
+            "• Plan de délestage VP sur axe parallèle"
         )
         color = COLORS["status_critical"]
     elif diagnosis == "operations":
         cause = "⏱ Le bus accumule du retard sans congestion — problème de fréquence ou de charge"
-        recommendation = (
-            "**Action prioritaire :**\n"
-            "- Augmenter fréquence aux heures de pointe\n"
-            "- Vérifier rotation des chauffeurs\n"
-            "- Ajuster temps de battement aux terminus"
+        recommendation_html = (
+            "<b>Action prioritaire :</b><br/>"
+            "• Augmenter fréquence aux heures de pointe<br/>"
+            "• Vérifier rotation des chauffeurs<br/>"
+            "• Ajuster temps de battement aux terminus"
         )
         color = COLORS["status_warning"]
     elif diagnosis == "bus_lane_ok":
         cause = "🚌 Couloir bus fonctionnel — trafic VP bouché mais bus protégé"
-        recommendation = (
-            "**Bonne pratique à généraliser :**\n"
-            "- Étendre le couloir bus aux tronçons adjacents\n"
-            "- Documenter comme cas d'école pour d'autres lignes"
+        recommendation_html = (
+            "<b>Bonne pratique à généraliser :</b><br/>"
+            "• Étendre le couloir bus aux tronçons adjacents<br/>"
+            "• Documenter comme cas d'école pour d'autres lignes"
         )
         color = COLORS["status_info"]
     else:
         cause = "✅ Aucune anomalie détectée"
-        recommendation = "RAS — fonctionnement normal."
+        recommendation_html = "RAS — fonctionnement normal."
         color = COLORS["status_ok"]
 
     st.markdown(
@@ -67,7 +72,7 @@ def render_cause_analysis(segment: dict | None = None) -> None:
             </div>
             <div style="margin-top:0.6rem;padding:0.6rem;background:{color}22;
                         border-radius:4px;font-size:0.85rem;">
-                {recommendation}
+                {recommendation_html}
             </div>
         </div>
         """,

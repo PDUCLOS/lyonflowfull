@@ -55,8 +55,15 @@ WITH per_line AS (
             (SUM(n_observations)::numeric / NULLIF(COUNT(DISTINCT (date::text || '-' || hour::text)), 0)),
             1
         ) AS freq_vehicules_par_h,
-        -- Charge = intensité d'observations (proxy)
-        ROUND((SUM(n_observations)::numeric / NULLIF(COUNT(*), 0)) * 100.0, 1) AS charge_pct
+        -- Charge = intensité d'observations (proxy). n_observations est un
+        -- comptage de véhicules par snapshot (souvent > 1), ce qui peut
+        -- dépasser 100% si on multiplie par 100 naïvement. On cap à 100
+        -- pour respecter le contrat widget ``load_pct: 0..100``.
+        -- (BUG-01 audit Pro TCL 2026-06-19 : valeurs aberrantes 675%, 1800%, 3951%)
+        LEAST(
+            ROUND((SUM(n_observations)::numeric / NULLIF(COUNT(*), 0)) * 100.0, 1),
+            100.0
+        ) AS charge_pct
     FROM gold.bus_delay_segments
     GROUP BY
         CASE

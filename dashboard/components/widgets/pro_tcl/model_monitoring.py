@@ -19,6 +19,8 @@ Sprint 9+ (2026-06-17) — politique "zéro mock" :
 
 from __future__ import annotations
 
+import html
+
 import streamlit as st
 
 from dashboard.components.colors import COLORS
@@ -188,10 +190,16 @@ def _render_model_registry_table(models: list[dict]) -> None:
 
 
 def render_model_registry_status() -> None:
-    """Sprint 8 — Affiche le statut live du Model Registry (toggle XGBoost vs GNN).
+    """Sprint 8 — Affiche le statut live du Model Registry.
+
+    Sprint 15+ (audit Pro TCL B-20) : le modèle GNN/STGCN est paused
+    (DAG ``retrain_gnn`` désactivé, modèle pas réentraîné). On ne
+    montre plus ses traces dans le dashboard pour éviter l'affichage
+    ``GNN H+60min dispo = ❌`` trompeur. Le code ModelRegistry reste
+    en place (rétro-compat) mais l'UI n'expose plus que XGBoost.
 
     Section ajoutée pour permettre à Patrice de visualiser en temps réel
-    quel modèle est actif en prod et basculer de l'un à l'autre.
+    le statut du modèle XGBoost actif en prod.
     """
     st.markdown("##### 🎛️ Model Registry Status (live)")
 
@@ -199,27 +207,21 @@ def render_model_registry_status() -> None:
     try:
         from src.ml.model_registry import (
             ModelRegistry,
-            get_active_models,
-            is_stgcn_training_enabled,
             is_xgboost_training_enabled,
         )
     except ImportError as e:
         st.warning(f"Model Registry indispo : {e}")
         return
 
-    active = get_active_models().value
-    if active == "both":
-        badge_color = COLORS["status_warning"]
-        badge_text = "🟡 COEXISTENCE (XGBoost=Champion, GNN=Challenger)"
-    elif active == "xgboost":
+    # Sprint 15+ (audit B-20) : XGBoost est désormais l'unique modèle
+    # de trafic exposé. Le badge reflète l'état binaire (actif / paused).
+    is_active = is_xgboost_training_enabled()
+    if is_active:
         badge_color = COLORS["status_ok"]
-        badge_text = "🟢 XGBOOST SEUL (prod)"
-    elif active == "stgcn":
-        badge_color = COLORS["chart_purple"]
-        badge_text = "🟣 STGCN SEUL (GNN a pris le relais)"
+        badge_text = "🟢 XGBOOST ACTIF (prod)"
     else:
-        badge_color = COLORS["text_muted"]
-        badge_text = f"⚪ {active}"
+        badge_color = COLORS["status_critical"]
+        badge_text = "🔴 XGBOOST PAUSED — vérifier DAG ``dag_daily_speed_train``"
 
     st.markdown(
         f'<div style="background:{badge_color};color:white;padding:0.5rem 1rem;'
@@ -228,28 +230,22 @@ def render_model_registry_status() -> None:
         unsafe_allow_html=True,
     )
 
-    # Toggles status
-    col1, col2, col3, col4 = st.columns(4)
+    # Toggles status — Sprint 15+ : 2 colonnes (XGBoost retrain + dispo H+1h)
+    col1, col2 = st.columns(2)
     with col1:
         st.metric(
             "XGBoost retrain",
-            "ON" if is_xgboost_training_enabled() else "OFF",
-            delta="nightly" if is_xgboost_training_enabled() else "paused",
-            delta_color="normal" if is_xgboost_training_enabled() else "inverse",
+            "ON" if is_active else "OFF",
+            delta="nightly" if is_active else "paused",
+            delta_color="normal" if is_active else "inverse",
         )
     with col2:
-        st.metric(
-            "GNN retrain",
-            "ON" if is_stgcn_training_enabled() else "OFF",
-            delta="EC2 nightly" if is_stgcn_training_enabled() else "paused",
-            delta_color="normal" if is_stgcn_training_enabled() else "inverse",
-        )
-    with col3:
         # Show 1 horizon representative
         r60 = ModelRegistry.get(60)
-        st.metric("XGB H+60min dispo", "✅" if r60.xgboost and r60.xgboost.is_available() else "❌")
-    with col4:
-        st.metric("GNN H+60min dispo", "✅" if r60.stgcn and r60.stgcn.is_available() else "❌")
+        st.metric(
+            "XGB H+60min dispo",
+            "✅" if r60.xgboost and r60.xgboost.is_available() else "❌",
+        )
 
     # Detail table
     st.markdown("---")
@@ -261,7 +257,7 @@ def render_model_registry_status() -> None:
     for h in horizons:
         reg = ModelRegistry.get(h)
         s = reg.status()
-        col1, col2, col3, col4 = st.columns([1, 2, 2, 2])
+        col1, col2 = st.columns([1, 3])
         with col1:
             st.markdown(f"**H+{h}min**")
         with col2:
@@ -270,44 +266,6 @@ def render_model_registry_status() -> None:
                 f'<span style="color:{color};">●</span> XGBoost',
                 unsafe_allow_html=True,
             )
-        with col3:
-            color = COLORS["chart_purple"] if s["stgcn_available"] else COLORS["text_disabled"]
-            st.markdown(
-                f'<span style="color:{color};">●</span> STGCN',
-                unsafe_allow_html=True,
-            )
-        with col4:
-            champion = s.get("champion", "—")
-            challenger = s.get("challenger", "—")
-            st.caption(f"Champion: **{champion}** · Challenger: {challenger or '—'}")
-
-    # Switch helper (admin)
-    st.markdown("---")
-    with st.expander("🔧 Basculer la solution active (admin)", expanded=False):
-        st.markdown(
-            """
-            Pour basculer entre XGBoost / GNN / les deux, modifier la
-            variable d'environnement ``LYONFLOW_MODELS_ACTIVE`` puis
-            redémarrer les services :
-
-            ```bash
-            # Sur le VPS (ou dans .env)
-            export LYONFLOW_MODELS_ACTIVE=xgboost   # XGBoost seul
-            export LYONFLOW_MODELS_ACTIVE=stgcn     # GNN seul
-            export LYONFLOW_MODELS_ACTIVE=both       # coexistence (défaut)
-
-            # Pour stopper le retrain du modèle non-champion
-            export LYONFLOW_XGBOOST_TRAINING=false
-            export LYONFLOW_STGCN_TRAINING=false
-
-            # Reload Airflow + API + Streamlit
-            docker compose restart airflow-scheduler api streamlit
-            ```
-
-            Le dashboard "Model Monitoring" (Pro_7) reflète le toggle en
-            moins de 30s grâce au cache de streamlit.
-            """
-        )
 
     # Note Sprint 9+ : le tableau détaillé des modèles est rendu par
     # `render_model_registry()` (au-dessus), qui lit MLflow live.
@@ -315,8 +273,13 @@ def render_model_registry_status() -> None:
 
 
 def render_metrics_comparison() -> None:
-    """Affiche la comparaison des métriques entre modèles."""
-    st.markdown("##### 📊 Comparaison métriques (XGBoost vs GNN)")
+    """Affiche les métriques du modèle XGBoost (focus H+1h).
+
+    Sprint 15+ (audit Pro TCL B-20) : le modèle GNN/STGCN est paused
+    et n'est plus affiché. Cette section montre les métriques du
+    champion XGBoost uniquement.
+    """
+    st.markdown("##### 📊 Métriques XGBoost Speed H+60min")
 
     from dashboard.components.data_cache import cached_mlflow_models
     from src.data.exceptions import DashboardDataError
@@ -335,10 +298,9 @@ def render_metrics_comparison() -> None:
         return
 
     xgb_h60 = next((m for m in models if m.get("name") == "xgboost_speed_h60"), None)
-    gnn_h60 = next((m for m in models if m.get("name") == "stgcn_gnn_h60"), None)
 
-    if not xgb_h60 or not gnn_h60:
-        st.info("Modèles XGBoost H+60min ou GNN H+60min non trouvés dans le registry.")
+    if not xgb_h60:
+        st.info("Modèle XGBoost H+60min non trouvé dans le registry.")
         return
 
     # Defensive : valeurs None-safe pour éviter crash si MLflow renvoie un dict partiel
@@ -366,33 +328,19 @@ def render_metrics_comparison() -> None:
         except (TypeError, ValueError):
             return 0
 
-    cols = st.columns(2)
-    with cols[0]:
-        st.markdown("**XGBoost Speed H+60min**")
+    st.markdown("**XGBoost Speed H+60min (Champion)**")
+    col_a, col_b = st.columns(2)
+    with col_a:
         st.metric("MAE", f"{_mae(xgb_h60):.2f} km/h")
-        st.metric("R²", f"{_r2(xgb_h60):.3f}")
         st.metric("Samples", f"{_samples(xgb_h60):,}")
+    with col_b:
+        st.metric("R²", f"{_r2(xgb_h60):.3f}")
         st.metric("Features", _features(xgb_h60))
 
-    with cols[1]:
-        st.markdown("**ST-GCN GNN H+60min (Staging)**")
-        st.metric(
-            "MAE",
-            f"{_mae(gnn_h60):.2f} km/h",
-            delta=f"{_mae(gnn_h60) - _mae(xgb_h60):+.2f} vs XGBoost",
-            delta_color="inverse",
-        )
-        st.metric(
-            "R²",
-            f"{_r2(gnn_h60):.3f}",
-            delta=f"{_r2(gnn_h60) - _r2(xgb_h60):+.3f} vs XGBoost",
-        )
-        st.metric("Samples", f"{_samples(gnn_h60):,}")
-        st.metric("Features", _features(gnn_h60))
-
     st.caption(
-        "💡 Le GNN capture les dépendances spatiales entre segments. "
-        "Promotion Production prévue si MAE reste < XGBoost pendant 7 jours consécutifs."
+        "💡 Modèle focus H+1h, réentraîné nightly par "
+        "``dag_daily_speed_train``. Sprint 15+ : GNN/STGCN paused, "
+        "les traces ont été retirées du dashboard."
     )
 
 
@@ -505,13 +453,17 @@ def render_drift_panel() -> None:
     }.get(status, COLORS["text_muted"])
     icon = {"ok": "🟢", "warning": "🟡", "critical": "🔴"}.get(status, "⚪")
 
-    n_ref = report.get("n_ref", "—")
-    n_cur = report.get("n_current", "—")
-    ref_from = report.get("ref_from", "—")
-    ref_to = report.get("ref_to", "—")
-    cur_from = report.get("current_from", "—")
-    cur_to = report.get("current_to", "—")
-    computed_at = report.get("computed_at", "—")
+    # Sprint 15+ (audit Pro TCL B-15) : ``report.get(..., "—")`` retourne
+    # ``"—"`` SEULEMENT si la clé est absente. Si la clé existe avec
+    # valeur ``None``, Python renvoie ``None`` (pas le défaut). On utilise
+    # ``or "—"`` pour gérer les deux cas.
+    n_ref = report.get("n_ref") or "—"
+    n_cur = report.get("n_current") or "—"
+    ref_from = report.get("ref_from") or "—"
+    ref_to = report.get("ref_to") or "—"
+    cur_from = report.get("current_from") or "—"
+    cur_to = report.get("current_to") or "—"
+    computed_at = report.get("computed_at") or "—"
 
     per_column_html = ""
     report_payload = report.get("report", {})
@@ -525,9 +477,14 @@ def render_drift_panel() -> None:
             col_icon = {"stable": "🟢", "moderate": "🟡", "significant": "🔴"}.get(
                 col_status, "⚪"
             )
+            # Sprint 15+ (audit Pro TCL B-08) : escape nom de colonne et
+            # status pour éviter que des caractères spéciaux (`<`, `>`, `&`)
+            # ne cassent le parsing HTML de Streamlit.
+            safe_col = html.escape(str(col))
+            safe_status = html.escape(str(col_status))
             per_column_html += (
                 f'<div style="font-size:0.8rem;margin-top:0.2rem;">'
-                f"{col_icon} <code>{col}</code> : PSI = {psi:.3f} ({col_status})</div>"
+                f"{col_icon} <code>{safe_col}</code> : PSI = {psi:.3f} ({safe_status})</div>"
             )
 
     action_text = ""

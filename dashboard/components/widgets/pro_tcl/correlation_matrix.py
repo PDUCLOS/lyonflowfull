@@ -114,8 +114,11 @@ def render_correlation_matrix(line_id: str | None = None) -> None:
                 # de l'identifiant SYTRAL brut (ActIV:Line::66:SYTRAL_h20).
                 "Ligne": clean_line_label(s["line_id"]),
                 "Segment": s["name"],
-                "Bus": "OK" if s["bus_state"] == "on_time" else "Retard",
-                "Trafic": "Fluide" if s["traffic_state"] == "fluid" else "Bloqué",
+                # Sprint 15+ (audit Pro TCL B-14) : libellés FR pour rester
+                # cohérent avec segment_table (synchronisation des 2 widgets
+                # de la page Pro_3_Correlation).
+                "Bus": "À l'heure" if s["bus_state"] == "on_time" else "En retard",
+                "Trafic": "Fluide" if s["traffic_state"] == "fluid" else "Congestionné",
                 "Diagnostic": DIAGNOSIS_LABELS.get(s["diagnosis"], "—"),
                 "Retard (min)": s.get("delay_min", 0),
             }

@@ -27,7 +27,10 @@ def test_widget_modules_pro_tcl_importable():
     assert hasattr(pro_tcl, "render_cause_analysis")
     assert hasattr(pro_tcl, "render_frequency_slider")
     assert hasattr(pro_tcl, "render_otp_projection")
-    assert hasattr(pro_tcl, "render_saeiv_export")
+    # Sprint 15+ (audit Pro TCL B-22) : ``render_saeiv_export`` supprimé
+    # avec la page Pro_5_Export. Plus de SAEIV tant que les connecteurs
+    # réels ne sont pas branchés.
+    assert not hasattr(pro_tcl, "render_saeiv_export")
     assert hasattr(pro_tcl, "render_line_kpis")
     assert hasattr(pro_tcl, "render_segment_table")
 
@@ -39,7 +42,6 @@ def test_pro_tcl_pages_exist():
         "Pro_2_Heatmap_OTP.py",
         "Pro_3_Correlation.py",
         "Pro_4_Simulateur.py",
-        "Pro_5_Export.py",
     ]
     for page in expected:
         path = pages_dir / page
@@ -47,6 +49,12 @@ def test_pro_tcl_pages_exist():
         content = path.read_text(encoding="utf-8")
         assert "apply_persona_guard" in content
         assert 'expected_persona="pro_tcl"' in content
+    # Sprint 15+ (audit Pro TCL B-22) : Pro_5_Export supprimé du dashboard
+    # (page stub, JSON placeholder, WeasyPrint non branché). Décision
+    # utilisateur 2026-06-19.
+    assert not (pages_dir / "Pro_5_Export.py").exists(), (
+        "Pro_5_Export.py doit avoir été supprimé (Sprint 15+ audit B-22)"
+    )
 
 
 def test_correlation_page_uses_correlation_matrix():

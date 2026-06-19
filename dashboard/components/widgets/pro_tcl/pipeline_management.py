@@ -14,6 +14,8 @@ Sprint 9+ (2026-06-17) — fail loud strict :
 
 from __future__ import annotations
 
+import html
+
 import streamlit as st
 
 from dashboard.components.colors import COLORS
@@ -226,17 +228,25 @@ def render_health_panel() -> None:
             }.get(status, COLORS["text_muted"])
             icon = {"ok": "✅", "warning": "⚠️", "critical": "🔴"}.get(status, "❓")
             name = r.get("name", "—")
+            # Sprint 15+ (audit Pro TCL B-09 + B-11) : ``details`` peut
+            # contenir des messages d'erreur PostgreSQL bruts (ex: "to add
+            # explicit type casts") avec des ``<``, ``>``, ``&`` qui
+            # cassent le parsing HTML de Streamlit. On escape + on tronque
+            # pour éviter une card démesurée.
+            raw_details = str(r.get("details", "") or "")
+            safe_details = html.escape(raw_details[:200])
+            safe_name = html.escape(str(name))
             st.markdown(
                 f"""
                 <div style="background:var(--bg-card);border:1px solid var(--border-card);border-left:4px solid {color};
                             border-radius:6px;padding:0.6rem;margin:0.3rem 0;">
                     <div style="font-size:0.75rem;opacity:0.7;text-transform:uppercase;
-                                letter-spacing:0.5px;">{name}</div>
+                                letter-spacing:0.5px;">{safe_name}</div>
                     <div style="font-size:1.1rem;font-weight:600;margin-top:0.2rem;">
                         {icon} {status.upper()}
                     </div>
                     <div style="font-size:0.75rem;opacity:0.7;margin-top:0.2rem;">
-                        {r.get("details", "")}
+                        {safe_details}
                     </div>
                 </div>
                 """,
