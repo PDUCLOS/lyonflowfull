@@ -55,6 +55,25 @@ def render_search_bar() -> dict[str, typing.Any]:
         border: 1px solid rgba(255,255,255,0.1);
         margin-bottom: 1rem;
     }
+    /* Sprint 15+ — Segmented control modes de transport : plus visible */
+    div[data-testid="stSegmentedControl"] {
+        margin-top: 0.25rem;
+    }
+    div[data-testid="stSegmentedControl"] label {
+        padding: 0.6rem 0.8rem !important;
+        font-weight: 500 !important;
+    }
+    div[data-testid="stSegmentedControl"] label[data-checked="true"] {
+        background-color: var(--primary-color) !important;
+        color: white !important;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.12) !important;
+    }
+    .mode-hint {
+        font-size: 0.8rem;
+        color: var(--text-color-secondary, rgba(128,128,128,0.9));
+        margin-top: 0.4rem;
+        font-style: italic;
+    }
     </style>
     """, unsafe_allow_html=True)
 
@@ -95,12 +114,32 @@ def render_search_bar() -> dict[str, typing.Any]:
                 departure_time = st.time_input("Heure prévue", key="search_dep_time")
 
         with col_modes:
-            modes = st.multiselect(
-                "Modes de transport autorisés",
-                ["🚇 Métro", "🚊 Tram", "🚌 Bus", "🚲 Vélov", "🚗 Voiture", "🚶 Marche"],
-                default=["🚇 Métro", "🚊 Tram", "🚌 Bus", "🚲 Vélov", "🚶 Marche"],
-                key="search_modes"
+            # Sprint 15+ (2026-06-19) — Refonte UX modes de transport v2 :
+            # - Boutons segmentés (st.segmented_control, 1 choix à la fois).
+            # - Default = "🚌 Transport en commun" (le mode principal usager).
+            # - Retour wrappé en liste d'1 élément pour rétro-compat avec
+            #   has_velov/has_voiture/has_tc dans Usager_1_Mon_Trajet.py:74-79.
+            # - Sprint 14 (2026-06-19) : fusion TC + suppression Marche (voir git log).
+            selected_mode = st.segmented_control(
+                "Mode de transport",
+                options=["🚌 Transport en commun", "🚲 Vélov", "🚗 Voiture"],
+                default="🚌 Transport en commun",
+                key="search_modes",
+                width="stretch",
+                help="Un seul mode à la fois",
             )
+            # Hint contextuel sous le sélecteur — feedback visuel du choix.
+            _mode_hints = {
+                "🚌 Transport en commun": "Métro · Tram · Bus (GTFS TCL temps réel)",
+                "🚲 Vélov": "Vélos en libre-service + marche d'accès",
+                "🚗 Voiture": "Itinéraire routier avec trafic H+1h",
+            }
+            st.markdown(
+                f'<div class="mode-hint">{_mode_hints.get(selected_mode, "")}</div>',
+                unsafe_allow_html=True,
+            )
+            # Rétro-compat : le code aval itère sur modes (list[str]).
+            modes = [selected_mode] if selected_mode else []  # retro-compat intentional
 
     return {
         "origin": origin,
