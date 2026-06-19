@@ -131,10 +131,18 @@ def render_sidebar_navigation() -> None:
 
         # 4. Footer & Quitter
         st.markdown("---")
-        if st.button("🚪 Changer de profil", use_container_width=True, type="secondary"):
-            from src.persona.manager import clear_current_persona_auth
+        if st.button("🚪 Quitter (retour à l'accueil)", use_container_width=True, type="secondary"):
+            # Sprint 15+ (2026-06-19) — fix bug "Changer de profil ne
+            # ramène pas à l'accueil". Avant : ``clear_current_persona_auth``
+            # ne clearait que l'auth (mot de passe), laissant le
+            # ``_SESSION_KEY = "lyonflow_persona"`` en place. Résultat :
+            # Accueil.py détectait un persona actif → renvoyait direct
+            # sur la page de re-login au lieu d'afficher l'onboarding.
+            # Maintenant : ``clear_current_persona()`` pop le persona ET
+            # clear l'auth → retour propre à l'accueil (sélecteur 3 cartes).
+            from src.persona.manager import clear_current_persona
 
-            clear_current_persona_auth()
+            clear_current_persona()
             st.switch_page("Accueil.py")
 
         from src.config import get_settings
