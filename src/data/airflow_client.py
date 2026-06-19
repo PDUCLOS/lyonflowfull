@@ -36,7 +36,13 @@ _HEALTH_CACHE: bool | None = None
 def _airflow_base_url() -> str:
     host = os.getenv("AIRFLOW_HOST", "localhost")
     port = os.getenv("AIRFLOW_PORT", "8080")
-    return f"http://{host}:{port}"
+    # Sprint 15+ (2026-06-19) — Airflow est exposé derrière nginx avec préfixe
+    # /airflow (cf. AIRFLOW__WEBSERVER__BASE_URL + nginx.conf). Sans ce
+    # préfixe, les endpoints /health et /api/v1/* retournent 404.
+    # En local sans nginx (dev direct), surcharger AIRFLOW_BASE_PATH=""
+    # dans .env.
+    base_path = os.getenv("AIRFLOW_BASE_PATH", "/airflow")
+    return f"http://{host}:{port}{base_path}"
 
 
 def _airflow_auth() -> tuple[str, str] | None:

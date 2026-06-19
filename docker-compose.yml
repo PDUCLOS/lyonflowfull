@@ -45,6 +45,11 @@ x-common-env: &common-env
   API_PASSWORD: ${API_PASSWORD:-}
   AIRFLOW_ADMIN_USERNAME: ${AIRFLOW_ADMIN_USERNAME:-admin}
   AIRFLOW_ADMIN_PASSWORD: ${AIRFLOW_ADMIN_PASSWORD:-admin}
+  # Sprint 15+ (2026-06-19) — host Docker interne pour les widgets dashboard
+  # (Pro_6 Pipeline Management, Pro_7 Model Monitoring). Fallback localhost
+  # est trompeur : depuis un autre container, localhost = le container lui-même.
+  # Le bon hostname est le service name `airflow-webserver` (DNS Docker).
+  AIRFLOW_HOST: ${AIRFLOW_HOST:-airflow-webserver}
   AIRFLOW__WEBSERVER__SECRET_KEY: ${AIRFLOW_SECRET_KEY:-lyonflow_default_secret_key_12345}
   # Prefixe /airflow nécessaire pour nginx reverse-proxy (cf. Lyontraffic config)
   AIRFLOW__WEBSERVER__BASE_URL: ${AIRFLOW_BASE_URL:-http://51.83.159.224/airflow}
