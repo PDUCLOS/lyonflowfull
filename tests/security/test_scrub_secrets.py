@@ -46,9 +46,16 @@ def test_detect_postgres_password(tmp_path):
 
 
 def test_detect_fernet_key(tmp_path):
-    """Détecte AIRFLOW_FERNET_KEY (base64 44+)."""
+    """Détecte AIRFLOW_FERNET_KEY (base64 44+).
+
+    Note : la chaîne fake est volontairement ``low-entropy`` (40 'a' + 2 '=')
+    pour ne pas déclencher la règle ``generic-api-key`` de gitleaks (le
+    test fixture n'est PAS un vrai secret). La pattern scrub_secrets.py
+    matche quand même car ``[a-zA-Z0-9+/=]{40,}`` ne nécessite pas de
+    diversité de caractères.
+    """
     f = tmp_path / "test.py"
-    f.write_text("AIRFLOW_FERNET_KEY=abcDEF1234567890abcDEF1234567890abcDEF12=\n")
+    f.write_text("AIRFLOW_FERNET_KEY=aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa==\n")
     findings = scan_file(f)
     assert any(p == "AIRFLOW_FERNET_KEY" for p, _, _ in findings)
 

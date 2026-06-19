@@ -1,0 +1,15 @@
+# Gitleaks ignore file
+# Format: <file-path>:<rule-id>:<line>:<fingerprint-or-comment>
+#
+# Use this to allowlist specific findings when they are known false
+# positives (test fixtures, example docs, etc.).
+#
+# NOTE — preferred path: fix the underlying data so it doesn't trigger
+# gitleaks (low-entropy fake secrets, etc.). This file is a safety net.
+#
+# Sprint 15+ — tests/security/test_scrub_secrets.py contains fake
+# fixtures by design (testing the scrubber). If a future test fixture
+# triggers a rule, add it here with a clear comment.
+
+# Example (uncomment + adapt if needed):
+# tests/security/test_scrub_secrets.py:generic-api-key:42:fake-fixture-test
