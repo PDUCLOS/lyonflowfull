@@ -30,7 +30,9 @@ def render_line_comparison(line_ids: list | None = None) -> None:
         k = kpis_dict.get(lid, {})
         data.append(
             {
-                "Ligne": lid,
+                # Sprint 15+ : affichage du label lisible (L66) plutôt que
+                # l'identifiant SYTRAL brut (ActIV:Line::66:SYTRAL_h20).
+                "Ligne": k.get("line_label") or lid,
                 "OTP %": k.get("otp_pct", 0),
                 "Retard (min)": k.get("avg_delay_min", 0),
                 "Fréquence (min)": k.get("frequency_min", 0),

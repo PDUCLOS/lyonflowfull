@@ -18,6 +18,7 @@ import streamlit as st
 
 from dashboard.components.colors import COLORS
 from dashboard.components.data_cache import cached_infra_bottlenecks
+from src.data.db_query import clean_line_label  # Sprint 15+ : libellé lisible des lignes TCL.
 from src.data.exceptions import DashboardDataError
 from src.data.labels import DIAGNOSIS_LABELS  # Sprint 8 : libellé FR d'un code SQL, pas du mock.
 
@@ -109,7 +110,9 @@ def render_correlation_matrix(line_id: str | None = None) -> None:
     detail_df = pd.DataFrame(
         [
             {
-                "Ligne": s["line_id"],
+                # Sprint 15+ (audit Pro TCL B3) : libellé lisible L66 au lieu
+                # de l'identifiant SYTRAL brut (ActIV:Line::66:SYTRAL_h20).
+                "Ligne": clean_line_label(s["line_id"]),
                 "Segment": s["name"],
                 "Bus": "OK" if s["bus_state"] == "on_time" else "Retard",
                 "Trafic": "Fluide" if s["traffic_state"] == "fluid" else "Bloqué",

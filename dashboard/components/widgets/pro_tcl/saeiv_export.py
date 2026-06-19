@@ -13,6 +13,7 @@ from datetime import datetime
 
 import streamlit as st
 
+from src.data.db_query import clean_line_label  # Sprint 15+ : libellé lisible des lignes TCL.
 from src.data.exceptions import DashboardDataError
 
 
@@ -105,4 +106,29 @@ def render_saeiv_export(report_config: dict | None = None) -> None:
         st.success(
             f"✅ Export SAEIV généré ({len(json_str)} octets) — "
             f"{len(kpis_payload)} lignes KPI + {len(bottlenecks_payload)} bottlenecks"
+        )
+
+        # Sprint 15+ (audit Pro TCL B5) : preview lisible avant download.
+        # Le payload JSON garde line_id brut (technique), mais l'UI affiche
+        # le label lisible L66 pour validation visuelle.
+        import pandas as pd
+
+        st.markdown("##### 👁 Aperçu des KPIs (labels lisibles)")
+        preview_df = pd.DataFrame(
+            [
+                {
+                    "Ligne": clean_line_label(p["line_id"]),
+                    "OTP %": p.get("otp_pct"),
+                    "Retard (min)": p.get("avg_delay_min"),
+                    "Fréquence (min)": p.get("frequency_min"),
+                    "Charge %": p.get("load_pct"),
+                    "Observations": p.get("n_obs_total", 0),
+                }
+                for p in kpis_payload
+            ]
+        )
+        st.dataframe(preview_df, use_container_width=True, hide_index=True)
+        st.caption(
+            "💡 Le fichier JSON téléchargé conserve les `line_id` SYTRAL "
+            "bruts pour intégration technique au SAEIV TCL."
         )

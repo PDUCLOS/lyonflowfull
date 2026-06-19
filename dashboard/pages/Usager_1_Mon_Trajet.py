@@ -23,6 +23,7 @@ from dashboard.components.widgets.usager import (
     render_lieux_velov_map,
     render_search_bar,
     render_traffic_widget,
+    render_transit_trip,
     render_velov_map_compact,
     render_velov_trip,
     render_velov_widget,
@@ -73,6 +74,9 @@ if st.session_state.get("results_loaded"):
     modes = search.get("modes", [])
     has_velov = any("Vélov" in m for m in modes)
     has_voiture = any("Voiture" in m for m in modes)
+    # Sprint 14 (2026-06-19) — Transport en commun : nouveau mode unifié
+    # Métro + Tram + Bus fusionnés en "🚌 Transport en commun".
+    has_tc = any("Transport en commun" in m for m in modes)
 
     origin_coords = _resolve_lieu(search["origin"])
     dest_coords = _resolve_lieu(search["destination"])
@@ -100,6 +104,18 @@ if st.session_state.get("results_loaded"):
                 render_velov_widget(max_stations=3)
     else:
         render_weather_widget()
+
+    # ── Trajet transport en commun (si TC sélectionné, Sprint 14) ─────────
+    if has_tc:
+        st.markdown("---")
+        st.markdown("### 🚌 Trajet transport en commun")
+        try:
+            render_transit_trip(
+                origin=search["origin"],
+                destination=search["destination"],
+            )
+        except DashboardDataError as e:
+            st.error(f"⚠️ {e}")
 
     # ── Trafic routier (si Voiture sélectionné) ──────────────────────────
     if has_voiture:

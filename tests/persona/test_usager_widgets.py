@@ -12,48 +12,9 @@ WORKSPACE = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(WORKSPACE))
 
 
-def test_mock_data_usager_imports():
-    """Le module mock data usager doit s'importer sans erreur."""
-    from tests.fixtures.mock_data import usager
-
-    assert hasattr(usager, "TCL_LINES")
-    assert hasattr(usager, "MOCK_TRIP_RESULTS")
-    assert hasattr(usager, "VELOV_STATIONS")
-    assert hasattr(usager, "MOCK_ALERTS")
-    assert hasattr(usager, "MOCK_WEATHER")
-    assert hasattr(usager, "MOCK_TRAFFIC")
-
-
-def test_tcl_lines_have_required_fields():
-    """Chaque ligne TCL doit avoir id, name, mode, color, icon."""
-    from tests.fixtures.mock_data.usager import TCL_LINES
-
-    assert len(TCL_LINES) >= 10, f"Attendu >= 10 lignes, trouve {len(TCL_LINES)}"
-    for line in TCL_LINES:
-        for field in ("id", "name", "mode", "color", "icon"):
-            assert field in line, f"Ligne {line.get('id')} manque le champ {field}"
-
-
-def test_velov_stations_have_lyon_coordinates():
-    """Les stations Velov doivent avoir des coordonnees realistes Lyon."""
-    from tests.fixtures.mock_data.usager import VELOV_STATIONS
-
-    assert len(VELOV_STATIONS) >= 3
-    for s in VELOV_STATIONS:
-        lat = s.get("lat", 0)
-        lon = s.get("lon", 0)
-        assert 45.70 <= lat <= 45.80, f"Station {s.get('name')} lat hors Lyon: {lat}"
-        assert 4.78 <= lon <= 4.90, f"Station {s.get('name')} lon hors Lyon: {lon}"
-
-
-def test_mock_alerts_have_required_fields():
-    """Chaque alerte doit avoir line, title, description, action, severity."""
-    from tests.fixtures.mock_data.usager import MOCK_ALERTS
-
-    assert len(MOCK_ALERTS) >= 3
-    for a in MOCK_ALERTS:
-        for field in ("line", "title", "description", "action", "severity"):
-            assert field in a, f"Alerte {a.get('id')} manque {field}"
+# Sprint 15 prep (2026-06-19) — 4 tests mock-constants supprimés (test_mock_data_usager_imports,
+# test_tcl_lines_have_required_fields, test_velov_stations_have_lyon_coordinates,
+# test_mock_alerts_have_required_fields). Backup: ~/.mavis/backups/sprint15-prep/persona/test_usager_widgets.py
 
 
 def test_widget_modules_importable():

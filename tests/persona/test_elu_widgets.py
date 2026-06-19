@@ -9,58 +9,9 @@ WORKSPACE = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(WORKSPACE))
 
 
-def test_mock_data_elu_imports():
-    from tests.fixtures.mock_data import elu
-
-    assert hasattr(elu, "KPI_12_MONTHS")
-    assert hasattr(elu, "BOTTLENECKS_TOP_10")
-    assert hasattr(elu, "AMENAGEMENTS_PASSES")
-    assert hasattr(elu, "PROJETS_PLANIFIES")
-
-
-def test_kpis_have_5_entries():
-    from tests.fixtures.mock_data.elu import KPI_12_MONTHS
-
-    assert len(KPI_12_MONTHS) == 5
-    required = ["part_modale_tc", "ponctualite_reseau", "co2_evite", "bottlenecks_actifs", "satisfaction_usager"]
-    for k in required:
-        assert k in KPI_12_MONTHS
-        kpi = KPI_12_MONTHS[k]
-        for field in ("label", "current", "delta_ytd", "target_2026", "history"):
-            assert field in kpi, f"{k} manque {field}"
-        assert len(kpi["history"]) == 12
-
-
-def test_bottlenecks_count():
-    from tests.fixtures.mock_data.elu import BOTTLENECKS_TOP_10
-
-    assert len(BOTTLENECKS_TOP_10) == 10
-    for b in BOTTLENECKS_TOP_10:
-        for field in (
-            "rank",
-            "zone",
-            "lines_impacted",
-            "voyageurs_jour",
-            "gain_min",
-            "cout_M_euros",
-            "roi_mois",
-            "delai_mois",
-        ):
-            assert field in b, f"Bottleneck {b.get('rank')} manque {field}"
-        # ROI doit être calculé (entier)
-        assert isinstance(b["roi_mois"], int | float)
-        assert b["roi_mois"] > 0
-
-
-def test_amenagements_passes_have_avant_apres():
-    from tests.fixtures.mock_data.elu import AMENAGEMENTS_PASSES
-
-    assert len(AMENAGEMENTS_PASSES) >= 5
-    for a in AMENAGEMENTS_PASSES:
-        assert "avant" in a
-        assert "apres" in a
-        assert "nom" in a
-        assert "annee" in a
+# Sprint 15 prep (2026-06-19) — 4 tests mock-constants supprimés (test_mock_data_elu_imports,
+# test_kpis_have_5_entries, test_bottlenecks_count, test_amenagements_passes_have_avant_apres).
+# Backup local hors-repo: ~/.mavis/backups/sprint15-prep/persona/test_elu_widgets.py
 
 
 def test_widget_modules_elu_importable():

@@ -102,10 +102,10 @@ def render_otp_heatmap(otp_data: dict | None = None, days: int = 1, height: int 
                 x=[f"{h}h" for h in range(24)],
                 y=lines,
                 colorscale=[
-                    [0.0, COLORS["status_critical"]],  # rouge si <70
-                    [0.3, COLORS["status_warning"]],  # orange 70-80
-                    [0.6, COLORS["chart_yellow"]],  # jaune 80-90
-                    [1.0, COLORS["status_ok"]],  # vert >90
+                    [0.0, COLORS["status_critical"]],    # < 60% mediocre
+                    [0.395, COLORS["status_warning"]],   # 75% = seuil "bon"
+                    [0.789, COLORS["chart_yellow"]],     # 90% = seuil "excellent"
+                    [1.0, COLORS["status_ok"]],          # 98% vert
                 ],
                 zmin=60,
                 zmax=98,

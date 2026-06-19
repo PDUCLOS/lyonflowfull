@@ -7,6 +7,7 @@ from dashboard.components.widgets.usager.itinerary import render_itinerary_resul
 from dashboard.components.widgets.usager.lieux_velov_map import render_lieux_velov_map
 from dashboard.components.widgets.usager.search_bar import render_search_bar
 from dashboard.components.widgets.usager.traffic_widget import render_traffic_widget
+from dashboard.components.widgets.usager.transit_trip import render_transit_trip
 from dashboard.components.widgets.usager.velov_map import (
     render_velov_map,
     render_velov_map_compact,
@@ -23,6 +24,7 @@ __all__ = [
     "render_lieux_velov_map",
     "render_search_bar",
     "render_traffic_widget",
+    "render_transit_trip",
     "render_velov_map",
     "render_velov_map_compact",
     "render_velov_trip",

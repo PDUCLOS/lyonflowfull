@@ -1001,6 +1001,45 @@ def get_cadence_for_line(
     return [dict(r) for r in rows]
 
 
+def get_transit_options(origin_lieu_id: int, dest_lieu_id: int) -> list[dict]:
+    """Lignes TC desservant simultanément origin ET destination (intersection N-N).
+
+    Sprint 14 (2026-06-19) — jointure référentiel.lieux_transports sur lui-même
+    par ``line_ref``. Si une ligne dessert les 2 lieux, on a un trajet direct
+    possible. Tri par somme des ranks (rank 1 = arrêt le plus proche du lieu)
+    pour prioriser les lignes les plus accessibles à pied.
+
+    Args:
+        origin_lieu_id: PK de ``referentiel.lieux_lyon`` (origine).
+        dest_lieu_id: PK de ``referentiel.lieux_lyon`` (destination).
+
+    Returns:
+        Liste de dicts ``{line_ref, line_mode, stop_origin, distance_origin_m,
+        rank_origin, stop_dest, distance_dest_m, rank_dest}``. Vide si aucune
+        ligne commune (→ fallback correspondance via hub par
+        ``plan_transit_trip``).
+    """
+    query = """
+        SELECT lt_o.line_ref, lt_o.line_mode,
+               lt_o.stop_name AS stop_origin,
+               lt_o.distance_m AS distance_origin_m,
+               lt_o.rank AS rank_origin,
+               lt_d.stop_name AS stop_dest,
+               lt_d.distance_m AS distance_dest_m,
+               lt_d.rank AS rank_dest
+        FROM referentiel.lieux_transports lt_o
+        JOIN referentiel.lieux_transports lt_d
+          ON lt_o.line_ref = lt_d.line_ref
+         AND lt_o.is_active = TRUE
+         AND lt_d.is_active = TRUE
+        WHERE lt_o.lieu_id = %s
+          AND lt_d.lieu_id = %s
+        ORDER BY (lt_o.rank + lt_d.rank), lt_o.line_ref
+    """
+    rows = execute_query(query, (origin_lieu_id, dest_lieu_id))
+    return [dict(r) for r in rows]
+
+
 # =============================================================================
 # TomTom + vue unifiée trafic (Sprint VPS-6, 2026-06-11)
 # =============================================================================

@@ -17,7 +17,6 @@ from __future__ import annotations
 import pandas as pd
 import streamlit as st
 
-from dashboard.components.colors import COLORS
 from dashboard.components.data_cache import cached_line_kpis
 
 SORT_OPTIONS = {
@@ -167,55 +166,6 @@ def render_line_kpis(
                 trend_icon = {"up": "📈", "down": "📉", "stable": "➡️"}.get(row["trend"], "➡️")
                 st.write(f"Tendance : {trend_icon} {row['trend_delta']:+.1f} pts")
 
-    # ---- Mode legacy : cards colorées (si demandé) ----
-    if not compact:
-        st.markdown("---")
-        st.markdown("##### 🟢🟠🔴 Vue cartes (legacy)")
-        for _, row in df_view.iterrows():
-            line_id = row["line_id"]
-            line_label = row["line_label"]
-            kpis = kpis_dict.get(line_id, {})
-            otp = row["otp_pct"]
-            otp_color = (
-                COLORS["status_ok"] if otp >= 88 else COLORS["status_warning"] if otp >= 80 else COLORS["status_critical"]
-            )
-            delay = row["avg_delay_min"]
-            load = row["load_pct"]
-            load_color = (
-                COLORS["status_ok"] if load < 70 else COLORS["status_warning"] if load < 90 else COLORS["status_critical"]
-            )
-            trend_icon = {"up": "📈", "down": "📉", "stable": "➡️"}.get(row["trend"], "➡️")
-
-            st.markdown(
-                f"""
-                <div class="lyonflow-card" style="padding:0.6rem 0.8rem;margin:0.3rem 0;">
-                    <div style="display:flex;align-items:center;justify-content:space-between;
-                                margin-bottom:6px;">
-                        <div style="font-weight:600;font-size:0.95rem;">{line_label}</div>
-                        <div style="font-size:0.75rem;opacity:0.7;">
-                            {trend_icon} {row['trend_delta']:+.1f}pts
-                        </div>
-                    </div>
-                    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:0.5rem;
-                                font-size:0.8rem;">
-                        <div>
-                            <div style="opacity:0.6;font-size:0.7rem;">OTP</div>
-                            <div style="font-weight:600;color:{otp_color};">{otp:.0f}%</div>
-                        </div>
-                        <div>
-                            <div style="opacity:0.6;font-size:0.7rem;">Retard</div>
-                            <div style="font-weight:600;">{delay:.1f} min</div>
-                        </div>
-                        <div>
-                            <div style="opacity:0.6;font-size:0.7rem;">Fréq.</div>
-                            <div style="font-weight:600;">{row['frequency_min']:.0f} min</div>
-                        </div>
-                        <div>
-                            <div style="opacity:0.6;font-size:0.7rem;">Charge</div>
-                            <div style="font-weight:600;color:{load_color};">{load:.0f}%</div>
-                        </div>
-                    </div>
-                </div>
-                """,
-                unsafe_allow_html=True,
-            )
+    # Sprint 15+ (audit Pro TCL C1) — Suppression du bloc "Vue cartes (legacy)".
+    # Le mode compact (param ``compact``, conservé pour rétro-compat) n'est plus
+    # utilisé ; tout passe par le tableau Streamlit + mode détails dépliables.

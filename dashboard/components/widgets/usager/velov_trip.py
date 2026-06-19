@@ -100,6 +100,9 @@ def render_velov_trip(
         return
 
     _render_velov_summary(itin)
+    # Sprint 14 (2026-06-19) — Cards stations proéminentes (départ + arrivée)
+    # avec vélos/docks/méca-élec/statut coloré/distance à pied.
+    _render_station_cards(itin)
     # Diagnostics VIDE/PLEINE
     for diag in itin.diagnostics:
         st.warning(diag)
@@ -147,6 +150,121 @@ def _render_velov_summary(itin: VelovItinerary) -> None:
     for seg in itin.segments:
         if "⚠️" in seg.notes:
             st.warning(f"⚠️ {seg.from_label} → {seg.to_label} : {seg.notes}")
+
+
+def _render_station_cards(itin: VelovItinerary) -> None:
+    """Sprint 14 (2026-06-19) — 2 cards stations proéminentes (départ + arrivée).
+
+    Affichées directement après le résumé KPIs (pas dans un expander).
+    Visibilité immédiate de : nom, vélos dispo (méca+élec si dispo), docks,
+    statut coloré (vert OK / orange FAIBLE / rouge VIDE-PLEINE), distance à pied.
+
+    Sources :
+    - cycle_seg.from_label / to_label (noms stations via smart routing)
+    - cycle_seg.n_bikes_depart / n_docks_arrive (dispo temps réel)
+    - cycle_seg.n_bikes_mechanical / n_bikes_electrical (optionnel, GBFS)
+    - walk_seg / from_seg (distances à pied)
+    """
+    if not itin.segments:
+        return
+    cycle_seg = next((s for s in itin.segments if s.mode == "cycle"), None)
+    walk_seg = next((s for s in itin.segments if s.mode == "walk"), None)
+    dest_seg = next((s for s in itin.segments if s.mode == "destination"), None)
+    if cycle_seg is None:
+        return
+
+    st.markdown("#### 🚲 Bornes Vélov utilisées")
+
+    col1, col2 = st.columns(2)
+    with col1:
+        _render_single_station_card(
+            role="🟢 DÉPART",
+            station_label=cycle_seg.from_label,
+            n_bikes=cycle_seg.n_bikes_depart,
+            n_docks=None,  # pas dans le segment walk actuel
+            n_mech=cycle_seg.n_bikes_mechanical,
+            n_elec=cycle_seg.n_bikes_electrical,
+            walk_distance_m=walk_seg.distance_m if walk_seg else 0.0,
+            walk_duration_min=walk_seg.duration_min if walk_seg else 0.0,
+        )
+    with col2:
+        _render_single_station_card(
+            role="🔴 ARRIVÉE",
+            station_label=cycle_seg.to_label,
+            n_bikes=None,  # pas dans le segment destination actuel
+            n_docks=cycle_seg.n_docks_arrive,
+            n_mech=None,
+            n_elec=None,
+            walk_distance_m=dest_seg.distance_m if dest_seg else 0.0,
+            walk_duration_min=dest_seg.duration_min if dest_seg else 0.0,
+        )
+
+
+def _render_single_station_card(
+    role: str,
+    station_label: str,
+    n_bikes: int | None,
+    n_docks: int | None,
+    n_mech: int | None,
+    n_elec: int | None,
+    walk_distance_m: float,
+    walk_duration_min: float,
+) -> None:
+    """Une card station (Sprint 14) — vélos, docks, statut coloré, marche.
+
+    Statut couleur :
+    - 🔴 VIDE / PLEINE (rouge) si vélos == 0 ou docks == 0
+    - 🟠 FAIBLE (orange) si vélos < 5 ou docks < 5
+    - 🟢 OK (vert) sinon (≥5 vélos ET ≥5 docks)
+    """
+    # Couleur + label statut
+    if n_bikes == 0:
+        color, status_label = "#F44336", "🔴 VIDE"
+    elif n_docks == 0:
+        color, status_label = "#F44336", "🔴 PLEINE"
+    elif (n_bikes is not None and n_bikes < 5) or (n_docks is not None and n_docks < 5):
+        color, status_label = "#FF9800", "🟠 FAIBLE"
+    else:
+        color, status_label = "#4CAF50", "🟢 OK"
+
+    # Détail méca/élec si GBFS le fournit
+    mech_elec_html = ""
+    if n_mech is not None or n_elec is not None:
+        m = int(n_mech) if n_mech is not None else 0
+        e = int(n_elec) if n_elec is not None else 0
+        mech_elec_html = (
+            '<div style="font-size:0.7rem;opacity:0.65;margin-top:0.3rem;'
+            'line-height:1.4;">'
+            f'├── 🔧 {m} mécaniques<br/>└── ⚡ {e} électriques'
+            '</div>'
+        )
+
+    bikes_str = f"{int(n_bikes)} vélos" if n_bikes is not None else "N/A"
+    docks_str = f"{int(n_docks)} places" if n_docks is not None else "N/A"
+
+    st.html(
+        f"""
+        <div class="lyonflow-card" style="border-left:4px solid {color};">
+            <div style="display:flex;justify-content:space-between;align-items:center;">
+                <span style="background:{color};color:white;padding:0.2rem 0.6rem;
+                             border-radius:12px;font-size:0.7rem;font-weight:600;">{role}</span>
+                <span style="font-size:0.75rem;font-weight:700;color:{color};">{status_label}</span>
+            </div>
+            <div style="font-size:1rem;font-weight:700;margin:0.5rem 0 0.3rem 0;">
+                🚲 {station_label}
+            </div>
+            <div style="display:flex;gap:1rem;align-items:baseline;">
+                <div style="font-size:1.1rem;font-weight:700;color:{color};">🚲 {bikes_str}</div>
+                <div style="font-size:0.85rem;opacity:0.85;">🅿️ {docks_str}</div>
+            </div>
+            {mech_elec_html}
+            <div style="font-size:0.75rem;opacity:0.7;margin-top:0.5rem;
+                        border-top:1px solid rgba(255,255,255,0.1);padding-top:0.4rem;">
+                📍 {int(walk_distance_m)}m à pied (~{walk_duration_min:.0f} min)
+            </div>
+        </div>
+        """
+    )
 
 
 def _render_velov_map(

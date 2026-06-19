@@ -804,6 +804,65 @@ def load_cadence_for_line(
     return get_cadence_for_line(line_ref=line_ref, day_type=day_type, time_bucket=time_bucket)
 
 
+def load_transit_itinerary(origin: str, destination: str) -> dict | None:
+    """Itinéraire transport en commun entre 2 lieux (Sprint 14, 2026-06-19).
+
+    Wrapper fail-loud autour de ``src.routing.pathfinder_multimodal.plan_transit_trip``.
+    Sérialise le ``TransitItinerary`` (dataclass) en dict pour consommation par
+    Streamlit cache (``@st.cache_data`` n'accepte pas les dataclasses non
+    hashables).
+
+    Args:
+        origin: label de lieu (peut être préfixé emoji, ex: ``"🏙 Villeurbanne"``).
+        destination: idem.
+
+    Returns:
+        Dict sérialisable ou ``None`` si O == D ou si l'un des lieux n'existe
+        pas. Structure :
+        ``{origin_label, destination_label, segments: [dict, ...],
+        transfer_hub, n_transfers, total_duration_min, total_walk_m,
+        total_delay_min, confidence, source, diagnostics}``.
+
+    Raises:
+        DashboardDataError: si PostgreSQL indisponible.
+    """
+    _require_db_or_raise("referentiel.lieux_lyon")
+    from src.routing.pathfinder_multimodal import plan_transit_trip
+
+    itin = plan_transit_trip(origin=origin, destination=destination)
+    if itin is None:
+        return None
+    return {
+        "origin_label": itin.origin_label,
+        "destination_label": itin.destination_label,
+        "segments": [
+            {
+                "line_ref": s.line_ref,
+                "line_mode": s.line_mode,
+                "line_label": s.line_label,
+                "stop_origin": s.stop_origin,
+                "stop_dest": s.stop_dest,
+                "distance_walk_to_m": s.distance_walk_to_m,
+                "distance_walk_from_m": s.distance_walk_from_m,
+                "cadence_min": s.cadence_min,
+                "wait_estimate_min": s.wait_estimate_min,
+                "delay_avg_min": s.delay_avg_min,
+                "duration_estimate_min": s.duration_estimate_min,
+                "confidence": s.confidence,
+            }
+            for s in itin.segments
+        ],
+        "transfer_hub": itin.transfer_hub,
+        "n_transfers": itin.n_transfers,
+        "total_duration_min": itin.total_duration_min,
+        "total_walk_m": itin.total_walk_m,
+        "total_delay_min": itin.total_delay_min,
+        "confidence": itin.confidence,
+        "source": itin.source,
+        "diagnostics": list(itin.diagnostics),
+    }
+
+
 # =============================================================================
 # MLflow — registry tracking (Sprint 9)
 # =============================================================================

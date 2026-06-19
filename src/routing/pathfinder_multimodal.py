@@ -27,6 +27,7 @@ from __future__ import annotations
 
 import logging
 from dataclasses import dataclass, field
+from datetime import datetime
 
 from src.data.exceptions import DashboardDataError
 from src.db.connection import execute_query
@@ -55,6 +56,11 @@ class VelovSegment:
     duration_min: float
     n_bikes_depart: int | None = None
     n_docks_arrive: int | None = None
+    # Sprint 14 (2026-06-19) — Vélov GBFS : séparation mécanique / électrique
+    # si la source silver.velov_clean expose `num_bikes_available_types`
+    # (GBFS Vélov). None par défaut → affichage sobre (juste le total).
+    n_bikes_mechanical: int | None = None
+    n_bikes_electrical: int | None = None
     notes: str = ""
 
 
@@ -582,3 +588,486 @@ def plan_car_trip(
         ],
         "source": "db",
     }
+
+
+# =============================================================================
+# Sprint 14 (2026-06-19) — Routing transport en commun (TC) usager
+# =============================================================================
+# Itinéraire TC entre 2 lieux du référentiel (21 lieux emblématiques).
+# Stratégie Phase 1 :
+#   - Si intersection lignes(O) ∩ lignes(D) ∃ → trajet direct
+#     (meilleure ligne = somme ranks minimale aux 2 bouts)
+#   - Sinon → correspondance via 1 hub (parmi les 21 lieux actifs),
+#     minimisation durée totale
+#
+# Données :
+#   - referentiel.lieux_transports (dessertes, 56 liaisons)
+#   - referentiel.lieux_calendrier (cadences, 223 enregistrements)
+#   - gold.bus_delay_segments (retards SIRI 7j glissants)
+#
+# Limites affichées à l'usager (cf. T4 widget transit_trip.py) :
+#   - Fréquences estimées (pas horaires exacts GTFS)
+#   - 21 lieux uniquement (= ceux de la selectbox, 100% couverture UI)
+#   - 1 correspondance max (Phase 2 = Raptor multi-transfers)
+#   - Retards = moyenne 7j à cette heure (pas prédiction ML)
+
+
+@dataclass
+class TransitSegment:
+    """Un segment de trajet TC (1 ligne, sans correspondance)."""
+
+    line_ref: str
+    line_mode: str  # metro|tram|bus|funicular
+    line_label: str  # ex: "🚇 Métro A"
+    stop_origin: str  # ex: "Laurent Bonnevay"
+    stop_dest: str  # ex: "Confluence"
+    distance_walk_to_m: int  # marche lieu → arrêt départ
+    distance_walk_from_m: int  # marche arrêt arrivée → lieu
+    cadence_min: float  # fréquence observée (min)
+    wait_estimate_min: float  # attente moyenne = cadence/2
+    delay_avg_min: float  # retard moyen observé (7j, time_bucket)
+    duration_estimate_min: float  # walk_to + wait + drive + retard + walk_from
+    confidence: float  # 0-1, basée sur n_observations cadence
+
+
+@dataclass
+class TransitItinerary:
+    """Itinéraire TC complet (1 ou 2 segments) entre 2 lieux."""
+
+    origin_label: str
+    destination_label: str
+    segments: list[TransitSegment] = field(default_factory=list)
+    transfer_hub: str | None = None  # None = trajet direct
+    n_transfers: int = 0  # 0 = direct, 1 = 1 correspondance
+    total_duration_min: float = 0.0
+    total_walk_m: int = 0
+    total_delay_min: float = 0.0
+    confidence: float = 0.0
+    source: str = "db"  # toujours "db" en prod (Sprint 8 — pas de mock)
+    diagnostics: list[str] = field(default_factory=list)
+
+    @property
+    def feasible(self) -> bool:
+        """True si l'itinéraire a au moins 1 segment et une durée > 0."""
+        return len(self.segments) > 0 and self.total_duration_min > 0
+
+
+# Vitesse moyenne par mode TC (km/h) — approximation Phase 1.
+# Sources : métro A Lyon 35 km/h moyen, tram T1/T2 ~20, bus C3 ~15, funiculaires ~18.
+_TRANSIT_SPEED_KMH: dict[str, float] = {
+    "metro": 35.0,
+    "tram": 20.0,
+    "bus": 15.0,
+    "funicular": 18.0,
+}
+_TRANSIT_SPEED_KMH_DEFAULT = 18.0
+
+# Libellé emoji par mode (utilisé pour affichage segment.line_label).
+_TRANSIT_MODE_LABEL: dict[str, str] = {
+    "metro": "🚇 Métro",
+    "tram": "🚊 Tram",
+    "bus": "🚌 Bus",
+    "funicular": "🚞 Funiculaire",
+}
+
+# Pénalité forfaitaire pour 1 correspondance (marche inter-arrêts + attente).
+_TRANSFER_PENALTY_MIN = 3.0
+
+
+def _transit_line_label(line_ref: str, line_mode: str) -> str:
+    """Construit un libellé lisible pour une ligne TC.
+
+    Exemples :
+        ('M_A', 'metro')     → '🚇 Métro A'
+        ('T_1', 'tram')      → '🚊 Tram 1'
+        ('C_3', 'bus')       → '🚌 Bus 3'
+        ('F_2', 'funicular') → '🚞 Funiculaire 2'
+    """
+    prefix = _TRANSIT_MODE_LABEL.get(line_mode, line_mode.capitalize())
+    if "_" in line_ref:
+        suffix = line_ref.split("_", 1)[1]
+        return f"{prefix} {suffix}"
+    return f"{prefix} {line_ref}"
+
+
+def _resolve_transit_lieu(text: str) -> tuple[int, str, float, float] | None:
+    """Résout un label de lieu (avec emoji optionnel) → (lieu_id, name, lon, lat).
+
+    Robuste aux emojis préfixes (ex: ``"🏙 Villeurbanne"``) — même logique
+    que ``velov_trip._resolve_lieu`` mais retourne aussi l'ID.
+
+    Returns:
+        Tuple (lieu_id, name_clean, lon, lat) ou None si non trouvé.
+    """
+    if not text:
+        return None
+    cleaned = text.strip()
+    # Strip emoji préfixe (1 char hors BMP + espace)
+    if cleaned and ord(cleaned[0]) > 0x2700:
+        sp = cleaned.find(" ")
+        if sp > 0 and sp <= 3:
+            cleaned = cleaned[sp + 1:].strip()
+    text_lower = cleaned.lower().strip()
+    if not text_lower:
+        return None
+    rows = execute_query(
+        """
+        SELECT lieu_id, name, lon, lat FROM referentiel.lieux_lyon
+        WHERE is_active = TRUE AND LOWER(name) LIKE %s
+        ORDER BY LENGTH(name) ASC LIMIT 1
+        """,
+        (f"%{text_lower}%",),
+    )
+    if not rows:
+        return None
+    return (
+        int(rows[0]["lieu_id"]),
+        rows[0]["name"],
+        float(rows[0]["lon"]),
+        float(rows[0]["lat"]),
+    )
+
+
+def _day_type_from_date(dt: datetime) -> str:
+    """Détermine ``day_type`` depuis une date.
+
+    Renvoie ``weekday|saturday|sunday_holiday|vacation``.
+
+    Heuristique vacation (périodes Métropole Lyon, simplifié) :
+      - 1/7 → 31/8 (vacances été)
+      - 15/12 → 5/1 (vacances fin d'année)
+
+    Fonction pure (Sprint 14+) — testable directement sans monkeypatch
+    sur ``datetime.now()``.
+    """
+    weekday = dt.weekday()  # 0=Monday, 6=Sunday
+    md = (dt.month, dt.day)
+    is_vacation = (
+        (md >= (7, 1) and md <= (8, 31))
+        or md >= (12, 15)
+        or md <= (1, 5)
+    )
+    if is_vacation:
+        return "vacation"
+    if weekday == 6:
+        return "sunday_holiday"
+    if weekday == 5:
+        return "saturday"
+    return "weekday"
+
+
+def _time_bucket_from_date(dt: datetime) -> str:
+    """Construit ``time_bucket`` ``"HH:00"`` depuis une date.
+
+    Fonction pure (Sprint 14+) — testable directement.
+    """
+    return f"{dt.hour:02d}:00"
+
+
+def _get_current_day_type_and_bucket() -> tuple[str, str]:
+    """Détermine ``(day_type, time_bucket)`` courants pour cadences.
+
+    Wrapper runtime : appelle ``_day_type_from_date`` et
+    ``_time_bucket_from_date`` sur ``datetime.now()``.
+    """
+    now = datetime.now()
+    return _day_type_from_date(now), _time_bucket_from_date(now)
+
+
+def _estimate_transit_duration_min(
+    distance_walk_to_m: int,
+    distance_walk_from_m: int,
+    segment_distance_m: float,
+    line_mode: str,
+    cadence_min: float,
+    delay_avg_min: float,
+) -> float:
+    """Estime la durée totale d'un segment TC (en minutes).
+
+    Composantes :
+      - walk_to : marche lieu → arrêt (à DEFAULT_WALK_SPEED_KMH)
+      - wait : cadence / 2 (attente moyenne sur fréquence uniforme)
+      - drive : segment_distance / vitesse(mode)
+      - retard moyen observé (7j glissants, time_bucket)
+      - walk_from : marche arrêt → lieu destination
+    """
+    speed = _TRANSIT_SPEED_KMH.get(line_mode, _TRANSIT_SPEED_KMH_DEFAULT)
+    walk_to = (distance_walk_to_m / 1000.0) / DEFAULT_WALK_SPEED_KMH * 60.0
+    walk_from = (distance_walk_from_m / 1000.0) / DEFAULT_WALK_SPEED_KMH * 60.0
+    wait = cadence_min / 2.0
+    drive = (segment_distance_m / 1000.0) / speed * 60.0
+    return walk_to + wait + drive + delay_avg_min + walk_from
+
+
+def _build_transit_segment(
+    origin_line: dict,
+    dest_line: dict,
+    segment_distance_m: float,
+    day_type: str,
+    time_bucket: str,
+) -> TransitSegment:
+    """Construit un TransitSegment à partir de 2 dessertes.
+
+    Args:
+        origin_line: dict de ``referentiel.lieux_transports`` (départ segment).
+        dest_line: dict (arrivée segment).
+        segment_distance_m: haversine entre 2 lieux (proxy inter-arrêts Phase 1).
+        day_type: weekday|saturday|sunday_holiday|vacation.
+        time_bucket: HH:00 (pour filtrer cadence + retard).
+    """
+    from src.data.db_query import get_bus_delay_segments, get_cadence_for_line
+
+    line_ref = origin_line["line_ref"]
+    line_mode = origin_line["line_mode"]
+    distance_walk_to_m = int(origin_line["distance_m"])
+    distance_walk_from_m = int(dest_line["distance_m"])
+
+    # Cadence : filter exact (line_ref, day_type, time_bucket)
+    cadence_rows = get_cadence_for_line(
+        line_ref, day_type=day_type, time_bucket=time_bucket,
+    )
+    if cadence_rows:
+        cadence_min = float(cadence_rows[0]["cadence_min_per_vehicle"])
+        confidence = float(cadence_rows[0].get("confidence") or 0.5)
+        n_obs = int(cadence_rows[0].get("n_observations") or 0)
+        if n_obs < 10:
+            # Peu d'observations : on baisse la confiance
+            confidence = max(0.3, confidence - 0.2)
+    else:
+        # Fallback : moyenne toutes tranches weekday
+        all_cadence = get_cadence_for_line(line_ref, day_type="weekday")
+        if all_cadence:
+            cadence_min = float(
+                sum(c["cadence_min_per_vehicle"] for c in all_cadence)
+                / len(all_cadence)
+            )
+            confidence = 0.4  # confiance basse (fallback agrégé)
+        else:
+            # Pas de données du tout : défaut par mode
+            cadence_min = {
+                "metro": 5.0, "tram": 10.0, "bus": 12.0, "funicular": 8.0,
+            }.get(line_mode, 10.0)
+            confidence = 0.2
+
+    # Retard moyen 7j filtré sur l'heure du time_bucket
+    delay_avg_min = 0.0
+    try:
+        bucket_hour = int(time_bucket.split(":")[0])
+        delay_df = get_bus_delay_segments(line_ref=line_ref, days=7)
+        if not delay_df.empty and "avg_delay_seconds" in delay_df.columns:
+            if "hour" in delay_df.columns:
+                matched = delay_df[delay_df["hour"] == bucket_hour]
+                src = matched if not matched.empty else delay_df
+            else:
+                src = delay_df
+            delay_avg_min = max(
+                0.0, float(src["avg_delay_seconds"].mean()) / 60.0,
+            )
+    except Exception:
+        # Si la requête échoue (DB ou colonne manquante), on garde 0
+        delay_avg_min = 0.0
+
+    duration = _estimate_transit_duration_min(
+        distance_walk_to_m=distance_walk_to_m,
+        distance_walk_from_m=distance_walk_from_m,
+        segment_distance_m=segment_distance_m,
+        line_mode=line_mode,
+        cadence_min=cadence_min,
+        delay_avg_min=delay_avg_min,
+    )
+
+    return TransitSegment(
+        line_ref=line_ref,
+        line_mode=line_mode,
+        line_label=_transit_line_label(line_ref, line_mode),
+        stop_origin=origin_line["stop_name"],
+        stop_dest=dest_line["stop_name"],
+        distance_walk_to_m=distance_walk_to_m,
+        distance_walk_from_m=distance_walk_from_m,
+        cadence_min=round(cadence_min, 1),
+        wait_estimate_min=round(cadence_min / 2.0, 1),
+        delay_avg_min=round(delay_avg_min, 2),
+        duration_estimate_min=round(duration, 1),
+        confidence=round(confidence, 2),
+    )
+
+
+def plan_transit_trip(
+    origin: str,
+    destination: str,
+    day_type: str | None = None,
+    time_bucket: str | None = None,
+) -> TransitItinerary | None:
+    """Planifie un itinéraire transport en commun entre 2 lieux du référentiel.
+
+    Algorithme Phase 1 :
+      1. Résoudre origin/dest → lieu_id (``referentiel.lieux_lyon``).
+      2. Charger lignes desservant O et D (``referentiel.lieux_transports``).
+      3. Si intersection non vide → trajet direct (meilleure ligne = somme
+         ranks minimale aux 2 bouts).
+      4. Sinon → correspondance via 1 hub (parmi les 21 lieux actifs).
+         Critère : pour chaque hub, vérifier ∃ ligne ∈ O∩hub ET ∃ ligne ∈ D∩hub.
+         Choisir le hub à durée totale minimale.
+      5. Pour chaque segment : cadence (``referentiel.lieux_calendrier``)
+         + retard moyen (``gold.bus_delay_segments``, 7j).
+
+    Args:
+        origin: label de lieu (peut être préfixé emoji).
+        destination: idem.
+        day_type: ``weekday|saturday|sunday_holiday|vacation`` (défaut: auto).
+        time_bucket: ``HH:00`` (défaut: heure actuelle).
+
+    Returns:
+        ``TransitItinerary`` (direct ou via hub) avec segments, durées,
+        cadences, retards. ``diagnostics`` rempli si aucun trajet trouvé.
+        ``None`` si O == D ou si l'un des lieux n'existe pas.
+
+    Raises:
+        DashboardDataError: si PostgreSQL indisponible.
+    """
+    _require_db_or_raise("referentiel.lieux_lyon")
+
+    origin_res = _resolve_transit_lieu(origin)
+    dest_res = _resolve_transit_lieu(destination)
+    if origin_res is None or dest_res is None:
+        return None
+    origin_id, origin_name, origin_lon, origin_lat = origin_res
+    dest_id, dest_name, dest_lon, dest_lat = dest_res
+    if origin_id == dest_id:
+        return None  # même lieu → pas de trajet
+
+    from src.data.db_query import get_lieux_transports
+
+    origin_lines = get_lieux_transports(lieu_id=origin_id)
+    dest_lines = get_lieux_transports(lieu_id=dest_id)
+    if not origin_lines or not dest_lines:
+        return TransitItinerary(
+            origin_label=origin_name,
+            destination_label=dest_name,
+            diagnostics=[
+                f"Aucune desserte TC pour {origin_name if not origin_lines else dest_name}",
+            ],
+        )
+
+    # Auto day_type/time_bucket
+    if day_type is None or time_bucket is None:
+        auto_day, auto_bucket = _get_current_day_type_and_bucket()
+        day_type = day_type or auto_day
+        time_bucket = time_bucket or auto_bucket
+
+    origin_by_line = {item["line_ref"]: item for item in origin_lines}
+    dest_by_line = {item["line_ref"]: item for item in dest_lines}
+    common_lines = set(origin_by_line) & set(dest_by_line)
+
+    segment_distance_m = _haversine_m(origin_lat, origin_lon, dest_lat, dest_lon)
+
+    # 1. Trajet direct
+    if common_lines:
+        # Meilleure ligne = somme des ranks (rank 1 = plus proche)
+        best_line = min(
+            common_lines,
+            key=lambda lr: (origin_by_line[lr]["rank"] + dest_by_line[lr]["rank"], lr),
+        )
+        seg = _build_transit_segment(
+            origin_by_line[best_line],
+            dest_by_line[best_line],
+            segment_distance_m,
+            day_type,
+            time_bucket,
+        )
+        return TransitItinerary(
+            origin_label=origin_name,
+            destination_label=dest_name,
+            segments=[seg],
+            transfer_hub=None,
+            n_transfers=0,
+            total_duration_min=seg.duration_estimate_min,
+            total_walk_m=seg.distance_walk_to_m + seg.distance_walk_from_m,
+            total_delay_min=seg.delay_avg_min,
+            confidence=seg.confidence,
+            source="db",
+        )
+
+    # 2. Correspondance via hub
+    all_lieux_rows = execute_query(
+        "SELECT lieu_id, name FROM referentiel.lieux_lyon WHERE is_active = TRUE"
+    )
+    best_itin: TransitItinerary | None = None
+    for hub_row in all_lieux_rows:
+        hub_id = int(hub_row["lieu_id"])
+        if hub_id in (origin_id, dest_id):
+            continue
+        hub_lines = get_lieux_transports(lieu_id=hub_id)
+        if not hub_lines:
+            continue
+        hub_by_line = {item["line_ref"]: item for item in hub_lines}
+        match_o = set(origin_by_line) & set(hub_by_line)
+        match_d = set(dest_by_line) & set(hub_by_line)
+        if not match_o or not match_d:
+            continue
+
+        best_o = min(
+            match_o,
+            key=lambda lr: origin_by_line[lr]["rank"] + hub_by_line[lr]["rank"],
+        )
+        best_d = min(
+            match_d,
+            key=lambda lr: hub_by_line[lr]["rank"] + dest_by_line[lr]["rank"],
+        )
+        hub_geo = execute_query(
+            "SELECT lon, lat FROM referentiel.lieux_lyon WHERE lieu_id = %s",
+            (hub_id,),
+        )
+        if not hub_geo:
+            continue
+        hub_lon, hub_lat = float(hub_geo[0]["lon"]), float(hub_geo[0]["lat"])
+
+        seg1_dist = _haversine_m(origin_lat, origin_lon, hub_lat, hub_lon)
+        seg2_dist = _haversine_m(hub_lat, hub_lon, dest_lat, dest_lon)
+        seg1 = _build_transit_segment(
+            origin_by_line[best_o], hub_by_line[best_o], seg1_dist, day_type, time_bucket,
+        )
+        seg2 = _build_transit_segment(
+            hub_by_line[best_d], dest_by_line[best_d], seg2_dist, day_type, time_bucket,
+        )
+        total_walk = (
+            seg1.distance_walk_to_m + seg1.distance_walk_from_m
+            + seg2.distance_walk_to_m + seg2.distance_walk_from_m
+        )
+        total_dur = (
+            seg1.duration_estimate_min
+            + seg2.duration_estimate_min
+            + _TRANSFER_PENALTY_MIN
+        )
+        total_delay = seg1.delay_avg_min + seg2.delay_avg_min
+        confidence = min(seg1.confidence, seg2.confidence)
+        itin = TransitItinerary(
+            origin_label=origin_name,
+            destination_label=dest_name,
+            segments=[seg1, seg2],
+            transfer_hub=hub_row["name"],
+            n_transfers=1,
+            total_duration_min=round(total_dur, 1),
+            total_walk_m=total_walk,
+            total_delay_min=round(total_delay, 2),
+            confidence=round(confidence, 2),
+            source="db",
+        )
+        if best_itin is None or total_dur < best_itin.total_duration_min:
+            best_itin = itin
+
+    if best_itin:
+        return best_itin
+
+    # 3. Aucun trajet possible → diagnostic lignes O et D
+    return TransitItinerary(
+        origin_label=origin_name,
+        destination_label=dest_name,
+        diagnostics=[
+            f"Lignes desservant {origin_name} : "
+            f"{', '.join(sorted(set(origin_by_line)))}",
+            f"Lignes desservant {dest_name} : "
+            f"{', '.join(sorted(set(dest_by_line)))}",
+            "Aucune correspondance simple (Phase 1 : 21 lieux, 1 hub max).",
+        ],
+    )

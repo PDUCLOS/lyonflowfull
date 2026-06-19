@@ -225,6 +225,25 @@ def cached_tomtom_gl_drift(limit: int = 200) -> pd.DataFrame:
     return dl.load_tomtom_gl_drift(limit=limit)
 
 
+# =============================================================================
+# Transport en commun (Sprint 14, 2026-06-19)
+# =============================================================================
+
+
+@st.cache_data(ttl=TTL_REALTIME, show_spinner=False)
+def cached_transit_itinerary(origin: str, destination: str) -> dict | None:
+    """Itinéraire TC entre 2 lieux (routing référentiel, 21 lieux emblématiques).
+
+    Args typés explicitement (str, pas ``*args``) pour garantir le hashage
+    Streamlit correct.
+
+    Returns:
+        Dict sérialisable (cf. ``load_transit_itinerary``) ou ``None`` si pas
+        de trajet possible (O == D, lieu inexistant, etc.).
+    """
+    return dl.load_transit_itinerary(origin=origin, destination=destination)
+
+
 def clear_all_caches() -> None:
     """Vide tous les caches Streamlit (utilisable depuis un bouton 'refresh')."""
     st.cache_data.clear()

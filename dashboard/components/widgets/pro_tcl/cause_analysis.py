@@ -15,14 +15,8 @@ def render_cause_analysis(segment: dict | None = None) -> None:
                  Si None, affiche un exemple.
     """
     if segment is None:
-        segment = {
-            "line_id": "C3",
-            "name": "Part-Dieu → Saxe",
-            "bus_state": "delayed",
-            "traffic_state": "jammed",
-            "diagnosis": "infra",
-            "delay_min": 7,
-        }
+        st.info("Sélectionnez un segment pour voir l'analyse causale.")
+        return
 
     line = segment.get("line_id", "—")
     seg_name = segment.get("name", "—")

@@ -10,6 +10,7 @@ import pandas as pd
 import streamlit as st
 
 from dashboard.components.data_cache import cached_infra_bottlenecks
+from src.data.db_query import clean_line_label  # Sprint 15+ : libellé lisible des lignes TCL.
 from src.data.exceptions import DashboardDataError
 
 # DIAGNOSIS_LABELS est un libellé FR d'un code SQL (cf. infra_bottlenecks.diagnosis),
@@ -36,8 +37,9 @@ def render_segment_table(line_id: str | None = None, height: int = 400) -> None:
             segments.append({
                 "line_id": row.get("line_ref", "?"),
                 "name": row.get("segment_id", "—"),
-                "bus_state": "delayed" if delay_s > _DELAY_THRESHOLD else "on_time",
-                "traffic_state": "jammed" if speed < _SPEED_THRESHOLD else "fluid",
+                # Sprint 15+ (audit Pro TCL D3) : libellés FR dans l'UI.
+                "bus_state": "En retard" if delay_s > _DELAY_THRESHOLD else "À l'heure",
+                "traffic_state": "Congestionné" if speed < _SPEED_THRESHOLD else "Fluide",
                 "diagnosis": row.get("diagnosis", "ok"),
                 "delay_min": round(delay_s / 60, 1),
                 "lat": row.get("lat", 0) or 0,
@@ -58,7 +60,9 @@ def render_segment_table(line_id: str | None = None, height: int = 400) -> None:
     df_display = pd.DataFrame(
         [
             {
-                "Ligne": s["line_id"],
+                # Sprint 15+ (audit Pro TCL B2) : libellé lisible L66 au lieu
+                # de l'identifiant SYTRAL brut (ActIV:Line::66:SYTRAL_h20).
+                "Ligne": clean_line_label(s["line_id"]),
                 "Segment": s["name"],
                 "Bus": s["bus_state"],
                 "Trafic": s["traffic_state"],
