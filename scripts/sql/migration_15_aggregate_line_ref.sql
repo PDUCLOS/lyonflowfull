@@ -1,27 +1,42 @@
 -- =============================================================================
--- LyonFlowFull — Vues matérialisées KPIs lignes TCL + Heatmap OTP (Sprint 7)
+-- LyonFlowFull — Migration 15 (Sprint 15, 2026-06-19)
 -- =============================================================================
--- Sprint 7 (post-Sprint VPS-6, 2026-06-11) — Débloque les pages Pro TCL :
---   * Pro_2_Heatmap_OTP.py : heatmap OTP ligne × heure
---   * Pro_4_Simulateur.py : simulation ajout/retrait bus
+-- Bug structurel Pro TCL : explosion lignes `_hNN` + point-virgule (item A
+-- du SPRINT_15_AUDIT_PRO_TCL.md).
 --
--- Vue matérialisée = données pré-calculées + index. Refresh par
--- ``DAG refresh_lieux_calendrier`` quotidien 5h (Sprint 7) ou
--- ad-hoc après évolution de gold.bus_delay_segments.
+-- Cause racine
+-- ------------
+-- ``gold.bus_delay_segments`` stocke ``line_ref`` brut avec un suffixe
+-- horaire SYTRAL, ex ``ActIV:Line::66:SYTRAL_h20``. La MV
+-- ``gold.mv_line_kpis_live`` fait un ``GROUP BY line_ref`` brut → chaque
+-- bucket horaire devient une "ligne" distincte (155+ entrées au lieu de
+-- ~40 lignes physiques). La MV ``gold.mv_otp_heatmap`` agrège par
+-- ``(line_ref, date, hour)`` et propage la même pollution.
 --
--- Définitions KPI :
---   * OTP (On-Time Performance) = % de snapshots avec retard < 2 min
---     (= avg_delay_seconds < 120s). Standard TCL/SNCF.
---   * retard_moyen_s = avg(avg_delay_seconds) sur la fenêtre
---   * frequence_min = 60 / n_observations_par_heure (moyenne véhicules/h)
---   * charge = n_observations / n_observations_max_attendu (%)
+-- Côté UI, ``clean_line_label()`` (Sprint 11+, src/data/db_query.py)
+-- transforme ``ActIV:Line::66:SYTRAL_h20`` en ``"L66 ; 20h"`` — d'où les
+-- point-virgules visibles partout (heatmap, KPI table, dropdown, etc.).
 --
--- Migration 15 (2026-06-19, Sprint 15) — Agrégation par LIGNE PHYSIQUE :
--- retire le suffixe horaire ``_hNN`` du ``line_ref`` (ex
--- ``ActIV:Line::66:SYTRAL_h20`` → ``ActIV:Line::66:SYTRAL``) pour éviter
--- l'explosion de 155+ "lignes" dupliquées dans la heatmap / KPI table.
--- Avant la migration, voir scripts/sql/migration_15_aggregate_line_ref.sql
--- pour la migration forward-only appliquée sur VPS.
+-- Fix
+-- ---
+-- Agréger par **ligne physique** au niveau SQL (avant le rendu Python).
+-- On retire le suffixe ``_hNN`` via :
+--   CASE
+--       WHEN line_ref LIKE '%:SYTRAL%'
+--           THEN SPLIT_PART(line_ref, ':SYTRAL', 1) || ':SYTRAL'
+--       ELSE line_ref
+--   END
+--
+-- Ce CASE gère les 2 formats coexistants en DB :
+--   * ``ActIV:Line::66:SYTRAL_h20``   → ``ActIV:Line::66:SYTRAL``
+--   * ``T1`` / ``M_A`` / ``C3`` (legacy) → inchangé (pas de ``:SYTRAL``)
+--
+-- Côté Python, ``clean_line_label('ActIV:Line::66:SYTRAL')`` retourne
+-- ``"L66"`` (plus de point-virgule horaire).
+--
+-- Côté DB, la MV passe de ~155 lignes dupliquées à ~40 lignes physiques.
+-- La heatmap OTP garde la granularité (line_id, date, hour) mais avec un
+-- ``line_id`` propre.
 --
 -- Idempotent : DROP IF EXISTS + CREATE MATERIALIZED VIEW.
 -- =============================================================================
@@ -159,15 +174,27 @@ DECLARE
 BEGIN
     SELECT COUNT(*) INTO n_lignes FROM gold.mv_line_kpis_live;
     SELECT COUNT(*) INTO n_heat FROM gold.mv_otp_heatmap;
+    -- Sanity check : la nouvelle MV ne doit PAS contenir de suffixe _hNN
     SELECT COUNT(*) INTO n_avec_suffixe
     FROM gold.mv_line_kpis_live
     WHERE line_ref LIKE '%_h%' AND line_ref LIKE '%:SYTRAL%';
     IF n_avec_suffixe > 0 THEN
-        RAISE WARNING 'mv_line_kpis_live contient encore % lignes avec suffixe _hNN !', n_avec_suffixe;
+        RAISE WARNING 'mv_line_kpis_live contient encore % lignes avec suffixe _hNN ! Vérifier le CASE dans la migration.', n_avec_suffixe;
     ELSIF n_lignes > 200 THEN
         RAISE WARNING 'mv_line_kpis_live a % lignes (> 200) — vérifier agrégation', n_lignes;
     ELSE
-        RAISE NOTICE 'OK : mv_line_kpis_live : % lignes physiques', n_lignes;
+        RAISE NOTICE 'OK : mv_line_kpis_live : % lignes physiques (pas de suffixe _hNN)', n_lignes;
     END IF;
     RAISE NOTICE 'mv_otp_heatmap : % (ligne,date,hour) triplets', n_heat;
 END $$;
+
+
+-- =============================================================================
+-- Rollback (si besoin — NE PAS exécuter dans le run normal)
+-- =============================================================================
+-- Pour revenir à l'ancienne version (avec suffixe _hNN) :
+--   1. git checkout v0.6.5 -- scripts/sql/create_mv_line_kpis_otp.sql
+--   2. psql ... -f scripts/sql/create_mv_line_kpis_otp.sql
+--
+-- La MV est droppée puis recréée, donc aucun risque de corruption.
+-- =============================================================================
