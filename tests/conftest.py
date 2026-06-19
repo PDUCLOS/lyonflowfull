@@ -126,27 +126,10 @@ def mock_db(monkeypatch: pytest.MonkeyPatch) -> MockDB:
     return db
 
 
-@pytest.fixture
-def demo_mode(monkeypatch: pytest.MonkeyPatch) -> None:
-    """Force ``LYONFLOW_DEMO_MODE=1`` (mode démo local)."""
-    monkeypatch.setenv("LYONFLOW_DEMO_MODE", "1")
-
-
-@pytest.fixture
-def prod_mode(monkeypatch: pytest.MonkeyPatch) -> None:
-    """Force ``LYONFLOW_DEMO_MODE=0`` (mode prod, fail loud)."""
-    monkeypatch.setenv("LYONFLOW_DEMO_MODE", "0")
-    # Reset le cache de _is_demo_mode entre les tests
-    from src.data.data_loader import _is_demo_mode
-
-    _is_demo_mode.cache_clear()
-
-
-@pytest.fixture
-def reset_demo_mode_cache() -> None:
-    """Reset le cache de _is_demo_mode entre tests (idempotence)."""
-    from src.data.data_loader import _is_demo_mode
-
-    _is_demo_mode.cache_clear()
-    yield
-    _is_demo_mode.cache_clear()
+# Sprint 15+ (audit Pro TCL 2026-06-19) — fixtures ``demo_mode`` /
+# ``prod_mode`` / ``reset_demo_mode_cache`` SUPPRIMÉES. Elles référençaient
+# ``src.data.data_loader._is_demo_mode`` (helper déprécié Sprint 8, retiré
+# Sprint 12+) — toute activation aurait levé ImportError. La politique
+# "zéro mock" (Sprint 8) + le test ``test_no_mock_vps_policy.py`` qui assert
+# la suppression du helper rendent ces fixtures caduques. L'env var
+# ``LYONFLOW_DEMO_MODE`` n'est plus lue par le code de prod.
