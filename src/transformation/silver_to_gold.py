@@ -24,11 +24,12 @@ def transform_silver_to_gold(target: str = "all", dry_run: bool = False) -> dict
     """Transform Silver → Gold pour un ou tous les modèles.
 
     Args:
-        target: 'traffic' | 'velov' | 'bus_delay' | 'tcl_realtime' | 'bottleneck' | 'all'
+        target: 'traffic' | 'velov' | 'bus_delay' | 'tcl_realtime'
+            | 'bottleneck' | 'multimodal_grid' | 'all'
         dry_run: log uniquement.
 
     Returns:
-        {target: n_rows_upserted}
+        {target: n_rows_upserted_or_refreshed}
     """
     if dry_run:
         logger.info("[DRY-RUN] Silver → Gold %s skipped", target)
@@ -45,6 +46,12 @@ def transform_silver_to_gold(target: str = "all", dry_run: bool = False) -> dict
         results["tcl_realtime"] = _build_tcl_realtime()
     if target in ("bottleneck", "all"):
         results["bottleneck"] = _build_infrastructure_bottlenecks()
+    if target in ("multimodal_grid", "all"):
+        # Refresh MV (pas d'INSERT — REFRESH MATERIALIZED VIEW CONCURRENTLY
+        # nécessite l'index unique idx_mv_multimodal_grid_latlon — créé dans
+        # migration 017). Si la MV n'existe pas encore (migration pas
+        # appliquée), on log un warning sans planter.
+        results["multimodal_grid"] = _refresh_multimodal_grid()
     return results
 
 
@@ -446,4 +453,46 @@ def _build_infrastructure_bottlenecks() -> int:
         cur.execute(_BOTTLENECK_SQL)
         n = cur.rowcount
     logger.info("gold.infrastructure_bottlenecks: %d rows upserted", n)
+    return n
+
+
+def _refresh_multimodal_grid() -> int:
+    """Refresh la vue matérialisée ``gold.mv_multimodal_grid`` (Sprint 15+).
+
+    Agrège sur grille 0.01° (~1 km) Lyon :
+    * gold.traffic_features_live (vitesse, % congestion)
+    * gold.tcl_vehicle_realtime (retard, % véhicules en retard)
+    * silver.velov_clean (vélos/docks dispo)
+    * silver.meteo_hourly (température, précipitations — CROSS JOIN)
+
+    REFRESH CONCURRENTLY (pas de lock exclusif sur la MV côté dashboard).
+    Requiert l'index unique ``idx_mv_multimodal_grid_latlon`` créé dans
+    la migration 017. Si la MV n'existe pas (migration pas appliquée),
+    on log un warning et on retourne 0 sans planter — le DAG continue.
+
+    Returns:
+        Nombre de cellules dans la MV après refresh (0 si MV absente).
+    """
+    with raw_connection() as conn, conn.cursor() as cur:
+        # Vérifie que la MV existe avant de tenter le refresh
+        cur.execute(
+            """
+            SELECT 1 FROM pg_matviews
+            WHERE schemaname = 'gold' AND matviewname = 'mv_multimodal_grid'
+            """
+        )
+        if cur.fetchone() is None:
+            logger.warning(
+                "gold.mv_multimodal_grid absente — migration 017 non appliquée. "
+                "Le widget multimodal_heatmap affichera 'vue non alimentée'. "
+                "Appliquer scripts/sql/migration_017_multimodal_grid.sql puis "
+                "redémarrer ce DAG."
+            )
+            return 0
+        # CONCURRENTLY = refresh sans lock exclusif (dashboard peut lire
+        # la MV en parallèle). Requiert l'index unique idx_mv_multimodal_grid_latlon.
+        cur.execute("REFRESH MATERIALIZED VIEW CONCURRENTLY gold.mv_multimodal_grid")
+        cur.execute("SELECT COUNT(*) FROM gold.mv_multimodal_grid")
+        n = int(cur.fetchone()[0])
+    logger.info("gold.mv_multimodal_grid: %d cellules refreshed", n)
     return n

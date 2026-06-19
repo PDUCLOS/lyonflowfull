@@ -22,6 +22,7 @@ from dashboard.components.widgets.pro_tcl.line_comparison import render_line_com
 from dashboard.components.widgets.pro_tcl.line_kpis import render_line_kpis
 from dashboard.components.widgets.pro_tcl.line_selector import render_line_selector
 from dashboard.components.widgets.pro_tcl.model_monitoring import render_model_monitoring_page
+from dashboard.components.widgets.pro_tcl.multimodal_heatmap import render_multimodal_heatmap
 from dashboard.components.widgets.pro_tcl.network_map import render_network_map
 from dashboard.components.widgets.pro_tcl.otp_filters import render_otp_filters
 from dashboard.components.widgets.pro_tcl.otp_heatmap import (
@@ -46,6 +47,7 @@ __all__ = [
     "render_line_kpis",
     "render_line_selector",
     "render_model_monitoring_page",
+    "render_multimodal_heatmap",
     "render_network_map",
     "render_otp_filters",
     "render_otp_heatmap",

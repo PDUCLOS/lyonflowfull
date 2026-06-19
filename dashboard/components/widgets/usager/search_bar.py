@@ -7,6 +7,13 @@ Affiche 2 champs (départ + destination) avec auto-complétion **cliquable** :
 
 Sprint 8 — Adresses chargées via
 data_loader.cached_lyon_addresses_with_coords() (zéro mock).
+
+Sprint 15+ (2026-06-19) — Ajout du radio "Optimiser pour" (temps / coût).
+Ce critère sert :
+- Phase 1 : affichage enrichi dans ``render_mode_summary`` (KPI cards).
+- Phase 2 : critère de tri du comparateur multi-modes (winner card).
+Le critère est ajouté au dict retourné sous la clé ``"critere"``
+(``"temps"`` | ``"cout"``).
 """
 
 from __future__ import annotations
@@ -73,6 +80,14 @@ def render_search_bar() -> dict[str, typing.Any]:
         color: var(--text-color-secondary, rgba(128,128,128,0.9));
         margin-top: 0.4rem;
         font-style: italic;
+    }
+    /* Sprint 15+ — radio critère d'optimisation : compact, sous le mode hint */
+    div[data-testid="stRadio"][aria-label="Optimiser pour"] {
+        margin-top: 0.5rem;
+    }
+    div[data-testid="stRadio"][aria-label="Optimiser pour"] label {
+        padding: 0.3rem 0.6rem !important;
+        font-size: 0.85rem !important;
     }
     </style>
     """, unsafe_allow_html=True)
@@ -145,10 +160,24 @@ def render_search_bar() -> dict[str, typing.Any]:
             )
             modes = [selected_mode]
 
+            # Sprint 15+ — Critère d'optimisation (radio horizontal compact).
+            # Position : sous le hint contextuel dans la même col_modes.
+            # Sert au scoring composite du comparateur Phase 2 (cf. eco_calculator).
+            critere_label = st.radio(
+                "Optimiser pour",
+                ["⏱️ Temps", "💰 Coût"],
+                horizontal=True,
+                key="search_critere",
+                index=0,
+                help="Critère de tri pour le comparateur multi-modes (Phase 2)",
+            )
+            critere = "temps" if critere_label.startswith("⏱") else "cout"
+
     return {
         "origin": origin,
         "destination": destination,
         "departure_mode": departure_mode,
         "departure_time": str(departure_time) if departure_time else None,
         "modes": modes,
+        "critere": critere,
     }

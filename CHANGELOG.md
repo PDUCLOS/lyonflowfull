@@ -5,6 +5,114 @@ Toutes les modifications notables de ce projet sont documentées ici.
 Le format suit [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/),
 et ce projet adhère au [Semantic Versioning](https://semver.org/lang/fr/).
 
+## [0.7.0] - 2026-06-19 — Sprint 15+ : Axe 1 — Grille multimodale (branche `vps`)
+
+Première livraison de `docs/SPEC_OPTIMISATION_INTERDEPENDANCES.md` :
+**fusion multi-sources sur grille spatiale 0.01° (~1 km)** combinant
+trafic routier + TCL temps réel + Vélov + météo en une seule vue. C'est
+la fondation qui permet les axes suivants du spec (bus × trafic
+spatialisé, propagation congestion, couplage Vélov ↔ TC).
+
+### Ajouté
+- **Migration 17** `scripts/sql/migration_017_multimodal_grid.sql` :
+  - Vue matérialisée `gold.mv_multimodal_grid` (DROP IF EXISTS +
+    CREATE MATERIALIZED VIEW — pattern idempotent comme la migration 15).
+  - Agrège sur grille 0.01° (FULL OUTER JOIN des 3 CTEs + CROSS JOIN
+    météo single-row) : `gold.traffic_features_live` × `gold.tcl_vehicle_realtime`
+    × `silver.velov_clean` × `silver.meteo_hourly`.
+  - **Score multimodal 0-10** : `clamp(0.5 × pct_congestion/10 +
+    0.5 × pct_delayed/10 - bonus_vélov)` (bonus = 1.0 si vélos ≥ 5).
+  - **Diagnostic dominant** : `saturated` (>60% cong. ET >40% retard),
+    `road_congested` (>60% cong.), `transit_delayed` (>40% retard),
+    `velov_scarce` (vélos < 3 ET ≥ 1 station), `ok` (reste).
+  - 3 index : unique `(lat, lon)` (requis pour REFRESH CONCURRENTLY),
+    `diagnosis`, `score_multimodal DESC`.
+- **Helpers DB** : `get_multimodal_grid(limit)` + `get_multimodal_grid_diagnosis_counts()`
+  dans `src/data/db_query.py` (pattern `_df_from_query` — DataFrame vide
+  si DB indispo, fail loud au niveau data_loader).
+- **Wrappers fail-loud** : `load_multimodal_grid(limit)` +
+  `load_multimodal_grid_diagnosis_counts()` dans `src/data/data_loader.py`.
+  Lèvent `DashboardDataError` si DB indispo OU si la MV est vide
+  (> 30 min = DAG refresh qui n'a pas tourné).
+- **Cache Streamlit** : `cached_multimodal_grid()` (TTL 60s = 1 cycle
+  de refresh DAG) + `cached_multimodal_grid_diagnosis_counts()` dans
+  `dashboard/components/data_cache.py`.
+- **Widget `dashboard/components/widgets/pro_tcl/multimodal_heatmap.py`** :
+  - 4 KPI cards : Saturé / Tendu (route + TC) / Vélov scarce / Fluide
+  - Carte Folium avec rectangles colorés par `score_multimodal` (rouge
+    saturé, orange tendu, vert fluide). Popup détaillé : vitesse trafic,
+    retard TCL, vélos/docks dispo, météo.
+  - Tableau top 15 cellules saturées avec badge coloré sur Diagnostic.
+  - Fail loud via DashboardDataError → `st.error(...)` côté page.
+- **Câblage page** : section "Vue multimodale grille 0.01°" ajoutée
+  à `dashboard/pages/Pro_3_Correlation.py` (sous la section TomTom
+  × GL, en bas de page — zéro impact sur les widgets existants).
+- **DAG refresh** : nouvelle tâche `refresh_mv_multimodal_grid` dans
+  `dags/transforms/transform_silver_to_gold.py` (dépend de
+  `traffic + velov + tcl_realtime`). Refresh `REFRESH MATERIALIZED VIEW
+  CONCURRENTLY` toutes les 10 min (index unique requis). Vérifie que
+  la MV existe avant refresh (warning clair si migration 17 pas
+  appliquée, sans planter le DAG).
+
+### Changed
+- `src/transformation/silver_to_gold.py` : `target='multimodal_grid'`
+  ajouté à `transform_silver_to_gold()` + helper `_refresh_multimodal_grid()`.
+- `dashboard/components/widgets/pro_tcl/__init__.py` : export
+  `render_multimodal_heatmap` (ajouté à `__all__`).
+- `dashboard/pages/Pro_3_Correlation.py` : import `render_multimodal_heatmap`
+  + section dédiée + caption explicative des 3 sources de données.
+
+### Fixed
+- **Adaptation schéma réel** : le spec initial utilisait
+  `silver.meteo_hourly.temperature_2m` / `precipitation` mais le schéma
+  effectif a `temperature_c` / `rain_mm` (cf. `silver_to_gold.py:192-193`).
+  Le commentaire en tête de la migration documente cette divergence.
+
+**Tests** : 265 verts (+7 nouveaux test_multimodal_grid.py), 11 skipped,
+14 deselected. Ruff clean sur les 8 fichiers du PR.
+
+### Bonus Sprint 15+ — Comparateur de modes Usager (Phase 1 + Phase 2)
+
+Première livraison de `docs/SPEC_COMPARATEUR_MODES_USAGER.md` :
+**comparateur temps/coût/CO2** pour les 3 modes (TC, Voiture, Vélov)
+avec recommandation selon critère choisi (temps ou coût).
+
+#### Ajouté
+- **Migration 16** `scripts/sql/migration_016_tarifs_modes.sql` :
+  table référentielle `referentiel.tarifs_modes` (€/km, g CO2/km
+  par mode + vitesse moyenne + source ADEME). Pattern idempotent
+  (DROP IF EXISTS + CREATE).
+- **Helpers routage** : `src/routing/eco_calculator.py` —
+  `calculate_impact(mode, distance_km, is_congested)` + `get_comparison(...)`
+  + `recommend_mode(...)`. Pur Python (zéro DB — utilise tarifs_modes
+  chargés via fonction dédiée). Testable hors-ligne.
+- **Wrappers fail-loud** : `load_car_itinerary(...)` + `load_velov_itinerary(...)`
+  dans `src/data/data_loader.py`. Sérialisent les dataclasses en dict
+  pour compatibilité `@st.cache_data` Streamlit.
+- **Cache Streamlit** : `cached_car_itinerary` + `cached_velov_itinerary`
+  + `cached_mode_impact` dans `dashboard/components/data_cache.py`.
+- **Widget `dashboard/components/widgets/usager/mode_comparison.py`** :
+  comparateur 3 modes côte à côte (cartes temps + coût + CO2) avec
+  badge "recommandé" selon critère.
+- **Widget `dashboard/components/widgets/usager/mode_summary.py`** :
+  enrichissement Phase 1 — KPI cards (temps, coût, CO2) sous l'itinéraire
+  du mode sélectionné.
+- **Câblage search_bar** : radio "Optimiser pour" (⏱️ Temps / 💰 Coût)
+  dans `dashboard/components/widgets/usager/search_bar.py`. Clé
+  `critere` ajoutée au dict retourné (consommée par les 2 widgets).
+- **Spec de référence** : `docs/SPEC_OPTIMISATION_INTERDEPENDANCES.md`
+  (883 lignes, 7 axes — Axe 1 = grille multimodale livrée dans cette
+  entrée, Axes 2-7 = backlog).
+
+#### Changed
+- `src/routing/__init__.py` : export public `calculate_impact`,
+  `get_comparison`, `recommend_mode` (facade routing).
+- `dashboard/components/widgets/usager/__init__.py` : export
+  `render_mode_comparison` + `render_mode_summary`.
+
+**Tests** : 265 verts (Sprint 15+ multimodal + comparateur, +7 test_multimodal_grid.py),
+11 skipped, 14 deselected. Ruff clean sur les 8 fichiers du PR.
+
 ## [0.6.7] - 2026-06-18 — Sprint 13+ : TomTom Niveau 1 réactivé + cross-validation (branche `vps`)
 
 Réactive TomTom Traffic Flow comme **deuxième source indépendante de vitesse

@@ -44,6 +44,10 @@ def _run_bottleneck() -> dict[str, int]:
     return transform_silver_to_gold(target="bottleneck")
 
 
+def _run_multimodal_grid() -> dict[str, int]:
+    return transform_silver_to_gold(target="multimodal_grid")
+
+
 default_args = {
     "owner": "lyonflow",
     "retries": 1,
@@ -53,8 +57,8 @@ default_args = {
 with DAG(
     dag_id="transform_silver_to_gold",
     description=(
-        "Silver → Gold (traffic + velov + tcl_realtime + bus_delay + bottleneck) — "
-        "toutes les 10 min"
+        "Silver → Gold (traffic + velov + tcl_realtime + bus_delay + bottleneck "
+        "+ multimodal_grid) — toutes les 10 min"
     ),
     default_args=default_args,
     schedule_interval="*/10 * * * *",
@@ -93,5 +97,17 @@ with DAG(
         execution_timeout=timedelta(minutes=3),
     )
 
+    # Sprint 15+ (2026-06-19) — Refresh de gold.mv_multimodal_grid (migration 17).
+    # Dépend de toutes les sources upstream (traffic + TCL + Vélov alimentent
+    # la grille via les CTE_FULL OUTER JOIN de la MV).
+    multimodal_grid = PythonOperator(
+        task_id="refresh_mv_multimodal_grid",
+        python_callable=_run_multimodal_grid,
+        execution_timeout=timedelta(minutes=2),
+    )
+
     # Bottleneck dépend des deux : bus_delay (intra-jour) et traffic (lat/lon pour la carte)
     [traffic, velov, tcl_realtime, bus_delay] >> bottleneck
+
+    # La grille multimodale dépend de toutes les sources (traffic + TCL + Vélov)
+    [traffic, velov, tcl_realtime] >> multimodal_grid

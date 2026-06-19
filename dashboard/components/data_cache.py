@@ -226,6 +226,34 @@ def cached_tomtom_gl_drift(limit: int = 200) -> pd.DataFrame:
 
 
 # =============================================================================
+# Grille multimodale (Sprint 15+, 2026-06-19) — Axe 1
+# =============================================================================
+# Vue matérialisée refresh toutes les 10 min côté DAG, cache Streamlit TTL 60s
+# (= 1 cycle de refresh) pour éviter les rafales côté dashboard.
+# =============================================================================
+
+
+@st.cache_data(ttl=TTL_FAST, show_spinner=False)
+def cached_multimodal_grid(limit: int = 5000) -> pd.DataFrame:
+    """Grille multimodale temps réel (Sprint 15+, 2026-06-19).
+
+    Vue matérialisée ``gold.mv_multimodal_grid`` : trafic + TCL + Vélov +
+    météo fusionnés sur grille 0.01°. TTL 60s = 1 cycle de refresh DAG.
+    """
+    return dl.load_multimodal_grid(limit=limit)
+
+
+@st.cache_data(ttl=TTL_FAST, show_spinner=False)
+def cached_multimodal_grid_diagnosis_counts() -> pd.DataFrame:
+    """Distribution des diagnostics dominants (Sprint 15+, 2026-06-19).
+
+    Pour le bandeau KPI du widget ``multimodal_heatmap`` : compte les
+    cellules par diagnostic dominant.
+    """
+    return dl.load_multimodal_grid_diagnosis_counts()
+
+
+# =============================================================================
 # Transport en commun (Sprint 14, 2026-06-19)
 # =============================================================================
 
@@ -242,6 +270,88 @@ def cached_transit_itinerary(origin: str, destination: str) -> dict | None:
         de trajet possible (O == D, lieu inexistant, etc.).
     """
     return dl.load_transit_itinerary(origin=origin, destination=destination)
+
+
+# =============================================================================
+# Sprint 15+ (2026-06-19) — Comparateur de modes Usager (Phase 1 + Phase 2)
+# =============================================================================
+
+
+@st.cache_data(ttl=TTL_REALTIME, show_spinner=False)
+def cached_car_itinerary(
+    origin_lon: float,
+    origin_lat: float,
+    dest_lon: float,
+    dest_lat: float,
+    origin_label: str,
+    dest_label: str,
+    horizon_minutes: int = 60,
+) -> dict | None:
+    """Itinéraire voiture traffic-aware — wrapper cache Streamlit.
+
+    Args typés explicitement (floats + str) pour garantir le hashage
+    Streamlit correct (``@st.cache_data`` ne hash pas correctement les
+    tuples nommés via *args/**kwargs).
+
+    Sprint 15+ (2026-06-19) : ajouté pour le comparateur de modes Usager
+    (Phase 1 + Phase 2). Voir ``docs/SPEC_COMPARATEUR_MODES_USAGER.md``.
+    """
+    return dl.load_car_itinerary(
+        origin_lon=origin_lon,
+        origin_lat=origin_lat,
+        dest_lon=dest_lon,
+        dest_lat=dest_lat,
+        origin_label=origin_label,
+        dest_label=dest_label,
+        horizon_minutes=horizon_minutes,
+    )
+
+
+@st.cache_data(ttl=TTL_REALTIME, show_spinner=False)
+def cached_velov_itinerary(
+    origin_lat: float,
+    origin_lon: float,
+    dest_lat: float,
+    dest_lon: float,
+    origin_label: str,
+    dest_label: str,
+) -> dict | None:
+    """Itinéraire Vélov + marche — wrapper cache Streamlit.
+
+    Args typés explicitement pour le hashage Streamlit correct.
+    Sprint 15+ (2026-06-19) : ajouté pour le comparateur de modes Usager.
+    """
+    return dl.load_velov_itinerary(
+        origin_lat=origin_lat,
+        origin_lon=origin_lon,
+        dest_lat=dest_lat,
+        dest_lon=dest_lon,
+        origin_label=origin_label,
+        dest_label=dest_label,
+    )
+
+
+@st.cache_data(ttl=TTL_FAST, show_spinner=False)
+def cached_mode_impact(mode: str, distance_km: float, is_congested: bool = False) -> dict:
+    """Cache l'impact CO2/coût pour un mode.
+
+    Pur Python (pas de DB) — module-level cache léger via Streamlit pour
+    homogénéïté avec les autres wrappers et permettre au cache de se vider
+    via ``clear_all_caches()`` lors d'un refresh manuel.
+
+    Sprint 15+ (2026-06-19) : ajouté pour ``render_mode_summary()`` et
+    ``render_mode_comparison()``. L'impact ne dépend que de (mode, distance,
+    is_congested) — hashable, cache efficace.
+    """
+    from src.routing.eco_calculator import calculate_impact
+
+    return dict(
+        calculate_impact(
+            mode=mode,
+            distance_km=distance_km,
+            is_congested=is_congested,
+        ),
+    )
 
 
 def clear_all_caches() -> None:

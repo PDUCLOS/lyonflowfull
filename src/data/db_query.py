@@ -874,6 +874,75 @@ def get_amenagements_passes(limit: int = 50) -> pd.DataFrame:
 
 
 # =============================================================================
+# Grille multimodale (Sprint 15+, 2026-06-19) — Axe 1 du SPEC_OPTIMISATION_INTERDEPENDANCES
+# =============================================================================
+# Vue matérialisée gold.mv_multimodal_grid (migration 17) :
+#   Fusionne gold.traffic_features_live + gold.tcl_vehicle_realtime +
+#   silver.velov_clean + silver.meteo_hourly sur une grille spatiale 0.01°.
+#   Refresh toutes les 10 min par le DAG transform_silver_to_gold.
+# =============================================================================
+
+
+def get_multimodal_grid(limit: int = 5000) -> pd.DataFrame:
+    """Grille multimodale temps réel (Sprint 15+, 2026-06-19).
+
+    Vue matérialisée ``gold.mv_multimodal_grid`` (migration 17). Chaque
+    ligne = 1 cellule 0.01° (~1 km) Lyon avec un agrégat trafic + TCL +
+    Vélov + météo, un score 0-10 (haut = saturé) et un diagnostic dominant.
+
+    Args:
+        limit: nb max de cellules retournées (défaut 5000 — couvre tout
+            Lyon intra-muros + banlieue proche).
+
+    Returns:
+        DataFrame avec colonnes : ``lat, lon, avg_speed_kmh, pct_congestion,
+        n_sensors, avg_delay_sec, pct_delayed, n_vehicles, bikes_available,
+        docks_available, n_stations, temperature_c, rain_mm,
+        score_multimodal, diagnosis, computed_at``. ``diagnosis`` ∈
+        {ok, road_congested, transit_delayed, saturated, velov_scarce}.
+
+        Retourne un DataFrame vide si DB indispo (pattern cohérent avec
+        ``_df_from_query``). Le fail loud via ``DashboardDataError`` est
+        porté par ``data_loader.load_multimodal_grid``.
+    """
+    query = """
+        SELECT lat, lon,
+               avg_speed_kmh, pct_congestion, n_sensors,
+               avg_delay_sec, pct_delayed, n_vehicles,
+               bikes_available, docks_available, n_stations,
+               temperature_c, rain_mm,
+               score_multimodal, diagnosis, computed_at
+        FROM gold.mv_multimodal_grid
+        ORDER BY score_multimodal DESC
+        LIMIT %s
+    """
+    return _df_from_query(query, (limit,))
+
+
+def get_multimodal_grid_diagnosis_counts() -> pd.DataFrame:
+    """Distribution des diagnostics dominants (Sprint 15+, 2026-06-19).
+
+    Pour le bandeau KPI du widget ``multimodal_heatmap`` : compte les
+    cellules par diagnostic.
+
+    Returns:
+        DataFrame ``{diagnosis, n_cells, avg_score, pct_cells}`` trié par
+        ``n_cells`` DESC. Vide si DB indispo (fail loud via data_loader).
+    """
+    query = """
+        SELECT diagnosis,
+               COUNT(*)::int                   AS n_cells,
+               ROUND(AVG(score_multimodal)::numeric, 2) AS avg_score,
+               ROUND((100.0 * COUNT(*) / SUM(COUNT(*)) OVER ())::numeric, 1)
+                                                AS pct_cells
+        FROM gold.mv_multimodal_grid
+        GROUP BY diagnosis
+        ORDER BY n_cells DESC
+    """
+    return _df_from_query(query)
+
+
+# =============================================================================
 # Référentiel lieux × transports × calendrier (Sprint VPS-6, 2026-06-11)
 # =============================================================================
 # Ces 3 tables sont créées par :

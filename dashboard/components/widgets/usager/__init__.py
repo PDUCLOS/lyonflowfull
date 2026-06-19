@@ -5,6 +5,8 @@ from dashboard.components.widgets.usager.alert_settings import render_alert_sett
 from dashboard.components.widgets.usager.alert_timeline import render_alert_timeline
 from dashboard.components.widgets.usager.itinerary import render_itinerary_result
 from dashboard.components.widgets.usager.lieux_velov_map import render_lieux_velov_map
+from dashboard.components.widgets.usager.mode_comparison import render_mode_comparison
+from dashboard.components.widgets.usager.mode_summary import render_mode_summary
 from dashboard.components.widgets.usager.search_bar import render_search_bar
 from dashboard.components.widgets.usager.traffic_widget import render_traffic_widget
 from dashboard.components.widgets.usager.transit_trip import render_transit_trip
@@ -22,6 +24,8 @@ __all__ = [
     "render_alert_timeline",
     "render_itinerary_result",
     "render_lieux_velov_map",
+    "render_mode_comparison",
+    "render_mode_summary",
     "render_search_bar",
     "render_traffic_widget",
     "render_transit_trip",

@@ -863,6 +863,131 @@ def load_transit_itinerary(origin: str, destination: str) -> dict | None:
     }
 
 
+def load_car_itinerary(
+    origin_lon: float,
+    origin_lat: float,
+    dest_lon: float,
+    dest_lat: float,
+    origin_label: str = "Origine",
+    dest_label: str = "Destination",
+    horizon_minutes: int = 60,
+) -> dict | None:
+    """Itinéraire voiture traffic-aware entre 2 points GPS (Sprint 15+, 2026-06-19).
+
+    Wrapper fail-loud autour de ``src.routing.pathfinder_multimodal.plan_car_trip``.
+    Sérialise le dict retourné (déjà un dict, pas une dataclass) — utile pour
+    le cache Streamlit et l'uniformisation avec ``load_transit_itinerary`` /
+    ``load_velov_itinerary``.
+
+    Args:
+        origin_lon, origin_lat: GPS du point de départ.
+        dest_lon, dest_lat: GPS du point d'arrivée.
+        origin_label, dest_label: labels affichés.
+        horizon_minutes: H+0 (maintenant, défaut 60 = H+1h pour focus Sprint 8+).
+
+    Returns:
+        Dict sérialisable avec clés : ``origin_label``, ``destination_label``,
+        ``total_length_m``, ``total_duration_min``, ``average_speed_kmh``,
+        ``horizon_minutes``, ``segments`` (list[dict]), ``source``.
+        ``source == "unavailable"`` si le graphe routier n'a pas pu calculer
+        un itinéraire (DB up mais graphe incomplet). ``None`` seulement si
+        DB indispo (``DashboardDataError`` levée dans ce cas).
+
+    Raises:
+        DashboardDataError: si PostgreSQL indisponible (politique Sprint 8).
+    """
+    _require_db_or_raise("silver.trafic_boucles_clean")
+    from src.routing.pathfinder_multimodal import plan_car_trip
+
+    result = plan_car_trip(
+        origin_lon=origin_lon,
+        origin_lat=origin_lat,
+        dest_lon=dest_lon,
+        dest_lat=dest_lat,
+        origin_label=origin_label,
+        dest_label=dest_label,
+        horizon_minutes=horizon_minutes,
+    )
+    return result
+
+
+def load_velov_itinerary(
+    origin_lat: float,
+    origin_lon: float,
+    dest_lat: float,
+    dest_lon: float,
+    origin_label: str = "Origine",
+    dest_label: str = "Destination",
+) -> dict | None:
+    """Itinéraire Vélov + marche entre 2 points GPS (Sprint 15+, 2026-06-19).
+
+    Wrapper fail-loud autour de ``src.routing.pathfinder_multimodal.plan_velov_trip``.
+    Sérialise la dataclass ``VelovItinerary`` en dict pour consommation par
+    Streamlit cache (``@st.cache_data`` n'accepte pas les dataclasses non
+    hashables — même contrainte que ``load_transit_itinerary``).
+
+    Args:
+        origin_lat, origin_lon: GPS du point de départ.
+        dest_lat, dest_lon: GPS du point d'arrivée.
+        origin_label, dest_label: labels affichés.
+
+    Returns:
+        Dict sérialisable avec clés : ``origin_label``, ``destination_label``,
+        ``total_distance_m``, ``total_duration_min``, ``source`` ("db" en prod),
+        ``segments`` (list[dict 11 champs]), ``origin_alternatives``,
+        ``dest_alternatives``, ``origin_neighbors``, ``dest_neighbors``,
+        ``diagnostics``, ``feasible`` (bool).
+
+    Raises:
+        DashboardDataError: si PostgreSQL indisponible (politique Sprint 8).
+    """
+    _require_db_or_raise("silver.velov_clean")
+    from src.routing.pathfinder_multimodal import plan_velov_trip
+
+    itin = plan_velov_trip(
+        origin_lat=origin_lat,
+        origin_lon=origin_lon,
+        dest_lat=dest_lat,
+        dest_lon=dest_lon,
+        origin_label=origin_label,
+        dest_label=dest_label,
+    )
+    if itin is None:
+        return None
+    return {
+        "origin_label": itin.origin_label,
+        "destination_label": itin.destination_label,
+        "total_distance_m": itin.total_distance_m,
+        "total_duration_min": itin.total_duration_min,
+        "source": itin.source,
+        "feasible": itin.feasible,
+        "segments": [
+            {
+                "mode": s.mode,
+                "from_label": s.from_label,
+                "to_label": s.to_label,
+                "from_lon": s.from_lon,
+                "from_lat": s.from_lat,
+                "to_lon": s.to_lon,
+                "to_lat": s.to_lat,
+                "distance_m": s.distance_m,
+                "duration_min": s.duration_min,
+                "n_bikes_depart": s.n_bikes_depart,
+                "n_docks_arrive": s.n_docks_arrive,
+                "n_bikes_mechanical": s.n_bikes_mechanical,
+                "n_bikes_electrical": s.n_bikes_electrical,
+                "notes": s.notes,
+            }
+            for s in itin.segments
+        ],
+        "origin_alternatives": list(itin.origin_alternatives),
+        "dest_alternatives": list(itin.dest_alternatives),
+        "origin_neighbors": list(itin.origin_neighbors),
+        "dest_neighbors": list(itin.dest_neighbors),
+        "diagnostics": list(itin.diagnostics),
+    }
+
+
 # =============================================================================
 # MLflow — registry tracking (Sprint 9)
 # =============================================================================
@@ -971,6 +1096,79 @@ def load_tomtom_gl_drift(limit: int = 200) -> pd.DataFrame:
     from src.data.db_query import get_tomtom_gl_drift
 
     return get_tomtom_gl_drift(limit=limit)
+
+
+# =============================================================================
+# Grille multimodale (Sprint 15+, 2026-06-19) — Axe 1 du SPEC_OPTIMISATION_INTERDEPENDANCES
+# =============================================================================
+# Vue matérialisée gold.mv_multimodal_grid (migration 17).
+# Fail loud via _require_db_or_raise, pas de fallback mock (politique Sprint 8).
+# =============================================================================
+
+
+def load_multimodal_grid(limit: int = 5000) -> pd.DataFrame:
+    """Grille multimodale temps réel (Sprint 15+, 2026-06-19).
+
+    Vue matérialisée ``gold.mv_multimodal_grid`` (migration 17) qui
+    fusionne trafic + TCL + Vélov + météo sur une grille spatiale 0.01°
+    (~1 km) Lyon. Permet au widget ``multimodal_heatmap`` de visualiser
+    l'état multimodal du réseau par cellule.
+
+    Args:
+        limit: nb max de cellules retournées (défaut 5000 — couvre Lyon
+            intra-muros + banlieue proche).
+
+    Returns:
+        DataFrame avec colonnes ``lat, lon, avg_speed_kmh, pct_congestion,
+        n_sensors, avg_delay_sec, pct_delayed, n_vehicles, bikes_available,
+        docks_available, n_stations, temperature_c, rain_mm,
+        score_multimodal, diagnosis, computed_at``.
+
+    Raises:
+        DashboardDataError: en mode prod, si PostgreSQL ne répond pas ou
+            si la vue matérialisée n'existe pas encore (migration 17 non
+            appliquée). Lève aussi si la vue est vide de façon prolongée
+            (> 30 min) — probablement le DAG refresh qui n'a pas tourné.
+    """
+    _require_db_or_raise("gold.mv_multimodal_grid")
+    from src.data.db_query import get_multimodal_grid
+
+    df = get_multimodal_grid(limit=limit)
+    if df.empty:
+        # DB répond mais vue vide : situation anormale, on signale.
+        raise DashboardDataError(
+            source="gold.mv_multimodal_grid",
+            detail="Vue matérialisée vide. Vérifier que le DAG "
+            "transform_silver_to_gold a bien tourné (tâche "
+            "refresh_mv_multimodal_grid). Si oui, attendre 1 cycle "
+            "(10 min) après l'application de la migration 17.",
+        )
+    return df
+
+
+def load_multimodal_grid_diagnosis_counts() -> pd.DataFrame:
+    """Distribution des diagnostics dominants (Sprint 15+, 2026-06-19).
+
+    Pour les KPI cards du widget ``multimodal_heatmap`` : compte les
+    cellules par diagnostic et calcule le score moyen.
+
+    Returns:
+        DataFrame ``{diagnosis, n_cells, avg_score, pct_cells}``.
+
+    Raises:
+        DashboardDataError: si PostgreSQL ne répond pas ou vue vide.
+    """
+    _require_db_or_raise("gold.mv_multimodal_grid")
+    from src.data.db_query import get_multimodal_grid_diagnosis_counts
+
+    df = get_multimodal_grid_diagnosis_counts()
+    if df.empty:
+        raise DashboardDataError(
+            source="gold.mv_multimodal_grid",
+            detail="Vue matérialisée vide — pas de diagnostic à agréger. "
+            "Vérifier le DAG refresh_mv_multimodal_grid.",
+        )
+    return df
 
 
 def load_mlflow_models(

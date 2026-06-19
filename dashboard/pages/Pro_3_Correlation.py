@@ -14,6 +14,7 @@ from dashboard.components.widgets.pro_tcl import (
     render_coherence_scatter,
     render_correlation_matrix,
     render_line_selector,
+    render_multimodal_heatmap,
     render_segment_table,
 )
 
@@ -83,8 +84,20 @@ st.markdown("---")
 st.markdown("##### Cohérence TomTom × Grand Lyon (cross-validation sources)")
 render_coherence_scatter()
 
+st.markdown("---")
+
+# Sprint 15+ (2026-06-19) — Axe 1 du SPEC_OPTIMISATION_INTERDEPENDANCES
+# Grille multimodale 0.01° (trafic + TCL + Vélov + météo fusionnés) — carte
+# chaleur avec score 0-10 et diagnostic dominant par cellule. Vue
+# gold.mv_multimodal_grid (migration 17), refresh DAG */10 min.
+st.markdown("##### Vue multimodale grille 0.01° (trafic + TCL + Vélov + météo)")
+render_multimodal_heatmap()
+
 st.caption(
     "Corrélation bus × trafic · Données : SIRI Lite + boucles Grand Lyon. "
     "Cohérence TomTom × GL · Données : TomTom Flow (DAG collect_tomtom_traffic */15) + "
-    "jointure spatiale gold.channels_ref < 200 m (PostGIS ST_DWithin)."
+    "jointure spatiale gold.channels_ref < 200 m (PostGIS ST_DWithin). "
+    "Grille multimodale · Données : fusion gold.traffic_features_live × "
+    "gold.tcl_vehicle_realtime × silver.velov_clean × silver.meteo_hourly "
+    "sur gold.mv_multimodal_grid (refresh */10)."
 )
