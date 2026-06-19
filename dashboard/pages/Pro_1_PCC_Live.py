@@ -60,9 +60,9 @@ with q2:
     from dashboard.components.colors import STATUS_COLORS
     from dashboard.components.data_cache import cached_recent_alerts
 
-    alerts_df = cached_recent_alerts(hours=2, limit=10)
+    alerts_df = cached_recent_alerts(hours=24, limit=10)
     if alerts_df.empty:
-        st.info("Aucune alerte active sur les 2 dernières heures.")
+        st.info("Aucun chantier actif ni alerte en cours.")
     else:
         for _, alert in alerts_df.iterrows():
             severity = alert.get("severity", "info")

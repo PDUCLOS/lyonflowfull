@@ -171,11 +171,11 @@ def calculate_impact(
     elif mode == "velov":
         impact["co2_g"] = round(VELOV_CO2_G_PER_KM * distance_km, 2)
         impact["cost_eur"] = round(VELOV_COST_EUR, 2)  # gratuit abonné
-        impact["calories_kcal"] = int(round(CALORIES_PER_KM["velov"] * distance_km))
+        impact["calories_kcal"] = round(CALORIES_PER_KM["velov"] * distance_km)
 
     # duration_min est pour l'instant non utilisé (réservé pour extension —
     # ex. calories marcheurs en mode "marche" future, ou chaleur corporelle).
-    _ = duration_min  # noqa: F841 — intentional placeholder
+    _ = duration_min
 
     return impact
 
@@ -265,7 +265,7 @@ def recommend_mode(
         if critere == "temps":
             scores[mode_key] = duration if duration > 0 else 9999.0
         else:  # "cout"
-            # duration_min + cost_eur × (1 min / 0.30€) = duration + cost/0.30
+            # duration_min + cost_eur x (1 min / 0.30€) = duration + cost/0.30
             scores[mode_key] = duration + cost / _TIME_VALUE_EUR_PER_MIN
 
     # Winner = mode avec le score le plus bas (parmi ceux qui ont un score < 9999)
@@ -303,8 +303,13 @@ def _build_explanation(
     """
     mode_label = {"voiture": "voiture", "tc": "transports en commun", "velov": "Vélov"}
     duration_w = durations.get(winner, 0.0)
-    cost_w = comparison.get(winner, {}).get("cost_eur", 0.0)
-    co2_w = comparison.get(winner, {}).get("co2_g", 0.0)
+    impact_w = comparison.get(winner)
+    if impact_w:
+        cost_w = float(impact_w.get("cost_eur", 0.0))
+        co2_w = float(impact_w.get("co2_g", 0.0))
+    else:
+        cost_w = 0.0
+        co2_w = 0.0
 
     if critere == "temps":
         if duration_w <= 0:

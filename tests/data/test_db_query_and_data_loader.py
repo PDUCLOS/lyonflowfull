@@ -9,12 +9,11 @@ Ce module valide :
 1. ``_is_db_available()`` retourne False quand l'env ne pointe pas
    vers une DB.
 2. ``load_X()`` lèvent ``DashboardDataError`` (pas de fallback mock).
-3. Si la DB répond (mockée via conftest.mock_db), ``load_X()``
-   retournent un DataFrame / dict issu de la DB.
 
-Note : pour tester avec une vraie DB, voir
-``tests/integration/test_infrastructure.py`` qui démarre un
-PostgreSQL en container.
+Note : pour tester du code avec une vraie DB, marquer
+``@pytest.mark.integration`` (voir ``tests/integration/``). Sprint 15+
+(2026-06-19) — la fixture ``mock_db`` qui monkeypatchait
+``src.db.connection`` a été virée d'un commun accord avec Patrice.
 """
 from __future__ import annotations
 
@@ -106,7 +105,7 @@ def test_load_lyon_addresses_raises_when_no_db() -> None:
 
 
 # =============================================================================
-# Tests avec mock_db : si DB répond, load_X retourne la donnée
+# Tests fail-loud supplémentaires (sans mock — DB absente = exception)
 # =============================================================================
 
 

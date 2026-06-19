@@ -72,7 +72,7 @@ def _load_lyo() -> pl.DataFrame:
         """)
         rows = cur.fetchall()
         cols = [d[0] for d in cur.description]
-    df = pl.DataFrame([dict(zip(cols, r)) for r in rows], schema_overrides={
+    df = pl.DataFrame([dict(zip(cols, r, strict=False)) for r in rows], schema_overrides={
         "channel_id": pl.Utf8, "lat": pl.Float64, "lon": pl.Float64
     })
     logger.info("Loaded %d distinct LYO channels (Polars)", df.height)
@@ -104,7 +104,7 @@ def _add_h3_index(df: pl.DataFrame) -> pl.DataFrame:
     """Ajoute colonne h3_cell — utilise l'API vectorisée de h3-py v4.5+.
 
     Sprint 10+ fix : avant on itérait row-par-row (1 appel Python par
-    cellule, ~10× plus lent). Maintenant ``h3.latlng_to_cell`` accepte
+    cellule, ~10x plus lent). Maintenant ``h3.latlng_to_cell`` accepte
     directement des arrays numpy et retourne un array, le tout en C.
     """
     lat_arr = df["lat"].to_numpy()

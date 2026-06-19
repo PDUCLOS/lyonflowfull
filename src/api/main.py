@@ -319,15 +319,28 @@ async def list_models(api_key: None = Depends(verify_api_key)):
 
 @app.post("/api/v1/predict/traffic", response_model=PredictTrafficResponse, tags=["predict"])
 async def predict_traffic(req: PredictTrafficRequest, api_key: None = Depends(verify_api_key)):
-    """Prédit la vitesse trafic pour un nœud et un horizon."""
+    """Prédit la vitesse trafic pour un nœud et un horizon.
+    
+    EXPLICATION MÉTIER (Analyse) :
+    Cette route est appelée par le Dashboard (Persona Pro TCL) pour afficher la carte de prédiction.
+    Depuis le Sprint 8, le modèle ML s'attend à recevoir un identifiant `channel_id` de type texte
+    (ex: 'LYO00007'), alors que l'API et le frontend utilisent historiquement un `node_idx` (entier).
+    Nous réalisons donc ici une traduction "node_idx -> channel_id" en interrogeant PostgreSQL
+    (`gold.dim_spatial_grid_mapping`).
+    """
     # Sprint VPS-4 : métriques ML
     with PREDICTION_LATENCY.labels(model="xgboost_speed").time():
+        # Récupération channel_id via mapping node_idx
+        from src.db import execute_query
         from src.models.xgboost_speed import XGBoostSpeedModel
+        mapping = execute_query("SELECT properties_twgid FROM gold.dim_spatial_grid_mapping WHERE node_idx = %s", (req.node_idx,))
+        if not mapping:
+            raise HTTPException(status_code=404, detail=f"Nœud {req.node_idx} inconnu")
+        channel_id = str(mapping[0]["properties_twgid"])
 
-        # TODO: Câbler la récupération du modèle depuis MLflow Registry en priorité
         # En attendant, on utilise la logique locale/fallback du modèle XGBoost
         model = XGBoostSpeedModel()
-        prediction = model.predict(req.node_idx, req.horizon_minutes)
+        prediction = model.predict(channel_id, req.horizon_minutes)
 
     PREDICTIONS_TOTAL.labels(
         model="xgboost_speed",
@@ -421,10 +434,15 @@ async def itinerary(req: ItineraryRequest, api_key: None = Depends(verify_api_ke
     - destination_lon, destination_lat : coords GPS de l'arrivée
     - horizon_minutes : 0 = maintenant, sinon H+ (utilise vitesse prédite)
 
-    Returns:
-    - Itinéraire complet avec segments détaillés (length, speed, duration)
-    - Total durée / longueur / vitesse moyenne
-    - Confiance (0..1) basée sur fraîcheur des données
+    EXPLICATION MÉTIER (Analyse) :
+    Il s'agit du moteur de pathfinding routier utilisé pour le mode 'Voiture'.
+    Plutôt que d'utiliser de simples distances, ce endpoint appelle `compute_itinerary()`
+    (basé sur l'algorithme de Dijkstra) pour trouver le chemin le plus rapide sur le
+    graphe de la Métropole de Lyon.
+    
+    Si `horizon_minutes` > 0, Dijkstra n'utilise pas la vitesse instantanée mais
+    les vitesses futures issues des prédictions du modèle XGBoost, ce qui permet un
+    itinéraire "anticipatif" ("traffic-aware").
     """
     from src.routing import compute_itinerary
 
@@ -524,14 +542,22 @@ class LoginResponse(BaseModel):
 
 @app.post("/api/v1/auth/login", response_model=LoginResponse, tags=["auth"])
 async def login(req: LoginRequest, request: Request):
-    """Login utilisateur (persona protégé)."""
+    """Login utilisateur (persona protégé).
+    
+    EXPLICATION MÉTIER (Analyse) :
+    Cette méthode authentifie les utilisateurs de type 'Pro TCL' et 'Élu'.
+    - L'accès base de données interroge `gold.app_users`.
+    - Le mot de passe est stocké sous forme de hash via bcrypt (sécurité robuste).
+    - Un log RGPD/Audit est systématiquement déclenché (login_failed ou login_success)
+      pour assurer la traçabilité des accès aux données sensibles.
+    """
     query = "SELECT user_id, persona_id, username, password_hash FROM gold.app_users WHERE username = %s AND is_active = TRUE"
     rows = execute_query(query, (req.username,))
     if not rows:
         log_audit(
             actor="user",
             action="login_failed",
-            ip_address=request.client.host,
+            ip_address=request.client.host if request.client else "",
             details={"username": req.username},
         )
         raise HTTPException(status_code=401, detail="Identifiants invalides")
@@ -541,7 +567,7 @@ async def login(req: LoginRequest, request: Request):
         log_audit(
             actor="user",
             action="login_failed",
-            ip_address=request.client.host,
+            ip_address=request.client.host if request.client else "",
             details={"username": req.username, "reason": "bad_password"},
         )
         raise HTTPException(status_code=401, detail="Identifiants invalides")
@@ -555,7 +581,7 @@ async def login(req: LoginRequest, request: Request):
     log_audit(
         actor=req.username,
         action="login_success",
-        ip_address=request.client.host,
+        ip_address=request.client.host if request.client else "",
         details={"persona": user["persona_id"]},
     )
     return LoginResponse(

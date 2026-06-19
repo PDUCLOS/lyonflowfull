@@ -38,6 +38,10 @@ x-common-env: &common-env
   PERSONA_ELU_USERNAME: ${PERSONA_ELU_USERNAME}
   PERSONA_ELU_PASSWORD: ${PERSONA_ELU_PASSWORD}
   LYONFLOW_API_KEY: ${LYONFLOW_API_KEY}
+  # Sprint 15+ (2026-06-19) — TomTom free tier (2500 req/jour). Sans ça, le
+  # DAG collect_tomtom_traffic fait un no-op silencieux. Doit être visible
+  # par airflow-scheduler/worker (et streamlit pour la carte trafic).
+  TOMTOM_API_KEY: ${TOMTOM_API_KEY:-}
   # Grand Lyon Open Data auth (HTTP Basic — collecteurs ingestion)
   GRANDLYON_USERNAME: ${GRANDLYON_USERNAME:-}
   GRANDLYON_PASSWORD: ${GRANDLYON_PASSWORD:-}
@@ -208,6 +212,18 @@ services:
           memory: 768M
 
   # ---------------------------------------------------------------------------
+  # Airflow logs permissions fix (Sprint 9+)
+  # ---------------------------------------------------------------------------
+  airflow-logs-perms:
+    image: alpine:latest
+    container_name: lyonflow-airflow-perms
+    user: "root"
+    volumes:
+      - ./logs/airflow:/opt/airflow/logs
+    command: chown -R 50000:0 /opt/airflow/logs
+    restart: "no"
+
+  # ---------------------------------------------------------------------------
   # Airflow (init — crée l'utilisateur admin)
   # ---------------------------------------------------------------------------
   airflow-init:
@@ -218,6 +234,8 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
+      airflow-logs-perms:
+        condition: service_completed_successfully
     environment:
       <<: *common-env
       PYTHONPATH: /opt/airflow

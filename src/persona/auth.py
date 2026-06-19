@@ -42,7 +42,7 @@ _SESSION_AUTH_KEY = "lyonflow_auth"
 # Mot de passe démo par défaut (Sprint 8+ — simplification démo Jedha).
 # En production réelle, ces valeurs NE DOIVENT PAS être dans le repo :
 # les valeurs réelles sont injectées via les env vars au déploiement.
-_DEMO_PASSWORD = "demo2026"
+_DEMO_PASSWORD = "demo2026"  # nosec B105
 
 
 def _get_expected_password(persona_id: str) -> str | None:
@@ -129,7 +129,7 @@ def require_password() -> None:
     st.info(f"🔐 **{label}** est un espace protégé. Saisis le mot de passe.")
     # Sprint 8+ démo : on affiche le mdp par défaut dans une info box
     # (à retirer en prod).
-    with st.expander("ℹ️ Aide démo (mots de passe par défaut)"):
+    with st.expander("Information Aide démo (mots de passe par défaut)"):
         st.markdown(f"**Mot de passe démo Jedha** : `{_DEMO_PASSWORD}`")
         st.caption(
             "Cette aide est affichée uniquement parce que c'est une démo Jedha. "

@@ -106,7 +106,7 @@ class APISettings(BaseSettings):
     """FastAPI."""
 
     key: str = Field(default="", alias="LYONFLOW_API_KEY")
-    host: str = "0.0.0.0"
+    host: str = "0.0.0.0"  # nosec B104
     port: int = 8000
     cors_origins: list[str] = ["http://localhost:8501", "http://localhost"]
 

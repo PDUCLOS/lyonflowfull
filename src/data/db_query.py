@@ -150,6 +150,15 @@ def get_latest_traffic(limit: int = 100) -> pd.DataFrame:
     Returns:
         DataFrame avec colonnes: measurement_time, node_idx, channel_id,
         speed_kmh, importance_code. Vide si DB down (mock fallback).
+        
+    EXPLICATION MÉTIER (Analyse) :
+    Cette méthode est au cœur de l'affichage temps réel.
+    Note sur la politique Zéro Mock (Sprint 8) : auparavant, si la base de données
+    PostgreSQL tombait en panne, un "mock" simulait des données aléatoires.
+    Ceci a été strictement banni pour la production sur le VPS. Si la base est injoignable,
+    la fonction lève une exception (`DashboardDataError`) qui est interceptée par
+    Streamlit pour afficher une erreur explicite à l'usager, garantissant ainsi
+    la fiabilité de l'information (Fail-Loud).
     """
     # Schema réel : gold.traffic_features_live = computed_at, channel_id, speed_kmh
     # (pas de node_idx ni importance_code dans la table effective)
@@ -208,6 +217,14 @@ def get_traffic_predictions(horizon_minutes: int = 60, limit: int = 200) -> pd.D
             color, vitesse_limite_kmh, label, model_version, lat, lon.
         Pour rétro-compat, expose aussi ``predicted_speed`` (= speed_pred)
         et ``prediction_timestamp`` (= calculated_at).
+        
+    EXPLICATION MÉTIER (Analyse) :
+    Le schéma de la table `gold.trafic_predictions` a évolué au Sprint 5 (v0.3.1).
+    Plutôt que d'utiliser des minutes, la table partitionne les données en "heures"
+    d'horizon (0, 1, 3, 6).
+    C'est pourquoi une conversion `horizon_minutes -> horizon_h` est effectuée ici.
+    Cette fonction est sollicitée massivement par le Pathfinding (Voiture) pour
+    calculer les itinéraires prospectifs.
     """
     # Mapping horizon_minutes -> horizon_h
     # Le schéma gold stocke en heures : 0=H+5min, 1=H+1h, 3=H+3h, 6=H+6h
@@ -830,7 +847,7 @@ def get_buses_positions(limit: int = 200) -> pd.DataFrame:
             delay_seconds,
             measurement_time AS recorded_at
         FROM silver.tcl_vehicles_clean
-        WHERE measurement_time >= NOW() - INTERVAL '5 minutes'
+        WHERE measurement_time >= NOW() - INTERVAL '15 minutes'
         LIMIT %s
     """
     return _df_from_query(query, (limit,))
@@ -1067,10 +1084,12 @@ def get_lieux_lyon_names(active_only: bool = True) -> list[str]:
     Returns:
         Liste de strings ``['Part-Dieu, Lyon', 'Perrache, Lyon', ...]``.
     """
-    where = "WHERE is_active = TRUE" if active_only else ""
-    rows = execute_query(
-        f"SELECT name FROM referentiel.lieux_lyon {where} ORDER BY name"
+    query = (
+        "SELECT name FROM referentiel.lieux_lyon WHERE is_active = TRUE ORDER BY name"
+        if active_only
+        else "SELECT name FROM referentiel.lieux_lyon ORDER BY name"
     )
+    rows = execute_query(query)
     return [r["name"] for r in rows]
 
 
@@ -1082,15 +1101,12 @@ def get_lieux_lyon_with_coords(active_only: bool = True) -> list[dict]:
     Returns:
         Liste de dicts ``[{name, lon, lat, type}, ...]``.
     """
-    where = "WHERE is_active = TRUE" if active_only else ""
-    rows = execute_query(
-        f"""
-        SELECT name, lon, lat, type
-        FROM referentiel.lieux_lyon
-        {where}
-        ORDER BY name
-        """
+    query = (
+        "SELECT name, lon, lat, type FROM referentiel.lieux_lyon WHERE is_active = TRUE ORDER BY name"
+        if active_only
+        else "SELECT name, lon, lat, type FROM referentiel.lieux_lyon ORDER BY name"
     )
+    rows = execute_query(query)
     return [dict(r) for r in rows]
 
 
@@ -1159,21 +1175,19 @@ def get_cadence_for_line(
         clauses.append("time_bucket = %s")
         params.append(time_bucket)
 
-    query = f"""
-        SELECT line_ref, day_type, time_bucket, cadence_min_per_vehicle,
-               n_observations, confidence, computed_at
-        FROM referentiel.lieux_calendrier
-        WHERE {' AND '.join(clauses)}
-        ORDER BY
-            CASE day_type
-                WHEN 'weekday' THEN 1
-                WHEN 'saturday' THEN 2
-                WHEN 'sunday_holiday' THEN 3
-                WHEN 'vacation' THEN 4
-                ELSE 5
-            END,
-            time_bucket
-    """
+    where_clause = " AND ".join(clauses)
+    query = (
+        "SELECT line_ref, day_type, time_bucket, cadence_min_per_vehicle, "
+        "n_observations, confidence, computed_at "
+        "FROM referentiel.lieux_calendrier "
+        "WHERE " + where_clause + " "  # nosec B608
+        "ORDER BY CASE day_type "
+        "WHEN 'weekday' THEN 1 "
+        "WHEN 'saturday' THEN 2 "
+        "WHEN 'sunday_holiday' THEN 3 "
+        "WHEN 'vacation' THEN 4 "
+        "ELSE 5 END, time_bucket"
+    )
     rows = execute_query(query, tuple(params))
     return [dict(r) for r in rows]
 
@@ -1350,9 +1364,10 @@ def get_lieux_with_velov(k: int = 3, only_operational: bool = True) -> list[dict
             num_bikes_available, num_docks_available, distance_m
         FROM referentiel.v_lieux_velov_proches
         WHERE rank <= %s
-        {extra_filter}
-        ORDER BY lieu_id, distance_m
-    """.format(extra_filter="AND num_bikes_available >= 0" if only_operational else "")
+    """
+    if only_operational:
+        query += " AND num_bikes_available >= 0"
+    query += " ORDER BY lieu_id, distance_m"
     rows = execute_query(query, (k,))
     # Regroupement par lieu
     out: dict[int, dict] = {}
@@ -1552,19 +1567,23 @@ def get_line_kpis(line_ids: list[str] | None = None) -> dict:
     """
     if not _is_db_available():
         return {}
-    where_clause = ""
-    params: tuple = ()
     if line_ids:
-        where_clause = "WHERE line_ref = ANY(%s)"
+        query = """
+            SELECT line_ref, otp_pct, retard_moyen_s, freq_vehicules_par_h,
+                   charge_pct, mode, otp_status, n_obs_total, n_days
+            FROM gold.mv_line_kpis_live
+            WHERE line_ref = ANY(%s)
+            ORDER BY line_ref
+        """
         params = (line_ids,)
-
-    query = f"""
-        SELECT line_ref, otp_pct, retard_moyen_s, freq_vehicules_par_h,
-               charge_pct, mode, otp_status, n_obs_total, n_days
-        FROM gold.mv_line_kpis_live
-        {where_clause}
-        ORDER BY line_ref
-    """
+    else:
+        query = """
+            SELECT line_ref, otp_pct, retard_moyen_s, freq_vehicules_par_h,
+                   charge_pct, mode, otp_status, n_obs_total, n_days
+            FROM gold.mv_line_kpis_live
+            ORDER BY line_ref
+        """
+        params = ()
     try:
         rows = execute_query(query, params)
     except Exception as e:

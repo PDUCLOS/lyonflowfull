@@ -22,6 +22,15 @@ Le collecteur Bronze s'exécute via DAG ``collect_tomtom_traffic``
 Pour le dashboard, on lit la table ``bronze.tomtom_traffic`` via
 ``data_loader.load_traffic_for_map()`` qui fusionne Gold + TomTom.
 
+EXPLICATION MÉTIER (Analyse) :
+La particularité de cette API TomTom (mode Free Tier) est son quota
+journalier strict (2500 requêtes/jour). Pour éviter le blocage, nous avons
+mis en place un mécanisme de "Cache Process" (TTL 5 minutes). L'API n'est
+requêtée que si la donnée de la tuile GPS est absente ou périmée.
+Si le quota est épuisé, le code est résilient et bascule sur la dernière valeur
+connue (Fallback), ou arrête l'ingestion silencieusement sans faire crasher
+l'application, ce qui est crucial pour la fiabilité du VPS.
+
 Calcul budget (free tier 2500 req/jour) :
 * Tuiles Lyon bbox 4.85°E-4.92°E x 45.72°N-45.81°N, grille 0.02° :
   (0.07/0.02) x (0.09/0.02) = 3.5 x 4.5 = ~16 tuiles, on en suit 12
@@ -291,7 +300,7 @@ def save_lyon_tiles_to_bronze(results: list[dict]) -> int:
     if not results:
         return 0
 
-    from src.db.connection import get_connection
+    from src.db.connection import raw_connection
 
     rows = [
         (
@@ -316,7 +325,7 @@ def save_lyon_tiles_to_bronze(results: list[dict]) -> int:
     from psycopg2.extras import execute_batch
 
     n = 0
-    with get_connection() as conn:
+    with raw_connection() as conn:
         with conn.cursor() as cur:
             execute_batch(cur, sql, rows, page_size=100)
             n = cur.rowcount

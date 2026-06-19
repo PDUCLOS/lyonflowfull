@@ -275,6 +275,17 @@ def plan_velov_trip(
         [1] Vélov entre 2 stations (haversine ou Dijkstra)
         [2] marche Vélov arrivée → destination
 
+    EXPLICATION MÉTIER (Analyse) :
+    Ce moteur multimodal combine la marche à pied et le vélo.
+    L'intelligence (Smart Routing) réside dans le choix des bornes Vélov :
+    plutôt que de prendre aveuglément la borne la plus proche, l'algorithme :
+    1. Récupère les bornes candidates (proches de l'origine et de la destination).
+    2. Vérifie la disponibilité TEMPS RÉEL (vélos au départ, docks à l'arrivée).
+    3. Si la borne la plus proche est "VIDE" (plus de vélos) ou "PLEINE" (plus de docks),
+       l'algorithme bascule automatiquement sur la 2ème ou 3ème borne la plus proche.
+    
+    Cela garantit que l'itinéraire proposé à l'usager est réalisable dans le monde réel.
+
     Raises:
         DashboardDataError: si la DB ne répond pas.
     """
@@ -533,6 +544,13 @@ def plan_car_trip(
                           start_lat, start_lon, end_lat, end_lon} ],
           "source": "db" | "demo" | "unavailable",
         }
+        
+    EXPLICATION MÉTIER (Analyse) :
+    Cette fonction est le point d'entrée du routage routier (pour les voitures).
+    Elle délègue la résolution du plus court chemin à `compute_itinerary()` qui
+    implémente l'algorithme de Dijkstra sur le graphe de la métropole.
+    La particularité est qu'elle gère l'injection de l'`horizon_minutes`, 
+    permettant un routage basé sur le futur plutôt que le présent.
     """
     _require_db_or_raise("silver.trafic_boucles_clean")
 

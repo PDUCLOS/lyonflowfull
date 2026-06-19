@@ -73,7 +73,7 @@ Le pipeline de données (Ingestion ➡️ Bronze ➡️ Silver ➡️ Gold) fonc
 5. **Reconciliation mapping channel_id ↔ properties_twgid** (Sprint 9+) :
    - Le backfill lat/lon (Sprint 8+5) résout la geometrie, mais la jointure d'identité entre `traffic_features_live.channel_id` (string LYO000xx) et `dim_spatial_grid_mapping.properties_twgid` (entiers ou strings) reste à coder proprement pour géocoder les prédictions sur la carte.
 6. **Tests e2e intégration** (Sprint 9) : `tests/integration/test_fail_loud_e2e.py` avec PostgreSQL en container (actuellement skippé par défaut).
-7. **TomTom Traffic Flow refacto** (Sprint 12+) : coder `TomTomTrafficFlow(DataCollector)` conforme (actuellement no-op).
+7. **Refonte Modèle Vélov** (Dette Sprint 8) : Aligner `xgboost_velov.py` et `gold.velov_features` sur le schéma v0.3.1 (temperature_2m, precipitation, lag_h1) introduit pour le trafic routier.
 8. **`_is_demo_mode` déprécié à supprimer** (Sprint 9+) : helper retourne toujours False, à virer quand tous les call sites nettoyés.
 
 ---

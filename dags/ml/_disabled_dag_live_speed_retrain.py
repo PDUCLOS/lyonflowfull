@@ -1,6 +1,6 @@
 """DAG — Prédiction XGBoost Speed + persiste dans gold.trafic_predictions.
 
-Sprint 9+ (Optimisation) — L'entraînement a été déplacé dans un DAG quotidien 
+Sprint 9+ (Optimisation) — L'entraînement a été déplacé dans un DAG quotidien
 (`dag_daily_speed_train.py`). Ce DAG-ci ne gère plus que l'inférence temps réel.
 Il utilise le vrai modèle XGBoost au lieu de la baseline naïve.
 

@@ -6,6 +6,8 @@ Ce module vérifie :
 3. Aucun widget dashboard n'importe ``src.data.mock``.
 4. Les fonctions deprecated ``_is_demo_mode`` et ``_maybe_force_mock``
    ont été supprimées du data_loader (Sprint 12+).
+5. La classe ``MockDB`` et la fixture ``mock_db`` ont été virées du
+   conftest centralisé (Sprint 15+).
 """
 from __future__ import annotations
 
@@ -66,3 +68,28 @@ def test_widgets_have_no_mock_imports() -> None:
         assert "src.data.mock" not in content, (
             f"{py_file} importe encore src.data.mock — c'est interdit (Sprint 8)"
         )
+
+
+def test_no_mockdb_in_conftest() -> None:
+    """Sprint 15+ — MockDB et la fixture mock_db virés du conftest centralisé.
+
+    Politique zéro mock durcie : pas de monkeypatch DB dans les tests.
+    Pour tester du code qui touche la DB, marquer
+    ``@pytest.mark.integration``.
+    """
+    project_root = Path(__file__).resolve().parents[2]
+    conftest_path = project_root / "tests" / "conftest.py"
+    content = conftest_path.read_text()
+
+    assert "class MockDB" not in content, (
+        "tests/conftest.py contient encore une classe MockDB — "
+        "politique zéro mock violée"
+    )
+    assert "def mock_db" not in content, (
+        "tests/conftest.py contient encore une fixture mock_db — "
+        "politique zéro mock violée"
+    )
+    assert "monkeypatch.setattr" not in content, (
+        "tests/conftest.py contient encore un monkeypatch.setattr — "
+        "le monkeypatch sur src.db.connection est interdit"
+    )

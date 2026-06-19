@@ -12,11 +12,10 @@ Fonctions :
 from __future__ import annotations
 
 import logging
+import math
 from dataclasses import dataclass, field
 
 import networkx as nx
-
-import math
 
 from src.routing.graph import build_routing_graph, get_nearest_node, get_node_speed
 

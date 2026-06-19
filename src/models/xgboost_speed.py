@@ -75,7 +75,15 @@ class XGBoostSpeedModel:
         self.models: dict[int, xgb.XGBRegressor] = {}  # horizon_minutes → model
 
     def load(self, horizons: list[int] | None = None) -> None:
-        """Charge les modèles depuis MLflow (si dispo) ou depuis le disque local."""
+        """Charge les modèles depuis MLflow (si dispo) ou depuis le disque local.
+        
+        EXPLICATION MÉTIER (Analyse) :
+        Ce modèle est intégré avec MLflow pour le suivi des expérimentations et le
+        registre de modèles (Model Registry). Au démarrage ou lors d'une prédiction,
+        le code tente de télécharger le modèle marqué "Production" depuis MLflow.
+        Si MLflow est tombé ou inaccessible, le code "fallback" de façon robuste
+        sur le dernier modèle pkl stocké localement sur le disque du VPS.
+        """
         import mlflow
 
         from src.ml.mlflow_integration import is_mlflow_available
@@ -128,6 +136,13 @@ class XGBoostSpeedModel:
 
         Returns:
             Dict avec métriques {'mae', 'rmse', 'r2'}.
+            
+        EXPLICATION MÉTIER (Analyse) :
+        C'est ici que l'entraînement du modèle a lieu (souvent déclenché par le DAG Airflow).
+        On sépare chronologiquement les données : les 80% les plus anciens pour l'entraînement,
+        les 20% les plus récents pour le test (afin de ne pas faire de fuite temporelle).
+        Les hyperparamètres peuvent être ajustés, mais par défaut on limite la profondeur
+        (`max_depth=6`) pour éviter le surentraînement.
         """
         if df is None:
             df = self._load_training_data(horizon_minutes)
@@ -254,6 +269,13 @@ class XGBoostSpeedModel:
 
         Returns:
             Dict avec predicted_speed, confidence_low/high.
+            
+        EXPLICATION MÉTIER (Analyse) :
+        La prédiction à H+1h se base sur les "lags" (vitesse il y a 5, 10, 15 min),
+        et sur des facteurs exogènes (heure de la journée encodée en sinus/cosinus, météo).
+        Si l'horizon demandé n'est pas 60 minutes, la fonction renvoie volontairement
+        un "fallback" (30 km/h) afin de limiter les coûts de calculs inutiles,
+        car le Sprint 8 a recentré le besoin métier exclusivement sur le H+1h.
         """
         # Sprint 8+2 (2026-06-12) — Focus H+1h uniquement. Si un caller
         # demande un autre horizon, fallback direct (pas de coût compute).

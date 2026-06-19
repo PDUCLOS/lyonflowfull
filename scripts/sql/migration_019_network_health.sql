@@ -18,7 +18,10 @@
 --   * gold.traffic_features_live  (fetched_at, speed_kmh)
 --   * gold.tcl_vehicle_realtime   (recorded_at, is_delayed)
 --   * silver.velov_clean          (fetched_at, num_bikes_available)
---   * silver.meteo_hourly         (measurement_time, precipitation, temperature_2m)
+--   * silver.meteo_hourly         (measurement_time, rain_mm, temperature_c)
+--     NOTE: la spec d'origine disait precipitation/temperature_2m, mais le
+--     schéma effectif utilise rain_mm/temperature_c (cf. Sprint VPS-3 +
+--     migration 17 qui a fait le même constat).
 --
 -- Idempotent : DROP + CREATE.
 
@@ -91,10 +94,10 @@ meteo AS (
     SELECT
         TRUE AS available,
         CASE
-            WHEN precipitation > 5 THEN 15
-            WHEN precipitation > 1 THEN 8
-            WHEN temperature_2m < 0 THEN 10
-            WHEN temperature_2m > 35 THEN 5
+            WHEN rain_mm > 5 THEN 15
+            WHEN rain_mm > 1 THEN 8
+            WHEN temperature_c < 0 THEN 10
+            WHEN temperature_c > 35 THEN 5
             ELSE 0
         END::numeric(5,2) AS penalty
     FROM silver.meteo_hourly

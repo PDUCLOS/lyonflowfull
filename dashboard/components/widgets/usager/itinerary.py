@@ -212,7 +212,7 @@ def _render_map(
         ).add_to(m)
 
         # Full path: origin → node₀ → node₁ → … → destination
-        full_path = [(o_lat, o_lon)] + node_latlons + [(d_lat, d_lon)]
+        full_path = [(o_lat, o_lon), *node_latlons, (d_lat, d_lon)]
 
         # Draw colored segments between consecutive points
         for i in range(len(full_path) - 1):

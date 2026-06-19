@@ -54,14 +54,14 @@
 # - Healthcheck : scripts/healthcheck-vps.sh (Sprint 8+, 20 checks : containers + DB + endpoints)
 #
 # Dette technique connue (Sprint 9+) :
-# - get_bottlenecks_summary n'est pas exporté par src.data.db_query (load_bottlenecks_top plante)
+# - Désynchronisation Architecturale (Modèle Vélov) : Le pipeline Trafic a été migré en v0.3.1
+#   (temperature_2m, precipitation, lag_h1) mais xgboost_velov.py et gold.velov_features
+#   sont restés sur l'ancien schéma (temperature_c, rain_mm, hour_sin). À refactorer pour cohérence.
 # - dim_spatial_grid_mapping.properties_twgid (entiers ou strings) ne match pas
 #   traffic_features_live.channel_id (LYO00xxx) d'identité — backfill lat/lon OK mais mapping
 #   à réconcilier pour la jointure d'identité dans gold.trafic_predictions.
 # - /opt/lyonflow/logs/ doit être chown 50000:0 récursif après chaque rsync.
-#   Fix durable = entrypoint Dockerfile.
-# - TomTom Traffic : module helpers sans classe DataCollector. DAG no-op Sprint 8,
-#   réactivation Sprint 12+ = coder `TomTomTrafficFlow(DataCollector)`.
+#   Fix durable = entrypoint Dockerfile ou service init docker-compose.
 # - GNN training : code livré (stgcn_wrapper), retrain Airflow à finaliser
 # - Composant React deck.gl : pas encore intégré
 # - Intégration dynamique FastAPI ↔ MLflow : en cours
