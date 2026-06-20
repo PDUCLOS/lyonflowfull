@@ -103,3 +103,12 @@ site/
 # TLS certs (generated, never committed)
 nginx/certs/*.pem
 .opencode/
+
+# Audit pipeline data (artefacts générés, pas versionnés — RNCP 38777)
+# Le script générateur scripts/audit/generate_audit_doc.py reste en local
+# (non commité) car c'est un outil one-shot, et les .docx produits sont
+# des livrables à archiver hors Git (Google Drive, etc.).
+# Note : les SPEC_*.md (Sprint 16, Evidently) restent versionnés — ce sont
+# des inputs partagés, pas des artefacts générés.
+scripts/audit/
+docs/AUDIT_*.docx
