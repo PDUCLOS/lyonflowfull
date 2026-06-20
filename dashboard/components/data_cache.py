@@ -23,6 +23,7 @@ import pandas as pd
 import streamlit as st
 
 from src.data import data_loader as dl
+from src.data import db_query as dbq
 
 TTL_REALTIME = 30
 TTL_FAST = 60
