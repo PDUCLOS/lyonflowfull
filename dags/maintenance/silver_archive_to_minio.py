@@ -11,10 +11,11 @@ fait 28 Go et continue à grossir (~500 Mo/jour). 80% de ces données ont
 
 **Ratio attendu** : 28 Go → 2.8 Go en Parquet snappy, puis DELETE.
 
-**Stratégie Parquet** : on dump avec COPY TO STDOUT (Postgres natif) puis
-on parse avec polars qui sait lire du TSV/csv. Alternative : utiliser
-``pyarrow.parquet`` directement + ``read_sql`` via SQLAlchemy. On opte
-pour polars.read_database + write_parquet (vectorisé, simple).
+**Stratégie Parquet** : on lit via psycopg2 (RealDictCursor, déjà utilisé
+par tout le projet) puis on construit un ``pandas.DataFrame`` qu'on
+sérialise en Parquet snappy. Pandas est dans ``requirements-airflow.txt``
+— on évite polars pour respecter la règle "pas de Polars dans Airflow"
+(CLAUDE.md).
 
 Schedule : quotidien 04h00 (après dag_daily_speed_train 03h00).
 """
@@ -26,7 +27,7 @@ from datetime import datetime, timedelta
 from pathlib import Path
 
 import boto3
-import polars as pl
+import pandas as pd
 from airflow import DAG
 from airflow.operators.python import PythonOperator
 
@@ -97,33 +98,25 @@ def _archive_one_table(table: str, cutoff: datetime) -> dict:
     n_rows = int(stats[0]["n_rows"])
     logger.info("silver.%s — %s rows to archive (size: %s)", table, n_rows, stats[0]["total_size"])
 
-    # 2) Export en Parquet via polars.read_database
+    # 2) Export en Parquet via psycopg2 + pandas
     #    Note: on chunk par 50k rows pour éviter OOM sur gros volumes.
     LOCAL_STAGING.mkdir(parents=True, exist_ok=True)
     local_path = LOCAL_STAGING / f"{table}_{cutoff.strftime('%Y%m%d')}.parquet"
 
-    # Lecture via polars (psycopg2 + pl.read_database_uri).
-    # Le code copiait avant avec cur.copy_expert(TO STDOUT) mais
-    # psycopg2 v3 exige un file-like object en argument et le résultat
-    # était ignoré de toute façon (Phase 2 lit via polars). Bloc mort
-    # supprimé. Sprint P2-ter (2026-06-16).
-    #
-    # polars 1.41+ a séparé read_database() (Connection object) et
-    # read_database_uri() (string URI). On utilise la nouvelle API.
-    #
-    # polars 1.41+ utilise 'connectorx' par défaut qui ne supporte
-    # PAS execute_options. On force l'engine 'adbc' qui supporte
-    # les paramètres psycopg2. À défaut, on pourrait aussi substituer
-    # les %s manuellement avant l'appel.
-    df = pl.read_database_uri(
-        query=f"SELECT * FROM silver.{table} WHERE transformed_at < %s ORDER BY transformed_at",
-        uri=get_settings().db.url,
-        execute_options={"parameters": [cutoff]},
-        engine="adbc",
+    # Lecture via execute_query (psycopg2 RealDictCursor, déjà utilisé
+    # partout dans le projet) puis conversion en DataFrame pandas.
+    # Ancien code : polars.read_database_uri(engine="adbc") — abandonné
+    # car polars pas dans requirements-airflow.txt et complexifie
+    # l'engine ADBC. Sprint P2-ter (2026-06-16) — voir aussi
+    # commit c892ac6 (cryptography<43) qui a révélé la dette polars.
+    rows = execute_query(
+        f"SELECT * FROM silver.{table} WHERE transformed_at < %s ORDER BY transformed_at",
+        (cutoff,),
     )
-    df.write_parquet(local_path, compression="snappy")
+    df = pd.DataFrame(rows)
+    df.to_parquet(local_path, compression="snappy")
     bytes_parquet = local_path.stat().st_size
-    logger.info("Wrote %s (%.1f MB) — %d rows", local_path, bytes_parquet / 1e6, df.height)
+    logger.info("Wrote %s (%.1f MB) — %d rows", local_path, bytes_parquet / 1e6, len(df))
 
     # 3) Push vers MinIO
     s3 = _get_s3_client()
