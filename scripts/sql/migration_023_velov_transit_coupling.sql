@@ -28,13 +28,21 @@
 --     lat/lon (Sprint VPS-6 : id, lieu_id, line_ref, line_mode, stop_name,
 --     distance_m, rank, is_active, source). On ne peut pas faire un JOIN
 --     spatial PostGIS dessus.
---   * Sprint 17 (2026-06-20) : on prend la **position médiane des véhicules
---     TCL** (``gold.tcl_vehicle_realtime``, latitude/longitude/line_ref) sur
---     les 15 dernières minutes comme proxy de la "zone de desserte" d'une
---     ligne. Plus grossier qu'un arrêt précis, mais utilisable tel quel et
---     dérivé des données temps réel.
+--   * Sprint 17 (2026-06-20) — révisé après retour utilisateur : on prend
+--     les **positions GPS individuelles des véhicules TCL**
+--     (``gold.tcl_vehicle_realtime``) dédupliquées par tuile
+--     ROUND(lat/lon, 3) ≈ 100 m (cohérent avec migration_018, même
+--     résolution 0.001°). Chaque véhicule = un point TC réel, on garde
+--     la couverture spatiale effective de la ligne (~100-200 véhicules
+--     en 15 min → cardinality gérable pour ST_DWithin).
+--   * Avantage vs centroïde AVG : couverture spatiale réelle (pas un
+--     point fictif), ST_DWithin 300m devient signifiant, pas de
+--     nouvelle table de schéma.
+--   * Limite connue : biais horaire nuit/dimanche (peu de véhicules =
+--     faux négatifs). Acceptable pour l'alerte report modal — s'il n'y
+--     a pas de bus la nuit, il n'y a pas de report modal non plus.
 --   * Le rayon 300m reste celui de la spec : marche à pied ~3-4 min entre
---     la station Vélov et l'arrêt TC.
+--     la station Vélov et le véhicule TC.
 --
 -- Refresh :
 --   Toutes les 15 min par ``dags/maintenance/refresh_velov_transit_coupling.py``
@@ -67,18 +75,26 @@ velov_latest AS (
       AND vc.is_active = TRUE
     ORDER BY vc.station_id, vc.fetched_at DESC
 ),
--- Zones TC : centre approximatif par ligne (moyenne positions GPS 15 min)
+-- Zones TC : positions GPS directes (1 ligne par tuile lat/lon ~100m par ligne)
+-- Dédup via ROUND(lat/lon, 3) ≈ 100 m (cohérent avec migration_018, résolution
+-- 0.001°). Chaque véhicule = un point TC réel, on garde la couverture spatiale
+-- effective de la ligne. Évite le piège du centroïde AVG qui produit un point
+-- fictif au milieu de la ligne.
 tcl_zones AS (
-    SELECT
+    SELECT DISTINCT ON (line_ref, ROUND(latitude::numeric, 3), ROUND(longitude::numeric, 3))
         line_ref,
-        AVG(latitude)::double precision                  AS line_lat,
-        AVG(longitude)::double precision                 AS line_lon,
-        COUNT(DISTINCT vehicle_ref)                      AS n_vehicles
+        latitude                                         AS line_lat,
+        longitude                                        AS line_lon,
+        1                                                AS n_vehicles
     FROM gold.tcl_vehicle_realtime
     WHERE recorded_at > NOW() - INTERVAL '15 minutes'
       AND latitude IS NOT NULL
       AND longitude IS NOT NULL
-    GROUP BY line_ref
+    ORDER BY
+        line_ref,
+        ROUND(latitude::numeric, 3),
+        ROUND(longitude::numeric, 3),
+        recorded_at DESC
 ),
 -- Stations Vélov dans un rayon 300m d'une zone TC
 velov_near_transit AS (
