@@ -17,6 +17,7 @@ from dashboard.components.widgets.pro_tcl import (
     render_correlation_matrix,
     render_line_selector,
     render_meteo_impact,
+    render_modal_shift_alert,
     render_multimodal_heatmap,
     render_segment_table,
 )
@@ -137,6 +138,20 @@ deferred_render(
     button_icon="🌤",
 )
 
+st.markdown("---")
+
+# Sprint 17 (2026-06-20) — Axe 4 du SPEC_OPTIMISATION_INTERDEPENDANCES
+# Vélov ↔ TC report modal : pour chaque station Vélov < 300m d'une zone
+# TC, calcule un z-score vélos dispos. z < -2 = alarme probable (incident
+# TC → usagers basculent vers Vélov). Vue gold.mv_velov_transit_coupling
+# (migration 023), refresh */15 min par dags/maintenance/refresh_velov_transit_coupling.py.
+deferred_render(
+    "modal_shift_alert",
+    "Charger l'alerte report modal Vélov ↔ TC",
+    render_modal_shift_alert,
+    button_icon="🔄",
+)
+
 st.caption(
     "Corrélation bus × trafic · Données : SIRI Lite + boucles Grand Lyon. "
     "Corrélation spatialisée · JOIN zone 0.001° (~100 m) dans "
@@ -147,5 +162,8 @@ st.caption(
     "gold.tcl_vehicle_realtime × silver.velov_clean × silver.meteo_hourly "
     "sur gold.mv_multimodal_grid (refresh */10). "
     "Impact météo · 5 bandes × 3 modes + delta vs fair weather dans "
-    "gold.mv_meteo_impact (migration 022, refresh quotidien 04h30)."
+    "gold.mv_meteo_impact (migration 022, refresh quotidien 04h30). "
+    "Report modal Vélov ↔ TC · z-score vélos dispos par station < 300m "
+    "d'une zone TC dans gold.mv_velov_transit_coupling (migration 023, "
+    "refresh */15 min)."
 )

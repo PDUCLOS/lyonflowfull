@@ -1843,3 +1843,105 @@ def get_meteo_impact() -> pd.DataFrame:
             END
     """
     return _df_from_query(query, ())
+
+
+# Sprint 17 Axe 4 — Vélov ↔ TC report modal (migration 023)
+# Vue matérialisée gold.mv_velov_transit_coupling : z-score vélos dispos
+# par station Vélov < 300m d'une zone TC. anomaly_detected = TRUE si
+# z_score < -2 (vidange anormale → report modal probable).
+# Voir docs/SPEC_OPTIMISATION_INTERDEPENDANCES.md §5.
+
+
+def get_velov_transit_coupling(anomalies_only: bool = False) -> pd.DataFrame:
+    """Couplage Vélov ↔ TC (Sprint 17 Axe 4, migration 023).
+
+    Vue matérialisée ``gold.mv_velov_transit_coupling`` : pour chaque
+    station Vélov située à < 300m d'une zone où circule une ligne TC,
+    calcule le z-score (= combien d'écarts-types en dessous de la
+    moyenne horaire 7j) du nombre de vélos disponibles.
+
+    Sert au widget ``modal_shift_alert`` (Pro_3_Correlation → section
+    Interdépendances multimodales) pour détecter les incidents TC qui
+    font basculer les usagers vers le Vélov.
+
+    Args:
+        anomalies_only: si True, filtre ``anomaly_detected = TRUE``
+            (z_score < -2). Utilisé pour le KPI counter + le tableau
+            "stations anormalement vides".
+
+    Returns:
+        DataFrame avec colonnes : station_id, station_name, transit_line,
+        transit_n_vehicles, station_lat, station_lon, distance_to_line_m,
+        bikes_now, baseline_avg_bikes, baseline_std_bikes, baseline_n_obs,
+        hour_of_day, z_score, anomaly_detected, computed_at.
+
+        Trié par anomaly_detected DESC puis z_score ASC (les anomalies
+        les plus extrêmes en premier).
+
+    Raises:
+        DashboardDataError: si PostgreSQL ne répond pas ou si la vue
+            matérialisée n'existe pas (migration 023 non appliquée).
+    """
+    base_query = """
+        SELECT station_id,
+               station_name,
+               transit_line,
+               transit_n_vehicles,
+               station_lat,
+               station_lon,
+               distance_to_line_m,
+               bikes_now,
+               baseline_avg_bikes,
+               baseline_std_bikes,
+               baseline_n_obs,
+               hour_of_day,
+               z_score,
+               anomaly_detected,
+               computed_at
+        FROM gold.mv_velov_transit_coupling
+    """
+    if anomalies_only:
+        query = base_query + " WHERE anomaly_detected = TRUE" + " ORDER BY z_score ASC NULLS LAST"
+    else:
+        query = base_query + " ORDER BY anomaly_detected DESC, z_score ASC NULLS LAST"
+    return _df_from_query(query, ())
+
+
+def get_velov_transit_coupling_summary() -> pd.DataFrame:
+    """Résumé par ligne TC : nombre de stations en alerte par ligne.
+
+    Si plusieurs stations Vélov proches d'une même ligne TC sont en
+    alarme simultanée → probable incident sur cette ligne (panne métro,
+    tram interrompu, etc.) qui fait basculer les usagers vers le Vélov.
+
+    Sert au widget ``modal_shift_alert`` pour le bandeau KPI "lignes TC
+    en alerte" + le tri par "score de report modal".
+
+    Returns:
+        DataFrame avec colonnes : transit_line, n_stations_total,
+        n_stations_anomaly, n_vehicles, alert_level (critical si ≥ 3
+        stations en alarme, warning si ≥ 1, ok sinon).
+
+    Raises:
+        DashboardDataError: si PostgreSQL ne répond pas.
+    """
+    query = """
+        SELECT
+            transit_line,
+            COUNT(*)::int                                AS n_stations_total,
+            SUM(CASE WHEN anomaly_detected THEN 1 ELSE 0 END)::int
+                                                        AS n_stations_anomaly,
+            MAX(transit_n_vehicles)::int                 AS n_vehicles,
+            CASE
+                WHEN SUM(CASE WHEN anomaly_detected THEN 1 ELSE 0 END) >= 3
+                    THEN 'critical'
+                WHEN SUM(CASE WHEN anomaly_detected THEN 1 ELSE 0 END) >= 1
+                    THEN 'warning'
+                ELSE 'ok'
+            END                                          AS alert_level,
+            MIN(z_score)::numeric(6,2)                   AS min_z_score
+        FROM gold.mv_velov_transit_coupling
+        GROUP BY transit_line
+        ORDER BY n_stations_anomaly DESC, min_z_score ASC NULLS LAST
+    """
+    return _df_from_query(query, ())

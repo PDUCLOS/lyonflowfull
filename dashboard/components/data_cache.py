@@ -435,3 +435,27 @@ def cached_meteo_impact() -> pd.DataFrame:
     Sert au widget ``meteo_impact`` (Pro_3_Correlation).
     """
     return dbq.get_meteo_impact()
+
+
+# Sprint 17 Axe 4 — Vélov ↔ TC report modal (migration 023)
+# Refresh */15 min par dags/maintenance/refresh_velov_transit_coupling.py.
+# TTL_FAST (60s) pour réactivité — détection d'incident TC en temps quasi-réel.
+@st.cache_data(ttl=TTL_FAST, show_spinner=False)
+def cached_velov_transit_coupling(anomalies_only: bool = False) -> pd.DataFrame:
+    """Couplage Vélov ↔ TC : z-score vélos dispos par station < 300m zone TC.
+
+    Si ``anomalies_only=True``, filtre sur ``z_score < -2`` (anomalie).
+
+    Sert au widget ``modal_shift_alert`` (Pro_3_Correlation).
+    """
+    return dbq.get_velov_transit_coupling(anomalies_only=anomalies_only)
+
+
+@st.cache_data(ttl=TTL_FAST, show_spinner=False)
+def cached_velov_transit_coupling_summary() -> pd.DataFrame:
+    """Résumé par ligne TC : nombre de stations en alerte + alert_level.
+
+    Sert au widget ``modal_shift_alert`` pour le bandeau KPI "lignes
+    TC en alerte".
+    """
+    return dbq.get_velov_transit_coupling_summary()
