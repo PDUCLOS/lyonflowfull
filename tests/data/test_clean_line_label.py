@@ -1,21 +1,7 @@
-"""Tests Sprint 11+ (2026-06-17) — ``clean_line_label`` (helper TCL).
+"""Tests — ``clean_line_label`` (helper TCL).
 
-Sprint 11+ introduit un helper ``clean_line_label`` dans
-:mod:`src.data.db_query` qui convertit un ``line_ref`` brut (format SIRI
-Lite Grand Lyon ``ActIV:Line::<num>:SYTRAL[_h<bucket>]``) en libellé
-lisible pour le dashboard (``"L66"`` ou ``"L4252 ; 16h"``).
-
-Ce module couvre :
-
-1. Tous les formats supportés (``ActIV:Line::``, déjà lisibles, ``None``).
-2. Idempotence (un libellé déjà lisible passe inchangé).
-3. Cas limites (espaces, string vide, type non-string).
-4. Comportement face à un format inconnu (renvoie tel quel, pas de crash).
-
-Le helper est utilisé par :func:`get_bottlenecks_summary`,
-:func:`get_line_kpis` et :func:`get_otp_heatmap` pour produire les
-colonnes ``line_label`` et ``road_label`` consommées par les widgets
-``Pro TCL`` (line_kpis, otp_heatmap).
+Sprint 16 : le suffixe horaire ``_hNN`` est désormais supprimé
+(``"ActIV:Line::66:SYTRAL_h20"`` → ``"L66"`` et non plus ``"L66 ; 20h"``).
 """
 
 from __future__ import annotations
@@ -40,9 +26,9 @@ from src.data.db_query import clean_line_label
         # Cas nominal sans bucket horaire
         ("ActIV:Line::66:SYTRAL", "L66"),
         ("ActIV:Line::4252:SYTRAL", "L4252"),
-        # Avec bucket horaire
-        ("ActIV:Line::4252:SYTRAL_h16", "L4252 ; 16h"),
-        ("ActIV:Line::66:SYTRAL_h20", "L66 ; 20h"),
+        # Avec bucket horaire — suffixe _hNN supprimé (Sprint 16)
+        ("ActIV:Line::4252:SYTRAL_h16", "L4252"),
+        ("ActIV:Line::66:SYTRAL_h20", "L66"),
         # Ligne métro (suffixe alphabétique)
         ("ActIV:Line::M_A:SYTRAL", "LM_A"),
         # Ligne C3 (bus) en format ActIV

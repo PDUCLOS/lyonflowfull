@@ -146,10 +146,10 @@ def render_itinerary_result(
     _render_segments(itinerary)
 
     # Sprint 16 Axe C — Retour dict pour comparateur multimodal.
-    # itinerary.total_duration_s est en secondes, total_distance_m en mètres.
+    # itinerary.total_duration_s est en secondes, total_length_m en mètres.
     return {
         "duration_min": float(itinerary.total_duration_s) / 60.0,
-        "distance_km": float(itinerary.total_distance_m) / 1000.0,
+        "distance_km": float(itinerary.total_length_m) / 1000.0,
         "feasible": True,
         "avg_speed_kmh": float(getattr(itinerary, "average_speed_kmh", 0.0) or 0.0),
         "source": "computed",

@@ -16,6 +16,7 @@ from dashboard.components.widgets.pro_tcl import (
     render_otp_heatmap_mini,
     render_traffic_map,
 )
+from src.data.db_query import clean_line_label
 
 st.set_page_config(
     page_title="PCC Live — Pro TCL · LyonFlowFull",
@@ -76,7 +77,7 @@ with q2:
         for _, alert in alerts_df.iterrows():
             severity = alert.get("severity", "info")
             color = STATUS_COLORS.get(severity, STATUS_COLORS["info"])
-            line_ref = alert.get("line_ref", "—")
+            line_ref = clean_line_label(alert.get("line_ref", "—"))
             st.markdown(
                 f"""
                 <div class="lyonflow-card" style="border-left-color:{color};padding:0.6rem;">

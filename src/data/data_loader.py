@@ -38,6 +38,7 @@ import pandas as pd
 
 from src.data.db_query import (
     _is_db_available,
+    clean_line_label,
     get_infrastructure_bottlenecks,
     get_latest_traffic,
     get_nearest_velov_stations,
@@ -685,7 +686,7 @@ def load_tcl_lines() -> list[dict]:
         out.append(
             {
                 "id": line_id,
-                "name": f"{'Tram' if mode == 'tram' else 'Métro' if mode == 'metro' else 'Bus'} {line_id}",
+                "name": f"{'Tram' if mode == 'tram' else 'Métro' if mode == 'metro' else 'Bus'} {clean_line_label(line_id)}",
                 "mode": mode,
                 "color": color,
                 "icon": icon,

@@ -34,22 +34,19 @@ SORT_OPTIONS = {
 
 
 def _to_dataframe(kpis_dict: dict) -> pd.DataFrame:
-    """Convertit le dict de KPIs en DataFrame pour tri/filtre Streamlit.
-
-    Sprint 11+ (2026-06-17) — utilise ``line_label`` (calculé par
-    ``get_line_kpis`` via ``clean_line_label``) pour l'affichage, et garde
-    ``line_id`` brut pour le tri A-Z technique si besoin.
-    """
+    """Convertit le dict de KPIs en DataFrame pour tri/filtre Streamlit."""
     rows = []
     for line_id, kpis in kpis_dict.items():
         if not kpis:
             continue
+        delay_min = float(kpis.get("avg_delay_min", 0))
+        delay_min = max(0.0, min(delay_min, 30.0))
         rows.append(
             {
                 "line_id": line_id,
                 "line_label": kpis.get("line_label", line_id),
                 "otp_pct": float(kpis.get("otp_pct", 0)),
-                "avg_delay_min": float(kpis.get("avg_delay_min", 0)),
+                "avg_delay_min": round(delay_min, 1),
                 "frequency_min": float(kpis.get("frequency_min", 0)),
                 "load_pct": float(kpis.get("load_pct", 0)),
                 "trend": kpis.get("trend", "stable"),
@@ -138,13 +135,19 @@ def render_line_kpis(
                 "OTP (%)",
                 min_value=0,
                 max_value=100,
-                format="%.0f",
+                format="%.0f%%",
+            ),
+            "Retard (min)": st.column_config.NumberColumn(
+                "Retard (min)",
+                format="%.1f",
+                min_value=0,
+                max_value=30,
             ),
             "Charge (%)": st.column_config.ProgressColumn(
                 "Charge (%)",
                 min_value=0,
                 max_value=100,
-                format="%.0f",
+                format="%.0f%%",
             ),
         },
     )

@@ -42,8 +42,17 @@ days = days_map.get(period, 1)
 if period == "Personnalisé":
     days = 1
 
-st.markdown(f"##### Vue : {period}")
-render_otp_heatmap(days=days, height=500)
+col_period, col_topn = st.columns([2, 1])
+with col_period:
+    st.markdown(f"##### Vue : {period}")
+with col_topn:
+    show_all = st.checkbox("Toutes les lignes", value=False, key="otp_show_all")
+    if not show_all:
+        top_n = st.slider("Top N pires lignes", min_value=5, max_value=50, value=20, key="otp_top_n")
+    else:
+        top_n = None
+
+render_otp_heatmap(days=days, height=600 if show_all else 500, top_n=top_n)
 
 st.markdown("---")
 

@@ -16,6 +16,7 @@ from dashboard.components.widgets.pro_tcl import (
     render_line_selector,
     render_otp_projection,
 )
+from src.data.db_query import clean_line_label
 
 st.set_page_config(
     page_title="Simulateur fréquences — Pro TCL · LyonFlowFull",
@@ -40,7 +41,8 @@ selected = render_line_selector(multiselect=False, key_suffix="simul")
 target_line = selected[0] if selected else "C3"
 
 # KPIs de la ligne sélectionnée (live via data_loader)
-st.markdown(f"##### 📊 État actuel — {target_line}")
+target_label = clean_line_label(target_line)
+st.markdown(f"##### 📊 État actuel — {target_label}")
 all_line_kpis = cached_line_kpis()
 kpis = all_line_kpis.get(target_line, {})
 c1, c2, c3, c4 = st.columns(4)
@@ -76,7 +78,7 @@ st.markdown("##### ⏰ Export vers Hastus")
 st.caption("L'export au format Hastus permet d'intégrer le scénario dans l'outil de planification des horaires.")
 if st.button("📤 Exporter scénario vers Hastus", key="hastus_export_btn"):
     st.success(
-        f"✅ Scénario exporté : {target_line} · {simulation.get('buses_added', 0):+d} bus · "
+        f"✅ Scénario exporté : {target_label} · {simulation.get('buses_added', 0):+d} bus · "
         f"{simulation.get('period_start', 17)}h-{simulation.get('period_end', 19)}h"
     )
 

@@ -45,9 +45,7 @@ def render_network_map(buses: list | None = None, height: int = 400) -> None:
             st.error(f"⚠️ {e}")
             return
         if not df.empty:
-            # Adapter le format DB → format attendu par le widget
             def _safe_delay_min(seconds):
-                """Convertit delay_seconds en minutes, None/string safe."""
                 try:
                     return int(float(seconds) / 60)
                 except (TypeError, ValueError):
@@ -59,15 +57,26 @@ def render_network_map(buses: list | None = None, height: int = 400) -> None:
                     "line_id": row.get("line_ref", "—"),
                     "lat": row.get("lat", 0) or 0,
                     "lon": row.get("lng", 0) or 0,
-                    "segment": "—",  # pas dans la table de base
+                    "segment": "—",
                     "delay_min": _safe_delay_min(row.get("delay_seconds")),
                 }
                 for _, row in df.iterrows()
+                if (row.get("lat") or 0) != 0 and (row.get("lng") or 0) != 0
             ]
-        # Sprint 8 (2026-06-12) — viré le fallback ALL_BUSES (mock).
-        # Si la DB est vide, on affiche l'info.
+            if "recorded_at" in df.columns:
+                latest = pd.to_datetime(df["recorded_at"]).max()
+                if pd.notna(latest):
+                    from datetime import datetime, timezone
+                    age_min = (datetime.now(timezone.utc) - latest.to_pydatetime().replace(
+                        tzinfo=timezone.utc if latest.tzinfo is None else latest.tzinfo
+                    )).total_seconds() / 60
+                    if age_min > 5:
+                        st.caption(f"⏱️ Données SIRI datant de {age_min:.0f} min")
         else:
-            st.info("Aucun bus en circulation actuellement.")
+            st.info(
+                "Aucun bus en circulation (pas de données SIRI dans les 30 dernières minutes). "
+                "Vérifiez que le DAG `collect_bronze` (SIRI Lite) et `transform_bronze_to_silver` tournent."
+            )
             return
 
     if not buses:

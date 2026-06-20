@@ -55,17 +55,14 @@ _LINE_REF_ACTIV_PATTERN = re.compile(r"^ActIV:Line::([^:]+):SYTRAL(?:_h(\d+))?$"
 def clean_line_label(line_ref: str | None) -> str:
     """Nettoie un identifiant TCL brut en libellé lisible (Sprint 11+).
 
-    Le ``;`` est utilisé comme séparateur (ligne ; bucket horaire) pour
-    respecter la convention validée par Patrice le 2026-06-17. Les
-    identifiants déjà lisibles (``T1``, ``M_A``, ``C3``, ...) passent
-    inchangés.
-
     Args:
         line_ref: identifiant TCL brut (ex. ``"ActIV:Line::66:SYTRAL_h20"``)
             ou déjà lisible (ex. ``"T1"``). ``None`` et ``""`` renvoient ``"—"``.
 
     Returns:
-        Libellé formaté. Exemples : ``"L66"``, ``"L4252 ; 16h"``, ``"T1"``, ``"—"``.
+        Libellé formaté. Exemples : ``"L66"``, ``"T1"``, ``"—"``.
+        Le suffixe horaire ``_hNN`` est supprimé (bucket interne, pas pertinent
+        pour l'affichage utilisateur).
     """
     if not line_ref or not isinstance(line_ref, str):
         return "—"
@@ -75,13 +72,8 @@ def clean_line_label(line_ref: str | None) -> str:
 
     m = _LINE_REF_ACTIV_PATTERN.match(ref)
     if m:
-        line_num = m.group(1)
-        hour = m.group(2)
-        if hour:
-            return f"L{line_num} ; {int(hour)}h"
-        return f"L{line_num}"
+        return f"L{m.group(1)}"
 
-    # Cas déjà lisible (T1, M_A, C3, ...) ou format inconnu → pas de transformation
     return ref
 
 
@@ -838,9 +830,13 @@ def get_correlation_matrix(limit: int = 50) -> pd.DataFrame:
 
 
 def get_buses_positions(limit: int = 200) -> pd.DataFrame:
-    """Positions temps réel des bus TCL."""
+    """Positions temps réel des bus TCL.
+
+    Fenêtre 30 min (6 cycles SIRI @5min) pour tolérer les gaps d'ingestion.
+    DISTINCT ON (journey_ref) garde la position la plus récente par véhicule.
+    """
     query = """
-        SELECT
+        SELECT DISTINCT ON (journey_ref)
             journey_ref AS vehicle_ref,
             line_ref,
             lat,
@@ -849,7 +845,10 @@ def get_buses_positions(limit: int = 200) -> pd.DataFrame:
             delay_seconds,
             measurement_time AS recorded_at
         FROM silver.tcl_vehicles_clean
-        WHERE measurement_time >= NOW() - INTERVAL '15 minutes'
+        WHERE measurement_time >= NOW() - INTERVAL '30 minutes'
+          AND lat IS NOT NULL
+          AND lon IS NOT NULL
+        ORDER BY journey_ref, measurement_time DESC
         LIMIT %s
     """
     return _df_from_query(query, (limit,))
