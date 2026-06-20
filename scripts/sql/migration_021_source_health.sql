@@ -127,7 +127,7 @@ SELECT
     'silver.trafic_boucles_clean' AS source,
     COUNT(*) AS total_rows,
     ROUND(100.0 * COUNT(*) FILTER (WHERE vitesse_kmh IS NOT NULL) / NULLIF(COUNT(*), 0), 1) AS speed_pct,
-    ROUND(100.0 * COUNT(*) FILTER (WHERE geom_wgs84 IS NOT NULL) / NULLIF(COUNT(*), 0), 1) AS geo_pct,
+    ROUND(100.0 * COUNT(*) FILTER (WHERE geom IS NOT NULL) / NULLIF(COUNT(*), 0), 1) AS geo_pct,
     ROUND(100.0 * COUNT(*) FILTER (WHERE channel_id IS NOT NULL) / NULLIF(COUNT(*), 0), 1) AS id_pct
 FROM silver.trafic_boucles_clean
 WHERE measurement_time > NOW() - INTERVAL '24 hours'
