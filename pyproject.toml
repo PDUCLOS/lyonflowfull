@@ -10,7 +10,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "lyonflowfull"
-version = "0.7.0"
+version = "0.8.0"
 description = "Plateforme MLOps de prédiction et d'analyse du trafic multimodal sur la Métropole de Lyon"
 readme = "README.md"
 license = {text = "MIT"}

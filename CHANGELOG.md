@@ -5,6 +5,114 @@ Toutes les modifications notables de ce projet sont documentées ici.
 Le format suit [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/),
 et ce projet adhère au [Semantic Versioning](https://semver.org/lang/fr/).
 
+## [0.8.0] - 2026-06-20 — Sprint 16 : Backtest Engine + Data Quality + Durées réelles (branche `vps`)
+
+Sprint le plus ambitieux du projet : 3 axes, ~3 jours, 4 nouveaux widgets,
+2 nouveaux DAGs, 2 migrations SQL, 18 nouveaux tests. Boucle MLOps complète
+maintenant fermée (train → infer → **validate vs oracle externe**).
+
+### 🆕 Backtest Engine (Axe A — TomTom Niveau 2)
+
+Validation XGBoost H+1h contre TomTom Traffic Flow (GPS flottes = oracle
+externe). C'est la fin de la boucle MLOps ouverte en Sprint 8+.
+
+- **Migration 020** : ``gold.mv_xgb_vs_tomtom`` (MV, jointure spatiale
+  ST_DWithin 200m + temporelle ±10min) + ``gold.v_xgb_accuracy_summary``
+  (MAE/MAPE/P90 par heure) + 3 index.
+- **Helpers db_query** : ``get_xgb_vs_tomtom()``, ``get_xgb_accuracy_summary()``.
+- **Cache** : ``cached_xgb_vs_tomtom()``, ``cached_xgb_accuracy_summary()``.
+- **Widget Pro_7** ``backtest_dashboard.py`` : 4 KPI cards (MAE, MAPE, P90,
+  n_pairs) + scatter Plotly XGB vs TomTom + courbe MAE temporelle
+  7 jours + bar distribution accuracy_band + table top 10 pires prédictions.
+  Button-gate via ``deferred_render()`` (coût élevé).
+- **Widget Élu** ``drift_status_badge.py`` : bandeau compact 1 ligne,
+  diagnostic différentiel (modèle dégradé / changement trafic réel /
+  oracle dégradé / erreurs en hausse / stable).
+- **DAG** ``refresh_xgb_vs_tomtom`` (*/30 min) : REFRESH MV CONCURRENTLY.
+- **DAG** ``daily_drift_report`` (05h30 quotidien) : PSI drift detection
+  + Evidently v0.7 optional (rapports HTML on-demand).
+- **Upgrade** ``check_drift_evidently()`` : passe du placeholder "count
+  reports" à lecture du dernier rapport + classification (ok/warning/critical).
+
+### 🆕 Data Quality (Axe B — Monitoring multi-source)
+
+Passage du monitoring basique (6 checks quotidiens mono-table) à un
+**monitoring par source temps réel** avec score de qualité agrégé.
+
+- **Migration 021** : ``gold.v_source_health`` (8 sources + score 0-100
+  + statut healthy/delayed/stale/dead) + ``gold.v_data_completeness``
+  (% non-NULL colonnes critiques Silver 24h).
+- **Helpers db_query** : ``get_source_health()``, ``get_data_completeness()``.
+- **Widget Pro_6** ``source_health_monitor.py`` : jauge Plotly 0-100
+  (poids trafic=3, TCL=2, Vélov=2, autres=1) + grille 8 sources + 3
+  barres complétude Silver.
+- **Widget Élu** ``data_quality_badge.py`` : bandeau 1 ligne (n healthy/stale/dead + score).
+- **Upgrade** ``check_all_sources()`` : remplace les 6 checks mono-table
+  (legacy ``ALL_CHECKS_LEGACY`` conservé pour transition).
+
+### 🆕 Durées réelles (Axe C — Comparateur multimodal)
+
+Remplace les vitesses moyennes hardcodées (Vélov 12, TC 18, Voiture 25 km/h)
+par les durées réellement calculées par chaque widget trajet.
+
+- **velov_trip, transit_trip, itinerary** : signature ``-> dict | None``,
+  retour ``{duration_min, distance_km, feasible, source: "computed"}``.
+- **Usager_1** : ``session_state["trip_<key>"]`` pour chaque mode + passage
+  des durées réelles à ``render_mode_comparison()`` (fallback estimation
+  si pas encore calculé).
+- **mode_comparison** : badge "✅ Durée calculée" (vert) ou "⏱️ Estimé"
+  (orange) selon ``result.source``.
+
+### 🔧 Refacto : PSI primary + Evidently v0.7 optional (post-Sprint 16)
+
+Suite du diagnostic complet dans ``docs/SPEC_EVIDENTLY_CONFIGURATION.md``
+(855 lignes).
+
+- **Problème** : ``drift_detector.py`` utilisait l'API Evidently v0.4
+  (imports cassés en v0.7) → DAG ``daily_drift_report`` timeout 30s
+  à l'import sur le VPS.
+- **Décision** : PSI devient le moteur principal (zéro deps, déjà
+  testé, déterministe). Evidently v0.7 reste en optionnel (rapports
+  HTML on-demand depuis Pro_7 ou notebook local).
+- **Bénéfice** : -250 Mo image Docker (evidently + 13 deps transitives
+  virées du chemin critique), DAG quotidien 5-10s au lieu de 15-30s.
+- **Modifications** :
+  - ``src/monitoring/drift_detector.py`` : API v0.4 → PSI primary
+    + ``generate_html_drift_report()`` (Evidently v0.7, on-demand).
+  - ``drift_status_badge._diagnose_drift()`` : diagnostic différentiel
+    (5 cas : modèle dégradé / trafic réel / oracle dégradé / erreurs
+    en hausse / stable).
+  - ``requirements-airflow.txt`` : ``evidently>=0.4,<0.5`` **viré**.
+  - ``requirements-base.txt`` : ``evidently>=0.7.0`` marqué optional
+    (PEP 508 ``; extra == "drift-reports"``).
+  - ``tests/monitoring/test_evidently_configuration.py`` (24 tests).
+
+### 🐛 Bug fix migration 021 (post-Sprint 16)
+
+- ``silver.trafic_boucles_clean`` a une colonne ``geom`` (et ``geom_2154``
+  PostGIS), pas ``geom_wgs84``. La migration 021 plantait au déploiement.
+  Fix appliqué + redéployé.
+
+### 📊 Bilan Sprint 16
+
+| Métrique | Avant (0.7.1) | Après (0.8.0) |
+|----------|---------------|---------------|
+| Widgets | 51 | **55** (+4) |
+| DAGs | 13 | **15** (+2) |
+| Tests | ~301 | **~325** |
+| Sources monitorées | 1 (trafic) | **8** (toutes Bronze + Gold) |
+| Validation modèle | aucune externe | **XGBoost vs TomTom oracle** |
+| Drift detection | placeholder | **Evidently DataDriftPreset + PSI quotidien** |
+| Durées comparateur | estimées | **calculées** (+ fallback estimé) |
+
+### 🚀 Déploiement Sprint 16 sur VPS
+
+- **Migrations SQL** : 020 + 021 appliquées manuellement (script apply
+  à venir — voir TODO).
+- **DAGs** : ``refresh_xgb_vs_tomtom`` (is_paused=True, schedule */30),
+  ``daily_drift_report`` (is_paused=True, schedule 30 5 * * *).
+- **Tags déployés** : ``vps-20260620-111838``, ``vps-20260620-092233``.
+
 ## [0.7.1] - 2026-06-19 — Sprint 15+ : mypy clean (42 → 0 erreurs) + training/stgcn package (branche `vps`)
 
 Sprint dédié **type safety** : résout le `Source file found twice` (root cause
