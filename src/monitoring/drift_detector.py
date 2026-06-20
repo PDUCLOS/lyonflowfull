@@ -1,13 +1,22 @@
-"""Drift detector — Compare distribution XGBoost vs TomTom via Evidently.
+"""Drift detector — Compare distribution XGBoost vs TomTom via PSI + Evidently.
 
-Sprint 16 Axe A (2026-06-20) — Remplace le placeholder ``check_drift_evidently()``
-qui ne faisait que compter les rapports. Utilise ``evidently.DataDriftPreset``
-pour détecter un shift dans la distribution des erreurs XGBoost vs TomTom.
+Sprint 16 Axe A refacto (2026-06-20) — Voir docs/SPEC_EVIDENTLY_CONFIGURATION.md.
+
+Architecture :
+- **Moteur principal** : PSI (``src.monitoring.psi``). Zéro dépendance,
+  déterministe, déjà testé. Couvre 100% du besoin opérationnel.
+- **Moteur optionnel** : Evidently v0.7 (rapports HTML on-demand, usage
+  dashboard Pro_7 ou notebook local). Import paresseux, jamais appelé
+  dans un DAG (trop lourd : 13+ deps transitives, +250 Mo Docker).
 
 Appelé par le DAG ``daily_drift_report`` à 05h30 (après le refresh de
 ``gold.mv_xgb_vs_tomtom``). Résultat stocké dans ``gold.model_drift_reports``.
 
-Voir ``docs/SPEC_SPRINT_16.md`` §A.4 et §A.11.
+Diagnostic différentiel (cf spec §5) :
+- XGB drift + TomTom stable + errors ↑ → **Modèle dégradé** (retrain)
+- XGB drift + TomTom drift → **Changement trafic réel** (vacances, chantier)
+- TomTom confidence drop seul → **Oracle dégradé** (vérifier quota API)
+- Stable partout → RAS
 """
 
 from __future__ import annotations
@@ -23,7 +32,7 @@ from src.data.db_query import get_xgb_vs_tomtom
 logger = logging.getLogger(__name__)
 
 
-# Colonnes numériques à surveiller pour le drift
+# Colonnes numériques à surveiller pour le drift (alignées sur gold.mv_xgb_vs_tomtom)
 NUMERICAL_FEATURES = [
     "xgb_speed_kmh",
     "tomtom_speed_kmh",
@@ -66,7 +75,7 @@ def run_drift_report(
     hours_current: int = 24,
     hours_reference: int = 168,
 ) -> dict[str, Any]:
-    """Compare reference vs current via Evidently DataDriftPreset.
+    """Calcule le rapport de drift via PSI (moteur principal).
 
     Args:
         reference_df: DataFrame de référence (None = fetch auto J-7→J-1).
@@ -77,23 +86,83 @@ def run_drift_report(
     Returns:
         Dict avec ``dataset_drift`` (bool), ``n_drifted_features`` (int),
         ``share_drifted_features`` (float), ``n_ref`` (int), ``n_current`` (int),
-        ``details`` (dict Evidently complet).
+        ``details`` (dict par colonne : {psi, status, ...}), ``engine`` (str = "psi").
     """
-    # Import Evidently paresseux (sinon startup lourd)
+    # Fetch si non fourni
+    if reference_df is None or current_df is None:
+        reference_df, current_df = _fetch_reference_current(
+            hours_current=hours_current, hours_reference=hours_reference,
+        )
+
+    base_result = {
+        "dataset_drift": False,
+        "n_drifted_features": 0,
+        "share_drifted_features": 0.0,
+        "n_ref": len(reference_df),
+        "n_current": len(current_df),
+        "details": {},
+        "engine": "psi",
+    }
+
+    if reference_df.empty or current_df.empty:
+        base_result["details"] = {"info": "empty reference or current"}
+        return base_result
+
+    # Filtre colonnes disponibles
+    available = [
+        c for c in NUMERICAL_FEATURES
+        if c in reference_df.columns and c in current_df.columns
+    ]
+    if not available:
+        base_result["details"] = {"info": "no numerical features available"}
+        return base_result
+
+    # Calcul PSI (zéro dépendance, voir src/monitoring/psi.py)
+    from src.monitoring.psi import compute_dataset_drift
+
+    psi_result = compute_dataset_drift(
+        reference=reference_df,
+        current=current_df,
+        columns=available,
+    )
+    summary = psi_result.pop("_summary")
+
+    return {
+        "dataset_drift": bool(summary["dataset_drift"]),
+        "n_drifted_features": int(summary["n_columns_drifted"]),
+        "share_drifted_features": float(summary["drift_share"]),
+        "n_ref": len(reference_df),
+        "n_current": len(current_df),
+        "details": psi_result,  # {col: {psi, status, ...}, ...}
+        "engine": "psi",
+    }
+
+
+def generate_html_drift_report(
+    reference_df: pd.DataFrame | None = None,
+    current_df: pd.DataFrame | None = None,
+    hours_current: int = 24,
+    hours_reference: int = 168,
+) -> str | None:
+    """Génère un rapport HTML Evidently v0.7 (usage on-demand, pas DAG).
+
+    Args:
+        reference_df: DataFrame de référence (None = fetch auto).
+        current_df: DataFrame current (None = fetch auto).
+        hours_current: fenêtre current (défaut 24h).
+        hours_reference: fenêtre reference (défaut 168h).
+
+    Returns:
+        HTML en string ou None si Evidently non installé / données vides.
+        NE PAS utiliser dans un DAG — usage Pro_7 on-demand uniquement
+        (rapport visuel riche pour exploration ponctuelle).
+    """
     try:
-        from evidently import ColumnMapping
-        from evidently.metric_preset import DataDriftPreset
-        from evidently.report import Report
-    except ImportError as e:
-        logger.error("Evidently non installé : %s", e)
-        return {
-            "dataset_drift": False,
-            "n_drifted_features": 0,
-            "share_drifted_features": 0.0,
-            "n_ref": 0,
-            "n_current": 0,
-            "details": {"error": "evidently not installed"},
-        }
+        from evidently import Report as EvidentlyReport
+        from evidently.presets import DataDriftPreset
+    except ImportError:
+        logger.info("Evidently non installé, generate_html_drift_report retourne None")
+        return None
 
     # Fetch si non fourni
     if reference_df is None or current_df is None:
@@ -101,49 +170,25 @@ def run_drift_report(
             hours_current=hours_current, hours_reference=hours_reference,
         )
 
-    if reference_df.empty or current_df.empty:
-        logger.warning(
-            "Drift report impossible : reference=%d, current=%d",
-            len(reference_df), len(current_df),
-        )
-        return {
-            "dataset_drift": False,
-            "n_drifted_features": 0,
-            "share_drifted_features": 0.0,
-            "n_ref": len(reference_df),
-            "n_current": len(current_df),
-            "details": {"info": "empty reference or current"},
-        }
-
-    # Filtre colonnes
-    available = [c for c in NUMERICAL_FEATURES if c in reference_df.columns and c in current_df.columns]
+    available = [
+        c for c in NUMERICAL_FEATURES
+        if c in reference_df.columns and c in current_df.columns
+    ]
     if not available:
-        return {
-            "dataset_drift": False,
-            "n_drifted_features": 0,
-            "share_drifted_features": 0.0,
-            "n_ref": len(reference_df),
-            "n_current": len(current_df),
-            "details": {"info": "no numerical features available"},
-        }
+        return None
 
     ref = reference_df[available].dropna()
     cur = current_df[available].dropna()
+    if ref.empty or cur.empty:
+        return None
 
-    column_mapping = ColumnMapping(numerical_features=available)
-    report = Report(metrics=[DataDriftPreset()])
-    report.run(reference_data=ref, current_data=cur, column_mapping=column_mapping)
-    result = report.as_dict()
-    drift_info = result.get("metrics", [{}])[0].get("result", {})
-
-    return {
-        "dataset_drift": bool(drift_info.get("dataset_drift", False)),
-        "n_drifted_features": int(drift_info.get("number_of_drifted_columns", 0)),
-        "share_drifted_features": float(drift_info.get("share_of_drifted_columns", 0.0)),
-        "n_ref": int(len(ref)),
-        "n_current": int(len(cur)),
-        "details": drift_info,
-    }
+    try:
+        report = EvidentlyReport(metrics=[DataDriftPreset()])
+        snapshot = report.run(current_data=cur, reference_data=ref)
+        return snapshot.get_html_str()
+    except Exception as e:  # noqa: BLE001
+        logger.error("Evidently HTML report failed: %s", e)
+        return None
 
 
 def persist_drift_report(report: dict[str, Any], db_connection) -> bool:

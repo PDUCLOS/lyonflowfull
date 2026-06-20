@@ -100,10 +100,14 @@ protobuf>=4.25.0,<5.0.0
 grpcio>=1.60.0
 
 # Monitoring
-evidently>=0.4.0
-# litestar pinné : evidently 0.4 demande litestar>=2.19 qui déclenche
-# un backtracking pip sur multipart (5+ min). 2.13 est la dernière
-# compatible sans cette chaîne transitive.
+# Evidently OPTIONNEL : PSI (src/monitoring/psi.py) est le moteur principal
+# du drift detection (Sprint 16 refacto, cf docs/SPEC_EVIDENTLY_CONFIGURATION.md).
+# Evidently sert uniquement pour les rapports HTML on-demand depuis
+# Pro_7 (déclenché manuellement, pas en DAG). Installation :
+#   pip install 'lyonflowfull[drift-reports]'
+# ou directement :
+#   pip install evidently>=0.7.0
+evidently>=0.7.0 ; extra == "drift-reports"
 litestar>=2.13.0,<2.19.0
 
 # Tests

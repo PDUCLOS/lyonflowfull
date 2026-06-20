@@ -19,6 +19,8 @@ Coût : 🟢 léger (1 requête scalaire). Pas besoin de button-gate.
 
 from __future__ import annotations
 
+import json
+
 import streamlit as st
 
 from dashboard.components.data_cache import cached_xgb_accuracy_summary
@@ -31,12 +33,68 @@ MAE_GREEN = 7.0
 MAE_YELLOW = 12.0
 
 
-def _classify(mae_kmh: float | None, drift_share: float | None) -> tuple[str, str, str]:
+def _diagnose_drift(report: dict) -> tuple[str, str]:
+    """Diagnostic métier à partir du rapport PSI (cf spec §5).
+
+    Logique :
+    - XGB drift + TomTom stable + errors ↑ → critical "Modèle dégradé"
+    - XGB drift + TomTom drift → warning "Changement trafic réel"
+    - TomTom confidence drop seul → warning "Oracle moins fiable"
+    - errors en hausse seules → warning "Erreurs en hausse"
+    - tout stable → ok "Modèle stable"
+
+    Returns:
+        Tuple (status, message) où status ∈ {"ok", "warning", "critical"}.
+    """
+    psi_details = report.get("details", {})
+
+    def _status(col: str) -> str:
+        """Lit le statut PSI d'une colonne (stable / moderate / significant)."""
+        return psi_details.get(col, {}).get("status", "stable")
+
+    xgb_drift = _status("xgb_speed_kmh") in ("moderate", "significant")
+    tomtom_drift = _status("tomtom_speed_kmh") in ("moderate", "significant")
+    error_drift = _status("error_abs_kmh") in ("moderate", "significant")
+    error_pct_drift = _status("error_pct") in ("moderate", "significant")
+    confidence_drift = _status("tomtom_confidence") in ("moderate", "significant")
+
+    if error_drift and xgb_drift and not tomtom_drift:
+        return ("critical", "Modèle dégradé — retrain recommandé")
+    if xgb_drift and tomtom_drift:
+        return ("warning", "Changement trafic réel détecté (vacances, chantier)")
+    if confidence_drift and not error_drift and not error_pct_drift:
+        return ("warning", "Oracle TomTom moins fiable (vérifier quota/confiance)")
+    if error_drift or error_pct_drift:
+        return ("warning", "Erreurs en hausse — surveiller")
+    if xgb_drift and not tomtom_drift:
+        return ("warning", "Prédictions XGBoost décalées")
+    return ("ok", "Modèle stable")
+
+
+def _classify(
+    mae_kmh: float | None,
+    drift_share: float | None,
+    drift_diag: tuple[str, str] | None = None,
+) -> tuple[str, str, str]:
     """Détermine (couleur, icône, message) selon MAE + drift.
+
+    Si ``drift_diag`` est fourni (sortie de ``_diagnose_drift``), il prend
+    priorité sur la classification générique MAE/drift_share.
 
     Returns:
         Tuple (color, icon, message).
     """
+    if mae_kmh is None and drift_diag is None:
+        return ("#9E9E9E", "⚪", "Données MAE indisponibles")
+
+    # Priorité au diagnostic différentiel PSI (plus précis)
+    if drift_diag is not None and drift_diag[0] != "ok":
+        status, msg = drift_diag
+        if status == "critical":
+            return ("#F44336", "🔴", msg)
+        return ("#FF9800", "🟡", msg)
+
+    # Fallback classification MAE + drift_share (avant PSI)
     if mae_kmh is None:
         return ("#9E9E9E", "⚪", "Données MAE indisponibles")
 
@@ -72,15 +130,29 @@ def render_drift_status_badge() -> None:
         if weights.sum() > 0:
             mae_kmh = float((summary["mae_kmh"] * weights).sum() / weights.sum())
 
-    # Drift share
+    # Drift share + diagnostic différentiel
     drift_share: float | None = None
-    if drift and "drift_share" in drift:
-        try:
-            drift_share = float(drift["drift_share"])
-        except (TypeError, ValueError):
-            drift_share = None
+    drift_diag: tuple[str, str] | None = None
+    if drift:
+        if "drift_share" in drift:
+            try:
+                drift_share = float(drift["drift_share"])
+            except (TypeError, ValueError):
+                drift_share = None
+        # Le rapport stocke les détails dans 'report' (JSONB).
+        # On reconstruit un dict compatible _diagnose_drift.
+        report_details = drift.get("report", {})
+        if report_details and isinstance(report_details, str):
+            try:
+                report_details = json.loads(report_details)
+            except (TypeError, ValueError):
+                report_details = {}
+        if report_details:
+            # report_details est le dict {col: {psi, status, ...}, ...}
+            # _diagnose_drift attend {"details": {col: {status, ...}, ...}}
+            drift_diag = _diagnose_drift({"details": report_details})
 
-    color, icon, message = _classify(mae_kmh, drift_share)
+    color, icon, message = _classify(mae_kmh, drift_share, drift_diag)
     st.markdown(
         f"""
         <div class="lyonflow-card" style="display:flex;align-items:center;gap:0.8rem;
