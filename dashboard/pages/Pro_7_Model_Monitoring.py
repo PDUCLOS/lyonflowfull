@@ -15,10 +15,12 @@ import streamlit as st
 
 from dashboard.components.auto_refresh import setup_auto_refresh
 from dashboard.components.data_status import render_data_status_banner
+from dashboard.components.deferred_widget import deferred_render
 from dashboard.components.navigation import render_sidebar_navigation
 from dashboard.components.persona_guard import apply_persona_guard
 from dashboard.components.theme import inject_theme
 from dashboard.components.widgets.pro_tcl import render_model_monitoring_page
+from dashboard.components.widgets.pro_tcl.backtest_dashboard import render_backtest_dashboard
 from dashboard.components.widgets.pro_tcl.gnn_map import render_gnn_map_section
 from src.ml.model_registry import is_model_monitoring_visible
 
@@ -70,6 +72,17 @@ render_model_monitoring_page()
 # Section 2 : GNN Map (Sprint 9 — préparée, désactivée par défaut)
 st.markdown("---")
 render_gnn_map_section()
+
+# Section 3 : Backtest XGBoost vs TomTom (Sprint 16 Axe A)
+# 4 KPIs + scatter + courbe MAE + distribution + top 10 pires prédictions.
+# Button-gate via deferred_render (Sprint 15+) car widget 🟠 lourd (3 Plotly + 1 MV).
+st.markdown("---")
+deferred_render(
+    "backtest_dashboard",
+    "Charger le backtest XGBoost vs TomTom",
+    render_backtest_dashboard,
+    button_icon="🎯",
+)
 
 st.caption(
     "Model Monitoring · Pour relancer un entraînement : `make logs` puis "

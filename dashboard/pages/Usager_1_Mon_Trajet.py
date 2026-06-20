@@ -84,13 +84,11 @@ if st.session_state.get("results_loaded"):
     origin_coords = _resolve_lieu(search["origin"])
     dest_coords = _resolve_lieu(search["destination"])
 
-    # ── Comparateur multimodal (Sprint 15+ audit P0-3) ──────────────────
+    # ── Comparateur multimodal (Sprint 15+ audit P0-3 + Sprint 16 Axe C) ──
     # Affiche un comparatif 3 modes (tc/voiture/velov) + winner card
-    # AVANT les détails par mode. Les durées sont estimées via vitesses
-    # moyennes Lyon (approximation documentée — calcul exact quand les
-    # trajets détaillés sont calculés plus bas). L'audit AUDIT_DASHBOARD_SPRINT15
-    # pointait que `mode_comparison` et `mode_summary` étaient implémentés
-    # mais jamais appelés — c'est corrigé ici.
+    # AVANT les détails par mode. Sprint 16 : si une durée réelle est déjà
+    # calculée pour un mode (session_state["trip_<key>"]), on l'utilise.
+    # Sinon, fallback estimation par vitesses moyennes Lyon.
     if origin_coords and dest_coords and len(modes) >= 2:
         import math
 
@@ -101,8 +99,7 @@ if st.session_state.get("results_loaded"):
         dlon = lon2 - lon1
         a = math.sin(dlat / 2) ** 2 + math.cos(lat1) * math.cos(lat2) * math.sin(dlon / 2) ** 2
         dist_km = 2 * R_KM * math.asin(math.sqrt(a))
-        # Vitesses moyennes Lyon (hypothèses explicites, approximation
-        # honnête — velov 12, tc 18 mélange métro/tram/bus, voiture 25 HP)
+        # Vitesses moyennes Lyon (hypothèses explicites, fallback estimation)
         speed_kmh = {"velov": 12.0, "tc": 18.0, "voiture": 25.0}
         # Mapping display name (search_bar) → key (mode_comparison)
         mode_to_key = {
@@ -110,26 +107,45 @@ if st.session_state.get("results_loaded"):
             "Voiture": "voiture",
             "Transport en commun": "tc",
         }
-        # Construit results pour les modes actifs et faisables
+        # Construit results pour les modes actifs et faisables.
+        # Sprint 16 Axe C : on privilégie la durée RÉELLE depuis session_state
+        # si dispo, sinon fallback estimation.
         results: dict[str, dict] = {}
         for display_name, key in mode_to_key.items():
             if not any(display_name in m for m in modes):
                 continue
-            v = speed_kmh[key]
-            dur_min = (dist_km / v) * 60.0
-            impact = calculate_impact(
-                mode=key,
-                distance_km=dist_km,
-                duration_min=dur_min,
-                is_congested=key == "voiture",  # pénalité potentielle HP
-            )
-            results[key] = {
-                "duration_min": dur_min,
-                "distance_km": dist_km,
-                "impact": impact,
-                "feasible": True,
-                "source": "estimated",  # approximation vitesses moyennes
-            }
+            trip_real = st.session_state.get(f"trip_{key}")
+            if trip_real:
+                dur_min = float(trip_real["duration_min"])
+                impact = calculate_impact(
+                    mode=key,
+                    distance_km=float(trip_real.get("distance_km", dist_km)),
+                    duration_min=dur_min,
+                    is_congested=key == "voiture",
+                )
+                results[key] = {
+                    "duration_min": dur_min,
+                    "distance_km": float(trip_real.get("distance_km", dist_km)),
+                    "impact": impact,
+                    "feasible": True,
+                    "source": "computed",  # durée réelle calculée
+                }
+            else:
+                v = speed_kmh[key]
+                dur_min = (dist_km / v) * 60.0
+                impact = calculate_impact(
+                    mode=key,
+                    distance_km=dist_km,
+                    duration_min=dur_min,
+                    is_congested=key == "voiture",
+                )
+                results[key] = {
+                    "duration_min": dur_min,
+                    "distance_km": dist_km,
+                    "impact": impact,
+                    "feasible": True,
+                    "source": "estimated",  # approximation vitesses moyennes
+                }
         if results:
             st.markdown("---")
             st.markdown("### ⚖️ Comparaison des modes")
@@ -183,10 +199,14 @@ if st.session_state.get("results_loaded"):
         st.markdown("---")
         st.markdown("### 🚌 Trajet transport en commun")
         try:
-            render_transit_trip(
+            # Sprint 16 Axe C — Stocke la durée réelle dans session_state
+            # pour le comparateur multimodal.
+            tc_result = render_transit_trip(
                 origin=search["origin"],
                 destination=search["destination"],
             )
+            if tc_result:
+                st.session_state["trip_tc"] = tc_result
         except DashboardDataError as e:
             st.error(f"⚠️ {e}")
 
@@ -205,12 +225,15 @@ if st.session_state.get("results_loaded"):
 
         if origin_coords and dest_coords:
             try:
-                render_velov_trip(
+                # Sprint 16 Axe C — Stocke la durée réelle dans session_state.
+                velov_result = render_velov_trip(
                     origin=search["origin"],
                     destination=search["destination"],
                     origin_coords=origin_coords,
                     dest_coords=dest_coords,
                 )
+                if velov_result:
+                    st.session_state["trip_velov"] = velov_result
             except DashboardDataError as e:
                 st.error(f"⚠️ {e}")
         else:
@@ -246,11 +269,14 @@ if st.session_state.get("results_loaded"):
             use_container_width=True,
             key="itin_calc_btn",
         ):
-            render_itinerary_result(
+            # Sprint 16 Axe C — Stocke la durée réelle dans session_state.
+            voiture_result = render_itinerary_result(
                 origin=search["origin"],
                 destination=search["destination"],
                 horizon_minutes=60,
             )
+            if voiture_result:
+                st.session_state["trip_voiture"] = voiture_result
 
     # ── Cartes informatives Vélov (si Vélov sélectionné) ─────────────────
     if has_velov:

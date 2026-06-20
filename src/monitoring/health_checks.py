@@ -163,17 +163,65 @@ def check_predictions_presentes() -> CheckResult:
 
 
 def check_drift_evidently() -> CheckResult:
-    """Compare distribution J-7 vs J via Evidently (placeholder simple)."""
-    # En production : utiliser Evidently DataDriftPreset
-    # Pour MVP : on check que la table drift_reports est alimentée
-    n = cast(int, execute_scalar("SELECT COUNT(*) FROM gold.model_drift_reports") or 0)
-    status = "ok" if n > 0 else "warning"
+    """Compare distribution J-7 vs J via Evidently (Sprint 16 Axe A).
+
+    Sprint 16 (2026-06-20) — Remplace le placeholder "compte les rapports".
+    Lit le DERNIER rapport dans ``gold.model_drift_reports`` (calculé
+    quotidiennement par le DAG ``daily_drift_report`` à 05h30 via
+    ``src.monitoring.drift_detector.run_drift_report()``).
+
+    Statut :
+    - ok       : dataset_drift=False, n_drifted_features <= 0
+    - warning  : n_drifted_features entre 1 et 2
+    - critical : dataset_drift=True OU n_drifted_features >= 3
+    - warning  : 0 rapports (Evidently pas encore tourné)
+    """
+    from src.data.db_query import get_latest_drift_report
+
+    try:
+        report = get_latest_drift_report()
+    except Exception as e:  # noqa: BLE001
+        return CheckResult(
+            name="drift_evidently",
+            status="warning",
+            details=f"Erreur lecture gold.model_drift_reports : {e}",
+            metric_value=0.0,
+            threshold=0.0,
+            timestamp=_now_iso(),
+        )
+
+    if not report:
+        return CheckResult(
+            name="drift_evidently",
+            status="warning",
+            details="Aucun rapport drift dans gold.model_drift_reports "
+                    "(DAG daily_drift_report pas encore exécuté ?)",
+            metric_value=0.0,
+            threshold=0.0,
+            timestamp=_now_iso(),
+        )
+
+    n_drifted = int(report.get("n_drifted_features", 0) or 0)
+    dataset_drift = bool(report.get("dataset_drift", False))
+    drift_share = float(report.get("drift_share", 0.0) or 0.0)
+    computed_at = report.get("computed_at", "?")
+
+    if dataset_drift or n_drifted >= 3:
+        status = "critical"
+    elif n_drifted >= 1:
+        status = "warning"
+    else:
+        status = "ok"
+
     return CheckResult(
-        name="drift_baseline",
+        name="drift_evidently",
         status=status,
-        details=f"{n} rapports drift enregistrés (Evidently à intégrer)",
-        metric_value=float(n),
-        threshold=1.0,
+        details=(
+            f"Rapport du {computed_at} — dataset_drift={dataset_drift}, "
+            f"{n_drifted} features en drift ({drift_share * 100:.0f}%)"
+        ),
+        metric_value=float(n_drifted),
+        threshold=0.0,  # 0 features en drift = idéal
         timestamp=_now_iso(),
     )
 
@@ -221,3 +269,81 @@ def run_dag_health_check() -> dict:
     """
     results = run_all_checks()
     return {r.name: r.status for r in results}
+
+
+# =============================================================================
+# Sprint 16 Axe B — Data Quality : Monitoring multi-source
+# =============================================================================
+# Remplace les 6 checks mono-table par 1 appel à gold.v_source_health.
+# Voir docs/SPEC_SPRINT_16.md §B.6.
+
+
+def check_all_sources() -> list:
+    """Vérifie la santé de toutes les sources via gold.v_source_health.
+
+    Sprint 16 Axe B (2026-06-20) — Remplace ``check_bronze_freshness()``,
+    ``check_bronze_volume()``, ``check_silver_nulls()``, ``check_silver_doublons()``,
+    ``check_predictions_presentes()`` par 1 appel à la vue agrégée.
+
+    Returns:
+        Liste de CheckResult (1 par source).
+    """
+    from src.data.db_query import get_source_health
+
+    try:
+        df = get_source_health()
+    except Exception as e:  # noqa: BLE001
+        return [CheckResult(
+            name="source_health_global",
+            status="critical",
+            details=f"gold.v_source_health indisponible : {e}",
+            metric_value=0.0,
+            threshold=70.0,
+            timestamp=_now_iso(),
+        )]
+
+    if df.empty:
+        return [CheckResult(
+            name="source_health_global",
+            status="warning",
+            details="gold.v_source_health vide (vue non populée ?)",
+            metric_value=0.0,
+            threshold=70.0,
+            timestamp=_now_iso(),
+        )]
+
+    status_map = {
+        "healthy": "ok",
+        "delayed": "warning",
+        "stale": "warning",
+        "dead": "critical",
+    }
+    results = []
+    for _, row in df.iterrows():
+        status = status_map.get(row["status"], "critical")
+        results.append(CheckResult(
+            name=f"source_{row['source'].replace('.', '_').replace('-', '_')}",
+            status=status,
+            details=(
+                f"{row['source']}: {row['status']} "
+                f"(âge {float(row['age_minutes']):.0f} min, "
+                f"score {int(row['health_score'])})"
+            ),
+            metric_value=float(row["health_score"]),
+            threshold=70.0,
+            timestamp=_now_iso(),
+        ))
+    return results
+
+
+# Catalogue des checks (Sprint 16 — les 5 checks mono-table sont commentés
+# car remplacés par check_all_sources(). Le DAG data_quality_daily appelle
+# désormais check_all_sources() + check_drift_evidently().)
+ALL_CHECKS_LEGACY = [
+    check_bronze_freshness,
+    check_bronze_volume,
+    check_silver_nulls,
+    check_silver_doublons,
+    check_predictions_presentes,
+    check_drift_evidently,
+]

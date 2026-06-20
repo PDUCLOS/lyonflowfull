@@ -90,6 +90,19 @@ def cached_predictions_vs_actuals(limit: int = 200) -> pd.DataFrame:
     return dl.load_predictions_vs_actuals(limit=limit)
 
 
+# Sprint 16 Axe A — Backtest Engine
+@st.cache_data(ttl=TTL_FAST, show_spinner=False)
+def cached_xgb_vs_tomtom(hours: int = 24, limit: int = 500) -> pd.DataFrame:
+    """Paires (XGBoost H+1h, TomTom Flow) pour le scatter backtest_dashboard."""
+    return dbq.get_xgb_vs_tomtom(hours=hours, limit=limit)
+
+
+@st.cache_data(ttl=TTL_SLOW, show_spinner=False)
+def cached_xgb_accuracy_summary(hours: int = 168) -> pd.DataFrame:
+    """KPIs agrégés par heure (MAE, MAPE, P90) pour la courbe MAE."""
+    return dbq.get_xgb_accuracy_summary(hours=hours)
+
+
 @st.cache_data(ttl=TTL_SLOW, show_spinner=False)
 def cached_city_synthesis() -> dict:
     return dl.load_city_synthesis()
@@ -395,3 +408,16 @@ def cached_mode_impact(mode: str, distance_km: float, is_congested: bool = False
 def clear_all_caches() -> None:
     """Vide tous les caches Streamlit (utilisable depuis un bouton 'refresh')."""
     st.cache_data.clear()
+
+
+# Sprint 16 Axe B — Data Quality
+@st.cache_data(ttl=TTL_FAST, show_spinner=False)
+def cached_source_health() -> pd.DataFrame:
+    """Santé par source (8 Bronze + 1 Gold) avec score 0-100 et statut."""
+    return dbq.get_source_health()
+
+
+@st.cache_data(ttl=TTL_SLOW, show_spinner=False)
+def cached_data_completeness() -> pd.DataFrame:
+    """Complétude colonnes critiques Silver (24h glissantes)."""
+    return dbq.get_data_completeness()

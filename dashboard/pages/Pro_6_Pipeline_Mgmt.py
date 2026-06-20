@@ -10,6 +10,7 @@ from dashboard.components.navigation import render_sidebar_navigation
 from dashboard.components.persona_guard import apply_persona_guard
 from dashboard.components.theme import inject_theme
 from dashboard.components.widgets.pro_tcl import render_pipeline_management_page
+from dashboard.components.widgets.pro_tcl.source_health_monitor import render_source_health_monitor
 
 st.set_page_config(
     page_title="Pipeline Management — Pro TCL · LyonFlowFull",
@@ -29,6 +30,11 @@ st.caption(
     "Vue opérateur : statut DAGs Airflow · 6 health checks · fraîcheur des 8 sources Bronze. "
     "Source : Airflow REST API + PostgreSQL Gold · Sprint 8+"
 )
+
+# Sprint 16 Axe B — Monitoring multi-source (remplace les health checks séquentiels)
+render_source_health_monitor()
+
+st.markdown("---")
 
 render_pipeline_management_page()
 

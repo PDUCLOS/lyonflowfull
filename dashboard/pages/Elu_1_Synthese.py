@@ -20,6 +20,8 @@ from dashboard.components.widgets.elu import (
     render_top_decisions,
     render_trend_chart,
 )
+from dashboard.components.widgets.elu.data_quality_badge import render_data_quality_badge
+from dashboard.components.widgets.elu.drift_status_badge import render_drift_status_badge
 
 st.set_page_config(
     page_title="Synthèse exécutive — Élu · LyonFlowFull",
@@ -40,6 +42,14 @@ render_data_status_banner()
 # Bandeau santé réseau (Axe 5, Sprint 15+ — migration 019)
 # Jauge synthétique 0-100 + 4 sous-jauges. Fail loud si DB indispo.
 render_network_health_gauge()
+
+# Sprint 16 Axe A — Drift status badge (bandeau compact 1 ligne).
+# Affiche modèle stable / attention / drift détecté selon MAE 24h + drift Evidently.
+render_drift_status_badge()
+
+# Sprint 16 Axe B — Data quality badge (bandeau compact 1 ligne).
+# Affiche nombre de sources healthy / stale / dead + score global.
+render_data_quality_badge()
 
 st.markdown("---")
 

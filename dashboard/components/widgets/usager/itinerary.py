@@ -72,13 +72,18 @@ def render_itinerary_result(
     origin: str,
     destination: str,
     horizon_minutes: int = 60,  # Sprint 8+ : focus H+1h (0 = maintenant)
-) -> None:
+) -> dict | None:
     """Affiche l'itinéraire entre 2 adresses.
 
     Args:
         origin: adresse d'origine (texte)
         destination: adresse de destination (texte)
         horizon_minutes: 60 = H+1h (défaut Sprint 8+), 0 = maintenant
+
+    Returns:
+        Sprint 16 Axe C — Dict ``{"duration_min", "distance_km", "feasible",
+        "avg_speed_kmh", "source": "computed"}`` pour intégration au comparateur
+        multimodal d'Usager_1. None si itinéraire non calculé.
     """
     try:
         origin_coords = _resolve_address(origin)
@@ -139,6 +144,16 @@ def render_itinerary_result(
     _render_summary(itinerary, comparison, horizon_minutes)
     _render_map(itinerary, origin_coords, dest_coords)
     _render_segments(itinerary)
+
+    # Sprint 16 Axe C — Retour dict pour comparateur multimodal.
+    # itinerary.total_duration_s est en secondes, total_distance_m en mètres.
+    return {
+        "duration_min": float(itinerary.total_duration_s) / 60.0,
+        "distance_km": float(itinerary.total_distance_m) / 1000.0,
+        "feasible": True,
+        "avg_speed_kmh": float(getattr(itinerary, "average_speed_kmh", 0.0) or 0.0),
+        "source": "computed",
+    }
 
 
 def _render_summary(

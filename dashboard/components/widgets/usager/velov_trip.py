@@ -40,7 +40,7 @@ def render_velov_trip(
     origin_coords: tuple[float, float] | None = None,
     dest_coords: tuple[float, float] | None = None,
     height: int = 450,
-) -> None:
+) -> dict | None:
     """Affiche le trajet Vélov + marche entre 2 points.
 
     Args:
@@ -49,6 +49,12 @@ def render_velov_trip(
         origin_coords: (lon, lat) — si fourni, évite la résolution.
         dest_coords: (lon, lat) — idem.
         height: hauteur de la carte en pixels.
+
+    Returns:
+        Sprint 16 Axe C — Dict ``{"duration_min", "distance_km", "feasible",
+        "source": "computed"}`` pour intégration au comparateur multimodal
+        d'Usager_1. None si le trajet n'a pas pu être calculé (adresse non
+        résolue, pas de station Vélov, erreur DB).
     """
     # Résolution des adresses si pas fournies
     if origin_coords is None:
@@ -119,6 +125,15 @@ def render_velov_trip(
     # Carte + segments
     _render_velov_map(itin, origin_coords, dest_coords, height=height)
     _render_velov_segments(itin)
+
+    # Sprint 16 Axe C — Retour dict pour comparateur multimodal.
+    # itin.total_distance_m est en mètres, total_duration_min en minutes.
+    return {
+        "duration_min": float(itin.total_duration_min),
+        "distance_km": float(itin.total_distance_m) / 1000.0,
+        "feasible": True,
+        "source": "computed",
+    }
 
 
 def _render_velov_summary(itin: VelovItinerary) -> None:

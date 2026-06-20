@@ -7,6 +7,7 @@
 # à un Sprint ultérieur quand les connecteurs seront réels.
 
 from dashboard.components.widgets.pro_tcl.alert_ticker import render_alert_ticker
+from dashboard.components.widgets.pro_tcl.backtest_dashboard import render_backtest_dashboard
 from dashboard.components.widgets.pro_tcl.before_after_chart import render_before_after_chart
 from dashboard.components.widgets.pro_tcl.bus_traffic_spatial import render_bus_traffic_spatial
 from dashboard.components.widgets.pro_tcl.cause_analysis import render_cause_analysis
@@ -34,9 +35,11 @@ from dashboard.components.widgets.pro_tcl.otp_projection import render_otp_proje
 from dashboard.components.widgets.pro_tcl.pipeline_management import render_pipeline_management_page
 from dashboard.components.widgets.pro_tcl.report_builder import render_report_builder
 from dashboard.components.widgets.pro_tcl.segment_table import render_segment_table
+from dashboard.components.widgets.pro_tcl.source_health_monitor import render_source_health_monitor
 
 __all__ = [
     "render_alert_ticker",
+    "render_backtest_dashboard",
     "render_before_after_chart",
     "render_bus_traffic_spatial",
     "render_cause_analysis",
@@ -58,6 +61,7 @@ __all__ = [
     "render_pipeline_management_page",
     "render_report_builder",
     "render_segment_table",
+    "render_source_health_monitor",
     "render_traffic_map",
     "render_traffic_map_compact",
 ]

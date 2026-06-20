@@ -1687,3 +1687,105 @@ def get_latest_drift_report() -> dict | None:
         if r.get(k) is not None and not isinstance(r[k], str):
             r[k] = str(r[k])
     return r
+
+
+# =============================================================================
+# Sprint 16 Axe A — TomTom Niveau 2 : Backtest Engine
+# =============================================================================
+# Validation XGBoost vs oracle externe (TomTom Traffic Flow = GPS flottes).
+# Vue matérialisée gold.mv_xgb_vs_tomtom (migration 020) + vue simple
+# gold.v_xgb_accuracy_summary. Refresh */30 min par le DAG
+# refresh_xgb_vs_tomtom. Voir docs/SPEC_SPRINT_16.md §A.1-A.3.
+
+
+def get_xgb_vs_tomtom(hours: int = 24, limit: int = 500) -> pd.DataFrame:
+    """Paires (prédiction XGBoost H+1h, observation TomTom) des dernières N heures.
+
+    Sert au widget Pro_7_Model_Monitoring::backtest_dashboard pour le scatter
+    Plotly XGBoost vs TomTom + table top 10 pires prédictions.
+
+    Args:
+        hours: fenêtre temporelle en heures (défaut 24h).
+        limit: nombre max de paires retournées (défaut 500, tri par date desc).
+
+    Returns:
+        DataFrame avec colonnes : axis_key, calculated_at, xgb_speed_kmh,
+        tomtom_speed_kmh, error_abs_kmh, error_pct, accuracy_band,
+        tomtom_confidence, model_version, etat_pred.
+    """
+    query = """
+        SELECT axis_key, calculated_at, xgb_speed_kmh, tomtom_speed_kmh,
+               error_abs_kmh, error_pct, accuracy_band,
+               tomtom_confidence, model_version, etat_pred
+        FROM gold.mv_xgb_vs_tomtom
+        WHERE calculated_at > NOW() - (INTERVAL '1 hour' * %s)
+        ORDER BY calculated_at DESC
+        LIMIT %s
+    """
+    return _df_from_query(query, (hours, limit))
+
+
+def get_xgb_accuracy_summary(hours: int = 168) -> pd.DataFrame:
+    """KPIs agrégés par heure (MAE, MAPE, P90, distribution accuracy).
+
+    Sert au widget backtest_dashboard pour la courbe MAE temporelle et le
+    pie distribution accuracy_band. 168h = 7 jours par défaut.
+
+    Args:
+        hours: fenêtre temporelle en heures (défaut 168 = 7 jours).
+
+    Returns:
+        DataFrame avec colonnes : hour_bucket, n_pairs, mae_kmh,
+        median_error_kmh, p90_error_kmh, mape_pct, n_accurate, n_acceptable,
+        n_poor, avg_tomtom_confidence.
+    """
+    query = """
+        SELECT hour_bucket, n_pairs, mae_kmh, median_error_kmh,
+               p90_error_kmh, mape_pct, n_accurate, n_acceptable, n_poor,
+               avg_tomtom_confidence
+        FROM gold.v_xgb_accuracy_summary
+        WHERE hour_bucket > NOW() - (INTERVAL '1 hour' * %s)
+        ORDER BY hour_bucket DESC
+    """
+    return _df_from_query(query, (hours,))
+
+
+# =============================================================================
+# Sprint 16 Axe B — Data Quality : Monitoring multi-source
+# =============================================================================
+# Vues gold.v_source_health (migration 021) + gold.v_data_completeness.
+# Remplacent les 6 checks mono-table par 2 vues agrégées + check_all_sources().
+# Voir docs/SPEC_SPRINT_16.md §B.1-B.3.
+
+
+def get_source_health() -> pd.DataFrame:
+    """Santé par source (fraîcheur + score 0-100 + statut).
+
+    Sert au widget Pro_6_Pipeline_Mgmt::source_health_monitor (jauge + grille)
+    et au badge Elu_1_Synthese::data_quality_badge.
+
+    Returns:
+        DataFrame avec colonnes : source, last_update, age_minutes,
+        records_1h, expected_interval_min, health_score, status.
+        Trié par health_score ASC (les plus malades en premier).
+    """
+    query = """
+        SELECT source, last_update, age_minutes, records_1h,
+               expected_interval_min, health_score, status
+        FROM gold.v_source_health
+        ORDER BY health_score ASC
+    """
+    return _df_from_query(query, ())
+
+
+def get_data_completeness() -> pd.DataFrame:
+    """Complétude colonnes critiques par table Silver (24h glissantes).
+
+    Returns:
+        DataFrame avec colonnes : source, total_rows, speed_pct, geo_pct, id_pct.
+    """
+    query = """
+        SELECT source, total_rows, speed_pct, geo_pct, id_pct
+        FROM gold.v_data_completeness
+    """
+    return _df_from_query(query, ())

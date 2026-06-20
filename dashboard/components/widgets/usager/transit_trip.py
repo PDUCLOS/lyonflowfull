@@ -36,19 +36,24 @@ _MODE_COLOR = {
 }
 
 
-def render_transit_trip(origin: str, destination: str) -> None:
+def render_transit_trip(origin: str, destination: str) -> dict | None:
     """Affiche le trajet transport en commun entre 2 lieux du référentiel.
 
     Args:
         origin: label du lieu d'origine (peut être préfixé emoji).
         destination: label du lieu destination (idem).
+
+    Returns:
+        Sprint 16 Axe C — Dict ``{"duration_min", "distance_km", "feasible",
+        "source": "computed"}`` pour intégration au comparateur multimodal
+        d'Usager_1. None si l'itinéraire n'a pas pu être calculé.
     """
     with st.spinner("🚌 Recherche itinéraire transport en commun…"):
         try:
             itin = cached_transit_itinerary(origin=origin, destination=destination)
         except DashboardDataError as e:
             st.error(f"⚠️ {e}")
-            return
+            return None
 
     if itin is None:
         st.warning(
@@ -56,7 +61,7 @@ def render_transit_trip(origin: str, destination: str) -> None:
             f"**{origin}** et **{destination}**. "
             f"Vérifiez que les lieux sont dans le référentiel (21 lieux emblématiques)."
         )
-        return
+        return None
 
     segments = itin.get("segments") or []
     if not segments:
@@ -68,7 +73,7 @@ def render_transit_trip(origin: str, destination: str) -> None:
         )
         for diag in itin.get("diagnostics", []):
             st.caption(f"ℹ️ {diag}")
-        return
+        return None
 
     _render_transit_banner(itin)
     _render_transit_kpis(itin)
@@ -76,6 +81,14 @@ def render_transit_trip(origin: str, destination: str) -> None:
     _render_transit_segments(itin)
     st.markdown("---")
     _render_transit_disclaimer()
+
+    # Sprint 16 Axe C — Retour dict pour comparateur multimodal.
+    return {
+        "duration_min": float(itin.get("total_duration_min", 0.0)),
+        "distance_km": float(itin.get("total_distance_km", 0.0)),
+        "feasible": True,
+        "source": "computed",
+    }
 
 
 def _render_transit_banner(itin: dict) -> None:

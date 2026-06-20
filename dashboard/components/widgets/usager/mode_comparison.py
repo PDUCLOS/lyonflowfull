@@ -178,6 +178,21 @@ def _render_mode_card(
     )
     score_html = f'<span class="lyf-sublabel" style="opacity:0.6;">score: {score:.1f}</span>' if score is not None else ""
 
+    # Sprint 16 Axe C — Badge "estimé/calculé" selon result.source.
+    # computed = durée réellement calculée par le widget trajet
+    # estimated = fallback vitesse moyenne (avant que l'usager clique "Voir détail")
+    source = result.get("source", "estimated")
+    if source == "computed":
+        source_badge = (
+            '<div class="lyf-sublabel" style="color:#4CAF50;font-weight:600;'
+            'margin-top:0.3rem;">✅ Durée calculée</div>'
+        )
+    else:
+        source_badge = (
+            '<div class="lyf-sublabel" style="color:#FF9800;font-weight:600;'
+            'margin-top:0.3rem;">⏱️ Estimé (cliquez "Voir détail" pour la durée réelle)</div>'
+        )
+
     calories_html = (
         f'<div class="lyf-detail" style="opacity:0.85;margin-top:0.3rem;">🔥 {calories} kcal</div>'
         if mode_key == "velov"
@@ -206,6 +221,7 @@ def _render_mode_card(
                         color:{color};line-height:1.1;">
                 {duration:.0f} <span style="font-size:1rem;font-weight:500;opacity:0.7;">min</span>
             </div>
+            {source_badge}
             <div class="lyf-detail" style="display:flex;gap:1rem;flex-wrap:wrap;opacity:0.9;">
                 <span>💰 {cost:.2f} €</span>
                 <span>🌿 {int(co2)} g CO2</span>
