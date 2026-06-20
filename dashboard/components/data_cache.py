@@ -422,3 +422,16 @@ def cached_source_health() -> pd.DataFrame:
 def cached_data_completeness() -> pd.DataFrame:
     """Complétude colonnes critiques Silver (24h glissantes)."""
     return dbq.get_data_completeness()
+
+
+# Sprint 17 Axe 7 — Météo impact (migration 022)
+# Refresh quotidien 04h30 par dags/maintenance/refresh_meteo_impact.py.
+# TTL_SLOW (300s) largement suffisant : la MV ne change qu'une fois/jour.
+@st.cache_data(ttl=TTL_SLOW, show_spinner=False)
+def cached_meteo_impact() -> pd.DataFrame:
+    """Impact météo par bande × mode (5 bandes × 3 modes + delta vs fair).
+
+    Voir ``db_query.get_meteo_impact`` pour le schéma retourné.
+    Sert au widget ``meteo_impact`` (Pro_3_Correlation).
+    """
+    return dbq.get_meteo_impact()

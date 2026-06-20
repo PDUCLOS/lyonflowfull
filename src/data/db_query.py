@@ -1788,3 +1788,58 @@ def get_data_completeness() -> pd.DataFrame:
         FROM gold.v_data_completeness
     """
     return _df_from_query(query, ())
+
+
+# Sprint 17 Axe 7 — Météo comme variable d'interaction (migration 022)
+# Vue matérialisée gold.mv_meteo_impact : impact de la météo (5 bandes) sur
+# 3 modes (trafic, TCL, Vélov), avec delta vs baseline "beau temps".
+# Voir docs/SPEC_OPTIMISATION_INTERDEPENDANCES.md §8.
+
+
+def get_meteo_impact() -> pd.DataFrame:
+    """Impact météo par bande × mode (Sprint 17 Axe 7, migration 022).
+
+    Vue matérialisée ``gold.mv_meteo_impact`` qui agrège 30 jours
+    d'historique pour comparer l'effet de 5 conditions météo (fair,
+    light_rain, heavy_rain, frost, heatwave) sur 3 modes de transport.
+
+    Sert au widget ``meteo_impact`` (Pro_3_Correlation → section
+    Interdépendances multimodales) pour le tableau comparatif.
+
+    Returns:
+        DataFrame avec colonnes : meteo_band, avg_speed_kmh, std_speed_kmh,
+        traffic_n_obs, traffic_delta_kmh_vs_fair, avg_delay_seconds,
+        tcl_n_obs, tcl_delay_delta_sec_vs_fair, avg_bikes_available,
+        velov_n_obs, velov_delta_bikes_vs_fair, computed_at.
+
+        Trié par meteo_band (ordre logique : fair → light_rain → heavy_rain
+        → frost → heatwave).
+
+    Raises:
+        DashboardDataError: si PostgreSQL ne répond pas ou si la vue
+            matérialisée n'existe pas (migration 022 non appliquée).
+    """
+    query = """
+        SELECT meteo_band,
+               avg_speed_kmh,
+               std_speed_kmh,
+               traffic_n_obs,
+               traffic_delta_kmh_vs_fair,
+               avg_delay_seconds,
+               tcl_n_obs,
+               tcl_delay_delta_sec_vs_fair,
+               avg_bikes_available,
+               velov_n_obs,
+               velov_delta_bikes_vs_fair,
+               computed_at
+        FROM gold.mv_meteo_impact
+        ORDER BY
+            CASE meteo_band
+                WHEN 'fair'        THEN 1
+                WHEN 'light_rain'  THEN 2
+                WHEN 'heavy_rain'  THEN 3
+                WHEN 'frost'       THEN 4
+                WHEN 'heatwave'    THEN 5
+            END
+    """
+    return _df_from_query(query, ())

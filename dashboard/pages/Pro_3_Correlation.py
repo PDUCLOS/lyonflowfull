@@ -16,6 +16,7 @@ from dashboard.components.widgets.pro_tcl import (
     render_coherence_scatter,
     render_correlation_matrix,
     render_line_selector,
+    render_meteo_impact,
     render_multimodal_heatmap,
     render_segment_table,
 )
@@ -122,6 +123,20 @@ deferred_render(
     button_icon="🌐",
 )
 
+st.markdown("---")
+
+# Sprint 17 (2026-06-20) — Axe 7 du SPEC_OPTIMISATION_INTERDEPENDANCES
+# Météo comme variable d'interaction : tableau comparatif 5 bandes × 3 modes
+# avec delta vs baseline "beau temps". Vue gold.mv_meteo_impact (migration
+# 022), refresh quotidien 04h30 par dags/maintenance/refresh_meteo_impact.py.
+# Button-gate (cohérent avec les autres widgets de la page).
+deferred_render(
+    "meteo_impact",
+    "Charger l'impact météo sur les 3 modes",
+    render_meteo_impact,
+    button_icon="🌤",
+)
+
 st.caption(
     "Corrélation bus × trafic · Données : SIRI Lite + boucles Grand Lyon. "
     "Corrélation spatialisée · JOIN zone 0.001° (~100 m) dans "
@@ -130,5 +145,7 @@ st.caption(
     "gold.channels_ref < 200 m (PostGIS ST_DWithin). "
     "Grille multimodale · fusion gold.traffic_features_live × "
     "gold.tcl_vehicle_realtime × silver.velov_clean × silver.meteo_hourly "
-    "sur gold.mv_multimodal_grid (refresh */10)."
+    "sur gold.mv_multimodal_grid (refresh */10). "
+    "Impact météo · 5 bandes × 3 modes + delta vs fair weather dans "
+    "gold.mv_meteo_impact (migration 022, refresh quotidien 04h30)."
 )
