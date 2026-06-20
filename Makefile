@@ -9,7 +9,8 @@
         shell-streamlit backup restore clean seed-users docs \
         deploy-vps deploy-vps-fast rollback-vps tag-vps certbot-init certbot-renew \
         healthcheck-vps coherence-check check-deploy-env tls-status \
-        monitoring-up monitoring-down monitoring-status monitoring-logs
+        monitoring-up monitoring-down monitoring-status monitoring-logs \
+        migrate migrate-dry-run migrate-status migrate-force
 
 # Variables
 PYTHON := python3
@@ -231,7 +232,7 @@ healthcheck-vps:  ## Healthcheck post-deploy (HTTP + DB + nginx)
 	fi
 	@echo "✅ All healthchecks passed"
 
-deploy-vps: check-deploy-env  ## Déploie sur le VPS (Sprint VPS-1+VPS-2 : tag + rsync + healthcheck)
+deploy-vps: check-deploy-env  ## Déploie sur le VPS (Sprint VPS-1+VPS-2 : tag + rsync + migrations + healthcheck)
 	@echo "==[ Tag version deploy ]=="
 	@$(MAKE) tag-vps
 	@echo "==[ Rsync code (excludes centralisés en tete de Makefile) ]=="
@@ -240,6 +241,8 @@ deploy-vps: check-deploy-env  ## Déploie sur le VPS (Sprint VPS-1+VPS-2 : tag +
 	      $(RSYNC_EXCLUDES) \
 	      -e "ssh -i $(SSH_KEY)" \
 	      ./ $(VPS_HOST):/opt/lyonflow/
+	@echo "==[ Apply pending SQL migrations (AVANT restart containers) ]=="
+	ssh -i $(SSH_KEY) $(VPS_HOST) "cd /opt/lyonflow && ./scripts/apply-migrations.sh"
 	@echo "==[ Restart stack ]=="
 	ssh -i $(SSH_KEY) $(VPS_HOST) "cd /opt/lyonflow && docker compose up -d --build"
 	@echo "==[ Healthcheck post-deploy ]=="
@@ -351,3 +354,22 @@ docs:  ## Ouvre la doc locale
 init:  ## Premier démarrage (génère .env, démarre stack)
 	@if [ ! -f .env ]; then cp .env.example .env && echo "✅ .env créé (à éditer)"; fi
 	@echo "Édite .env, puis lance : make up"
+
+
+# -----------------------------------------------------------------------------
+# Sprint 16 — SQL Migrations runner
+# -----------------------------------------------------------------------------
+# Cf scripts/apply-migrations.sh et docs/SPEC_APPLY_MIGRATIONS.md.
+
+migrate:  ## Applique les migrations SQL pendantes (PostgreSQL)
+	./scripts/apply-migrations.sh
+
+migrate-dry-run:  ## Liste les migrations pendantes sans les appliquer
+	./scripts/apply-migrations.sh --dry-run
+
+migrate-status:  ## Statut applied/pending des migrations
+	./scripts/apply-migrations.sh --status
+
+migrate-force:  ## Force la ré-application d'une migration (VERSION=NNN)
+	@read -p "Version à ré-appliquer (ex: 020): " v; \
+	./scripts/apply-migrations.sh --force $$v
