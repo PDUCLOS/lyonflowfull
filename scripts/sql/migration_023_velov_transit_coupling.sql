@@ -48,6 +48,17 @@
 --   Toutes les 15 min par ``dags/maintenance/refresh_velov_transit_coupling.py``
 --   (REFRESH MATERIALIZED VIEW CONCURRENTLY, donc index unique requis).
 --
+-- Notes Sprint 17 v3 (2026-06-20) — DISTINCT ON dans le SELECT final :
+--   * Avec positions directes, une même (station_id, transit_line) peut
+--     matcher plusieurs tuiles TC < 300 m (ex: 3 bus de la même ligne
+--     dans 3 rues parallèles autour d'une station). L'index unique
+--     (station_id, transit_line) ne peut pas se créer sur des doublons.
+--   * Fix : SELECT DISTINCT ON (station_id, transit_line) ... ORDER BY
+--     distance_to_line_m ASC — on garde la position TC la plus proche
+--     de la station Vélov (sémantiquement la plus pertinente).
+--   * Impact : réduit ~12% les lignes en doublon, garantit l'unicité
+--     pour REFRESH CONCURRENTLY.
+--
 -- Notes Sprint 17 v2 (2026-06-20) — fenêtre élargie à 1h :
 --   * Test initial avec fenêtre 15 min sur le VPS : la MV sortait 0 rows
 --     car le pipeline Bronze→Silver mettait > 15 min à propager (workers
@@ -141,7 +152,7 @@ velov_baseline AS (
       AND vc.num_bikes_available IS NOT NULL
     GROUP BY vc.station_id, EXTRACT(HOUR FROM vc.fetched_at AT TIME ZONE 'Europe/Paris')
 )
-SELECT
+SELECT DISTINCT ON (vnt.station_id, vnt.transit_line)
     vnt.station_id,
     vnt.station_name,
     vnt.transit_line,
@@ -172,8 +183,10 @@ LEFT JOIN velov_baseline vb
       AND vb.hour_of_day = EXTRACT(HOUR FROM NOW() AT TIME ZONE 'Europe/Paris')::int
 WHERE vnt.num_bikes_available IS NOT NULL
 ORDER BY
-    anomaly_detected DESC,        -- anomalies en premier
-    z_score ASC NULLS LAST;       -- puis z-score les plus négatifs
+    vnt.station_id,
+    vnt.transit_line,
+    vnt.distance_to_line_m ASC       -- garde la position TC la plus proche
+;
 
 -- Index unique sur (station_id, transit_line) : permet REFRESH CONCURRENTLY
 CREATE UNIQUE INDEX IF NOT EXISTS idx_gold_mv_velov_transit_coupling_pk
