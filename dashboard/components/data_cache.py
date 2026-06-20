@@ -459,3 +459,20 @@ def cached_velov_transit_coupling_summary() -> pd.DataFrame:
     TC en alerte".
     """
     return dbq.get_velov_transit_coupling_summary()
+
+
+# Sprint 17 Axe 2 — Propagation de congestion (migration 024 v3)
+# Refresh */30 min par dags/maintenance/refresh_congestion_propagation.py.
+# La MV stocke juste les paires (50k rows) — la MV elle-même change peu
+# (mapping spatial stable). TTL_SLOW (300s) largement suffisant.
+# C'est le WIDGET qui calcule les CORR à la volée en Python, donc cache
+# plus court possible (la donnée change peu).
+@st.cache_data(ttl=TTL_SLOW, show_spinner=False)
+def cached_congestion_propagation_pairs() -> pd.DataFrame:
+    """Paires de capteurs adjacents (K=2 grid) avec lat/lon des 2 nœuds.
+
+    Sert de base au widget ``propagation_map`` (Folium flèches
+    directionnelles) qui calcule les CORR en Python à partir de
+    gold.traffic_features_live (6h × 5min).
+    """
+    return dbq.get_congestion_propagation_pairs()

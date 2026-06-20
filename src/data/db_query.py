@@ -1945,3 +1945,35 @@ def get_velov_transit_coupling_summary() -> pd.DataFrame:
         ORDER BY n_stations_anomaly DESC, min_z_score ASC NULLS LAST
     """
     return _df_from_query(query, ())
+
+
+# Sprint 17 Axe 2 — Propagation de congestion (migration 024 v3)
+# Vue matérialisée gold.mv_congestion_propagation_pairs : index des paires
+# de capteurs adjacents (K=2 grid via gold.dim_gnn_adjacency) avec lat/lon
+# des 2 nœuds. PAS de CORR calculée ici (trop coûteux en SQL — testé : 4 min
+# timeout). Le widget propagation_map.py calcule les CORR en Python
+# (pandas/numpy, vectorisé) depuis gold.traffic_features_live (6h × 5min).
+# Voir docs/SPEC_OPTIMISATION_INTERDEPENDANCES.md §3.
+
+
+def get_congestion_propagation_pairs() -> pd.DataFrame:
+    """Paires de capteurs adjacents (Sprint 17 Axe 2, migration 024).
+
+    Vue matérialisée ``gold.mv_congestion_propagation_pairs`` (~50k paires
+    K=2 grid) avec lat/lon des 2 nœuds. Sert de base au widget
+    ``propagation_map`` (Folium avec flèches directionnelles) pour
+    calculer les lag cross-corrélations en Python.
+
+    Returns:
+        DataFrame avec colonnes : node_a, lat_a, lon_a, node_b, lat_b, lon_b.
+
+    Raises:
+        DashboardDataError: si PostgreSQL ne répond pas ou si la vue
+            matérialisée n'existe pas (migration 024 non appliquée).
+    """
+    query = """
+        SELECT node_a, lat_a, lon_a, node_b, lat_b, lon_b
+        FROM gold.mv_congestion_propagation_pairs
+        ORDER BY node_a, node_b
+    """
+    return _df_from_query(query, ())
