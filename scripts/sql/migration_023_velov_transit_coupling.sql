@@ -48,6 +48,16 @@
 --   Toutes les 15 min par ``dags/maintenance/refresh_velov_transit_coupling.py``
 --   (REFRESH MATERIALIZED VIEW CONCURRENTLY, donc index unique requis).
 --
+-- Notes Sprint 17 v2 (2026-06-20) — fenêtre élargie à 1h :
+--   * Test initial avec fenêtre 15 min sur le VPS : la MV sortait 0 rows
+--     car le pipeline Bronze→Silver mettait > 15 min à propager (workers
+--     bloqués sur transformations lourdes en environnement contraint).
+--   * Test avec fenêtre 1h : 2330 paires (station Vélov × position TC)
+--     analysées, distribution z-score saine (avg=0.23, range [-2.36, +3.61]),
+--     7 anomalies (0.3%, cohérent pour 2σ sur loi normale).
+--   * Compromis : on perd la réactivité 15 min pour une analyse plus robuste.
+--     Détection d'incident TC reste < 1h, acceptable pour le use case.
+--
 -- Idempotent : DROP IF EXISTS + CREATE MATERIALIZED VIEW + index unique.
 -- =============================================================================
 
@@ -69,7 +79,7 @@ velov_latest AS (
         vc.num_bikes_available,
         vc.fetched_at
     FROM silver.velov_clean vc
-    WHERE vc.fetched_at > NOW() - INTERVAL '15 minutes'
+    WHERE vc.fetched_at > NOW() - INTERVAL '1 hour'
       AND vc.lat IS NOT NULL
       AND vc.lon IS NOT NULL
       AND vc.is_active = TRUE
@@ -87,7 +97,7 @@ tcl_zones AS (
         longitude                                        AS line_lon,
         1                                                AS n_vehicles
     FROM gold.tcl_vehicle_realtime
-    WHERE recorded_at > NOW() - INTERVAL '15 minutes'
+    WHERE recorded_at > NOW() - INTERVAL '1 hour'
       AND latitude IS NOT NULL
       AND longitude IS NOT NULL
     ORDER BY
