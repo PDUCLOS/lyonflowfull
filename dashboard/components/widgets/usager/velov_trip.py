@@ -230,7 +230,7 @@ def _render_single_station_card(
         m = int(n_mech) if n_mech is not None else 0
         e = int(n_elec) if n_elec is not None else 0
         mech_elec_html = (
-            '<div style="font-size:0.7rem;opacity:0.65;margin-top:0.3rem;'
+            '<div class="lyf-sublabel" style="opacity:0.65;margin-top:0.3rem;'
             'line-height:1.4;">'
             f"├── 🔧 {m} mécaniques<br/>└── ⚡ {e} électriques"
             "</div>"
@@ -243,20 +243,18 @@ def _render_single_station_card(
         f"""
         <div class="lyonflow-card" style="border-left:4px solid {color};">
             <div style="display:flex;justify-content:space-between;align-items:center;">
-                <span style="background:{color};color:white;padding:0.2rem 0.6rem;
-                             border-radius:12px;font-size:0.7rem;font-weight:600;">{role}</span>
-                <span style="font-size:0.75rem;font-weight:700;color:{color};">{status_label}</span>
+                <span class="lyf-sublabel" style="background:{color};color:white;padding:0.2rem 0.6rem;border-radius:12px;font-weight:600;">{role}</span>
+                <span class="lyf-sublabel" style="font-weight:700;color:{color};">{status_label}</span>
             </div>
             <div style="font-size:1rem;font-weight:700;margin:0.5rem 0 0.3rem 0;">
                 🚲 {station_label}
             </div>
             <div style="display:flex;gap:1rem;align-items:baseline;">
                 <div style="font-size:1.1rem;font-weight:700;color:{color};">🚲 {bikes_str}</div>
-                <div style="font-size:0.85rem;opacity:0.85;">🅿️ {docks_str}</div>
+                <div class="lyf-detail" style="opacity:0.85;">🅿️ {docks_str}</div>
             </div>
             {mech_elec_html}
-            <div style="font-size:0.75rem;opacity:0.7;margin-top:0.5rem;
-                        border-top:1px solid rgba(255,255,255,0.1);padding-top:0.4rem;">
+            <div class="lyf-sublabel" style="opacity:0.7;margin-top:0.5rem;border-top:1px solid rgba(255,255,255,0.1);padding-top:0.4rem;">
                 📍 {int(walk_distance_m)}m à pied (~{walk_duration_min:.0f} min)
             </div>
         </div>
@@ -375,10 +373,7 @@ def _render_velov_segments(itin: VelovItinerary) -> None:
                 <div style="display:flex;align-items:center;gap:0.8rem;
                             padding:0.6rem;background:var(--bg-card);border-radius:4px;
                             margin:0.3rem 0;border-left:4px solid {color};">
-                    <div style="background:{color};color:white;width:28px;height:28px;
-                                border-radius:50%;display:flex;align-items:center;
-                                justify-content:center;font-weight:600;font-size:0.85rem;
-                                flex-shrink:0;">
+                    <div class="lyf-detail" style="background:{color};color:white;width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:600;flex-shrink:0;">
                         {i}
                     </div>
                     <div style="flex:1;">
@@ -388,7 +383,7 @@ def _render_velov_segments(itin: VelovItinerary) -> None:
                         <div style="font-size:0.8rem;opacity:0.7;">
                             📏 {seg.distance_m:.0f} m · 🕐 {seg.duration_min} min{extras}
                         </div>
-                        {f'<div style="font-size:0.75rem;opacity:0.6;font-style:italic;">{seg.notes}</div>' if seg.notes else ""}
+                        {f'<div class="lyf-sublabel" style="opacity:0.6;font-style:italic;">{seg.notes}</div>' if seg.notes else ""}
                     </div>
                 </div>
                 """,
@@ -434,16 +429,16 @@ def _render_alternatives_card(
             st.html(
                 f"""
                 <div class="lyonflow-card" style="border-left:4px solid {color};">
-                    <div style="font-size:0.85rem;font-weight:600;">
+                    <div class="lyf-detail" style="font-weight:600;">
                         🚲 {alt["velov_name"]}
                     </div>
-                    <div style="font-size:0.7rem;opacity:0.7;margin-top:0.2rem;">
+                    <div class="lyf-sublabel" style="opacity:0.7;margin-top:0.2rem;">
                         {status} · 📏 {int(alt.get("distance_m", 0))}m · 🚶 {walk_min}min
                     </div>
                     <div style="font-size:1.2rem;font-weight:700;margin:0.3rem 0;color:{color};">
                         🚴 {bikes} vélos
                     </div>
-                    <div style="font-size:0.7rem;opacity:0.7;">
+                    <div class="lyf-sublabel" style="opacity:0.7;">
                         🅿️ {docks} docks
                     </div>
                 </div>

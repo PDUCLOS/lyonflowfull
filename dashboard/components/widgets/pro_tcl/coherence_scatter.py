@@ -294,13 +294,13 @@ def render_coherence_scatter() -> None:
                 f"""
                 <div style="background:var(--bg-card);border-left:4px solid {color};
                             border-radius:6px;padding:0.8rem;margin:0.4rem 0;">
-                    <div style="font-size:0.85rem;opacity:0.8;">
+                    <div class="lyf-detail" style="opacity:0.8;">
                         {STATUS_LABELS[status]}
                     </div>
                     <div style="font-size:1.8rem;font-weight:700;margin:0.2rem 0;">
                         {counts[status]}
                     </div>
-                    <div style="font-size:0.75rem;opacity:0.6;">
+                    <div class="lyf-sublabel" style="opacity:0.6;">
                         {counts[status] / max(n_total, 1) * 100:.0f}% des paires
                     </div>
                 </div>

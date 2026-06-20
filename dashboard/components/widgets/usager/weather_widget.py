@@ -74,8 +74,8 @@ def render_weather_widget(weather: dict | None = None) -> None:
         <div class="lyonflow-card" style="display:flex;align-items:center;gap:1rem;">
             <div style="font-size:2.5rem;">{icon}</div>
             <div style="flex:1;">
-                <div style="font-size:1.4rem;font-weight:600;">{temp}°C · {cond}</div>
-                <div style="font-size:0.85rem;opacity:0.7;">
+                <div class="lyf-value" style="font-weight:600;">{temp}°C · {cond}</div>
+                <div class="lyf-detail" style="opacity:0.7;">
                     Pluie {rain}mm/h · Vent {wind} km/h
                 </div>
             </div>
@@ -96,7 +96,7 @@ def render_weather_widget(weather: dict | None = None) -> None:
                 st.markdown(
                     f"""
                     <div class="lyonflow-card" style="text-align:center;padding:0.5rem;">
-                        <div style="font-size:0.75rem;opacity:0.6;">{h.get("hour")}h</div>
+                        <div class="lyf-sublabel" style="opacity:0.6;">{h.get("hour")}h</div>
                         <div style="font-size:1.5rem;">{h.get("icon", "")}</div>
                         <div style="font-size:0.9rem;font-weight:600;">{h.get("temp_c", 0)}°</div>
                     </div>

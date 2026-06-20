@@ -63,15 +63,14 @@ def render_cause_analysis(segment: dict | None = None) -> None:
     st.markdown(
         f"""
         <div class="lyonflow-card" style="border-left:4px solid {color};">
-            <div style="font-size:0.85rem;opacity:0.7;">Analyse causale</div>
+            <div class="lyf-detail" style="opacity:0.7;">Analyse causale</div>
             <div style="font-size:1.1rem;font-weight:600;margin:0.3rem 0;">
                 {line} — {seg_name} · {delay} min de retard
             </div>
             <div style="margin-top:0.6rem;font-size:0.9rem;">
                 <b>Cause identifiée :</b> {cause}
             </div>
-            <div style="margin-top:0.6rem;padding:0.6rem;background:{color}22;
-                        border-radius:4px;font-size:0.85rem;">
+            <div class="lyf-detail" style="margin-top:0.6rem;padding:0.6rem;background:{color}22;border-radius:4px;">
                 {recommendation_html}
             </div>
         </div>

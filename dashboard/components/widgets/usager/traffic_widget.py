@@ -43,8 +43,8 @@ def render_traffic_widget(traffic: dict | None = None) -> None:
         st.markdown(
             f"""
             <div style="padding:0.5rem 0;">
-                <div style="font-size:0.75rem;opacity:0.6;">État du trafic</div>
-                <div style="font-size:1.3rem;font-weight:600;color:{level_color};">
+                <div class="lyf-sublabel" style="opacity:0.6;">État du trafic</div>
+                <div class="lyf-value" style="font-weight:600;color:{level_color};">
                     {level}
                 </div>
             </div>
@@ -62,9 +62,9 @@ def render_traffic_widget(traffic: dict | None = None) -> None:
         st.markdown(
             f"""
             <div class="lyonflow-card" style="text-align:center;padding:1rem;">
-                <div style="font-size:0.85rem;opacity:0.6;">H+1h</div>
+                <div class="lyf-detail" style="opacity:0.6;">H+1h</div>
                 <div style="font-size:1.6rem;font-weight:600;">{p.get("average_speed_kmh", 0)} km/h</div>
-                <div style="font-size:0.95rem;">{p.get("congestion_level", "—")}</div>
+                <div class="lyf-label">{p.get("congestion_level", "—")}</div>
             </div>
             """,
             unsafe_allow_html=True,

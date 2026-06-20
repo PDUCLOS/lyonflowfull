@@ -6,6 +6,7 @@ import streamlit as st
 
 from dashboard.components.auto_refresh import setup_auto_refresh
 from dashboard.components.data_status import render_data_status_banner
+from dashboard.components.deferred_widget import deferred_render
 from dashboard.components.navigation import render_sidebar_navigation
 from dashboard.components.persona_guard import apply_persona_guard
 from dashboard.components.theme import inject_theme
@@ -85,15 +86,27 @@ st.markdown("---")
 # Sprint 15+ (2026-06-19) — Axe 3 du SPEC_OPTIMISATION_INTERDEPENDANCES
 # Corrélation bus × trafic SPATIALISÉE (JOIN par zone 0.001° ≈ 100 m).
 # Coexiste avec la matrice globale (Option B, non-breaking).
-st.markdown("##### Corrélation bus × trafic spatialisée (JOIN zone ≈ 100 m)")
-render_bus_traffic_spatial(line_id=target_line)
+# Sprint 15+ audit (P0-1) : button-gate pour éviter re-render à chaque
+# auto-refresh 30s (coût estimé 0.5-2s par widget).
+deferred_render(
+    "bus_traffic_spatial",
+    "Charger la corrélation spatiale bus × trafic",
+    render_bus_traffic_spatial,
+    line_id=target_line,
+    button_icon="🚌",
+)
 
 st.markdown("---")
 
 # Sprint 13+ (2026-06-18) — Cross-validation TomTom ↔ Grand Lyon
 # Détecte les capteurs HS (delta > 20 km/h vs source indépendante GPS flottes).
-st.markdown("##### Cohérence TomTom × Grand Lyon (cross-validation sources)")
-render_coherence_scatter()
+# Sprint 15+ audit (P0-1) : button-gate, 2 requêtes PostGIS + 3 charts Plotly.
+deferred_render(
+    "coherence_scatter",
+    "Charger la cohérence TomTom × Grand Lyon",
+    render_coherence_scatter,
+    button_icon="🎯",
+)
 
 st.markdown("---")
 
@@ -101,8 +114,13 @@ st.markdown("---")
 # Grille multimodale 0.01° (trafic + TCL + Vélov + météo fusionnés) — carte
 # chaleur avec score 0-10 et diagnostic dominant par cellule. Vue
 # gold.mv_multimodal_grid (migration 17), refresh DAG */10 min.
-st.markdown("##### Vue multimodale grille 0.01° (trafic + TCL + Vélov + météo)")
-render_multimodal_heatmap()
+# Sprint 15+ audit (P0-1) : button-gate, le widget le plus lourd (Folium HTML).
+deferred_render(
+    "multimodal_heatmap",
+    "Charger la vue multimodale grille 0.01°",
+    render_multimodal_heatmap,
+    button_icon="🌐",
+)
 
 st.caption(
     "Corrélation bus × trafic · Données : SIRI Lite + boucles Grand Lyon. "

@@ -44,11 +44,11 @@ if not is_model_monitoring_visible():
                     border:1px dashed #5C6BC0;border-radius:8px;padding:1rem;margin:0.5rem 0;">
             <div style="font-size:0.8rem;opacity:0.8;text-transform:uppercase;
                         letter-spacing:1px;">🟡 Sprint 9 — Dashboard préparé, non activé</div>
-            <div style="font-size:0.95rem;margin:0.5rem 0;">
+            <div class="lyf-label" style="margin:0.5rem 0;">
                 Le dashboard Model Monitoring est <b>préparé</b> mais
                 <b>désactivé</b> par défaut.
             </div>
-            <div style="font-size:0.85rem;opacity:0.7;">
+            <div class="lyf-detail" style="opacity:0.7;">
                 Pour l'activer : set <code>LYONFLOW_DASHBOARD_MODEL_MONITORING=true</code>
                 dans .env, puis redémarrer Streamlit. Le dashboard bascule
                 alors en mode live MLflow (registry + drift + GNN map).

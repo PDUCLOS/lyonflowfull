@@ -47,13 +47,13 @@ def render_delta_kpis(avant: dict, apres: dict) -> None:
                 f"""
                 <div style="background:var(--bg-card);border:1px solid var(--border-card);
                             border-radius:8px;padding:0.8rem;text-align:center;">
-                    <div style="font-size:0.7rem;opacity:0.6;text-transform:uppercase;">
+                    <div class="lyf-detail" style="opacity:0.6;text-transform:uppercase;">
                         {label}
                     </div>
-                    <div style="font-size:1.4rem;font-weight:700;margin:0.3rem 0;">
+                    <div class="lyf-value" style="font-weight:700;margin:0.3rem 0;">
                         {apres_str}
                     </div>
-                    <div style="font-size:0.85rem;font-weight:600;color:{delta_color};">
+                    <div class="lyf-detail" style="font-weight:600;color:{delta_color};">
                         {delta_pct:+.1f}%
                     </div>
                 </div>

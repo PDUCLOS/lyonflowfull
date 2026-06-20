@@ -57,12 +57,12 @@ def render_cost_estimate(zone: str | None = None) -> None:
     st.markdown(
         f"""
         <div class="lyonflow-card" style="text-align:center;padding:1.5rem;">
-            <div style="font-size:0.85rem;opacity:0.6;">Coût estimé total</div>
+            <div class="lyf-detail" style="opacity:0.6;">Coût estimé total</div>
             <div style="font-size:2.5rem;font-weight:700;color:var(--persona-elu);margin:0.3rem 0;">
                 {cout_total / 1_000_000:.1f} M€
             </div>
-            <div style="font-size:0.85rem;opacity:0.7;">{cout_unite}</div>
-            <div style="font-size:0.75rem;opacity:0.5;margin-top:0.5rem;">
+            <div class="lyf-detail" style="opacity:0.7;">{cout_unite}</div>
+            <div class="lyf-sublabel" style="opacity:0.5;margin-top:0.5rem;">
                 Zone : {zone} · Type : {type_amenagement}
             </div>
         </div>

@@ -267,10 +267,7 @@ def _render_segments(itinerary: Itinerary) -> None:
                 <div style="display:flex;align-items:center;gap:0.8rem;
                             padding:0.5rem;background:var(--bg-card);border-radius:4px;
                             margin:0.3rem 0;border-left:4px solid {color};">
-                    <div style="background:{color};color:white;width:24px;height:24px;
-                                border-radius:50%;display:flex;align-items:center;
-                                justify-content:center;font-weight:600;font-size:0.85rem;
-                                flex-shrink:0;">
+                    <div class="lyf-detail" style="background:{color};color:white;width:24px;height:24px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:600;flex-shrink:0;">
                         {i}
                     </div>
                     <div style="flex:1;">

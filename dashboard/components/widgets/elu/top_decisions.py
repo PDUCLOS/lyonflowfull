@@ -39,14 +39,13 @@ def render_top_decisions(n: int = 5) -> None:
                     </div>
                     <div style="flex:1;">
                         <div style="font-weight:600;font-size:1rem;">{zone}</div>
-                        <div style="font-size:0.85rem;opacity:0.7;margin:2px 0;">
+                        <div class="lyf-detail" style="opacity:0.7;margin:2px 0;">
                             Lignes : {lignes} · {voyageurs:,} voyageurs/jour
                         </div>
                         <div style="font-size:0.9rem;margin-top:0.4rem;">
                             💡 <b>{b.get("description", "—")}</b>
                         </div>
-                        <div style="display:flex;gap:1.2rem;margin-top:0.5rem;
-                                    font-size:0.85rem;">
+                        <div class="lyf-detail" style="display:flex;gap:1.2rem;margin-top:0.5rem;">
                             <span>⏱ <b>{gain} min</b> gagnées</span>
                             <span>💰 <b>{cout} M€</b></span>
                             <span>📅 <b>{delai} mois</b> travaux</span>

@@ -43,10 +43,19 @@ st.markdown("---")
 q1, q2 = st.columns(2)
 with q1:
     st.markdown("##### 🗺️ NW — Carte live")
-    tab_bus, tab_traffic = st.tabs(["🚌 Bus GPS", "🚗 Charge trafic"])
-    with tab_bus:
+    # Sprint 15+ audit (P0-2) : st.tabs ne diffère PAS le calcul — les 2 maps
+    # pydeck s'exécutaient en séquentiel à chaque auto-refresh 30s. Switch
+    # vers st.radio → 1 seul rendu par cycle, gain ~50% sur ce quadrant.
+    map_choice = st.radio(
+        "Carte",
+        ["🚌 Bus GPS", "🚗 Charge trafic"],
+        horizontal=True,
+        key="pro1_map_choice",
+        label_visibility="collapsed",
+    )
+    if map_choice == "🚌 Bus GPS":
         render_network_map(height=320)
-    with tab_traffic:
+    else:
         render_traffic_map(
             height=320,
             horizon_default=60,  # Sprint 8+ : focus H+1h
@@ -74,10 +83,10 @@ with q2:
                     <div style="font-weight:600;font-size:0.9rem;">
                         🚦 [{line_ref}] {alert.get("title", "Alerte")}
                     </div>
-                    <div style="font-size:0.75rem;opacity:0.7;margin-top:0.2rem;">
+                    <div class="lyf-sublabel" style="opacity:0.7;margin-top:0.2rem;">
                         {alert.get("description", "")}
                     </div>
-                    <div style="font-size:0.75rem;color:var(--status-ok);margin-top:0.3rem;">
+                    <div class="lyf-sublabel" style="color:var(--status-ok);margin-top:0.3rem;">
                         💡 {alert.get("action", "—")}
                     </div>
                 </div>
@@ -105,9 +114,9 @@ with q4:
             roi = b.get("roi_mois", 0)
             st.markdown(
                 f"""
-                <div class="lyonflow-card-flat" style="padding:0.5rem 0.7rem;font-size:0.85rem;">
+                <div class="lyonflow-card-flat lyf-detail" style="padding:0.5rem 0.7rem;">
                     <div style="font-weight:600;">#{rank} {zone}</div>
-                    <div style="opacity:0.7;font-size:0.75rem;">
+                    <div class="lyf-sublabel" style="opacity:0.7;">
                         {len(lines)} lignes · {voy:,} voy/j · ROI {roi} mois
                     </div>
                 </div>

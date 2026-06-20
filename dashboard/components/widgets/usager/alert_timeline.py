@@ -45,7 +45,7 @@ def render_alert_timeline(alerts: list) -> None:
             f"""
             <div style="display:flex;gap:0.8rem;align-items:flex-start;margin:0.5rem 0;">
                 <div style="text-align:right;min-width:50px;">
-                    <div style="font-size:0.85rem;font-weight:600;color:{color};">{time_str}</div>
+                    <div class="lyf-detail" style="font-weight:600;color:{color};">{time_str}</div>
                 </div>
                 <div style="background:{color};width:8px;height:8px;border-radius:50%;
                             margin-top:6px;flex-shrink:0;"></div>

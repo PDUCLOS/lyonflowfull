@@ -36,8 +36,8 @@ def render_alert_ticker(alerts: list | None = None) -> None:
         }.get(sev, COLORS["text_muted"])
         icon = a.get("line_icon", "⚠️")
         items.append(
-            f'<span style="background:{color};color:white;padding:2px 10px;'
-            f'border-radius:10px;margin-right:12px;font-size:0.85rem;">'
+            f'<span class="lyf-detail" style="background:{color};color:white;padding:2px 10px;'
+            f'border-radius:10px;margin-right:12px;">'
             f"{icon} {a.get('title', '—')}</span>"
         )
 

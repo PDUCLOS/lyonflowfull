@@ -278,12 +278,11 @@ def render_health_panel() -> None:
                 f"""
                 <div style="background:var(--bg-card);border:1px solid var(--border-card);border-left:4px solid {color};
                             border-radius:6px;padding:0.6rem;margin:0.3rem 0;">
-                    <div style="font-size:0.75rem;opacity:0.7;text-transform:uppercase;
-                                letter-spacing:0.5px;">{safe_name}</div>
+                    <div class="lyf-sublabel" style="opacity:0.7;text-transform:uppercase;letter-spacing:0.5px;">{safe_name}</div>
                     <div style="font-size:1.1rem;font-weight:600;margin-top:0.2rem;">
                         {icon} {status.upper()}
                     </div>
-                    <div style="font-size:0.75rem;opacity:0.7;margin-top:0.2rem;">
+                    <div class="lyf-sublabel" style="opacity:0.7;margin-top:0.2rem;">
                         {safe_details}
                     </div>
                 </div>

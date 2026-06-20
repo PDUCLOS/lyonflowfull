@@ -139,7 +139,7 @@ def _lieu_popup_html(lieu: dict) -> str:
         <div style='font-size:1rem;font-weight:600;'>
             {icon} {lieu["lieu_name"]}
         </div>
-        <div style='font-size:0.75rem;opacity:0.7;
+        <div class="lyf-sublabel" style='opacity:0.7;
                     text-transform:uppercase;letter-spacing:0.5px;'>
             {lieu["lieu_type"]}
         </div>
@@ -156,7 +156,7 @@ def _borne_popup_html(lieu: dict, b: dict) -> str:
         <div style='font-size:0.85rem;font-weight:600;'>
             🚲 {b["velov_name"]}
         </div>
-        <div style='font-size:0.7rem;opacity:0.7;margin-top:0.2rem;'>
+        <div class="lyf-sublabel" style='opacity:0.7;margin-top:0.2rem;'>
             Relié à <b>{lieu["lieu_name"]}</b>
         </div>
         <div style='margin-top:0.4rem;font-size:0.85rem;'>

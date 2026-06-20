@@ -80,7 +80,7 @@ def render_velov_widget(stations: list | None = None, max_stations: int = 3) -> 
                 pred_html = f'<span style="color:{COLORS["status_warning"]};">↘ {pred} ({delta})</span>'
             else:
                 pred_html = f'<span style="opacity:0.7;">→ {pred}</span>'
-            pred_line = f'<div style="font-size:0.7rem;opacity:0.8;margin-top:0.3rem;">H+1h : {pred_html}</div>'
+            pred_line = f'<div class="lyf-sublabel" style="opacity:0.8;margin-top:0.3rem;">H+1h : {pred_html}</div>'
         else:
             pred_line = ""
 
@@ -91,15 +91,15 @@ def render_velov_widget(stations: list | None = None, max_stations: int = 3) -> 
             st.html(
                 f"""
                 <div class="lyonflow-card" style="border-left:4px solid {color};">
-                    <div style="font-size:0.85rem;font-weight:600;">{s.get("name", "—")}</div>
+                    <div class="lyf-detail" style="font-weight:600;">{s.get("name", "—")}</div>
                     <div style="font-size:1.8rem;font-weight:700;margin:0.4rem 0;color:{color};">
                         🚲 {bikes}
                     </div>
-                    <div style="font-size:0.75rem;opacity:0.7;">
+                    <div class="lyf-sublabel" style="opacity:0.7;">
                         {stands} places libres · {status}
                     </div>
                     {pred_line}
-                    <div style="font-size:0.7rem;opacity:0.5;margin-top:0.3rem;">
+                    <div class="lyf-sublabel" style="opacity:0.5;margin-top:0.3rem;">
                         {s.get("distance_m", 0)}m
                     </div>
                 </div>

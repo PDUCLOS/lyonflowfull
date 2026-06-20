@@ -98,11 +98,11 @@ def render_correlation_matrix(line_id: str | None = None) -> None:
                     f"""
                     <div style="background:var(--bg-card);border-left:4px solid {color};
                                 border-radius:6px;padding:0.8rem;margin:0.4rem 0;">
-                        <div style="font-size:0.85rem;opacity:0.8;">{title}</div>
+                        <div class="lyf-detail" style="opacity:0.8;">{title}</div>
                         <div style="font-size:1.8rem;font-weight:700;margin:0.2rem 0;">
                             {n} <span style="font-size:0.8rem;font-weight:400;">segments</span>
                         </div>
-                        <div style="font-size:0.75rem;opacity:0.6;">{sub}</div>
+                        <div class="lyf-sublabel" style="opacity:0.6;">{sub}</div>
                     </div>
                     """,
                     unsafe_allow_html=True,

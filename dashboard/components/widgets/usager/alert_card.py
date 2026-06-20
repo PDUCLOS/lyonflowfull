@@ -27,7 +27,7 @@ def render_alert_card(alert: dict) -> None:
                     <div style="font-weight:600;font-size:0.98rem;">
                         {alert.get("title", "—")}
                     </div>
-                    <div style="font-size:0.85rem;opacity:0.7;margin-top:2px;">
+                    <div class="lyf-detail" style="opacity:0.7;margin-top:2px;">
                         {alert.get("description", "")}
                     </div>
                 </div>

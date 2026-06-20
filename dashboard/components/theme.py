@@ -272,6 +272,35 @@ def inject_theme() -> None:
         margin-top: 2px;
     }}
 
+    /* Sprint 15+ audit — Classes utilitaires de typographie.
+       Objectif : remplacer les `style="font-size:0.7Xrem"` inline dans
+       23+ widgets. Le `!important` est nécessaire car le style inline
+       a une spécificité CSS supérieure à toute règle externe.
+       Préfixe `lyf-` (LyonFlow) pour éviter conflit avec `lyonflow-*`. */
+    .lyf-sublabel {{
+        font-size: 0.88rem !important;
+        opacity: 0.7;
+        font-weight: 400;
+    }}
+    .lyf-label {{
+        font-size: 0.95rem !important;
+        font-weight: 500;
+    }}
+    .lyf-value {{
+        font-size: 1.3rem !important;
+        font-weight: 700;
+    }}
+    .lyf-badge {{
+        font-size: 0.82rem !important;
+        padding: 0.15rem 0.5rem;
+        border-radius: 12px;
+        font-weight: 600;
+    }}
+    .lyf-detail {{
+        font-size: 0.85rem !important;
+        opacity: 0.65;
+    }}
+
     /* Badges */
     .lyonflow-badge {{
         display: inline-block;

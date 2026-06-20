@@ -69,8 +69,8 @@ if amgt:
                     f"""
                     <div style="background:#1A1D24;border:1px solid #E74C3C;border-left:4px solid #E74C3C;
                                 border-radius:6px;padding:0.6rem;text-align:center;">
-                        <div style="font-size:0.7rem;opacity:0.6;">{k.replace("_", " ").title()}</div>
-                        <div style="font-size:1.4rem;font-weight:700;color:#E74C3C;margin-top:0.3rem;">
+                        <div class="lyf-sublabel" style="opacity:0.6;">{k.replace("_", " ").title()}</div>
+                        <div class="lyf-value" style="font-weight:700;color:#E74C3C;margin-top:0.3rem;">
                             {v_str}
                         </div>
                     </div>
@@ -98,8 +98,8 @@ if amgt:
                     f"""
                     <div style="background:#1A1D24;border:1px solid #4CAF50;border-left:4px solid #4CAF50;
                                 border-radius:6px;padding:0.6rem;text-align:center;">
-                        <div style="font-size:0.7rem;opacity:0.6;">{k.replace("_", " ").title()}</div>
-                        <div style="font-size:1.4rem;font-weight:700;color:#4CAF50;margin-top:0.3rem;">
+                        <div class="lyf-sublabel" style="opacity:0.6;">{k.replace("_", " ").title()}</div>
+                        <div class="lyf-value" style="font-weight:700;color:#4CAF50;margin-top:0.3rem;">
                             {v_str}
                         </div>
                     </div>

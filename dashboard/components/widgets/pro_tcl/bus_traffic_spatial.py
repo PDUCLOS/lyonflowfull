@@ -85,12 +85,12 @@ def _render_kpi_banner(counts: dict[str, int], n_total: int) -> None:
                 f"""
                 <div style="background:var(--bg-card);border-left:4px solid {color};
                             border-radius:6px;padding:0.8rem;margin:0.4rem 0;">
-                    <div style="font-size:0.85rem;opacity:0.8;">{label}</div>
+                    <div class="lyf-detail" style="opacity:0.8;">{label}</div>
                     <div style="font-size:1.8rem;font-weight:700;margin:0.2rem 0;">
                         {n} <span style="font-size:0.8rem;font-weight:400;">
                         zones</span>
                     </div>
-                    <div style="font-size:0.75rem;opacity:0.6;">
+                    <div class="lyf-sublabel" style="opacity:0.6;">
                         {pct:.0f}% · {sub}
                     </div>
                 </div>

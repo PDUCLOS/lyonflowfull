@@ -93,7 +93,7 @@ def _render_cards(personas: list[dict], current: str) -> None:
                             {p["description"]}
                         </div>
                     </div>
-                    <div style="font-size:0.75rem;opacity:0.6;">
+                    <div class="lyf-sublabel" style="opacity:0.6;">
                         {("🔒 Protégé" if p["auth_required"] else "🔓 Accès libre")}
                         {"  •  ✅ Actif" if is_active else ""}
                     </div>

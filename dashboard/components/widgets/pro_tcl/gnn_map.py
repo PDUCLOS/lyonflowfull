@@ -275,7 +275,7 @@ def render_gnn_map_section() -> None:
                         border:1px dashed var(--persona-elu-accent);border-radius:8px;padding:1rem;margin:0.5rem 0;">
                 <div style="font-size:0.8rem;opacity:0.8;text-transform:uppercase;
                             letter-spacing:1px;">🟡 Carte désactivée</div>
-                <div style="font-size:0.95rem;margin:0.5rem 0;">
+                <div class="lyf-label" style="margin:0.5rem 0;">
                     Set <code>LYONFLOW_DASHBOARD_GNN_MAP=true</code> dans .env pour activer.
                 </div>
             </div>

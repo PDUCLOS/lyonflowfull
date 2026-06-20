@@ -46,8 +46,7 @@ def render_executive_summary() -> None:
             <div style="font-size:0.92rem;line-height:1.55;opacity:0.9;">
                 {tendance_text}
             </div>
-            <div style="margin-top:1rem;display:grid;grid-template-columns:repeat(5,1fr);
-                        gap:0.6rem;font-size:0.82rem;">
+            <div class="lyf-badge" style="margin-top:1rem;display:grid;grid-template-columns:repeat(5,1fr);gap:0.6rem;">
                 <div><b>{pm}%</b><br><span style="opacity:0.65;">part modale TC</span></div>
                 <div><b>{ponc}%</b><br><span style="opacity:0.65;">ponctualité</span></div>
                 <div><b>{co2:,}t</b><br><span style="opacity:0.65;">CO₂ évité</span></div>

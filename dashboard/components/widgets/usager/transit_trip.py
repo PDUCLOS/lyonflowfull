@@ -91,19 +91,13 @@ def _render_transit_banner(itin: dict) -> None:
 
     st.markdown(
         f"""
-        <div style="background:var(--bg-card);padding:0.8rem 1rem;border-radius:6px;
-                    border-left:4px solid #4CAF50;display:flex;align-items:center;
-                    gap:0.6rem;font-size:0.95rem;margin-bottom:1rem;flex-wrap:wrap;">
-            <span style="background:#4CAF50;color:white;padding:0.2rem 0.6rem;
-                         border-radius:12px;font-size:0.75rem;font-weight:600;">🚌 DÉPART</span>
+        <div class="lyf-label" style="background:var(--bg-card);padding:0.8rem 1rem;border-radius:6px;border-left:4px solid #4CAF50;display:flex;align-items:center;gap:0.6rem;margin-bottom:1rem;flex-wrap:wrap;">
+            <span class="lyf-sublabel" style="background:#4CAF50;color:white;padding:0.2rem 0.6rem;border-radius:12px;font-weight:600;">🚌 DÉPART</span>
             <span style="font-weight:600;">{itin["origin_label"]}</span>
             <span style="opacity:0.4;margin:0 0.5rem;">→</span>
-            <span style="background:#F44336;color:white;padding:0.2rem 0.6rem;
-                         border-radius:12px;font-size:0.75rem;font-weight:600;">🔴 ARRIVÉE</span>
+            <span class="lyf-sublabel" style="background:#F44336;color:white;padding:0.2rem 0.6rem;border-radius:12px;font-weight:600;">🔴 ARRIVÉE</span>
             <span style="font-weight:600;">{itin["destination_label"]}</span>
-            <span style="margin-left:auto;background:{mode_color};color:white;
-                         padding:0.2rem 0.6rem;border-radius:12px;
-                         font-size:0.7rem;font-weight:600;">{mode_label}</span>
+            <span class="lyf-sublabel" style="margin-left:auto;background:{mode_color};color:white;padding:0.2rem 0.6rem;border-radius:12px;font-weight:600;">{mode_label}</span>
         </div>
         """,
         unsafe_allow_html=True,
@@ -172,14 +166,14 @@ def _render_transit_segments(itin: dict) -> None:
                 <div style="flex:1;">
                     <div style="font-weight:700;font-size:1.05rem;">
                         {seg.get("line_label", "?")}
-                        <span style="opacity:0.5;font-weight:400;font-size:0.85rem;">
+                        <span class="lyf-detail" style="opacity:0.5;font-weight:400;">
                             ~{seg.get("duration_estimate_min", 0):.0f} min
                         </span>
                     </div>
-                    <div style="font-size:0.85rem;opacity:0.85;margin-top:0.1rem;">
+                    <div class="lyf-detail" style="opacity:0.85;margin-top:0.1rem;">
                         <b>{seg.get("stop_origin", "?")}</b> → <b>{seg.get("stop_dest", "?")}</b>
                     </div>
-                    <div style="font-size:0.75rem;opacity:0.65;margin-top:0.25rem;">
+                    <div class="lyf-sublabel" style="opacity:0.65;margin-top:0.25rem;">
                         ⏱ Fréquence : ~{seg.get("cadence_min", 0):.0f} min
                         · ⏳ Attente : ~{seg.get("wait_estimate_min", 0):.0f} min
                         {delay_html}

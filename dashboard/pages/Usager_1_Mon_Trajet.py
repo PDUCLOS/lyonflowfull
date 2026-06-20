@@ -21,6 +21,8 @@ from dashboard.components.widgets.common import render_traffic_map_compact
 from dashboard.components.widgets.usager import (
     render_itinerary_result,
     render_lieux_velov_map,
+    render_mode_comparison,
+    render_mode_summary,
     render_search_bar,
     render_traffic_widget,
     render_transit_trip,
@@ -31,6 +33,7 @@ from dashboard.components.widgets.usager import (
 )
 from src.config import get_settings
 from src.data.exceptions import DashboardDataError
+from src.routing.eco_calculator import calculate_impact
 
 st.set_page_config(
     page_title="Mon trajet — LyonFlowFull",
@@ -80,6 +83,74 @@ if st.session_state.get("results_loaded"):
 
     origin_coords = _resolve_lieu(search["origin"])
     dest_coords = _resolve_lieu(search["destination"])
+
+    # ── Comparateur multimodal (Sprint 15+ audit P0-3) ──────────────────
+    # Affiche un comparatif 3 modes (tc/voiture/velov) + winner card
+    # AVANT les détails par mode. Les durées sont estimées via vitesses
+    # moyennes Lyon (approximation documentée — calcul exact quand les
+    # trajets détaillés sont calculés plus bas). L'audit AUDIT_DASHBOARD_SPRINT15
+    # pointait que `mode_comparison` et `mode_summary` étaient implémentés
+    # mais jamais appelés — c'est corrigé ici.
+    if origin_coords and dest_coords and len(modes) >= 2:
+        import math
+
+        R_KM = 6371.0
+        lat1, lon1 = math.radians(origin_coords[1]), math.radians(origin_coords[0])
+        lat2, lon2 = math.radians(dest_coords[1]), math.radians(dest_coords[0])
+        dlat = lat2 - lat1
+        dlon = lon2 - lon1
+        a = math.sin(dlat / 2) ** 2 + math.cos(lat1) * math.cos(lat2) * math.sin(dlon / 2) ** 2
+        dist_km = 2 * R_KM * math.asin(math.sqrt(a))
+        # Vitesses moyennes Lyon (hypothèses explicites, approximation
+        # honnête — velov 12, tc 18 mélange métro/tram/bus, voiture 25 HP)
+        speed_kmh = {"velov": 12.0, "tc": 18.0, "voiture": 25.0}
+        # Mapping display name (search_bar) → key (mode_comparison)
+        mode_to_key = {
+            "Vélov": "velov",
+            "Voiture": "voiture",
+            "Transport en commun": "tc",
+        }
+        # Construit results pour les modes actifs et faisables
+        results: dict[str, dict] = {}
+        for display_name, key in mode_to_key.items():
+            if not any(display_name in m for m in modes):
+                continue
+            v = speed_kmh[key]
+            dur_min = (dist_km / v) * 60.0
+            impact = calculate_impact(
+                mode=key,
+                distance_km=dist_km,
+                duration_min=dur_min,
+                is_congested=key == "voiture",  # pénalité potentielle HP
+            )
+            results[key] = {
+                "duration_min": dur_min,
+                "distance_km": dist_km,
+                "impact": impact,
+                "feasible": True,
+                "source": "estimated",  # approximation vitesses moyennes
+            }
+        if results:
+            st.markdown("---")
+            st.markdown("### ⚖️ Comparaison des modes")
+            render_mode_comparison(
+                results=results,
+                critere=search.get("critere", "temps"),
+                origin=search["origin"],
+                destination=search["destination"],
+            )
+            # Summary cards (1 par mode actif)
+            st.markdown("#### 📊 Détail par mode")
+            n_modes = len(results)
+            cols = st.columns(min(n_modes, 3))
+            for col, (key, r) in zip(cols, results.items()):
+                with col:
+                    render_mode_summary(
+                        mode=key,
+                        duration_min=r["duration_min"],
+                        distance_km=r["distance_km"],
+                        impact=r["impact"],
+                    )
 
     # ── Contexte : météo (toujours) + Vélov destination (si mode actif) ──
     st.markdown("##### 🌤 Conditions actuelles")
@@ -158,15 +229,11 @@ if st.session_state.get("results_loaded"):
         with itin_col1:
             st.markdown(
                 f"""
-                <div style="background:var(--bg-card);padding:0.8rem 1rem;border-radius:6px;
-                            border-left:4px solid #4CAF50;display:flex;align-items:center;
-                            gap:0.6rem;font-size:0.95rem;">
-                    <span style="background:#4CAF50;color:white;padding:0.2rem 0.6rem;
-                                 border-radius:12px;font-size:0.75rem;font-weight:600;">🟢 DÉPART</span>
+                <div class="lyf-label" style="background:var(--bg-card);padding:0.8rem 1rem;border-radius:6px;border-left:4px solid #4CAF50;display:flex;align-items:center;gap:0.6rem;">
+                    <span class="lyf-sublabel" style="background:#4CAF50;color:white;padding:0.2rem 0.6rem;border-radius:12px;font-weight:600;">🟢 DÉPART</span>
                     <span style="font-weight:600;">{search["origin"]}</span>
                     <span style="opacity:0.4;margin:0 0.5rem;">→</span>
-                    <span style="background:#F44336;color:white;padding:0.2rem 0.6rem;
-                                 border-radius:12px;font-size:0.75rem;font-weight:600;">🔴 ARRIVÉE</span>
+                    <span class="lyf-sublabel" style="background:#F44336;color:white;padding:0.2rem 0.6rem;border-radius:12px;font-weight:600;">🔴 ARRIVÉE</span>
                     <span style="font-weight:600;">{search["destination"]}</span>
                 </div>
                 """,

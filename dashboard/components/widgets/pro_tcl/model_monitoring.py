@@ -163,8 +163,8 @@ def _render_model_registry_table(models: list[dict]) -> None:
                 m.get("stage", ""), COLORS["text_muted"]
             )
             st.markdown(
-                f'<span style="background:{stage_color};color:white;padding:2px 8px;'
-                f'border-radius:8px;font-size:0.75rem;">{m.get("stage", "—")}</span>',
+                f'<span class="lyf-sublabel" style="background:{stage_color};color:white;padding:2px 8px;'
+                f'border-radius:8px;">{m.get("stage", "—")}</span>',
                 unsafe_allow_html=True,
             )
         with cols[3]:
@@ -502,7 +502,7 @@ def render_drift_panel() -> None:
         <div style="background:var(--bg-card);border:1px solid var(--border-card);border-left:4px solid {color};
                     border-radius:6px;padding:0.7rem;margin:0.4rem 0;">
             <div style="display:flex;align-items:center;gap:0.6rem;">
-                <div style="font-size:1.3rem;">{icon}</div>
+                <div class="lyf-value">{icon}</div>
                 <div style="flex:1;">
                     <div style="font-weight:600;">XGBoost Speed H+1h</div>
                     <div style="font-size:0.8rem;opacity:0.7;">

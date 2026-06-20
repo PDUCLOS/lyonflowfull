@@ -56,9 +56,8 @@ def render_news_section() -> None:
             f"""
             <div style="background:var(--bg-card);border-left:4px solid {ann["color"]};
                         border-radius:8px;padding:0.8rem 1rem;margin:0.5rem 0;">
-                <div style="font-size:0.7rem;opacity:0.6;text-transform:uppercase;
-                            letter-spacing:0.5px;">{ann["type"]} {ann["icon"]}</div>
-                <div style="margin-top:0.3rem;font-size:0.95rem;line-height:1.5;">
+                <div class="lyf-sublabel" style="opacity:0.6;text-transform:uppercase;letter-spacing:0.5px;">{ann["type"]} {ann["icon"]}</div>
+                <div class="lyf-label" style="margin-top:0.3rem;line-height:1.5;">
                     {ann["text"]}
                 </div>
             </div>

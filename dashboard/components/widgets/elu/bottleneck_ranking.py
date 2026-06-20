@@ -48,8 +48,7 @@ def render_bottleneck_ranking(top_n: int | None = None) -> None:
         st.markdown(
             f"""
             <div class="lyonflow-card" style="padding:0.7rem 1rem;margin:0.4rem 0;">
-                <div style="display:grid;grid-template-columns:50px 2fr 1fr 1fr 1fr 1fr 1fr;
-                            gap:0.8rem;align-items:center;font-size:0.85rem;">
+                <div class="lyf-detail" style="display:grid;grid-template-columns:50px 2fr 1fr 1fr 1fr 1fr 1fr;gap:0.8rem;align-items:center;">
                     <div style="background:var(--persona-elu);color:white;border-radius:50%;width:36px;
                                 height:36px;display:flex;align-items:center;justify-content:center;
                                 font-weight:700;">
@@ -57,22 +56,22 @@ def render_bottleneck_ranking(top_n: int | None = None) -> None:
                     </div>
                     <div>
                         <div style="font-weight:600;">{zone}</div>
-                        <div style="font-size:0.75rem;opacity:0.6;">{lignes}</div>
+                        <div class="lyf-detail" style="opacity:0.6;">{lignes}</div>
                     </div>
                     <div style="text-align:center;">
-                        <div style="font-size:0.7rem;opacity:0.6;">Voyageurs/j</div>
+                        <div class="lyf-detail" style="opacity:0.6;">Voyageurs/j</div>
                         <div style="font-weight:600;">{voyageurs:,}</div>
                     </div>
                     <div style="text-align:center;">
-                        <div style="font-size:0.7rem;opacity:0.6;">Gain</div>
+                        <div class="lyf-detail" style="opacity:0.6;">Gain</div>
                         <div style="font-weight:600;color:var(--status-ok);">{gain} min</div>
                     </div>
                     <div style="text-align:center;">
-                        <div style="font-size:0.7rem;opacity:0.6;">Coût</div>
+                        <div class="lyf-detail" style="opacity:0.6;">Coût</div>
                         <div style="font-weight:600;">{cout_str}</div>
                     </div>
                     <div style="text-align:center;">
-                        <div style="font-size:0.7rem;opacity:0.6;">Délai</div>
+                        <div class="lyf-detail" style="opacity:0.6;">Délai</div>
                         <div style="font-weight:600;">{delai} mois</div>
                     </div>
                     <div style="text-align:center;color:{roi_color};font-weight:600;">

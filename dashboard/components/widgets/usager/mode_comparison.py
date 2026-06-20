@@ -70,15 +70,11 @@ def render_mode_comparison(
     if origin and destination:
         st.markdown(
             f"""
-            <div style="background:var(--bg-card);padding:0.7rem 1rem;border-radius:8px;
-                        border-left:4px solid {_WINNER_ACCENT};display:flex;align-items:center;
-                        gap:0.6rem;font-size:0.95rem;margin-bottom:1rem;flex-wrap:wrap;">
-                <span style="background:#4CAF50;color:white;padding:0.2rem 0.6rem;
-                             border-radius:12px;font-size:0.7rem;font-weight:600;">🟢 DÉPART</span>
+            <div class="lyf-label" style="background:var(--bg-card);padding:0.7rem 1rem;border-radius:8px;border-left:4px solid {_WINNER_ACCENT};display:flex;align-items:center;gap:0.6rem;margin-bottom:1rem;flex-wrap:wrap;">
+                <span class="lyf-sublabel" style="background:#4CAF50;color:white;padding:0.2rem 0.6rem;border-radius:12px;font-weight:600;">🟢 DÉPART</span>
                 <span style="font-weight:600;">{origin}</span>
                 <span style="opacity:0.4;margin:0 0.5rem;">→</span>
-                <span style="background:#F44336;color:white;padding:0.2rem 0.6rem;
-                             border-radius:12px;font-size:0.7rem;font-weight:600;">🔴 ARRIVÉE</span>
+                <span class="lyf-sublabel" style="background:#F44336;color:white;padding:0.2rem 0.6rem;border-radius:12px;font-weight:600;">🔴 ARRIVÉE</span>
                 <span style="font-weight:600;">{destination}</span>
                 <span style="margin-left:auto;opacity:0.7;font-size:0.8rem;">
                     Critère : <b>{"⏱️ Temps" if critere == "temps" else "💰 Coût"}</b>
@@ -150,13 +146,13 @@ def _render_mode_card(
             <div class="lyonflow-card"
                  style="border-left:4px solid {_UNAVAILABLE_ACCENT};opacity:0.55;
                         min-height:200px;display:flex;flex-direction:column;justify-content:center;">
-                <div style="font-size:1.4rem;font-weight:700;opacity:0.5;">
+                <div class="lyf-value" style="font-weight:700;opacity:0.5;">
                     {icon} {label}
                 </div>
-                <div style="font-size:0.85rem;opacity:0.6;margin-top:0.4rem;">
+                <div class="lyf-detail" style="opacity:0.6;margin-top:0.4rem;">
                     ⚠️ Indisponible pour ce trajet
                 </div>
-                <div style="font-size:0.7rem;opacity:0.5;margin-top:0.3rem;font-style:italic;">
+                <div class="lyf-sublabel" style="opacity:0.5;margin-top:0.3rem;font-style:italic;">
                     Source: {result.get("source", "?") if result else "aucune"}
                 </div>
             </div>
@@ -174,22 +170,22 @@ def _render_mode_card(
     # Card HTML
     accent = _WINNER_ACCENT if is_winner else _ALT_ACCENT
     winner_badge = (
-        f'<span style="background:{_WINNER_ACCENT};color:white;padding:0.25rem 0.7rem;'
-        f'border-radius:12px;font-size:0.7rem;font-weight:700;letter-spacing:0.5px;">'
+        f'<span class="lyf-sublabel" style="background:{_WINNER_ACCENT};color:white;padding:0.25rem 0.7rem;'
+        f'border-radius:12px;font-weight:700;letter-spacing:0.5px;">'
         f"🏆 RECOMMANDÉ</span>"
         if is_winner
         else ""
     )
-    score_html = f'<span style="opacity:0.6;font-size:0.7rem;">score: {score:.1f}</span>' if score is not None else ""
+    score_html = f'<span class="lyf-sublabel" style="opacity:0.6;">score: {score:.1f}</span>' if score is not None else ""
 
     calories_html = (
-        f'<div style="font-size:0.85rem;opacity:0.85;margin-top:0.3rem;">🔥 {calories} kcal</div>'
+        f'<div class="lyf-detail" style="opacity:0.85;margin-top:0.3rem;">🔥 {calories} kcal</div>'
         if mode_key == "velov"
         else ""
     )
 
     congested_html = (
-        f'<div style="font-size:0.75rem;color:{_WINNER_ACCENT};font-weight:600;margin-top:0.3rem;">'
+        f'<div class="lyf-sublabel" style="color:{_WINNER_ACCENT};font-weight:600;margin-top:0.3rem;">'
         f"⚠️ Trafic congestionné</div>"
         if mode_key == "voiture" and impact.get("is_congested")
         else ""
@@ -201,7 +197,7 @@ def _render_mode_card(
                     {"box-shadow:0 4px 16px rgba(76,175,80,0.25);" if is_winner else ""}">
             <div style="display:flex;justify-content:space-between;align-items:center;
                         gap:0.5rem;flex-wrap:wrap;">
-                <span style="font-size:1.3rem;font-weight:700;color:{color};">
+                <span class="lyf-value" style="font-weight:700;color:{color};">
                     {icon} {label}
                 </span>
                 {winner_badge}
@@ -210,7 +206,7 @@ def _render_mode_card(
                         color:{color};line-height:1.1;">
                 {duration:.0f} <span style="font-size:1rem;font-weight:500;opacity:0.7;">min</span>
             </div>
-            <div style="display:flex;gap:1rem;flex-wrap:wrap;font-size:0.85rem;opacity:0.9;">
+            <div class="lyf-detail" style="display:flex;gap:1rem;flex-wrap:wrap;opacity:0.9;">
                 <span>💰 {cost:.2f} €</span>
                 <span>🌿 {int(co2)} g CO2</span>
                 <span>📏 {distance:.2f} km</span>
