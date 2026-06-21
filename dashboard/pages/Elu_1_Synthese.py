@@ -21,6 +21,7 @@ from dashboard.components.widgets.elu import (
     render_trend_chart,
 )
 from dashboard.components.widgets.elu.data_quality_badge import render_data_quality_badge
+from dashboard.components.widgets.elu.data_quality_detail import render_data_quality_detail
 from dashboard.components.widgets.elu.drift_status_badge import render_drift_status_badge
 
 st.set_page_config(
@@ -50,6 +51,16 @@ render_drift_status_badge()
 # Sprint 16 Axe B — Data quality badge (bandeau compact 1 ligne).
 # Affiche nombre de sources healthy / stale / dead + score global.
 render_data_quality_badge()
+
+st.markdown("---")
+
+# Sprint 17 Axe 6 — Data quality detail (drill-down data bounds).
+# Affiche le détail des checks qualité (plages speed, null ratio, doublons,
+# volume) sur gold.traffic_features_live, gold.tcl_vehicle_realtime,
+# silver.velov_clean. Vue append-only gold.data_quality_log (migration 025).
+# Complémentaire de data_quality_badge (liveness des sources vs qualité
+# des valeurs). Coût léger (1 query, cache 300s), pas de button-gate.
+render_data_quality_detail()
 
 st.markdown("---")
 

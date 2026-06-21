@@ -487,3 +487,20 @@ def cached_traffic_speeds_for_propagation(hours: int = 6) -> pd.DataFrame:
     chaque ligne. TTL 30s car la donnée est temps réel (5 min cadence).
     """
     return dl.load_traffic_speeds_for_propagation(hours=hours)
+
+
+# Sprint 17 Axe 6 — Data Quality (migration 025, table gold.data_quality_log)
+# Alimentée par le DAG data_quality_daily (1×/jour, 04h15). Append-only
+# (1 ligne par CheckDetail). TTL_SLOW largement suffisant.
+@st.cache_data(ttl=TTL_SLOW, show_spinner=False)
+def cached_quality_report(limit: int = 30) -> pd.DataFrame:
+    """Derniers checks qualité data bounds (Sprint 17 Axe 6).
+
+    Vue append-only ``gold.data_quality_log`` : 1 ligne par sous-check
+    (CheckDetail) à un timestamp donné. Sert au widget
+    ``data_quality_detail`` (Élu) pour drill-down.
+
+    Limite par défaut 30 : 6 checks × 3 tables = 18 rows pour le dernier
+    run + un peu de marge historique.
+    """
+    return dbq.get_quality_report(limit=limit)

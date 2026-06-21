@@ -5,7 +5,7 @@ Toutes les modifications notables de ce projet sont documentées ici.
 Le format suit [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/),
 et ce projet adhère au [Semantic Versioning](https://semver.org/lang/fr/).
 
-## [0.9.0] - 2026-06-21 — Sprint 17 : Axes 2 + 4 + 7 interdépendances multimodales (branche `vps`)
+## [0.9.0] - 2026-06-21 — Sprint 17 : Axes 2 + 4 + 6 + 7 interdépendances multimodales (branche `vps`)
 
 Livraison de **3 axes** du `docs/SPEC_OPTIMISATION_INTERDEPENDANCES.md`
 (883 lignes, 7 axes) qui restait à implémenter après les Sprints 15+ Axe 1
@@ -52,6 +52,69 @@ dispos < -2) → probable incident TC en cours.
   alerte + table des anomalies (z-score, ligne, station).
 - **DAG** `refresh_velov_transit_coupling.py` (*/15 min) : REFRESH
   MV CONCURRENTLY (cadence rapide, détection incident temps réel).
+
+### 🆕 Axe 6 — Qualité des données (port LyonTraffic, data bounds)
+
+Validation des valeurs Gold/Silver dans des plages physiquement
+plausibles (Sprint 17 Axe 6, port du module `data_quality` de
+`PDUCLOS/Lyontraffic` adapté au schéma LyonFlowFull).
+
+- **Module `src/transformation/data_quality.py`** (~450 lignes) :
+  - `QualityConfig` : seuils spec §7.1 (speed 0-130, temp -20/45,
+    precip 0-100, delay 0-3600, null 30%, dup 5%, min_rows 100).
+  - `CheckDetail` / `QualityReport` : dataclass sérialisable.
+  - 4 sub-checks purs : `_check_range`, `_check_null_ratio`,
+    `_check_duplicate_ratio`, `_check_min_rows`. Warning si 1-5%
+    violations, critical au-delà.
+  - 3 validators : `validate_traffic_features` (speed/temp/precip +
+    null + dup + min_rows + doublons sur channel_id+computed_at),
+    `validate_tcl_realtime` (delay_seconds + null + dup sur
+    vehicle_ref+recorded_at), `validate_velov_clean` (bikes/docks
+    ranges + null + dup sur station_id+measurement_time).
+  - `run_all_validations()` : orchestrateur (retourne 3 reports).
+
+- **Migration 025** `scripts/sql/migration_025_data_quality_log.sql` :
+  table append-only `gold.data_quality_log` (id, checked_at,
+  table_name, check_name, status, metric_value, threshold, details).
+  Index sur (checked_at DESC, table_name). 1 ligne par CheckDetail.
+
+- **Helpers `src/data/db_query.py`** : `get_quality_report(limit=100)`
+  → dernier run par table depuis la vue append-only.
+
+- **Cache Streamlit** : `cached_quality_report(limit=30)` (TTL_SLOW
+  300s, 1×/jour alimenté par le DAG).
+
+- **Widget Élu `data_quality_detail.py`** (~210 lignes) : drill-down
+  des checks (3 KPI cards 1/table + tableau dernier run + historique
+  5 derniers runs). **Complémentaire** de `data_quality_badge.py`
+  (liveness sources vs qualité valeurs). Coût léger (1 query, cache
+  300s), pas de button-gate.
+
+- **DAG `data_quality_daily`** upgrade (Sprint 17 Axe 6) :
+  - Remplace le stub `_data_quality_check()` qui déléguait à
+    `health_checks.run_dag_health_check()` par un appel direct aux
+    validators.
+  - 3 loaders : `_load_traffic_features_df`, `_load_tcl_realtime_df`,
+    `_load_velov_clean_df` (charge le DataFrame sur fenêtre 1h).
+  - 6 task_ids legacy conservés (mapping 1-1 vers les 3 validators
+    + sous-checks) : `bronze_freshness`, `bronze_volume`,
+    `silver_nulls`, `silver_doublons`, `predictions_presentes`,
+    `drift_baseline`.
+  - INSERT 1 ligne par CheckDetail dans `gold.data_quality_log`
+    (`_log_quality_report`). Raise `AirflowException` si overall
+    == critical (alertes Airflow + Prometheus).
+
+- **Tests `tests/data/test_data_quality.py`** (37 tests verts) :
+  - `TestQualityConfig` : defaults conformes à la spec.
+  - `TestDataclasses` : `to_dict()`, `is_critical`, `_aggregate_status`.
+  - `TestCheckRange` / `TestCheckNullRatio` / `TestCheckDuplicateRatio` /
+    `TestCheckMinRows` : 4 sub-checks purs, 5 cas chacun.
+  - `TestValidateTrafficFeatures` : clean pass / speed out / null
+    too high / dup too high / min_rows critical / empty df.
+  - `TestValidateTclRealtime` : clean / delay out / negative warning.
+  - `TestValidateVelovClean` : clean / negative bikes / bikes > 60.
+  - `TestRunAllValidations` : 3 reports / empty warnings / shared config.
+  - `TestEmptyReport` : empty df → warning (1 check failed).
 
 ### 🆕 Axe 2 — Propagation de congestion (CORR cross-laggée Python)
 
@@ -114,11 +177,11 @@ dans les migrations 023 et 024 :
 
 | Métrique | Avant (0.8.0) | Après (0.9.0) |
 |----------|---------------|---------------|
-| Axes spec implémentés | 3/7 (Axe 1, 3, 5) | **6/7** (+ 2, 4, 7) |
-| Widgets | 55 | **56** (+1 propagation) |
-| Migrations SQL | 021 | **024** (+022, 023, 024) |
+| Axes spec implémentés | 3/7 (Axe 1, 3, 5) | **7/7** (+ 2, 4, 6, 7) |
+| Widgets | 55 | **57** (+2 propagation + data quality detail) |
+| Migrations SQL | 021 | **025** (+022, 023, 024, 025) |
 | DAGs | 15 | **17** (+3 refresh Axe 2/4/7) |
-| Tests | ~325 | **~365** (+40 propagation) |
+| Tests | ~325 | **~440** (+37 data quality) |
 
 ### 🐛 Fixes VPS durant Sprint 17
 

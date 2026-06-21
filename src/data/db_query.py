@@ -1977,3 +1977,48 @@ def get_congestion_propagation_pairs() -> pd.DataFrame:
         ORDER BY node_a, node_b
     """
     return _df_from_query(query, ())
+
+
+# =============================================================================
+# Sprint 17 Axe 6 — Data Quality (migration 025)
+# =============================================================================
+# Table append-only ``gold.data_quality_log`` alimentée par le DAG
+# ``data_quality_daily`` (via ``_log_quality_report()``). Sert au widget
+# ``data_quality_detail`` (Élu) et à toute analyse de tendance qualité.
+# =============================================================================
+
+
+def get_quality_report(limit: int = 100) -> pd.DataFrame:
+    """Derniers checks qualité depuis ``gold.data_quality_log`` (Sprint 17 Axe 6).
+
+    Vue append-only : chaque ligne = 1 sous-check (CheckDetail) à un
+    timestamp donné. Le widget Élu affiche la dernière exécution par
+    table + permet de drill-down dans l'historique.
+
+    Args:
+        limit: nb max de lignes retournées (défaut 100, trié par
+            ``checked_at`` DESC). Pour "dernier check par table",
+            utiliser ``limit=20`` (~6 checks × 3 tables = 18 rows).
+
+    Returns:
+        DataFrame avec colonnes ``checked_at, table_name, check_name,
+        status, metric_value, threshold, details``.
+
+    Raises:
+        DashboardDataError: si PostgreSQL ne répond pas (politique
+            fail loud Sprint 8+).
+    """
+    query = """
+        SELECT
+            checked_at,
+            table_name,
+            check_name,
+            status,
+            metric_value,
+            threshold,
+            details
+        FROM gold.data_quality_log
+        ORDER BY checked_at DESC, table_name, check_name
+        LIMIT %s
+    """
+    return _df_from_query(query, (limit,))

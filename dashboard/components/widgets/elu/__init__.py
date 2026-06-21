@@ -4,6 +4,7 @@ from dashboard.components.widgets.elu.bottleneck_map import render_bottleneck_ma
 from dashboard.components.widgets.elu.bottleneck_ranking import render_bottleneck_ranking
 from dashboard.components.widgets.elu.cost_estimate import render_cost_estimate
 from dashboard.components.widgets.elu.data_quality_badge import render_data_quality_badge
+from dashboard.components.widgets.elu.data_quality_detail import render_data_quality_detail
 from dashboard.components.widgets.elu.delta_kpis import render_delta_kpis
 from dashboard.components.widgets.elu.drift_status_badge import render_drift_status_badge
 from dashboard.components.widgets.elu.executive_summary import render_executive_summary
@@ -27,6 +28,7 @@ __all__ = [
     "render_bottleneck_ranking",
     "render_cost_estimate",
     "render_data_quality_badge",
+    "render_data_quality_detail",
     "render_delta_kpis",
     "render_drift_status_badge",
     "render_executive_summary",
