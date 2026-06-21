@@ -22,8 +22,15 @@
 --    dépasse 20 km/h sur 3 cycles consécutifs (15 min × 3 = 45 min)
 --    → candidats "capteur HS" à investiguer côté Grand Lyon.
 --
--- Idempotent : CREATE OR REPLACE VIEW.
+-- Idempotent : DROP IF EXISTS + CREATE VIEW (le CREATE OR REPLACE VIEW
+-- ne peut pas renommer des colonnes — cf. erreur "cannot change name of
+-- view column 'window_hour' to 'tile_key'" lors du premier deploy).
 -- =============================================================================
+
+
+-- Drop safe (idempotent si rejoué après evolution du schéma)
+DROP VIEW IF EXISTS gold.v_coherence_tomtom_vs_grandlyon CASCADE;
+DROP VIEW IF EXISTS gold.v_tomtom_gl_drift CASCADE;
 
 
 -- -----------------------------------------------------------------------------
