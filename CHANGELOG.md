@@ -5,6 +5,136 @@ Toutes les modifications notables de ce projet sont documentées ici.
 Le format suit [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/),
 et ce projet adhère au [Semantic Versioning](https://semver.org/lang/fr/).
 
+## [0.9.0] - 2026-06-21 — Sprint 17 : Axes 2 + 4 + 7 interdépendances multimodales (branche `vps`)
+
+Livraison de **3 axes** du `docs/SPEC_OPTIMISATION_INTERDEPENDANCES.md`
+(883 lignes, 7 axes) qui restait à implémenter après les Sprints 15+ Axe 1
+(grille multimodale) et 15+ Axe 3 (bus × trafic spatialisé) et Axe 5 (santé
+réseau). Sprint 17 boucle la spec sauf Axe 6 (qualité données, futur) et
+Axe 2 niveau Granger (futur, hors scope).
+
+### 🆕 Axe 7 — Météo comme variable d'interaction
+
+Impact de la météo sur les 3 modes (trafic, TCL, Vélov) par bandes × mode,
+avec delta vs "beau temps".
+
+- **Migration 022** `scripts/sql/migration_022_meteo_impact.sql` :
+  vue matérialisée `gold.mv_meteo_impact` (5 bandes × 3 modes + delta
+  vs baseline fair). DROP IF EXISTS + CREATE MATERIALIZED VIEW
+  idempotent.
+- **Helpers db_query** : `get_meteo_impact()`.
+- **Cache** : `cached_meteo_impact()` (TTL_SLOW = 300s, MV change 1×/jour).
+- **Widget Pro_3** `meteo_impact.py` : tableau comparatif 5 bandes × 3
+  modes + heatmap delta vs fair weather.
+- **DAG** `refresh_meteo_impact.py` (04h30 quotidien) : REFRESH MV
+  CONCURRENTLY.
+
+### 🆕 Axe 4 — Vélov ↔ TC report modal (z-score vélos dispos)
+
+Détection d'incident TC par report modal Vélov : si ≥ 3 stations Vélov
+proches d'une même ligne TC sont simultanément en alarme (z-score vélos
+dispos < -2) → probable incident TC en cours.
+
+- **Migration 023** `scripts/sql/migration_023_velov_transit_coupling.sql` :
+  - Vue matérialisée `gold.mv_velov_transit_coupling` (positions GPS
+    directes des véhicules TCL — pas centroïde AVG), z-score vélos
+    dispos par station < 300m zone TC.
+  - 3 commits successifs : (1) v1 centroïde AVG, (2) fix v2 positions
+    GPS directes, (3) fix v3 fenêtre 15 min → 1h (test VPS : avec
+    15 min, MV vide car pipeline > 15 min), (4) fix v4 DISTINCT ON
+    (station_id, transit_line) — UNIQUE INDEX requis pour
+    REFRESH CONCURRENTLY.
+- **Helpers db_query** : `get_velov_transit_coupling()`,
+  `get_velov_transit_coupling_summary()`.
+- **Cache** : `cached_velov_transit_coupling()` + `_summary()`
+  (TTL_FAST = 60s, réactivité temps réel).
+- **Widget Pro_3** `modal_shift_alert.py` : bandeau KPI lignes TC en
+  alerte + table des anomalies (z-score, ligne, station).
+- **DAG** `refresh_velov_transit_coupling.py` (*/15 min) : REFRESH
+  MV CONCURRENTLY (cadence rapide, détection incident temps réel).
+
+### 🆕 Axe 2 — Propagation de congestion (CORR cross-laggée Python)
+
+Carte Folium animée (AntPath) montrant comment la congestion se propage
+entre capteurs routiers adjacents, avec calcul de **corrélation croisée
+laggée** pour détecter la direction de propagation.
+
+- **Migration 024** `scripts/sql/migration_024_congestion_propagation.sql` :
+  - 3 commits successifs : (1) v1 24h × 4 subqueries CORR par paire :
+    timeout 3 min, (2) v2 6h × single-pass : timeout 4 min
+    (CTE JOIN explose en cartésien), (3) v3 final : MV = index des
+    50k paires (0.8s création), widget calcule CORR en Python
+    (vectorisé, ~5s pour 5k paires après filtre min_obs).
+  - Vue matérialisée `gold.mv_congestion_propagation_pairs` (index
+    paires K=2 grid + lat/lon) + UNIQUE INDEX sur (node_a, node_b)
+    pour REFRESH CONCURRENTLY.
+- **Helpers db_query** : `get_congestion_propagation_pairs()`.
+- **Helpers data_loader** : `load_congestion_propagation_pairs()`
+  (MV) + `load_traffic_speeds_for_propagation(hours=6)` (JOIN
+  `traffic_features_live` × `mv_twgid_to_lyo` pour mapping
+  `properties_twgid` ↔ `channel_id` LYO).
+- **Cache** : `cached_congestion_propagation_pairs()` (TTL_SLOW) +
+  `cached_traffic_speeds_for_propagation(hours=6)` (TTL_REALTIME).
+- **Widget Pro_3** `propagation_map.py` (500+ lignes) :
+  - **Fonction pure** `compute_propagation_correlations()` :
+    pivot large T × P, scan lag ±3 steps (= ±15 min), Pearson r
+    normalisé strict (bornage |r| ≤ 1). Filtrage min_obs=30.
+  - **Carte Folium AntPath** : lignes animées (les "fourmis"流动 le
+    long de la ligne = direction visible par le sens du flux),
+    couleur par intensité (rouge/orange/ambre/gris), épaisseur par
+    |CORR|, légende HTML.
+  - **Convention de lag** documentée : `lag > 0 = B lead A`
+    (B est la source de propagation, flèche B → A),
+    `lag < 0 = A lead B` (flèche A → B).
+  - **KPI banner** : paires analysées / forte propagation / moyenne /
+    directionnelle (|lag| > 0).
+  - **Tableau top 20** par |r| avec direction propagation + lag minutes.
+- **DAG** `refresh_congestion_propagation.py` (*/30 min) : REFRESH
+  MV CONCURRENTLY (la MV change peu, le widget calcule les CORR
+  à la volée).
+
+### 🔧 Compromis spec documentés (à valider au retour)
+
+Sprint 17 fait **2 compromis perf vs spec** documentés en commentaire
+dans les migrations 023 et 024 :
+
+1. **Axe 4 fenêtre 15 min → 1h** : avec 15 min de fenêtre, la MV
+   était vide car le pipeline Bronze→Silver met > 15 min à propager
+   (Bronze 5min cadence + transform + Gold). Compromis : 1h couvre
+   largement la détection d'incident (qui dure typiquement 30 min à
+   2h). Le code reste paramétrable si on veut retester 15 min plus
+   tard.
+2. **Axe 2 CORR en Python** : 4 min timeout SQL pur (24h × 4
+   subqueries) vs 0.8s pour la MV d'index seule. Compromis : la MV
+   stocke juste les paires, le widget calcule les CORR en Python
+   vectorisé (~5s pour 5k paires). Phase 2 spec §3.3 (Granger
+   statsmodels) reste hors scope Sprint 17.
+
+### 📊 Bilan Sprint 17
+
+| Métrique | Avant (0.8.0) | Après (0.9.0) |
+|----------|---------------|---------------|
+| Axes spec implémentés | 3/7 (Axe 1, 3, 5) | **6/7** (+ 2, 4, 7) |
+| Widgets | 55 | **56** (+1 propagation) |
+| Migrations SQL | 021 | **024** (+022, 023, 024) |
+| DAGs | 15 | **17** (+3 refresh Axe 2/4/7) |
+| Tests | ~325 | **~365** (+40 propagation) |
+
+### 🐛 Fixes VPS durant Sprint 17
+
+- **Worker Airflow débloqué** : `pg_terminate_backend` sur PID 1315609
+  (idle in transaction depuis 2h+). Pipeline Bronze→Silver a
+  recommencé à propager (0 → 464 → 4640 rows/1h).
+- **Toutes les migrations Sprint 17** validées en conditions réelles
+  sur le VPS.
+
+### 🚀 Déploiement Sprint 17 sur VPS
+
+- **Migrations SQL** : 022, 023 (×4 commits), 024 (×3 commits) appliquées.
+- **DAGs** : `refresh_meteo_impact` (04h30), `refresh_velov_transit_coupling`
+  (*/15), `refresh_congestion_propagation` (*/30).
+- **Widget** `propagation_map` button-gated dans Pro_3_Correlation.
+
 ## [0.8.0] - 2026-06-20 — Sprint 16 : Backtest Engine + Data Quality + Durées réelles (branche `vps`)
 
 Sprint le plus ambitieux du projet : 3 axes, ~3 jours, 4 nouveaux widgets,

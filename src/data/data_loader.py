@@ -1242,6 +1242,99 @@ def load_network_health_score() -> pd.DataFrame:
     return df
 
 
+# =============================================================================
+# Sprint 17 Axe 2 — Propagation de congestion (migration 024 v3)
+# =============================================================================
+# Vue matérialisée gold.mv_congestion_propagation_pairs : index des paires
+# de capteurs adjacents (K=2 grid via gold.dim_gnn_adjacency) avec lat/lon
+# des 2 nœuds. PAS de CORR calculée ici (trop coûteux en SQL — testé : 4 min
+# timeout). Le widget propagation_map.py calcule les CORR en Python
+# (pandas/numpy, vectorisé) depuis gold.traffic_features_live (6h × 5min).
+# Voir docs/SPEC_OPTIMISATION_INTERDEPENDANCES.md §3.
+# =============================================================================
+
+
+def load_congestion_propagation_pairs() -> pd.DataFrame:
+    """Paires de capteurs adjacents (Sprint 17 Axe 2, migration 024 v3).
+
+    Vue matérialisée ``gold.mv_congestion_propagation_pairs`` (~50k paires
+    K=2 grid) avec lat/lon des 2 nœuds (propriétés ``properties_twgid``
+    du mapping dim_spatial). Sert de base au widget ``propagation_map``
+    (Folium avec flèches directionnelles) pour calculer les lag
+    cross-corrélations en Python.
+
+    Returns:
+        DataFrame avec colonnes ``node_a, lat_a, lon_a, node_b, lat_b, lon_b``.
+        ``node_a`` et ``node_b`` sont des ``properties_twgid`` (string
+        integer) — pas des channel_id LYO. Le widget doit passer par
+        ``gold.mv_twgid_to_lyo`` pour récupérer les channel_id live.
+
+    Raises:
+        DashboardDataError: si PostgreSQL ne répond pas ou si la vue
+            matérialisée n'existe pas (migration 024 non appliquée).
+    """
+    _require_db_or_raise("gold.mv_congestion_propagation_pairs")
+    from src.data.db_query import get_congestion_propagation_pairs
+
+    df = get_congestion_propagation_pairs()
+    if df.empty:
+        raise DashboardDataError(
+            source="gold.mv_congestion_propagation_pairs",
+            detail="Vue matérialisée vide. Vérifier que la migration 024 "
+            "a été appliquée et que le DAG "
+            "refresh_congestion_propagation a tourné (*/30 min).",
+        )
+    return df
+
+
+def load_traffic_speeds_for_propagation(hours: int = 6) -> pd.DataFrame:
+    """Séries temporelles vitesse par channel_id (Sprint 17 Axe 2).
+
+    Charge les ``speed_kmh`` depuis ``gold.traffic_features_live`` sur
+    les ``hours`` dernières heures, JOINées avec ``gold.mv_twgid_to_lyo``
+    pour que chaque ligne porte le ``properties_twgid`` (clé de la MV
+    paires) ET le ``channel_id`` LYO (clé de traffic_features_live).
+
+    Cadence 5 min → ~72 points / capteur / 6h.
+
+    Returns:
+        DataFrame ``properties_twgid, channel_id, computed_at, speed_kmh``.
+        Un capteur peut apparaître plusieurs fois (1 par timestamp).
+
+    Raises:
+        DashboardDataError: si PostgreSQL ne répond pas.
+    """
+    _require_db_or_raise("gold.traffic_features_live + gold.mv_twgid_to_lyo")
+    query = """
+        SELECT
+            mv.properties_twgid,
+            t.channel_id,
+            t.computed_at,
+            t.speed_kmh
+        FROM gold.traffic_features_live t
+        JOIN gold.mv_twgid_to_lyo mv ON mv.channel_id = t.channel_id
+        WHERE t.computed_at >= NOW() - make_interval(hours => %s)
+          AND t.speed_kmh IS NOT NULL
+          AND t.speed_kmh > 0
+        ORDER BY t.computed_at DESC
+    """
+    from src.data.db_query import _df_from_query
+
+    df = _df_from_query(query, (hours,))
+    if df.empty:
+        raise DashboardDataError(
+            source="gold.traffic_features_live + gold.mv_twgid_to_lyo",
+            detail=(
+                f"Aucune mesure de vitesse sur les {hours}h glissantes. "
+                "Vérifier que le DAG transform_silver_to_gold tourne bien "
+                "(tâche refresh_traffic_features_live, */5 min) ET que "
+                "gold.mv_twgid_to_lyo est peuplée (script "
+                "build_mv_twgid_to_lyo.py)."
+            ),
+        )
+    return df
+
+
 def load_mlflow_models(
     experiment: str = "lyonflow-traffic",
     max_results: int = 50,

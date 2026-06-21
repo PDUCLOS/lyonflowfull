@@ -19,6 +19,7 @@ from dashboard.components.widgets.pro_tcl import (
     render_meteo_impact,
     render_modal_shift_alert,
     render_multimodal_heatmap,
+    render_propagation_map,
     render_segment_table,
 )
 
@@ -152,6 +153,24 @@ deferred_render(
     button_icon="🔄",
 )
 
+st.markdown("---")
+
+# Sprint 17 (2026-06-20) — Axe 2 du SPEC_OPTIMISATION_INTERDEPENDANCES
+# Propagation de congestion : carte Folium avec AntPath animées montrant
+# comment la congestion se propage entre capteurs adjacents (K=2 grid).
+# CORR cross-lagged calculée en Python depuis gold.traffic_features_live
+# (6h × 5min), direction = lag qui maximise |r|. Vue
+# gold.mv_congestion_propagation_pairs (migration 024 v3), refresh DAG
+# */30 min par dags/maintenance/refresh_congestion_propagation.py.
+# Button-gate (cohérent avec les autres widgets lourds de la page) car
+# le calcul CORR peut prendre 3-5s sur 5k paires.
+deferred_render(
+    "propagation_map",
+    "Charger la carte de propagation de congestion",
+    render_propagation_map,
+    button_icon="🌊",
+)
+
 st.caption(
     "Corrélation bus × trafic · Données : SIRI Lite + boucles Grand Lyon. "
     "Corrélation spatialisée · JOIN zone 0.001° (~100 m) dans "
@@ -165,5 +184,9 @@ st.caption(
     "gold.mv_meteo_impact (migration 022, refresh quotidien 04h30). "
     "Report modal Vélov ↔ TC · z-score vélos dispos par station < 300m "
     "d'une zone TC dans gold.mv_velov_transit_coupling (migration 023, "
-    "refresh */15 min)."
+    "refresh */15 min). "
+    "Propagation de congestion · carte AntPath entre paires de capteurs "
+    "adjacents K=2 grid, CORR cross-laggée Python sur 6h glissantes "
+    "depuis gold.mv_congestion_propagation_pairs (migration 024 v3, "
+    "refresh */30 min)."
 )

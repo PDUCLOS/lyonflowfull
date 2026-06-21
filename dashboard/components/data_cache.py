@@ -476,3 +476,14 @@ def cached_congestion_propagation_pairs() -> pd.DataFrame:
     gold.traffic_features_live (6h × 5min).
     """
     return dbq.get_congestion_propagation_pairs()
+
+
+@st.cache_data(ttl=TTL_REALTIME, show_spinner=False)
+def cached_traffic_speeds_for_propagation(hours: int = 6) -> pd.DataFrame:
+    """Séries vitesse par channel_id sur fenêtre glissante (Sprint 17 Axe 2).
+
+    Vue : ``gold.traffic_features_live`` JOIN ``gold.mv_twgid_to_lyo``
+    pour ramener le ``properties_twgid`` (clé de la MV paires) sur
+    chaque ligne. TTL 30s car la donnée est temps réel (5 min cadence).
+    """
+    return dl.load_traffic_speeds_for_propagation(hours=hours)

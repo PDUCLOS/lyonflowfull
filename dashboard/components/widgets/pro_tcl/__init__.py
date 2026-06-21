@@ -35,6 +35,7 @@ from dashboard.components.widgets.pro_tcl.otp_heatmap import (
 )
 from dashboard.components.widgets.pro_tcl.otp_projection import render_otp_projection
 from dashboard.components.widgets.pro_tcl.pipeline_management import render_pipeline_management_page
+from dashboard.components.widgets.pro_tcl.propagation_map import render_propagation_map
 from dashboard.components.widgets.pro_tcl.report_builder import render_report_builder
 from dashboard.components.widgets.pro_tcl.segment_table import render_segment_table
 from dashboard.components.widgets.pro_tcl.source_health_monitor import render_source_health_monitor
@@ -63,6 +64,7 @@ __all__ = [
     "render_otp_heatmap_mini",
     "render_otp_projection",
     "render_pipeline_management_page",
+    "render_propagation_map",
     "render_report_builder",
     "render_segment_table",
     "render_source_health_monitor",
