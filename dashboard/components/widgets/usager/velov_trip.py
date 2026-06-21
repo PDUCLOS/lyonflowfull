@@ -462,16 +462,20 @@ def _render_alternatives_card(
 
 
 def _render_velov_maillage(
-    m,
+    m,  # folium.Map
     origin_neighbors: list[dict],
     dest_neighbors: list[dict],
 ) -> None:
     """Dessine le maillage local des bornes Vélov (lignes entre voisines < 200m).
 
+    Requires folium — imported locally to match the pattern in _render_velov_map.
+
     Sprint VPS-6 hotfix 2 — visualise la "grappe" de bornes autour des
     2 stations Vélov utilisées. Permet à l'usager de voir s'il y a des
     alternatives à pied.
     """
+    import folium
+
     edges_drawn = set()  # éviter doublons (a-b == b-a)
     for neighbors, color in (
         (origin_neighbors, "#1976D2"),  # bleu pour voisines départ
