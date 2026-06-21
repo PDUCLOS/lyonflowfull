@@ -1,15 +1,17 @@
-# Sprint 17 — Axes 2, 4, 7 du SPEC_OPTIMISATION_INTERDEPENDANCES
+# Sprint 17 — Axes 2, 4, 6, 7 du SPEC_OPTIMISATION_INTERDEPENDANCES (final)
 
 **Date** : 2026-06-20 → 2026-06-21
 **Branche** : `vps`
 **Version** : 0.9.0
-**Statut** : ✅ LIVRÉ — 403 tests verts (+40 nouveaux), 0 régression.
-Sprint le plus ambitieux depuis Sprint 16 : **3 axes interdépendances
-multimodales** livrés en parallèle sur 2 jours.
+**Statut** : ✅ LIVRÉ — 440 tests verts (+77 nouveaux), 0 régression.
+Sprint final du `docs/SPEC_OPTIMISATION_INTERDEPENDANCES.md` : **4 axes
+livrés en parallèle sur 2 jours**, dont 3 interdépendances multimodales
+(Axes 2, 4, 7) + 1 qualité des données (Axe 6). **7/7 axes du spec
+implémentés** (reste uniquement Axe 2 niveau Granger, hors scope Sprint 18).
 
 ## Résumé
 
-Sprint 17 implémente **3 des 7 axes** du `docs/SPEC_OPTIMISATION_INTERDEPENDANCES.md`
+Sprint 17 implémente **4 des 7 axes** du `docs/SPEC_OPTIMISATION_INTERDEPENDANCES.md`
 qui restaient après le Sprint 15+ (Axe 1 grille multimodale, Axe 3 bus × trafic
 spatialisé, Axe 5 santé réseau) :
 
@@ -17,11 +19,11 @@ spatialisé, Axe 5 santé réseau) :
 |-----|-------------|--------|-------|
 | **2** | Propagation de congestion (CORR cross-laggée) | ✅ complet | 40 |
 | **4** | Vélov ↔ TC report modal (z-score vélos dispos) | ✅ complet | 10 |
+| **6** | Qualité des données (port LyonTraffic, data bounds) | ✅ complet | 37 |
 | **7** | Météo impact (5 bandes × 3 modes + delta) | ✅ complet | 12 |
-| 6 | Qualité données (`data_quality.py`) | ⏸ hors scope | — |
 
-Total : **3 migrations SQL, 3 DAGs, 3 widgets, +62 tests verts** sur la
-session. 0 régression sur les 363 tests existants.
+Total : **4 migrations SQL, 3 DAGs (refresh), 1 DAG upgrade, 4 widgets,
++77 tests verts** sur la session. 0 régression sur les 363 tests existants.
 
 ## Axe 2 — Propagation de congestion (Sprint 17 pièce maîtresse)
 
@@ -147,6 +149,53 @@ TCL, Vélov) avec delta vs "beau temps" baseline.
 - `dashboard/pages/Pro_3_Correlation.py` : câblage 🌤
 - 12 tests verts (Sprint 17 Axe 7)
 
+## Axe 6 — Qualité des données (port LyonTraffic, data bounds)
+
+**Objectif** : valider que les valeurs Gold/Silver restent dans des
+plages physiquement plausibles avant le feature engineering.
+
+### Spec respectée (§7.1)
+
+| Règle | Seuil | Implémentation |
+|-------|-------|----------------|
+| Vitesse | 0-130 km/h | `_check_range(speed_kmh, 0, 130)` |
+| Température | -20 à 45°C | `_check_range(temperature_2m, -20, 45)` |
+| Précipitations | 0-100 mm/h | `_check_range(precipitation, 0, 100)` |
+| Taux de null max | 30% | `_check_null_ratio(col, 0.30)` |
+| Taux de doublons max | 5% | `_check_duplicate_ratio(subset, 0.05)` |
+| Minimum de lignes | 100 | `_check_min_rows(100)` |
+| Retard max | 3600s (1h) | `_check_range(delay_seconds, 0, 3600)` |
+| Vélov bikes/docks | 0-60 | `_check_range(num_bikes_available, 0, 60)` |
+
+### Fichiers livrés (axe 6)
+
+- `src/transformation/data_quality.py` (~450 lignes) — module principal.
+  - `QualityConfig` dataclass : seuils spec, tunables.
+  - `CheckDetail` / `QualityReport` : dataclass + `to_dict()` (sérialisable
+    DB + JSON UI).
+  - 4 sub-checks purs : `_check_range`, `_check_null_ratio`,
+    `_check_duplicate_ratio`, `_check_min_rows`. Warning si 1-5%
+    violations, critical au-delà.
+  - 3 validators (`validate_traffic_features`, `validate_tcl_realtime`,
+    `validate_velov_clean`) : prennent un DataFrame en entrée,
+    retournent un QualityReport. **Pure Python**, testables sans DB.
+  - `run_all_validations()` : orchestrateur.
+- `scripts/sql/migration_025_data_quality_log.sql` — table append-only
+  `gold.data_quality_log` (1 ligne par CheckDetail) + index
+  (checked_at DESC, table_name).
+- `src/data/db_query.py` : `get_quality_report(limit=100)` + cache
+  `cached_quality_report(limit=30)`.
+- `dags/maintenance/maintenance.py` upgrade : `_data_quality_check()`
+  remplace le stub legacy. 3 loaders DataFrame (1h fenêtre) + appel
+  validator + INSERT dans `gold.data_quality_log` + raise
+  `AirflowException` si critical. 6 task_ids legacy conservés.
+- `dashboard/components/widgets/elu/data_quality_detail.py` (~210 lignes)
+  — drill-down (3 KPI cards + tableau dernier run + historique 5 runs).
+  Complémentaire de `data_quality_badge.py` (liveness vs qualité).
+- `dashboard/pages/Elu_1_Synthese.py` — câblage `render_data_quality_detail`
+  après `render_data_quality_badge`.
+- `tests/data/test_data_quality.py` — 37 tests verts (0 régression).
+
 ## Bugs VPS résolus durant la session
 
 - **Worker Airflow débloqué** : `pg_terminate_backend` sur PID 1315609
@@ -162,10 +211,10 @@ TCL, Vélov) avec delta vs "beau temps" baseline.
 
 | Métrique | Avant Sprint 17 (0.8.0) | Après Sprint 17 (0.9.0) |
 |----------|--------------------------|--------------------------|
-| Widgets | 55 | **56** (+1) |
-| Migrations SQL | 021 | **024** (+022, 023, 024) |
-| DAGs | 15 | **17** (+3 refresh Axe 2/4/7) |
-| Tests verts | 363 | **403** (+40) |
+| Widgets | 55 | **57** (+2 : propagation_map + data_quality_detail) |
+| Migrations SQL | 021 | **025** (+022, 023, 024, 025) |
+| DAGs | 15 | **17** (+3 refresh Axe 2/4/7) + 1 upgrade (data_quality_daily) |
+| Tests verts | 363 | **440** (+77) |
 | Skipped | 10 | 10 (mêmes — DB/torch indispo local) |
 | Deselected | 14 | 14 (mêmes) |
 | Ruff | clean | clean |
@@ -173,17 +222,20 @@ TCL, Vélov) avec delta vs "beau temps" baseline.
 
 **0 régression**. Tous les tests existants restent verts.
 
-## Prochaines étapes (Sprint 17+ / Sprint 18)
+## Prochaines étapes (Sprint 18+)
 
-1. **Axe 6** (qualité données) — `data_quality.py` port depuis LyonTraffic.
-   Spec déjà dans `SPEC_OPTIMISATION_INTERDEPENDANCES.md §6`.
+1. ~~**Axe 6** (qualité données) — `data_quality.py` port depuis LyonTraffic.~~ ✅ **FAIT** Sprint 17
 2. **Axe 2 niveau Granger** — spec §3.3 (statsmodels Granger causality
    test) pour confirmer la direction de propagation avec p-value.
+   *Maintenant c'est la SEULE dette du SPEC_OPTIMISATION_INTERDEPENDANCES*
+   qui reste.
 3. **Validation live widget** Axe 2 : faire un clic manuel sur
    Pro_3_Correlation, vérifier que AntPath s'affichent correctement et
    que les CORR sont sensées.
 4. **Déploiement continu** : faire un tag `vps-20260621-XXXXXX` et
-   vérifier que les 3 DAGs tournent en parallèle sans conflit.
+   vérifier que les 4 DAGs (refresh Axe 2/4/7 + data_quality_daily) tournent
+   en parallèle sans conflit. Migrations 022/023/024/025 à appliquer
+   sur le VPS.
 5. **UX** : légende Folium à améliorer (actuellement HTML brut).
 6. **Sprint 18 — performance** : si 50k paires devient un use case,
    vectoriser `compute_propagation_correlations` en pur numpy (matrice
