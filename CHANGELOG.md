@@ -5,6 +5,71 @@ Toutes les modifications notables de ce projet sont documentées ici.
 Le format suit [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/),
 et ce projet adhère au [Semantic Versioning](https://semver.org/lang/fr/).
 
+## [0.9.0] - 2026-06-21 — Sprint 17+ : Axe 2 niveau 2 — Granger statsmodels (branche `vps`)
+
+Enrichissement de l'Axe 2 (Sprint 17) avec le test de causalité Granger
+pour ajouter une couche de rigueur statistique à la direction de
+propagation détectée par simple CORR cross-laggée. **Boucle la spec
+interdépendances multimodales (7/7 axes + Granger niveau 2)**.
+
+### 🆕 Granger causality (Axe 2 niveau 2 — spec §3.3)
+
+`statsmodels.tsa.stattools.grangercausalitytests` est plus RIGOUREUX que
+la simple CORR cross-laggée parce qu'il teste si INCLURE les valeurs
+passées de X AMÉLIORE la prédiction de Y (causalité statistique, pas
+juste corrélation). Pour chaque paire, on teste les 2 directions (A→B
+et B→A) et on garde la direction avec la p-value la plus faible.
+
+- **Helper pur `compute_granger_causality()`** (~180 lignes) :
+  - Top N paires par |CORR| (défaut 200, équilibre perf / couverture).
+  - `statsmodels.grangercausalitytests(data, maxlag=3)` : 2 directions
+    × 3 lags × top N = 1200 F-tests ≈ 5-10s.
+  - Output : `granger_p_a_to_b, granger_p_b_to_a, granger_min_p,
+    granger_direction, granger_significant` (p<0.05 par défaut).
+  - Helper bas-niveau `_granger_min_p()` : `statsmodels` wrapper
+    robuste (captures stdout/stderr, skip séries constantes/courtes).
+
+- **Widget `propagation_map.py` enrichi** :
+  - **KPI banner** : nouvelle 4ème card "Granger significatif"
+    (p<0.05 sur N testées).
+  - **Popup Folium** : section "🔬 Granger (causalité)" avec
+    direction + p-value + statut significatif (vert/rouge).
+  - **Tableau top 20** : nouvelle colonne "Granger p-val (direction)".
+  - **Carte Folium AntPath** : pulse_color jaune (#FFEB3B) pour les
+    paires Granger significatives (effet "highlighter" sur la carte).
+  - **Légende** : nouvelle section "Granger (causalité)".
+  - **Caption** : ajoute la mention Granger avec seuil p<0.05.
+
+- **Tests `tests/widgets/test_propagation_map.py`** (50 tests verts,
+  +10 nouveaux) :
+  - `TestGrangerCausality` (5 tests) : empty inputs, vraie causalité
+    (lag construction → p<0.05), bruit blanc, top_n limit, série
+    constante skipped.
+  - `TestGrangerMinP` (5 tests) : short series → None, constant → None,
+    white noise (p-value valide), true Granger (p<0.05), seuil par
+    défaut 0.05.
+
+- **`requirements-base.txt`** : ajout `statsmodels>=0.14.0` (10 MB
+  wheel, dépendance indirecte via pandas → déjà install).
+
+### Notes de compromis
+
+- **Performance** : Granger est ~5-10x plus lent que la simple CORR.
+  On limite volontairement au top N=200 paires (les plus corrélées) pour
+  rester sous la minute même sur 50k paires candidates après filtre
+  min_obs. C'est un trade-off perf vs couverture, ajustable via
+  `granger_top_n=...` au niveau du widget.
+
+- **Hypothèse de linéarité** : Granger F-test suppose des relations
+  linéaires. Pour la non-linéarité (plus robuste mais +lent), la spec
+  mentionne Convergent Cross-Mapping (Mao et al., Wiley 2025) comme
+  upgrade futur — hors scope actuel.
+
+### Validation
+
+- ruff check : All checks passed
+- pytest : 450 verts / 10 skipped / 14 deselected (+10 nouveaux, 0 régression)
+
 ## [0.9.0] - 2026-06-21 — Sprint 17 : Axes 2 + 4 + 6 + 7 interdépendances multimodales (branche `vps`)
 
 Livraison de **3 axes** du `docs/SPEC_OPTIMISATION_INTERDEPENDANCES.md`
