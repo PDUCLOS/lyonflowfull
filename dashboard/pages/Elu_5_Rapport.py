@@ -7,6 +7,7 @@ import streamlit as st
 from dashboard.components.auto_refresh import setup_auto_refresh
 from dashboard.components.data_cache import cached_bottlenecks_top, cached_elu_kpis_dict
 from dashboard.components.data_status import render_data_status_banner
+from dashboard.components.freshness_badge import render_freshness_badge
 from dashboard.components.navigation import render_sidebar_navigation
 from dashboard.components.persona_guard import apply_persona_guard
 from dashboard.components.theme import inject_theme
@@ -26,6 +27,7 @@ apply_persona_guard(expected_persona="elu")
 inject_theme()
 render_sidebar_navigation()
 setup_auto_refresh()
+render_freshness_badge()
 
 st.title("📄 Rapport Conseil Municipal")
 render_data_status_banner()

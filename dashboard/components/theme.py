@@ -282,6 +282,17 @@ def inject_theme() -> None:
         opacity: 0.7;
         font-weight: 400;
     }}
+    /* Sprint 20 Axe F — Badge fraîcheur données (freshness_badge.py) */
+    .lyf-freshness-badge {{
+        font-size: 0.75rem !important;
+        color: var(--text-muted);
+        padding: 0.3rem 0.8rem;
+        border-radius: 4px;
+        background: var(--bg-card);
+        border: 1px solid var(--border-card);
+        display: inline-block;
+        margin-bottom: 0.5rem;
+    }}
     .lyf-label {{
         font-size: 0.95rem !important;
         font-weight: 500;
