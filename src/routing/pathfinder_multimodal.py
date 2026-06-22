@@ -8,7 +8,7 @@ Combine 3 segments pour un trajet multimodal Vélov :
 
 Toutes les coordonnées viennent du pipeline (jamais de mock en prod) :
 * Vélov dispo/traffic temps réel : ``silver.velov_clean``
-* Graphe routier : ``src.routing.graph.build_routing_graph`` (Dijkstra)
+* Routing voiture : pgRouting ``pgr_dijkstra`` sur réseau OSM (Sprint 18)
 * Distances haversine : fonction SQL ``referentiel.haversine_m``
 
 Sprint 9+ (2026-06-17) — mode démo supprimé (politique Sprint 8 zéro mock).

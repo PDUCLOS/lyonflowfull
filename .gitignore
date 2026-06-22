@@ -112,3 +112,6 @@ nginx/certs/*.pem
 # des inputs partagés, pas des artefacts générés.
 scripts/audit/
 docs/AUDIT_*.docx
+
+# Soutenance (slides HTML, pas du code)
+presentation.html
