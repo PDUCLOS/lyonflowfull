@@ -22,6 +22,7 @@ import streamlit as st
 
 from dashboard.components.colors import COLORS
 from dashboard.components.data_cache import cached_network_health_score
+from dashboard.components.plotly_theme import apply_lyf_theme
 from src.data.exceptions import DashboardDataError
 
 _DIAGNOSIS_COLORS = {
@@ -73,6 +74,7 @@ def _render_main_gauge(score: float, diagnosis: str) -> None:
         paper_bgcolor="rgba(0,0,0,0)",
         plot_bgcolor="rgba(0,0,0,0)",
     )
+    apply_lyf_theme(fig)
     st.plotly_chart(fig, use_container_width=True)
 
 
@@ -169,6 +171,7 @@ def _render_subgauges(
                 plot_bgcolor="rgba(0,0,0,0)",
                 title={"text": label, "font": {"size": 13}},
             )
+            apply_lyf_theme(fig)
             st.plotly_chart(fig, use_container_width=True)
             st.caption(sublabel)
             if not available:

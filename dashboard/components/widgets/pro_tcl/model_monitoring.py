@@ -23,6 +23,7 @@ import html
 import streamlit as st
 
 from dashboard.components.colors import COLORS
+from dashboard.components.plotly_theme import LYF_TEMPLATE
 
 
 def render_model_registry() -> None:
@@ -410,7 +411,7 @@ def render_training_history() -> None:
                 xaxis_title="Jour",
                 yaxis_title="MAE Speed (km/h)",
                 yaxis2={"title": "MAE Velov (vélos)", "overlaying": "y", "side": "right"},
-                template="plotly_dark",
+                template=LYF_TEMPLATE,
                 height=350,
             )
             st.plotly_chart(fig, use_container_width=True)
@@ -581,7 +582,7 @@ def render_velov_model_analysis() -> None:
                     pred_30,
                     x="predicted_bikes",
                     nbins=20,
-                    template="plotly_dark",
+                    template=LYF_TEMPLATE,
                     height=240,
                 )
                 fig.update_layout(margin={"l": 0, "r": 0, "t": 10, "b": 0})

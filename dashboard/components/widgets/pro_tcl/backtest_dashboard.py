@@ -29,6 +29,7 @@ import plotly.graph_objects as go
 import streamlit as st
 
 from dashboard.components.data_cache import cached_xgb_accuracy_summary, cached_xgb_vs_tomtom
+from dashboard.components.plotly_theme import apply_lyf_theme
 from src.data.exceptions import DashboardDataError
 
 # Seuils d'accuracy (cf SPEC_SPRINT_16.md §A.1)
@@ -126,9 +127,11 @@ def _scatter_xgb_vs_tomtom(pairs: pd.DataFrame) -> go.Figure:
         xaxis_title="TomTom speed (km/h) — oracle",
         yaxis_title="XGBoost speed (km/h) — prédiction",
         height=450,
-        template="plotly_white",
+        template=LYF_TEMPLATE,
         legend={"orientation": "h", "yanchor": "bottom", "y": -0.25},
     )
+    apply_lyf_theme(fig)
+    return fig
     return fig
 
 
@@ -168,8 +171,9 @@ def _mae_temporal_chart(summary: pd.DataFrame) -> go.Figure:
         xaxis_title="Heure",
         yaxis_title="MAE (km/h)",
         height=350,
-        template="plotly_white",
+        template=LYF_TEMPLATE,
     )
+    apply_lyf_theme(fig)
     return fig
 
 
@@ -194,8 +198,9 @@ def _accuracy_distribution(pairs: pd.DataFrame) -> go.Figure:
         xaxis_title="Bande",
         yaxis_title="Nombre de paires",
         height=300,
-        template="plotly_white",
+        template=LYF_TEMPLATE,
     )
+    apply_lyf_theme(fig)
     return fig
 
 

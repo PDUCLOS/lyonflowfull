@@ -30,6 +30,7 @@ from dashboard.components.data_cache import (
     cached_bus_traffic_spatial,
     cached_bus_traffic_spatial_diagnosis_counts,
 )
+from dashboard.components.plotly_theme import apply_lyf_theme
 from src.data.db_query import clean_line_label
 from src.data.exceptions import DashboardDataError
 from src.data.labels import DIAGNOSIS_LABELS
@@ -143,6 +144,7 @@ def _render_scatter(df: pd.DataFrame) -> None:
         margin=dict(l=40, r=20, t=30, b=40),
         legend=dict(orientation="h", yanchor="bottom", y=1.02),
     )
+    apply_lyf_theme(fig)
     st.plotly_chart(fig, use_container_width=True)
 
 

@@ -33,6 +33,7 @@ from dashboard.components.data_cache import (
     cached_tomtom_coherence,
     cached_tomtom_gl_drift,
 )
+from dashboard.components.plotly_theme import apply_lyf_theme
 from src.data.exceptions import DashboardDataError
 
 # Libellés FR pour les status SQL (cohérent avec labels.py ailleurs)
@@ -170,6 +171,7 @@ def _scatter_tomtom_vs_gl(df: pd.DataFrame) -> None:
     )
     fig.update_xaxes(range=[0, speed_max * 1.05])
     fig.update_yaxes(range=[0, speed_max * 1.05])
+    apply_lyf_theme(fig)
     st.plotly_chart(fig, use_container_width=True)
 
 
@@ -219,6 +221,7 @@ def _heatmap_delta(df: pd.DataFrame, top_n: int = 20) -> None:
         yaxis=dict(autorange="reversed"),
         margin=dict(l=10, r=10, t=40, b=10),
     )
+    apply_lyf_theme(fig)
     st.plotly_chart(fig, use_container_width=True)
 
 

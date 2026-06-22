@@ -12,6 +12,7 @@ import streamlit as st
 
 from dashboard.components.colors import COLORS
 from dashboard.components.data_cache import cached_otp_heatmap_data
+from dashboard.components.plotly_theme import LYF_TEMPLATE
 
 
 def _load_otp_data() -> tuple[dict, dict[str, str]]:
@@ -156,7 +157,7 @@ def render_otp_heatmap(
             xaxis_title="Heure" if not compact else None,
             yaxis_title=None,
             height=height,
-            template="plotly_dark",
+            template=LYF_TEMPLATE,
             margin={"l": 60, "r": 30, "t": 40, "b": 30} if compact else {"l": 70, "r": 40, "t": 50, "b": 50},
             yaxis={"tickfont": {"size": 11 if not compact else 10}},
             xaxis={"tickfont": {"size": 10}},

@@ -9,6 +9,7 @@ import streamlit as st
 
 from dashboard.components.colors import COLORS
 from dashboard.components.data_cache import cached_elu_kpis_dict
+from dashboard.components.plotly_theme import LYF_TEMPLATE
 
 
 def render_trend_chart(kpi_key: str = "part_modale_tc") -> None:
@@ -77,7 +78,7 @@ def render_trend_chart(kpi_key: str = "part_modale_tc") -> None:
             title=f"{kpi.get('label', '—')} — 12 derniers mois",
             yaxis_title=f"Valeur ({unit})",
             height=320,
-            template="plotly_dark",
+            template=LYF_TEMPLATE,
             showlegend=False,
         )
         st.plotly_chart(fig, use_container_width=True)

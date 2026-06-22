@@ -24,6 +24,7 @@ import pandas as pd
 import streamlit as st
 
 from dashboard.components.data_cache import cached_data_completeness, cached_source_health
+from dashboard.components.plotly_theme import apply_lyf_theme
 from src.data.exceptions import DashboardDataError
 
 # Poids par source pour le score global
@@ -96,6 +97,7 @@ def _gauge_plotly(score: float) -> plotly.graph_objects.Figure:
         )
     )
     fig.update_layout(height=250, margin={"t": 0, "b": 0, "l": 0, "r": 0})
+    apply_lyf_theme(fig)
     return fig
 
 

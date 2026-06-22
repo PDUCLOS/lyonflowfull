@@ -5,6 +5,7 @@ from __future__ import annotations
 import streamlit as st
 
 from dashboard.components.colors import COLORS
+from dashboard.components.plotly_theme import LYF_TEMPLATE
 
 
 def render_before_after_chart(base_value: float, new_value: float, label: str = "OTP") -> None:
@@ -49,7 +50,7 @@ def render_before_after_chart(base_value: float, new_value: float, label: str = 
             title=f"{label} — Avant / Après",
             yaxis_title=label,
             height=300,
-            template="plotly_dark",
+            template=LYF_TEMPLATE,
             showlegend=False,
         )
         st.plotly_chart(fig, use_container_width=True)

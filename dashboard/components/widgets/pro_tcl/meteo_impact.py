@@ -37,6 +37,7 @@ import plotly.graph_objects as go
 import streamlit as st
 
 from dashboard.components.data_cache import cached_meteo_impact
+from dashboard.components.plotly_theme import apply_lyf_theme
 from src.data.exceptions import DashboardDataError
 
 # Libellés FR pour les bandes météo (cohérent avec axe 1 multimodal_heatmap)
@@ -231,6 +232,7 @@ def _render_delta_chart(df: pd.DataFrame) -> None:
         height=400,
         hovermode="x unified",
     )
+    apply_lyf_theme(fig)
     st.plotly_chart(fig, use_container_width=True)
 
 

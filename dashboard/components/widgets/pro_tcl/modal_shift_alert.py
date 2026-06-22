@@ -34,6 +34,7 @@ from dashboard.components.data_cache import (
     cached_velov_transit_coupling,
     cached_velov_transit_coupling_summary,
 )
+from dashboard.components.plotly_theme import apply_lyf_theme
 from src.data.exceptions import DashboardDataError
 
 # Libellés FR pour les alertes (cohérent avec le reste du dashboard)
@@ -179,6 +180,7 @@ def _render_lines_chart(summary_df: pd.DataFrame) -> None:
         height=380,
         showlegend=False,
     )
+    apply_lyf_theme(fig)
     st.plotly_chart(fig, use_container_width=True)
 
 
