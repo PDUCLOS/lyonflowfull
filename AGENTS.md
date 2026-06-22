@@ -3,10 +3,10 @@
 # =============================================================================
 # Ce fichier est la source de vérité sur les décisions de phase et conventions
 # du projet. À lire en premier par tout assistant IA.
-# Dernière mise à jour : 2026-06-12, Sprint 8 (zéro mock + ingestion Bronze + focus H+1h).
+# Dernière mise à jour : 2026-06-22, Sprint 21 (v0.11.0).
 # =============================================================================
 
-# Phases du projet (état 2026-06-12)
+# Phases du projet (état 2026-06-22)
 # --------------------------------
 
 # PHASE 1 (livrée) — Production-ready LOCAL (branche `main`)
@@ -14,57 +14,35 @@
 # - Dashboard via `streamlit run dashboard/Accueil.py`
 # - 3 personas (usager, pro_tcl, elu) naviguent
 # - 8 collecteurs Bronze, transforms Silver/Gold, ML XGBoost, FastAPI, RGPD
-# - 47+ tests passent (`pytest tests/`)
 #
 # PHASE 2 (ACTIVE) — Déploiement VPS production (branche `vps`)
 # - Cible production unique : VPS 51.83.159.224 (Ubuntu, 6 CPU, 12 Go RAM, 2× 100 Go SSD)
-# - Sprints VPS 1-8 livrés :
-#   * VPS-1 : TLS Let's Encrypt + healthcheck + hardening SSH/firewall
-#   * VPS-2 : systemd unit + backup timer + rollback + CI vps branch
-#   * VPS-3 : Prometheus + Alertmanager + Grafana + exporters (node, postgres, nginx, redis)
-#   * VPS-4 : métriques FastAPI custom (predictions, latency, personas, DAGs, MLflow, DB)
-#   * VPS-5 : pipeline trafic reconnecté (dag_live_speed_retrain) + 166 lignes TCL
-#     Pro_4_Simulateur + sort/explore KPIs par ligne + 5 régressions SQL corrigées
-#     + fix perms logs/ worker Airflow
-#   * VPS-6 (2026-06-11) : focus H+1h stable
-#       - dag_live_speed_retrain : HORIZON_MAP={60:1} (suppression 0/3/6)
-#       - schedule :20 hourly → */30 * * * * (toutes les 30 min)
-#       - Nginx Docker healthcheck fix : `localhost` → `127.0.0.1` (IPv6 ::1 connection refused)
-#       - DB cleanup : DELETE 232k rows multi-horizons, reste 77k rows horizon=1
-#   * VPS-7 (2026-06-12) : KPIs TCL via vues matérialisées
-#       - gold.mv_line_kpis_live (155 lignes TCL avec OTP, retard, fréquence, charge)
-#       - gold.mv_otp_heatmap (4416 triplets ligne×date×hour)
-#       - DAG refresh_lieux_calendrier quotidien 5h
-#   * VPS-8 (2026-06-12) : ZÉRO MOCK DANS LE PROJET + INGESTION BRONZE
-#       - Suppression complète de `src/data/mock/` (déplacé dans `tests/fixtures/mock_data/`)
-#       - Tous widgets/data_loader/db_query fail loud via DashboardDataError
-#       - 18 fallbacks mock virés (data_loader, db_query, airflow_client)
-#       - Tests conftest centralisé + 6 tests valident la politique "zéro mock"
-#       - Sprint 8+1 : focus H+1h durci (FEATURE_COLS 14→9, horizons=[60], retries=0)
-#       - Sprint 8+4 : durcissement monitoring Prometheus/Grafana/Alertmanager (config YAML v2.54)
-#       - Sprint 8+5 : Cron backfill lat/lon `*/5min` (dette schéma propriétés_twgid)
-#       - Sprint 8+6 : Trigger SQL `trg_dim_spatial_has_lat_lon` (défense en profondeur)
-#       - Sprint 8+7 : Pathfinding voiture/Vélov (signature + smart routing)
-#       - Sprint 8+8 : 5 régressions ingestion Bronze (uq_*_nodup dropped, _count_records Open-Meteo)
-#         air_quality 72 records + chantiers 428 records débloqués
-#       - Refacto xgboost_speed.py : schéma v0.3.1 (lag_h1/h2/h3, delta_h1, rolling_mean_h1)
-# - Docs : docs/VPS_HARDENING.md, docs/MONITORING.md, docs/CONTROLE_VPS_VS_CLOUD_DEMO.md,
-#   archive/sprints/SPRINT_VPS-5_REPORT.md, archive/sprints/SPRINT_VPS-6_REPORT.md,
-#   archive/sprints/SPRINT_VPS-8_REPORT.md, PLAN_NO_MOCK_VPS.md
-# - Healthcheck : scripts/healthcheck-vps.sh (Sprint 8+, 20 checks : containers + DB + endpoints)
+# - **v0.11.0** — 615 tests verts, ~60 widgets, 18 pages × 3 personas, 15 DAGs Airflow
+# - Sprints livrés : VPS 1-8, 9+, 11+, 12+, 13, 13+, 15+, 17, 17+, 18, 20, 21
 #
-# Dette technique connue (Sprint 9+) :
-# - Désynchronisation Architecturale (Modèle Vélov) : Le pipeline Trafic a été migré en v0.3.1
-#   (temperature_2m, precipitation, lag_h1) mais xgboost_velov.py et gold.velov_features
-#   sont restés sur l'ancien schéma (temperature_c, rain_mm, hour_sin). À refactorer pour cohérence.
-# - dim_spatial_grid_mapping.properties_twgid (entiers ou strings) ne match pas
-#   traffic_features_live.channel_id (LYO00xxx) d'identité — backfill lat/lon OK mais mapping
-#   à réconcilier pour la jointure d'identité dans gold.trafic_predictions.
-# - /opt/lyonflow/logs/ doit être chown 50000:0 récursif après chaque rsync.
-#   Fix durable = entrypoint Dockerfile ou service init docker-compose.
-# - GNN training : code livré (stgcn_wrapper), retrain Airflow à finaliser
-# - Composant React deck.gl : pas encore intégré
-# - Intégration dynamique FastAPI ↔ MLflow : en cours
+# Résumé des sprints majeurs :
+#   * VPS-1 à VPS-4 : TLS, systemd, backup, monitoring, métriques custom
+#   * VPS-5 : pipeline trafic reconnecté, 166 lignes TCL, Pro_4_Simulateur
+#   * VPS-6 : focus H+1h, Nginx healthcheck fix, DB cleanup multi-horizons
+#   * VPS-7 : KPIs TCL vues matérialisées (mv_line_kpis_live, mv_otp_heatmap)
+#   * Sprint 8 : ZÉRO MOCK + ingestion Bronze complète (8 sources)
+#   * Sprint 9+ : découplage training/inférence, GNN données réelles,
+#     mapping LYO↔twgid, gold.xgb_training_set, MinIO sdb2
+#   * Sprint 11+ : libellés TCL lisibles, OOM-kill SIRI/Vélov résolu, reorg docs
+#   * Sprint 12+ : cleanup final audits Pro TCL + Usager (force_mock viré)
+#   * Sprint 13 : version unique, auto-refresh par persona, nettoyage force_mock
+#   * Sprint 13+ : TomTom Niveau 1 (cross-validation, détecteur capteurs HS)
+#   * Sprint 15+ : interdépendances multimodales (Axes 1+3+5), mypy clean,
+#     comparateur modes usager
+#   * Sprint 17/17+ : Axes 2+4+6+7 (propagation Granger, report modal,
+#     qualité données, météo interaction)
+#   * Sprint 18 : pgRouting voiture OSM (87k vertices, 101k arêtes, trafic
+#     temps réel */15 min). Image Docker pgrouting/pgrouting:16-3.5-3.7.3
+#   * Sprint 20 : UX unifiée (plotly_theme, error_display, loading_wrapper,
+#     freshness_badge, a11y)
+#   * Sprint 21 : quantile regression XGBoost P10/P50/P90, sparkline 24h,
+#     backup template, documentation cleanup (13 docs archivés, doublons
+#     tests mergés, docs centrales à jour)
 #
 # PHASE 3 (dormante, futur AWS/GCP) — Kubernetes (branche `kubernetes`)
 # - NE PAS MERGER dans `vps` ni `main`
@@ -77,17 +55,18 @@
 # Déploiement VPS (cible production unique)
 # -----------------------------------------
 # - VPS : 51.83.159.224 (Ubuntu, 6 CPU, 12 Go RAM, 2× 100 Go SSD)
-#   - sda1 = /, OS + code + tous volumes Docker (Airflow, MLflow, Grafana, Prometheus, Redis)
-#   - sdb = /mnt/postgres-data + /mnt/minio-data (données applicatives uniquement)
-# - SSH key : ~/.ssh/lyonflow_deploy (ED25519)
-# - DB : PostgreSQL 16 + PostGIS sur le VPS (3 schémas : bronze/silver/gold + referentiel)
+#   - sda1 = /, OS + code (Docker data-root migré sur sdb Sprint 9+)
+#   - sdb = /mnt/postgres-data + /mnt/minio-data + Docker data-root
+# - SSH : user `ubuntu`, clé `~/.ssh/id_ed25519`
+# - DB : PostgreSQL 16 + PostGIS 3.5 + pgRouting 3.7.3
+#   (4 schémas : bronze/silver/gold/osm + referentiel)
+#   Image Docker : pgrouting/pgrouting:16-3.5-3.7.3
 # - Path déploiement : /opt/lyonflow/
-# - Reverse proxy : Nginx 1.27 (DNS lyonflowfull.fr mort → accès par IP)
+# - Reverse proxy : Nginx 1.27 (self-signed cert, DNS lyonflowfull.fr mort → accès par IP)
 # - Process : systemd unit lyonflow.service
 # - Backup : timer systemd quotidien 03:00 → scripts/backup.sh + offsite scripts/backup-offsite.sh
-# - Monitoring : docker-compose.monitoring.yml (Prometheus/Grafana/Alertmanager — tous UP Sprint 8+)
+# - Monitoring : Grafana + Alertmanager UP. Prometheus supprimé Sprint 15+ (config YAML cassée v2.54)
 # - NE PAS TOUCHER AU VPS tant que l'utilisateur n'a pas donné le feu vert
-# - Vérifier l'état du disque avant tout : df -h /opt (sda1 à 80% — 19 Go libres)
 # - Commandes : make deploy-vps, make rollback-vps, make monitoring-up, ./scripts/healthcheck-vps.sh
 #
 # Règle CRITIQUE : toute correction faite SUR le VPS doit aussi être commitée dans git
@@ -100,8 +79,6 @@
 # Sinon le prochain deploy (rsync + restart) ÉCRASE ta correction.
 # Idem pour les installs pip dans un container : ajouter au requirements.txt
 # correspondant dans le repo.
-# Astuce : pousser un fichier via `cat local | ssh user@host "cat > remote"` (bypass chattr +a).
-# Astuce 2 : rebuild streamlit nécessaire car le container n'a pas de bind mount src/.
 
 # Conventions de code
 # -------------------
@@ -111,8 +88,9 @@
 # - Code (variables, fonctions) en ANGLAIS
 # - Commentaires / docstrings en FRANÇAIS
 # - Ruff lint (line-length 120)
-# - Type hints partout (mypy non bloquant)
+# - Type hints partout — mypy clean (82 fichiers, 0 erreur, Sprint 15+ v0.7.1)
 # - pytest pour chaque module (conftest.py centralisé avec MockDB fixture)
+# - Zéro mock dans le projet (Sprint 8) — DashboardDataError + show_error()
 
 # Personas & accès
 # ----------------
@@ -122,15 +100,44 @@
 # - 3 personas dans 1 dashboard, switcher dans la sidebar
 # - Fichiers pages : Usager_*.py, Pro_*.py, Elu_*.py (avec préfixe ordre)
 
-# Résolu en Phase 2 (vps)
-# -----------------------
-# - Tests E2E Playwright : OK (Tests profil Élu et résilience implémentés)
-# - Data binding (Sprint 6) : OK (100% des widgets branchés, fail loud Sprint 8+)
-# - Résilience : OK (ZÉRO mock en Sprint 8 — fail loud strict via DashboardDataError)
-# - Métriques Prometheus : OK (Sprint VPS-3 + VPS-4)
+# Composants UX transversaux (Sprint 20+)
+# ----------------------------------------
+# - plotly_theme.py : LYF_TEMPLATE + COLORS dict. apply_lyf_theme(fig).
+# - error_display.py : show_error(error_type, detail) — adapté par persona.
+# - loading_state.py : loading_wrapper(msg, icon) — context manager spinner.
+# - freshness_badge.py : badge prochaine MAJ par persona (30s/60s/300s).
+# - a11y.py : plotly_with_alt(fig), sr_only(text) — accessibilité WCAG.
+# - sparkline.py : sparkline 24h santé réseau.
+# - auto_refresh.py : auto-refresh par persona (streamlit-autorefresh).
+
+# Dette technique connue (Sprint 21)
+# -----------------------------------
+# - Vélov schéma ancien : xgboost_velov.py + gold.velov_features sur ancien
+#   schéma (temperature_c, rain_mm, hour_sin). Pipeline trafic migré v0.3.1.
+# - dim_spatial_grid_mapping.properties_twgid ≠ traffic_features_live.channel_id
+#   (LYO00xxx) — backfill lat/lon OK, mapping identité à réconcilier.
+# - /opt/lyonflow/logs/ doit être chown 50000:0 récursif après chaque rsync.
+# - GNN training : code livré (stgcn_wrapper), retrain Airflow à finaliser.
+# - DNS lyonflowfull.fr mort → accès par IP. Self-signed cert (Sprint 21 fix).
+# - Prometheus supprimé Sprint 15+ (config YAML v2.54 cassée). Grafana sans source.
+# - test_error_display 3 failures pré-existantes (test_persona_a_5_types).
+# - OFFSITE_HOST non configuré (backup-template.sh livré, destination à choisir).
+
+# Résolu depuis Sprint 8
+# ----------------------
+# - Tests E2E Playwright : OK
+# - Data binding (Sprint 6) : OK (100% widgets branchés, fail loud Sprint 8+)
+# - Résilience : OK (zéro mock — fail loud strict DashboardDataError)
+# - Métriques Prometheus : supprimé Sprint 15+ (pas un bug, décision ops)
 # - Backup auto : OK (Sprint VPS-2, timer systemd)
-# - TLS production : OK (Sprint VPS-1, Let's Encrypt)
-# - Ingestion Bronze : OK (Sprint VPS-8 — air_quality 72 records, chantiers 428 records)
+# - TLS production : self-signed (Sprint 21 fix, DNS mort)
+# - Ingestion Bronze : OK (8 sources + TomTom Sprint 13+)
+# - Nginx restart-loop : FIXÉ Sprint 21 (cert manquant → self-signed généré)
+# - Mode démo / mocks : VIRÉ Sprint 8. Cleanup terminé Sprint 12+.
+# - NetworkX routing : VIRÉ Sprint 18. pgRouting pgr_dijkstra.
+# - snap_to_roads.py : VIRÉ Sprint 18. Dead code.
+# - 13 docs stale : ARCHIVÉS Sprint 21 (convention déplacer, jamais supprimer).
+# - test drift_detector doublon : MERGÉ Sprint 21.
 
 # Règles strictes
 # ---------------
@@ -139,32 +146,21 @@
 # 3. SQL paramétré PARTOUT
 # 4. Pas de credentials en dur
 # 5. Containers non-root
-# 6. Pas de merge `kubernetes` ou `cloud-demo` dans `vps` ou `main` (dormantes AWS/GCP)
-# 7. **ZÉRO MOCK DANS LE PROJET** (Sprint 8, 2026-06-12) : helper `_is_demo_mode()`
-#    retourne TOUJOURS False. `LYONFLOW_DEMO_MODE` doit être `0` en prod
-#    (defense in depth via .env + check-deploy-env.sh). Toute source de
-#    données indisponible lève `DashboardDataError` et le widget affiche
-#    `st.error()`. Pas de fallback mock silencieux, jamais. Mode démo
-#    complètement supprimé. Cf. tests/data/test_no_mock_vps_policy.py.
-# 8. **Référentiel lieux en DB** : 21 lieux emblématiques Lyon stockés dans
-#    `referentiel.lieux_lyon` (PostgreSQL) — pas de codé-en-dur. Les desserts
-#    TCL dans `referentiel.lieux_transports`, les cadences dans
-#    `referentiel.lieux_calendrier`. 10 lignes emblématiques (M_A..D, T1..T6,
-#    C3, C13) extraites dans `src/data/tcl_lines.py` (référentiel statique,
-#    pas un mock).
-# 9. **Fiabilité VPS** (Sprint 8+) : DAGs critiques ont `retries=0` (le
-#    cycle suivant rattrape). Le backfill lat/lon tourne `*/5min`. Tests
-#    `pytest -m "not integration"` par défaut (integration skippable en CI
-#    sans stack).
-# 10. **Cache Python .pyc** dans containers Airflow : purger `find /opt/airflow
-#     -name __pycache__ -type d -exec rm -rf {} +` après modification de
-#     `src/`. Sinon DAGs chargent l'ancienne version (Sprint 8 leçon apprise).
+# 6. Pas de merge `kubernetes` ou `cloud-demo` dans `vps` ou `main`
+# 7. ZÉRO MOCK DANS LE PROJET (Sprint 8)
+# 8. Référentiel lieux en DB (referentiel.lieux_lyon, lieux_transports, lieux_calendrier)
+# 9. Fiabilité VPS : DAGs critiques retries=0, backfill lat/lon */5min
+# 10. Cache Python .pyc : purger __pycache__ après modif src/ dans containers Airflow
+# 11. DOCKER DATA-ROOT SUR SDB — ne pas revenir à /var/lib/docker
+# 12. BACKUP OFFSITE OBLIGATOIRE — jamais de backup persistant sur sdb
+# 13. Archive convention : déplacer, jamais supprimer (traçabilité RNCP 38777)
 
 # Liens utiles
 # ------------
 # - Repo GitHub : https://github.com/PDUCLOS/lyonflowfull
 # - Issue tracker : GitHub Issues
 # - CI : GitHub Actions (.github/workflows/ci.yml)
-# - Docs : /docs/ (README, ARCHITECTURE, DEPLOYMENT, DATA_GOVERNANCE, RUNBOOK, MONITORING)
-# - Rapports sprint : /archive/sprints/SPRINT_*.md (8 rapports archivés)
-# - Healthcheck : scripts/healthcheck-vps.sh (20 checks)
+# - Docs : /docs/ (ARCHITECTURE, DEPLOYMENT, DATA_GOVERNANCE, RUNBOOK, MONITORING, SPECs)
+# - Rapports sprint : /archive/sprints/ (convention : déplacer, jamais supprimer)
+# - Healthcheck : scripts/healthcheck-vps.sh
+# - TODO restant : docs/TODO.md (P2 tabs/collapsibles, P2.4 index pgRouting)
