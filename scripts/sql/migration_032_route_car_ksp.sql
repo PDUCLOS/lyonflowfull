@@ -76,7 +76,7 @@ BEGIN
             v_target,
             p_k,
             directed := true,
-            heap_paths := true
+            heap_paths := false
         ) k
         WHERE k.edge > 0
     ),
@@ -114,7 +114,7 @@ END;
 $$ LANGUAGE plpgsql STABLE;
 
 COMMENT ON FUNCTION osm.route_car_ksp IS
-    'K-shortest paths (Yen algorithm) via pgRouting KSP. Retourne jusqu''à 5 alternatives d''itinéraire avec géométrie OSM par arête. Colonne route_id (1..K) + totaux (length/cost) dupliqués sur chaque ligne pour affichage rapide côté client.';
+    'K-shortest paths (algorithme Yen) via pgRouting KSP. Retourne jusqu''à 5 alternatives d''itinéraire avec géométrie OSM par arête. Colonne route_id (1..K) + totaux (length/cost) dupliqués sur chaque ligne pour affichage rapide côté client. Note : heap_paths=false (Yen classique) car heap_paths=true retourne trop de paths en pgRouting 3.7.3 (~118 vs 3 demandés, bug connu).';
 
 -- ============================================================================
 -- Tests rapides (décommenter pour vérifier après déploiement)
