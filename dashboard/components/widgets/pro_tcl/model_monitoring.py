@@ -111,14 +111,12 @@ def render_model_registry() -> None:
     if latest_drift:
         with st.expander("📊 Dernier rapport de drift (PSI)", expanded=False):
             st.markdown(
-                f"""
-                - **Dataset drift** : `{latest_drift.get("dataset_drift")}`
-                - **Drift share** : `{drift_share_pct:.1f}%`
-                - **N ref / current** : `{latest_drift.get("n_ref")}` / `{latest_drift.get("n_current")}`
-                - **Période ref** : `{latest_drift.get("ref_from")}` → `{latest_drift.get("ref_to")}`
-                - **Période current** : `{latest_drift.get("current_from")}` → `{latest_drift.get("current_to")}`
-                - **Computed at** : `{latest_drift.get("computed_at")}`
-                """
+                f"- **Dataset drift** : `{latest_drift.get('dataset_drift')}`\n"
+                f"- **Drift share** : `{drift_share_pct:.1f}%`\n"
+                f"- **N ref / current** : `{latest_drift.get('n_ref')}` / `{latest_drift.get('n_current')}`\n"
+                f"- **Période ref** : `{latest_drift.get('ref_from')}` → `{latest_drift.get('ref_to')}`\n"
+                f"- **Période current** : `{latest_drift.get('current_from')}` → `{latest_drift.get('current_to')}`\n"
+                f"- **Computed at** : `{latest_drift.get('computed_at')}`"
             )
             report = latest_drift.get("report", {})
             if report.get("per_column"):
@@ -439,7 +437,7 @@ def render_drift_panel() -> None:
         st.info(
             "Aucun rapport de drift disponible. "
             "Le DAG `build_xgb_training_set` (quotidien 02h30) génère un "
-            "rapport Evidently dans `gold.model_drift_reports`."
+            "rapport PSI dans `gold.model_drift_reports`."
         )
         return
 
@@ -485,42 +483,41 @@ def render_drift_panel() -> None:
                 f"{col_icon} <code>{safe_col}</code> : PSI = {psi:.3f} ({safe_status})</div>"
             )
 
-    action_text = ""
+    # Build inner HTML parts without blank lines (CommonMark exits HTML
+    # block on blank line → subsequent tags render as raw text).
+    inner_parts = [
+        '<div style="font-weight:600;">XGBoost Speed H+1h</div>',
+        f'<div style="font-size:0.8rem;opacity:0.7;">'
+        f"Drift score: {drift_share:.1f}% features driftées"
+        f" · N ref/cur: {n_ref}/{n_cur}"
+        f" · {computed_at}</div>",
+    ]
+    if ref_from != "—" or cur_from != "—":
+        inner_parts.append(
+            f'<div style="font-size:0.8rem;opacity:0.7;margin-top:0.2rem;">'
+            f"Réf: {ref_from} → {ref_to} · Current: {cur_from} → {cur_to}</div>"
+        )
+    if per_column_html:
+        inner_parts.append(per_column_html)
     if dataset_drift:
-        action_text = (
-            '<div style="font-size:0.8rem;margin-top:0.4rem;color:var(--status-critical);">'
-            "→ Drift dataset détecté — investigation requise, retrain à planifier"
-            "</div>"
+        inner_parts.append(
+            '<div style="font-size:0.8rem;margin-top:0.4rem;color:#ef5350;">'
+            "→ Drift dataset détecté — investigation requise, retrain à planifier</div>"
         )
     elif drift_share > 10:
-        action_text = (
-            '<div style="font-size:0.8rem;margin-top:0.4rem;color:var(--status-warning);">'
-            "→ Drift modéré — surveiller l'évolution sur 24-48h"
-            "</div>"
+        inner_parts.append(
+            '<div style="font-size:0.8rem;margin-top:0.4rem;color:#ffa726;">'
+            "→ Drift modéré — surveiller l'évolution sur 24-48h</div>"
         )
 
+    body_html = "".join(inner_parts)
     st.markdown(
-        f"""
-        <div style="background:var(--bg-card);border:1px solid var(--border-card);border-left:4px solid {color};
-                    border-radius:6px;padding:0.7rem;margin:0.4rem 0;">
-            <div style="display:flex;align-items:center;gap:0.6rem;">
-                <div class="lyf-value">{icon}</div>
-                <div style="flex:1;">
-                    <div style="font-weight:600;">XGBoost Speed H+1h</div>
-                    <div style="font-size:0.8rem;opacity:0.7;">
-                        Drift score: {drift_share:.1f}% features drifteés
-                        · N ref/cur: {n_ref}/{n_cur}
-                        · {computed_at}
-                    </div>
-                    <div style="font-size:0.8rem;opacity:0.7;margin-top:0.2rem;">
-                        Réf: {ref_from} → {ref_to} · Current: {cur_from} → {cur_to}
-                    </div>
-                    {per_column_html}
-                    {action_text}
-                </div>
-            </div>
-        </div>
-        """,
+        f'<div style="background:var(--bg-card);border:1px solid var(--border-card);'
+        f"border-left:4px solid {color};border-radius:6px;padding:0.7rem;margin:0.4rem 0;\">"
+        f'<div style="display:flex;align-items:center;gap:0.6rem;">'
+        f'<div class="lyf-value">{icon}</div>'
+        f'<div style="flex:1;">{body_html}</div>'
+        f"</div></div>",
         unsafe_allow_html=True,
     )
 
