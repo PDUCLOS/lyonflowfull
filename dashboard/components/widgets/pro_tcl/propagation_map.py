@@ -66,6 +66,7 @@ from dashboard.components.data_cache import (
     cached_congestion_propagation_pairs,
     cached_traffic_speeds_for_propagation,
 )
+from dashboard.components.error_display import show_error
 from src.data.exceptions import DashboardDataError
 
 # -----------------------------------------------------------------------------
@@ -895,7 +896,7 @@ def render_propagation_map(
         pairs_df = cached_congestion_propagation_pairs()
         speeds_df = cached_traffic_speeds_for_propagation(hours=hours_window)
     except DashboardDataError as e:
-        st.error(f"⚠️ {e}")
+        show_error("db_down", str(e))
         return
 
     if pairs_df.empty or speeds_df.empty:

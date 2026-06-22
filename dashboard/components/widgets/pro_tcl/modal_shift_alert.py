@@ -34,6 +34,7 @@ from dashboard.components.data_cache import (
     cached_velov_transit_coupling,
     cached_velov_transit_coupling_summary,
 )
+from dashboard.components.error_display import show_error
 from dashboard.components.plotly_theme import apply_lyf_theme
 from src.data.exceptions import DashboardDataError
 
@@ -194,7 +195,7 @@ def render_modal_shift_alert() -> None:
         df = cached_velov_transit_coupling(anomalies_only=False)
         summary_df = cached_velov_transit_coupling_summary()
     except DashboardDataError as e:
-        st.error(f"⚠️ {e}")
+        show_error("db_down", str(e))
         return
 
     if df.empty:

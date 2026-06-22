@@ -30,6 +30,7 @@ from dashboard.components.data_cache import (
     cached_bus_traffic_spatial,
     cached_bus_traffic_spatial_diagnosis_counts,
 )
+from dashboard.components.error_display import show_error
 from dashboard.components.plotly_theme import apply_lyf_theme
 from src.data.db_query import clean_line_label
 from src.data.exceptions import DashboardDataError
@@ -203,7 +204,7 @@ def render_bus_traffic_spatial(
         df = cached_bus_traffic_spatial(line_ref=line_id)
         diag_df = cached_bus_traffic_spatial_diagnosis_counts(line_ref=line_id)
     except DashboardDataError as e:
-        st.error(f"⚠️ {e}")
+        show_error("db_down", str(e))
         return
 
     if df.empty or diag_df.empty:

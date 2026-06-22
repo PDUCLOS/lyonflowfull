@@ -19,6 +19,7 @@ from __future__ import annotations
 import streamlit as st
 
 from dashboard.components.colors import COLORS
+from dashboard.components.error_display import show_error
 from src.data.exceptions import DashboardDataError
 from src.routing.pathfinder_multimodal import (
     VelovItinerary,
@@ -61,13 +62,13 @@ def render_velov_trip(
         try:
             origin_coords = _resolve_lieu(origin)
         except DashboardDataError as e:
-            st.error(f"⚠️ {e}")
+            show_error("db_down", str(e))
             return
     if dest_coords is None:
         try:
             dest_coords = _resolve_lieu(destination)
         except DashboardDataError as e:
-            st.error(f"⚠️ {e}")
+            show_error("db_down", str(e))
             return
 
     if not origin_coords or not dest_coords:
@@ -89,7 +90,7 @@ def render_velov_trip(
                 dest_label=destination,
             )
         except DashboardDataError as e:
-            st.error(f"⚠️ {e}")
+            show_error("db_down", str(e))
             return
 
     # Sprint 9+ (2026-06-17) — viré le check `itin.source == "demo"` :

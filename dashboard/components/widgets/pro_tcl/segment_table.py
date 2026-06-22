@@ -10,6 +10,7 @@ import pandas as pd
 import streamlit as st
 
 from dashboard.components.data_cache import cached_infra_bottlenecks
+from dashboard.components.error_display import show_error
 from src.data.db_query import clean_line_label  # Sprint 15+ : libellé lisible des lignes TCL.
 from src.data.exceptions import DashboardDataError
 
@@ -26,7 +27,7 @@ def render_segment_table(line_id: str | None = None, height: int = 400) -> None:
     try:
         df = cached_infra_bottlenecks(top=500)
     except DashboardDataError as e:
-        st.error(f"⚠️ {e}")
+        show_error("db_down", str(e))
         return
 
     if not df.empty:

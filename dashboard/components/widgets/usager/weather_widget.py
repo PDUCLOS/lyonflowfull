@@ -15,6 +15,7 @@ import streamlit as st
 
 from dashboard.components.colors import COLORS
 from dashboard.components.data_cache import cached_weather_hourly
+from dashboard.components.error_display import show_error
 from src.data.exceptions import DashboardDataError
 
 
@@ -28,7 +29,7 @@ def render_weather_widget(weather: dict | None = None) -> None:
         try:
             df = cached_weather_hourly()
         except DashboardDataError as e:
-            st.error(f"⚠️ {e}")
+            show_error("db_down", str(e))
             return
         if not df.empty:
             current = df.iloc[0].to_dict()

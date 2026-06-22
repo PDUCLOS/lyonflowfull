@@ -25,6 +25,7 @@ from __future__ import annotations
 import streamlit as st
 
 from dashboard.components.data_cache import cached_transit_itinerary
+from dashboard.components.error_display import show_error
 from src.data.exceptions import DashboardDataError
 
 # Couleur par mode TC (segment card)
@@ -52,7 +53,7 @@ def render_transit_trip(origin: str, destination: str) -> dict | None:
         try:
             itin = cached_transit_itinerary(origin=origin, destination=destination)
         except DashboardDataError as e:
-            st.error(f"⚠️ {e}")
+            show_error("db_down", str(e))
             return None
 
     if itin is None:

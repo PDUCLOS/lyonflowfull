@@ -18,6 +18,7 @@ import html
 import streamlit as st
 
 from dashboard.components.colors import COLORS
+from dashboard.components.error_display import show_error
 from src.data.airflow_client import (
     clear_stuck_dag_run,
     get_dags_status,
@@ -96,7 +97,7 @@ def render_pipeline_status() -> None:
     try:
         dags = _cached_dags()
     except DashboardDataError as e:
-        st.error(f"⚠️ {e}")
+        show_error("db_down", str(e))
         return
     cols = st.columns(4)
     n_success = sum(1 for d in dags if d.get("last_status") == "success")
@@ -140,7 +141,7 @@ def render_dag_list() -> None:
     try:
         dags = _cached_dags()
     except DashboardDataError as e:
-        st.error(f"⚠️ {e}")
+        show_error("db_down", str(e))
         return
     if not dags:
         st.info("Aucun DAG enregistré pour le moment.")
@@ -224,7 +225,7 @@ def render_health_panel() -> None:
         try:
             results = run_all_checks()
         except DashboardDataError as e:
-            st.error(f"⚠️ {e}")
+            show_error("db_down", str(e))
             return
         except Exception as e:
             st.error(
@@ -290,7 +291,7 @@ def render_data_freshness() -> None:
     try:
         freshness = _cached_freshness()
     except DashboardDataError as e:
-        st.error(f"⚠️ {e}")
+        show_error("db_down", str(e))
         return
     if not freshness:
         st.info("Aucune source Bronze n'a collecté de données dans les 24 dernières heures.")
@@ -344,7 +345,7 @@ def render_alerts_feed() -> None:
     try:
         alerts = cached_recent_alerts(hours=24, limit=20)
     except DashboardDataError as e:
-        st.error(f"⚠️ {e}")
+        show_error("db_down", str(e))
         return
 
     if alerts.empty:

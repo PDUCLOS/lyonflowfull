@@ -44,6 +44,7 @@ from dashboard.components.data_cache import (
     cached_multimodal_grid,
     cached_multimodal_grid_diagnosis_counts,
 )
+from dashboard.components.error_display import show_error
 from src.data.exceptions import DashboardDataError
 
 # Libellés FR pour les diagnostics (cohérent avec labels.py)
@@ -287,7 +288,7 @@ def render_multimodal_heatmap(height: int = 500) -> None:
         df = cached_multimodal_grid(limit=5000)
         diag_df = cached_multimodal_grid_diagnosis_counts()
     except DashboardDataError as e:
-        st.error(f"⚠️ {e}")
+        show_error("db_down", str(e))
         return
 
     if df.empty or diag_df.empty:

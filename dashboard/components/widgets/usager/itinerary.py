@@ -17,6 +17,7 @@ import logging
 import streamlit as st
 
 from dashboard.components.colors import COLORS
+from dashboard.components.error_display import show_error
 from src.data.data_loader import load_lyon_addresses
 from src.data.exceptions import DashboardDataError
 from src.routing import Itinerary, compute_itinerary
@@ -89,7 +90,7 @@ def render_itinerary_result(
         origin_coords = _resolve_address(origin)
         dest_coords = _resolve_address(destination)
     except DashboardDataError as e:
-        st.error(f"⚠️ {e}")
+        show_error("db_down", str(e))
         return
 
     if not origin_coords:

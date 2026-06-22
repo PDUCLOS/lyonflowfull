@@ -33,6 +33,7 @@ from dashboard.components.data_cache import (
     cached_tomtom_coherence,
     cached_tomtom_gl_drift,
 )
+from dashboard.components.error_display import show_error
 from dashboard.components.plotly_theme import apply_lyf_theme
 from src.data.exceptions import DashboardDataError
 
@@ -272,7 +273,7 @@ def render_coherence_scatter() -> None:
     try:
         df = cached_tomtom_coherence(limit=500)
     except DashboardDataError as e:
-        st.error(f"⚠️ {e}")
+        show_error("db_down", str(e))
         return
 
     if df.empty:
@@ -328,7 +329,7 @@ def render_coherence_scatter() -> None:
         try:
             drift_df = cached_tomtom_gl_drift(limit=50)
         except DashboardDataError as e:
-            st.error(f"⚠️ {e}")
+            show_error("db_down", str(e))
             drift_df = pd.DataFrame()
         # Filtre : on priorise suspect et watch
         if not drift_df.empty and "sensor_health" in drift_df.columns:

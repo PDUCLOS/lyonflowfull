@@ -59,7 +59,7 @@ def render_lieux_velov_map(
 
             lieux_with_velov = get_lieux_with_velov(k=1)
         except DashboardDataError as e:
-            st.error(f"⚠️ {e}")
+            show_error("db_down", str(e))
             return
 
     if not lieux_with_velov:

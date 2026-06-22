@@ -18,6 +18,7 @@ import streamlit as st
 
 from dashboard.components.colors import COLORS
 from dashboard.components.data_cache import cached_infra_bottlenecks
+from dashboard.components.error_display import show_error
 from src.data.db_query import clean_line_label  # Sprint 15+ : libellé lisible des lignes TCL.
 from src.data.exceptions import DashboardDataError
 from src.data.labels import DIAGNOSIS_LABELS  # Sprint 8 : libellé FR d'un code SQL, pas du mock.
@@ -60,7 +61,7 @@ def render_correlation_matrix(line_id: str | None = None) -> None:
     try:
         df = cached_infra_bottlenecks(top=500)
     except DashboardDataError as e:
-        st.error(f"⚠️ {e}")
+        show_error("db_down", str(e))
         return
 
     if not df.empty:

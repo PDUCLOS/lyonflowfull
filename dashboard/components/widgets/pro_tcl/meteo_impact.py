@@ -37,6 +37,7 @@ import plotly.graph_objects as go
 import streamlit as st
 
 from dashboard.components.data_cache import cached_meteo_impact
+from dashboard.components.error_display import show_error
 from dashboard.components.plotly_theme import apply_lyf_theme
 from src.data.exceptions import DashboardDataError
 
@@ -245,7 +246,7 @@ def render_meteo_impact() -> None:
     try:
         df = cached_meteo_impact()
     except DashboardDataError as e:
-        st.error(f"⚠️ {e}")
+        show_error("db_down", str(e))
         return
 
     if df.empty:

@@ -16,6 +16,7 @@ import streamlit as st
 
 from dashboard.components.colors import COLORS
 from dashboard.components.data_cache import cached_buses_positions
+from dashboard.components.error_display import show_error
 from src.data.db_query import clean_line_label  # Sprint 15+ : libellé lisible des lignes TCL.
 from src.data.exceptions import DashboardDataError
 
@@ -42,7 +43,7 @@ def render_network_map(buses: list | None = None, height: int = 400) -> None:
         try:
             df = cached_buses_positions()
         except DashboardDataError as e:
-            st.error(f"⚠️ {e}")
+            show_error("db_down", str(e))
             return
         if not df.empty:
             def _safe_delay_min(seconds):

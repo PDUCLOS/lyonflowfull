@@ -23,6 +23,7 @@ import html
 import streamlit as st
 
 from dashboard.components.colors import COLORS
+from dashboard.components.error_display import show_error
 from dashboard.components.plotly_theme import LYF_TEMPLATE
 
 
@@ -288,7 +289,7 @@ def render_metrics_comparison() -> None:
     try:
         models = cached_mlflow_models()
     except DashboardDataError as e:
-        st.error(f"⚠️ {e}")
+        show_error("db_down", str(e))
         return
     except Exception as e:
         st.error(f"🔴 MLflow a échoué — métriques modèles indisponibles ({e}).")
