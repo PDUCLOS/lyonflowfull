@@ -6,28 +6,24 @@ from src.routing.eco_calculator import (
     recommend_mode,
 )
 from src.routing.graph import (
-    CACHE_TTL_SECONDS,
-    build_routing_graph,
-    get_nearest_node,
+    compute_route_pgrouting,
+    get_nearest_osm_node,
     get_node_speed,
 )
 from src.routing.pathfinder import (
     Itinerary,
     ItinerarySegment,
     compute_itinerary,
-    shortest_path,
 )
 
 __all__ = [
-    "CACHE_TTL_SECONDS",
     "Itinerary",
     "ItinerarySegment",
-    "build_routing_graph",
     "calculate_impact",
     "compute_itinerary",
+    "compute_route_pgrouting",
     "get_comparison",
-    "get_nearest_node",
+    "get_nearest_osm_node",
     "get_node_speed",
     "recommend_mode",
-    "shortest_path",
 ]

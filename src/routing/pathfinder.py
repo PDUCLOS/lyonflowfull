@@ -1,12 +1,18 @@
-"""Pathfinding — Dijkstra avec poids traffic-aware.
+"""Pathfinding — routing voiture via pgRouting (Sprint 26+).
 
-Calcule le plus court chemin entre 2 nœuds du graphe routier.
-Poids = travel_time = length_m / speed_kmh (avec conversion km/h → m/s).
+Sprint 26 (2026-06-21) — Remplace A* sur graphe NetworkX H3 par
+`pgr_dijkstra` côté PostgreSQL (réseau routier OSM réel).
 
-Fonctions :
-- shortest_path(graph, origin, destination, horizon_minutes) : chemin + détail
-- estimate_travel_time(graph, path, horizon_minutes) : temps total
-- k_shortest_paths(graph, origin, destination, k) : N alternatives
+API publique :
+- ``compute_itinerary(origin_lon, origin_lat, dest_lon, dest_lat)`` —
+  retourne un ``Itinerary`` avec géométrie multi-vertices par segment.
+
+L'interface est rétro-compatible : ``plan_car_trip()`` et
+``_road_itinerary_between()`` (pathfinder_multimodal.py) continuent
+de fonctionner sans modification.
+
+Sprint 16 Axe C : retourne aussi ``confidence`` (basée sur la
+couverture des capteurs Grand Lyon via ``osm.mv_sensor_to_way``).
 """
 
 from __future__ import annotations
@@ -15,12 +21,13 @@ import logging
 import math
 from dataclasses import dataclass, field
 
-import networkx as nx
+from src.routing.graph import compute_route_pgrouting
 
-from src.routing.graph import build_routing_graph, get_nearest_node, get_node_speed
+logger = logging.getLogger(__name__)
 
 
 def _haversine_m(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
+    """Distance haversine en mètres (utilisé en fallback)."""
     r = 6_371_000
     p1, p2 = math.radians(lat1), math.radians(lat2)
     dp = math.radians(lat2 - lat1)
@@ -29,12 +36,19 @@ def _haversine_m(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
     return 2 * r * math.asin(math.sqrt(a))
 
 
-logger = logging.getLogger(__name__)
-
-
 @dataclass
 class ItinerarySegment:
-    """Un segment dans l'itinéraire."""
+    """Un segment dans l'itinéraire.
+
+    Attributes:
+        channel_id: identifiant lisible (nom de rue OSM ou edge_id).
+        length_m: longueur du segment en mètres.
+        speed_kmh: vitesse moyenne estimée sur le segment.
+        duration_s: durée de parcours en secondes.
+        start_lon, start_lat: coordonnées du point de départ (premier vertex).
+        end_lon, end_lat: coordonnées du point d'arrivée (dernier vertex).
+        geometry: polyline OSM [[lon, lat], ...] ou None si non disponible.
+    """
 
     channel_id: str
     length_m: float
@@ -44,6 +58,7 @@ class ItinerarySegment:
     start_lat: float
     end_lon: float
     end_lat: float
+    geometry: list[list[float]] | None = None
 
 
 @dataclass
@@ -57,121 +72,55 @@ class Itinerary:
     total_length_m: float = 0.0
     total_duration_s: float = 0.0
     average_speed_kmh: float = 0.0
-    confidence: float = 0.0  # 0..1, basé sur vitesse récente disponible
+    confidence: float = 0.0  # 0..1, basé sur la couverture capteurs
 
     @property
     def total_duration_min(self) -> float:
         return self.total_duration_s / 60.0
 
 
-def shortest_path(
-    graph: nx.Graph,
-    origin_node: str,
-    destination_node: str,
-    horizon_minutes: int = 0,
-    weight_attr: str = "length_m",
-    speed_attr: str = "current_speed_kmh",
-) -> Itinerary | None:
-    """Calcule le plus court chemin traffic-aware via A*.
+def _compute_pgrouting_confidence() -> float:
+    """Calcule la confiance basée sur la couverture réelle des capteurs.
 
-    Utilise A* avec heuristique haversine (distance géographique vers
-    la destination) pour produire des routes géographiquement cohérentes.
+    - coverage_ratio = % d'arêtes OSM qui ont un capteur Grand Lyon nearby
+      avec vitesse temps réel < 1h
+    - confidence = 0.5 + 0.5 * coverage_ratio (plancher 50%, max 100%)
+
+    Sans capteur → utilise maxspeed_forward OSM (estimation moins fiable).
+    Avec capteur → vitesse réelle = haute confiance.
+
+    Returns:
+        float entre 0.5 et 1.0
     """
-    if origin_node not in graph:
-        logger.warning(f"Origin node {origin_node} pas dans le graphe")
-        return None
-    if destination_node not in graph:
-        logger.warning(f"Destination node {destination_node} pas dans le graphe")
-        return None
-
-    weighted = _build_traffic_aware_graph(graph, horizon_minutes)
-
-    dest_data = graph.nodes[destination_node]
-    dest_lat, dest_lon = dest_data["start_lat"], dest_data["start_lon"]
-    max_speed_ms = 50.0 * 1000 / 3600  # 50 km/h upper bound → admissible heuristic
-
-    def _heuristic(u: str, _v: str) -> float:
-        u_data = graph.nodes[u]
-        dist = _haversine_m(u_data["start_lat"], u_data["start_lon"], dest_lat, dest_lon)
-        return dist / max_speed_ms
-
     try:
-        path_nodes = nx.astar_path(
-            weighted,
-            origin_node,
-            destination_node,
-            heuristic=_heuristic,
-            weight="travel_time_s",
-        )
-    except nx.NetworkXNoPath:
-        logger.warning(f"Pas de chemin entre {origin_node} et {destination_node}")
-        return None
+        from src.db import execute_query
 
-    # Build segments from EDGES (u→v) — proper start/end coordinates
-    segments = []
-    total_length = 0.0
-    total_duration = 0.0
-
-    for i in range(len(path_nodes) - 1):
-        u, v = path_nodes[i], path_nodes[i + 1]
-        edge_data = weighted[u][v]
-        u_data = graph.nodes[u]
-        v_data = graph.nodes[v]
-        edge_length = edge_data.get("length_m", 50.0)
-        speed = edge_data.get("weighted_speed_kmh", 30.0)
-        duration = (edge_length / (speed * 1000 / 3600)) if speed > 0 else 0
-        total_length += edge_length
-        total_duration += duration
-        segments.append(
-            ItinerarySegment(
-                channel_id=f"{u}→{v}",
-                length_m=edge_length,
-                speed_kmh=speed,
-                duration_s=duration,
-                start_lon=u_data["start_lon"],
-                start_lat=u_data["start_lat"],
-                end_lon=v_data["start_lon"],
-                end_lat=v_data["start_lat"],
+        rows = execute_query("""
+            WITH coverage AS (
+                SELECT
+                    COUNT(*) AS total_ways,
+                    COUNT(*) FILTER (
+                        WHERE t.speed_kmh IS NOT NULL
+                          AND t.computed_at >= NOW() - INTERVAL '1 hour'
+                    ) AS covered_ways
+                FROM osm.ways w
+                LEFT JOIN osm.mv_sensor_to_way stw ON stw.way_gid = w.gid
+                LEFT JOIN gold.traffic_features_live t
+                  ON t.channel_id = stw.lyo_channel_id
             )
-        )
-
-    avg_speed = (total_length / (total_duration / 3600 * 1000)) if total_duration > 0 else 0
-
-    return Itinerary(
-        origin_node=origin_node,
-        destination_node=destination_node,
-        horizon_minutes=horizon_minutes,
-        segments=segments,
-        total_length_m=total_length,
-        total_duration_s=total_duration,
-        average_speed_kmh=avg_speed,
-        confidence=_compute_confidence(graph, path_nodes),
-    )
-
-
-def _build_traffic_aware_graph(graph: nx.Graph, horizon_minutes: int) -> nx.Graph:
-    """Construit un graphe pondéré par le temps de trajet traffic-aware."""
-    weighted = graph.copy()
-    for u, v, data in weighted.edges(data=True):
-        speed_u = get_node_speed(graph, u, horizon_minutes)
-        speed_v = get_node_speed(graph, v, horizon_minutes)
-        speed = min(speed_u, speed_v) if (speed_u and speed_v) else (speed_u or speed_v or 30.0)
-        edge_length = data.get("length_m", 50.0)
-        travel_time = (edge_length / (speed * 1000 / 3600)) if speed > 0 else 0
-        weighted[u][v]["travel_time_s"] = travel_time
-        weighted[u][v]["weighted_speed_kmh"] = speed
-    return weighted
-
-
-def _compute_confidence(graph: nx.Graph, path_nodes: list) -> float:
-    """Calcule un score de confiance basé sur la fraîcheur des données.
-
-    1.0 = toutes les données < 15 min
-    0.0 = données > 1h ou manquantes
-    """
-    # Heuristique simple : on suppose 1.0 par défaut (mock)
-    # Sprint 6+ : query DB pour vérifier fraîcheur réelle
-    return 0.85
+            SELECT
+                CASE WHEN total_ways > 0
+                     THEN covered_ways::FLOAT / total_ways::FLOAT
+                     ELSE 0.0
+                END AS coverage_ratio
+            FROM coverage
+        """)
+        if rows and rows[0].get("coverage_ratio") is not None:
+            cov = float(rows[0]["coverage_ratio"])
+            return min(1.0, max(0.5, 0.5 + 0.5 * cov))
+    except Exception as e:
+        logger.warning("Impossible de calculer coverage_ratio (%s) — fallback 0.75", e)
+    return 0.75  # fallback conservateur si DB indispo
 
 
 def compute_itinerary(
@@ -180,37 +129,74 @@ def compute_itinerary(
     destination_lon: float,
     destination_lat: float,
     horizon_minutes: int = 0,
-    use_cache: bool = True,
+    use_cache: bool = True,  # conservé pour rétro-compat — pas utilisé par pgRouting
 ) -> Itinerary | None:
-    """API haut-niveau : 2 points GPS → itinéraire détaillé.
+    """Calcule un itinéraire voiture via pgRouting (réseau routier OSM réel).
+
+    Appelle ``osm.route_car()`` côté PostgreSQL, qui exécute ``pgr_dijkstra``
+    sur le graphe routier OSM importé via ``osm2pgrouting``. Chaque arête
+    du chemin est retournée avec sa géométrie LineString (polyline OSM).
 
     Args:
         origin_lon, origin_lat: coords GPS du point de départ.
         destination_lon, destination_lat: coords GPS du point d'arrivée.
         horizon_minutes: 0 = maintenant, sinon utilise la prédiction.
-        use_cache: utiliser le cache graphe (5 min TTL).
+            (Note : pgRouting gère des coûts statiques par arête — l'horizon
+            influence le coût via ``osm.refresh_traffic_costs()`` qui tourne
+            en DAG toutes les 15 min.)
+        use_cache: conservé pour rétro-compat. pgRouting est stateless côté
+            Python (le cache SQL est géré par PostgreSQL).
 
     Returns:
-        Itinerary complet, ou None si pas de chemin.
+        Itinerary complet avec segments géométrie, ou None si pas de chemin.
     """
-    graph = build_routing_graph(use_cache=use_cache)
-    if graph.number_of_nodes() == 0:
+    edges = compute_route_pgrouting(
+        origin_lon=origin_lon,
+        origin_lat=origin_lat,
+        dest_lon=destination_lon,
+        dest_lat=destination_lat,
+    )
+    if not edges:
         return None
 
-    origin_node = get_nearest_node(graph, origin_lon, origin_lat)
-    dest_node = get_nearest_node(graph, destination_lon, destination_lat)
+    segments: list[ItinerarySegment] = []
+    total_length = 0.0
+    total_duration = 0.0
 
-    if not origin_node or not dest_node:
-        return None
+    for edge in edges:
+        coords = edge.get("geom_coordinates") or []
+        if coords:
+            start_lon, start_lat = float(coords[0][0]), float(coords[0][1])
+            end_lon, end_lat = float(coords[-1][0]), float(coords[-1][1])
+        else:
+            # Fallback rare (pas de géométrie OSM) — utilise coords uniques
+            start_lon = start_lat = end_lon = end_lat = 0.0
+            logger.warning("Edge %s sans géométrie OSM", edge.get("edge_id"))
 
-    if origin_node == dest_node:
-        # Origine = destination
-        return Itinerary(
-            origin_node=origin_node,
-            destination_node=dest_node,
-            horizon_minutes=horizon_minutes,
-            total_length_m=0,
-            total_duration_s=0,
+        seg = ItinerarySegment(
+            channel_id=edge.get("road_name") or f"edge_{edge['edge_id']}",
+            length_m=edge["length_m"],
+            speed_kmh=edge["speed_kmh"],
+            duration_s=edge["cost_s"],
+            start_lon=start_lon,
+            start_lat=start_lat,
+            end_lon=end_lon,
+            end_lat=end_lat,
+            geometry=coords if coords else None,
         )
+        segments.append(seg)
+        total_length += edge["length_m"]
+        total_duration += edge["cost_s"]
 
-    return shortest_path(graph, origin_node, dest_node, horizon_minutes)
+    avg_speed = (total_length / (total_duration / 3600 * 1000)) if total_duration > 0 else 0.0
+
+    return Itinerary(
+        origin_node=str(edges[0]["edge_id"]),
+        destination_node=str(edges[-1]["edge_id"]),
+        horizon_minutes=horizon_minutes,
+        segments=segments,
+        total_length_m=total_length,
+        total_duration_s=total_duration,
+        average_speed_kmh=avg_speed,
+        confidence=_compute_pgrouting_confidence(),
+    )

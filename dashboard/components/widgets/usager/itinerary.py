@@ -227,22 +227,35 @@ def _render_map(
             icon=folium.Icon(color="red", icon="stop"),
         ).add_to(m)
 
-        # Full path: origin → node₀ → node₁ → … → destination
-        full_path = [(o_lat, o_lon), *node_latlons, (d_lat, d_lon)]
-
-        # Draw colored segments between consecutive points
-        for i in range(len(full_path) - 1):
-            p1, p2 = full_path[i], full_path[i + 1]
-            seg_idx = min(i, len(itinerary.segments) - 1)
-            seg = itinerary.segments[seg_idx]
+        # Sprint 26+ : chaque segment peut avoir une géométrie OSM multi-vertices
+        # (LineString). On l'utilise pour tracer des polylines qui suivent
+        # les vraies rues, pas des lignes droites entre nœuds H3.
+        for seg in itinerary.segments:
             color = _speed_to_color(seg.speed_kmh)
 
+            if seg.geometry and len(seg.geometry) >= 2:
+                # Géométrie OSM : [[lon, lat], ...] → Folium veut [[lat, lon], ...]
+                locations = [[float(pt[1]), float(pt[0])] for pt in seg.geometry]
+            else:
+                # Fallback si géométrie absente (ne devrait plus arriver avec pgRouting)
+                locations = [
+                    [seg.start_lat, seg.start_lon],
+                    [seg.end_lat, seg.end_lon],
+                ]
+
+            popup = (
+                f"🚗 <b>{seg.speed_kmh:.0f} km/h</b><br>"
+                f"📏 {seg.length_m:.0f} m · 🕐 {seg.duration_s:.0f}s"
+            )
+            if seg.channel_id:
+                popup += f"<br>🛣️ {seg.channel_id}"
+
             folium.PolyLine(
-                locations=[list(p1), list(p2)],
+                locations=locations,
                 color=color,
                 weight=6,
                 opacity=0.85,
-                popup=(f"🚗 <b>{seg.speed_kmh:.0f} km/h</b><br>📏 {seg.length_m:.0f} m · 🕐 {seg.duration_s:.0f}s"),
+                popup=popup,
             ).add_to(m)
 
         # Small colored circle at each node

@@ -1,29 +1,33 @@
-"""Routing — graphe routier à partir de silver.trafic_boucles_clean.
+"""Routing — réseau routier OSM via pgRouting.
 
-Construit un graphe NetworkX où :
-- Nœuds = channel_id (segments de capteurs)
-- Arêtes = paires de segments partageant un endpoint (start ↔ end)
-- Attributs : length_m (mètres), current_speed (km/h), predicted_speeds (dict horizon→km/h)
+Sprint 26 (2026-06-21) — Remplacement du graphe H3 K=2
+(dim_spatial_grid_mapping + dim_gnn_adjacency) par le réseau routier
+OSM importé via osm2pgrouting. Le pathfinding voiture est délégué à
+`pgr_dijkstra` côté PostgreSQL.
 
-Le graphe est :
-- Construit depuis la DB (silver)
-- Cache en mémoire pendant la session (rebuild toutes les 5 min en prod)
-- Fallback mock pour dev sans DB
+Deux interfaces cohabitent :
 
-Pour Lyon :
-- ~1100 segments (capteurs pvotrafic)
-- ~5000-8000 arêtes (K=2 + endpoints partagés)
-- Latence pathfinding < 50ms pour 4 hops
+1. **Routing voiture (pgRouting)** — `compute_route_pgrouting()`
+   - Utilise `osm.ways` + `pgr_dijkstra` côté DB
+   - Retourne géométrie OSM réelle par arête (polyline multi-vertices)
+   - Consommé par `compute_itinerary()` (pathfinder.py)
+   - Coût = length_m / maxspeed_forward (refresh toutes les 15 min par DAG)
 
-Usage :
-    from src.routing import build_routing_graph
-    graph = build_routing_graph()
-    # graph.nodes → {channel_id: {length_m, current_speed, ...}}
-    # graph.edges → {(u, v): {length_m, ...}}
+2. **Graphe H3 (legacy/GNN)** — `build_routing_graph()` (conservé)
+   - Utilisé par le modèle GNN (prédictions spatiales)
+   - Plus utilisé pour le routing voiture (déprécié pour cet usage)
+   - Conservé pour rétro-compatibilité
+
+Fonctions publiques :
+- ``compute_route_pgrouting(origin_lon, origin_lat, dest_lon, dest_lat)`` — appel SQL pgRouting
+- ``get_nearest_osm_node(lon, lat)`` — nœud OSM le plus proche
+- ``build_routing_graph()`` — DÉPRÉCIÉ pour routing voiture, conservé pour GNN
+- ``get_node_speed(graph, node_id)`` — vitesse d'un nœud H3 (GNN only)
 """
 
 from __future__ import annotations
 
+import json
 import logging
 import time
 
@@ -313,3 +317,86 @@ def get_nearest_node(graph: nx.Graph, lon: float, lat: float) -> str | None:
                 min_dist = d
                 nearest = node_id
     return nearest
+
+
+# =============================================================================
+# Sprint 26+ — Routing voiture via pgRouting (extension PostgreSQL)
+# =============================================================================
+def compute_route_pgrouting(
+    origin_lon: float,
+    origin_lat: float,
+    dest_lon: float,
+    dest_lat: float,
+) -> list[dict] | None:
+    """Calcule un itinéraire voiture via pgr_dijkstra (réseau routier OSM).
+
+    Appelle la fonction SQL `osm.route_car()` qui :
+    1. Trouve les nœuds OSM les plus proches de l'origine / destination
+    2. Exécute pgr_dijkstra dirigé avec coûts trafic temps réel
+    3. Retourne le chemin avec la géométrie réelle de chaque arête (LineString)
+
+    Args:
+        origin_lon, origin_lat: coords GPS du point de départ.
+        dest_lon, dest_lat: coords GPS du point d'arrivée.
+
+    Returns:
+        Liste de dicts par arête du chemin :
+        {seq, edge_id, cost_s, agg_cost_s, length_m, speed_kmh,
+         road_name, geom_coordinates}
+        où ``geom_coordinates`` est une liste de [lon, lat] représentant
+        la polyline OSM de l'arête (peut être multi-vertices).
+        Retourne ``None`` si pas de chemin ou DB indispo.
+    """
+    from src.db import execute_query
+
+    rows = execute_query(
+        "SELECT * FROM osm.route_car(%s, %s, %s, %s)",
+        (origin_lon, origin_lat, dest_lon, dest_lat),
+    )
+    if not rows:
+        return None
+
+    result = []
+    for r in rows:
+        geojson_str = r.get("geom_geojson")
+        geom_coords: list[list[float]] = []
+        if geojson_str:
+            try:
+                geom = json.loads(geojson_str)
+                # GeoJSON LineString : {"type": "LineString", "coordinates": [[lon, lat], ...]}
+                geom_coords = geom.get("coordinates", [])
+            except (json.JSONDecodeError, TypeError, AttributeError):
+                logger.warning("geom_geojson invalide pour edge_id=%s", r.get("edge_id"))
+        result.append({
+            "seq": int(r["seq"]),
+            "edge_id": int(r["edge_id"]),
+            "cost_s": float(r["cost_s"] or 0.0),
+            "agg_cost_s": float(r["agg_cost_s"] or 0.0),
+            "length_m": float(r["length_m"] or 0.0),
+            "speed_kmh": float(r["speed_kmh"] or 30.0),
+            "road_name": r.get("road_name") or "",
+            "geom_coordinates": geom_coords,
+        })
+    return result
+
+
+def get_nearest_osm_node(lon: float, lat: float) -> int | None:
+    """Trouve le nœud OSM le plus proche d'un point GPS.
+
+    Args:
+        lon, lat: coordonnées GPS (WGS84).
+
+    Returns:
+        ID du nœud OSM (ways_vertices_pgr.id) ou None si aucun résultat.
+    """
+    from src.db import execute_query
+
+    rows = execute_query(
+        """
+        SELECT id FROM osm.ways_vertices_pgr
+        ORDER BY the_geom <-> ST_SetSRID(ST_MakePoint(%s, %s), 4326)
+        LIMIT 1
+        """,
+        (lon, lat),
+    )
+    return int(rows[0]["id"]) if rows else None

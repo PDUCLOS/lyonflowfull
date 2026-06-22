@@ -240,6 +240,7 @@ class ItinerarySegmentResponse(BaseModel):
     start_lat: float
     end_lon: float
     end_lat: float
+    geometry: list[list[float]] | None = None  # Sprint 26+ polyline OSM [[lon, lat], ...]
 
 
 class ItineraryResponse(BaseModel):
@@ -476,6 +477,7 @@ async def itinerary(req: ItineraryRequest, api_key: None = Depends(verify_api_ke
                 start_lat=s.start_lat,
                 end_lon=s.end_lon,
                 end_lat=s.end_lat,
+                geometry=s.geometry,  # Sprint 26+ polyline OSM
             )
             for s in itin.segments
         ],
