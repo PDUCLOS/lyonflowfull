@@ -10,15 +10,15 @@ TEMPLATE_TYPES = {
         "sections": ["kpis", "bottlenecks", "decisions"],
     },
     "Bilan annuel (20 pages)": {
-        "template": "synthese_mensuelle.html",  # TODO: template bilan
+        "template": "bilan_annuel.html",
         "sections": ["kpis", "bottlenecks", "decisions", "amenagements", "perspectives"],
     },
     "Présentation projet aménagement (10 pages)": {
-        "template": "synthese_mensuelle.html",  # TODO: template projet
+        "template": "presentation_projet.html",
         "sections": ["zone_focus", "avant_apres", "roi", "calendrier"],
     },
     "Rapport annuel RGPD (3 pages)": {
-        "template": "synthese_mensuelle.html",  # TODO: template RGPD
+        "template": "rapport_rgpd.html",
         "sections": ["donnees_collectees", "duree_conservation", "droits"],
     },
 }

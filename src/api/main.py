@@ -577,7 +577,7 @@ async def login(req: LoginRequest, request: Request):
         )
         raise HTTPException(status_code=401, detail="Identifiants invalides")
 
-    # TODO: générer JWT
+    # JWT généré (Sprint 21 — create_jwt déjà implémenté, le TODO était obsolète)
     token = create_jwt(
         user_id=str(user["user_id"]),
         username=user["username"],

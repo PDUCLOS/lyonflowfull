@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <title>{{ title }} — Rapport annuel RGPD</title>
+    <style>
+        @page { size: A4; margin: 2cm; }
+        body { font-family: 'Helvetica', 'Arial', sans-serif; color: #222; line-height: 1.5; }
+        .header { border-bottom: 3px solid #1976D2; padding-bottom: 1rem; margin-bottom: 1.5rem; }
+        .header h1 { color: #1976D2; margin: 0; font-size: 1.6rem; }
+        .header .meta { color: #666; font-size: 0.85rem; margin-top: 0.3rem; }
+        .section { margin: 1.2rem 0; }
+        .section h2 { color: #1976D2; border-bottom: 1px solid #DDD; padding-bottom: 0.3rem; font-size: 1.1rem; }
+        table { width: 100%; border-collapse: collapse; margin: 0.5rem 0; }
+        th, td { border: 1px solid #DDD; padding: 0.5rem; text-align: left; font-size: 0.9rem; }
+        th { background: #E3F2FD; color: #1976D2; }
+        .badge { display: inline-block; padding: 0.2rem 0.6rem; border-radius: 12px; font-size: 0.8rem; font-weight: 600; }
+        .badge-ok { background: #C8E6C9; color: #2E7D32; }
+        .badge-warn { background: #FFE0B2; color: #E65100; }
+        .footer { margin-top: 2rem; padding-top: 1rem; border-top: 1px solid #DDD; font-size: 0.7rem; color: #999; text-align: center; }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>{{ title }}</h1>
+        <div class="meta">Rapport annuel RGPD — Année {{ year }} — Généré le {{ generated_at }}</div>
+    </div>
+
+    <div class="section">
+        <h2>1. Données collectées</h2>
+        <table>
+            <thead><tr><th>Source</th><th>Type</th><th>Volume annuel</th><th>Statut</th></tr></thead>
+            <tbody>
+                {% for source in sources %}
+                <tr>
+                    <td>{{ source.name }}</td>
+                    <td>{{ source.type }}</td>
+                    <td>{{ source.volume }}</td>
+                    <td><span class="badge badge-{{ source.status_class }}">{{ source.status }}</span></td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <div class="section">
+        <h2>2. Durée de conservation</h2>
+        <p>Conformément à notre politique RGPD :</p>
+        <ul>
+            <li>Bronze (données brutes) : 7 à 45 jours selon le type (cf. doc data_gov)</li>
+            <li>Silver (données nettoyées) : 90 jours</li>
+            <li>Gold (agrégats) : indéfiniment (anonymes, agrégés)</li>
+        </ul>
+    </div>
+
+    <div class="section">
+        <h2>3. Droits des utilisateurs</h2>
+        <p>TODO: procédure d'exercice des droits RGPD (accès, rectification, suppression).</p>
+        <p>Contact DPO : dpo@lyonflowfull.fr</p>
+    </div>
+
+    <div class="footer">
+        LyonFlowFull — Conforme RGPD. Audit annuel 2026.
+    </div>
+</body>
+</html>

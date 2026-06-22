@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <title>{{ title }} — Bilan annuel</title>
+    <style>
+        @page { size: A4; margin: 2cm; }
+        body { font-family: 'Helvetica', 'Arial', sans-serif; color: #222; line-height: 1.5; }
+        .header { border-bottom: 3px solid #3F51B5; padding-bottom: 1rem; margin-bottom: 1.5rem; }
+        .header h1 { color: #3F51B5; margin: 0; font-size: 1.8rem; }
+        .header .meta { color: #666; font-size: 0.85rem; margin-top: 0.3rem; }
+        .section { margin: 1.5rem 0; page-break-inside: avoid; }
+        .section h2 { color: #3F51B5; border-bottom: 1px solid #DDD; padding-bottom: 0.3rem; font-size: 1.2rem; }
+        .kpi-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 0.8rem; margin: 1rem 0; }
+        .kpi-card { background: #F5F5F5; border-left: 4px solid #3F51B5; padding: 0.8rem; border-radius: 4px; }
+        .kpi-label { font-size: 0.75rem; color: #666; }
+        .kpi-value { font-size: 1.6rem; font-weight: 700; color: #3F51B5; }
+        .kpi-delta { font-size: 0.85rem; color: #4CAF50; }
+        .footer { margin-top: 2rem; padding-top: 1rem; border-top: 1px solid #DDD; font-size: 0.7rem; color: #999; text-align: center; }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>{{ title }}</h1>
+        <div class="meta">Bilan annuel — {{ year }} — Généré le {{ generated_at }}</div>
+    </div>
+
+    {# Sprint 21 — KPIs annuels agrégés (4 cards sur 1 ligne) #}
+    <div class="section">
+        <h2>1. KPIs annuels</h2>
+        <div class="kpi-grid">
+            {% for kpi in kpis %}
+            <div class="kpi-card">
+                <div class="kpi-label">{{ kpi.label }}</div>
+                <div class="kpi-value">{{ kpi.value }}</div>
+                <div class="kpi-delta">{{ kpi.delta }}</div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+
+    <div class="section">
+        <h2>2. Bottlenecks cumulés</h2>
+        <p>TODO: lister les top 20 bottlenecks de l'année.</p>
+    </div>
+
+    <div class="section">
+        <h2>3. Décisions structurantes</h2>
+        <p>TODO: lister les décisions prises par l'élu sur l'année.</p>
+    </div>
+
+    <div class="section">
+        <h2>4. Aménagements réalisés</h2>
+        <p>TODO: synthèse des aménagements (pistes cyclables, voies bus, etc.).</p>
+    </div>
+
+    <div class="section">
+        <h2>5. Perspectives N+1</h2>
+        <p>TODO: roadmap et projections.</p>
+    </div>
+
+    <div class="footer">
+        LyonFlowFull — Source de vérité : PostgreSQL + MLflow registry.
+    </div>
+</body>
+</html>

@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <title>{{ title }} — Présentation projet aménagement</title>
+    <style>
+        @page { size: A4 landscape; margin: 1.5cm; }
+        body { font-family: 'Helvetica', 'Arial', sans-serif; color: #222; line-height: 1.5; }
+        .header { border-bottom: 3px solid #FF9800; padding-bottom: 1rem; margin-bottom: 1.5rem; }
+        .header h1 { color: #FF9800; margin: 0; font-size: 1.8rem; }
+        .header .meta { color: #666; font-size: 0.85rem; margin-top: 0.3rem; }
+        .section { margin: 1.5rem 0; page-break-inside: avoid; }
+        .section h2 { color: #FF9800; border-bottom: 1px solid #DDD; padding-bottom: 0.3rem; font-size: 1.2rem; }
+        .zone-card { background: #FFF8E1; border-left: 4px solid #FF9800; padding: 1rem; margin: 0.5rem 0; border-radius: 4px; }
+        .kpi-row { display: flex; gap: 1rem; margin: 0.5rem 0; }
+        .kpi-block { flex: 1; }
+        .kpi-label { font-size: 0.75rem; color: #666; }
+        .kpi-value { font-size: 1.4rem; font-weight: 700; color: #FF9800; }
+        .footer { margin-top: 2rem; padding-top: 1rem; border-top: 1px solid #DDD; font-size: 0.7rem; color: #999; text-align: center; }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>{{ title }}</h1>
+        <div class="meta">Présentation projet aménagement — Généré le {{ generated_at }}</div>
+    </div>
+
+    <div class="section">
+        <h2>1. Zone focus</h2>
+        <div class="zone-card">
+            <p><strong>{{ zone_name }}</strong> — {{ zone_description }}</p>
+            <div class="kpi-row">
+                {% for kpi in kpis %}
+                <div class="kpi-block">
+                    <div class="kpi-label">{{ kpi.label }}</div>
+                    <div class="kpi-value">{{ kpi.value }}</div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+
+    <div class="section">
+        <h2>2. Avant / Après</h2>
+        <p>TODO: inclure captures Folium + KPIs delta (vitesse, congestion, etc.).</p>
+    </div>
+
+    <div class="section">
+        <h2>3. ROI estimé</h2>
+        <p>TODO: calcul ROI sur 5 ans (investissement vs gains temps/congestion).</p>
+    </div>
+
+    <div class="section">
+        <h2>4. Calendrier</h2>
+        <p>TODO: Gantt du projet (chantiers, validations, mise en service).</p>
+    </div>
+
+    <div class="footer">
+        LyonFlowFull — Présentation projet aménagement (Axe projet territorial).
+    </div>
+</body>
+</html>
