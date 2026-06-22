@@ -1,6 +1,6 @@
 # CLAUDE.md — LyonFlowFull
 
-> Mémoire projet — **dernière mise à jour : 2026-06-22, Sprint 21 (v0.11.0)** (UX unifiée + quantile regression P10/P50/P90 + sparkline 24h + accessibilité + cleanup docs).
+> Mémoire projet — **dernière mise à jour : 2026-06-22, Sprint 22 (ops cleanup VPS)** (disk 88% → 47%, systemd timer backup-offsite créé, tests verts).
 
 ## Projet
 
@@ -26,6 +26,20 @@ LyonFlowFull est une plateforme MLOps end-to-end de prédiction et d'analyse du 
   - **Action user requise** : `sudo rclone config` (Google Drive OAuth) + décommenter `GDRIVE_BACKUP_DEST=backups/lyonflow` dans `.backup-offsite.conf`
 - **Prometheus absent confirmé** (intentionnel, Sprint 15+) — voir commentaires `docker-compose.monitoring.yml:14-18`. Exporters (node/postgres/nginx) + Grafana + Alertmanager UP mais affichent "no data".
 - **Nginx restart-loop résolu** (était "Restarting 1141 fois" → maintenant healthy).
+
+## Décisions ouvertes (en attente Patrice)
+
+| Item | Statut | Impact si pas tranché |
+|------|--------|----------------------|
+| **`rclone config` destination offsite** | 🔴 Pending (interactif OAuth) | Backup-offsite fail clean tous les jours, journalctl spam |
+| **Prometheus absent** (intentionnel Sprint 15+) | 🟡 À confirmer | Grafana affiche "no data" sur dashboards provisionnés |
+| **Phase 3 / Phase 4 (K8s, cloud-demo)** | 🌑 Dormant | Aucune action avant AWS/GCP post-Jedha |
+| **Axes spec interdépendances (2/4/6/7)** | ⏸ À planifier | Pas bloquant pour RNCP 38777 |
+
+**Recommandation par défaut** (si pas de décision user explicite) :
+- rclone : GCP Service Account JSON (pas d'OAuth, automation-friendly)
+- Prometheus : laisser absent (Sprint 15+ justifié, exporters coûtent 200 MB mais Grafana mort de toute façon)
+- Axes 2/4/6/7 : Axe 6 (qualité données) en priorité 1 post-Jedha
 
 ### État au 2026-06-22 (Sprint 21 — v0.11.0 — UX + Quantile + Sparkline + Docs cleanup)
 
