@@ -230,7 +230,7 @@ class XGBoostSpeedModel:
                         }
                     )
                     tracker.log_metrics(metrics)
-                    tracker.log_artifact(str(model_path))
+                    tracker.log_artifact(str(models_path))
                     # Register & transition to Production natively
                     reg_model_name = f"xgboost_speed_h{horizon_minutes}"
                     tracker.register_model(reg_model_name)

@@ -27,7 +27,7 @@ from __future__ import annotations
 
 import logging
 import sys
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 
 from airflow import DAG
 from airflow.operators.python import PythonOperator
@@ -94,7 +94,7 @@ def _purge_old() -> int:
     Returns:
         Nombre de rows supprimées.
     """
-    cutoff = datetime.now(timezone.utc) - timedelta(days=7)
+    cutoff = datetime.now(UTC) - timedelta(days=7)
     execute_query(
         "DELETE FROM gold.network_health_history WHERE recorded_at < %s",
         (cutoff,),
@@ -117,7 +117,7 @@ with DAG(
     default_args=default_args,
     description="Snapshot 15-min du score santé réseau (Axe 5) → gold.network_health_history",
     schedule="*/15 * * * *",
-    start_date=datetime(2026, 6, 22, tzinfo=timezone.utc),
+    start_date=datetime(2026, 6, 22, tzinfo=UTC),
     catchup=False,  # pas de backfill des snapshots passés
     max_active_runs=1,  # 1 seule exécution concurrente (évite ON CONFLICT)
     tags=["maintenance", "sprint-21", "p4.3", "network-health"],

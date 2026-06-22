@@ -41,7 +41,7 @@ def render_sparkline(
             text="Historique bientôt disponible",
             xref="paper", yref="paper",
             x=0.5, y=0.5, showarrow=False,
-            font=dict(size=12, color="#94A3B8"),
+            font={"size": 12, "color": "#94A3B8"},
         )
         fig.update_layout(height=height, showlegend=False)
         apply_lyf_theme(fig)

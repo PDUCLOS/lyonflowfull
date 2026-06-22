@@ -9,8 +9,9 @@ import pytest
 # Path setup
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
-from dashboard.components.sparkline import render_sparkline  # noqa: E402
+from datetime import UTC
 
+from dashboard.components.sparkline import render_sparkline
 
 # ------------------------------------------------------------------
 # Tests
@@ -62,9 +63,9 @@ def test_render_sparkline_custom_color() -> None:
 
 def test_render_sparkline_with_timestamps() -> None:
     """timestamps doit être utilisé pour l'axe x si fourni."""
-    from datetime import datetime, timezone, timedelta
+    from datetime import datetime, timedelta, timezone
 
-    base = datetime(2026, 6, 22, 12, 0, 0, tzinfo=timezone.utc)
+    base = datetime(2026, 6, 22, 12, 0, 0, tzinfo=UTC)
     timestamps = [base + timedelta(minutes=15 * i) for i in range(5)]
     values = [50.0, 55.0, 60.0, 65.0, 70.0]
     fig = render_sparkline(values=values, timestamps=timestamps)

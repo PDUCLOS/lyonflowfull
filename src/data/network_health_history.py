@@ -5,7 +5,7 @@ Lit l'historique des scores de santé réseau pour la sparkline 24h.
 from __future__ import annotations
 
 import logging
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 
 from src.db import execute_query
 
@@ -23,7 +23,7 @@ def get_network_health_history(hours: int = 24) -> list[dict]:
         Liste vide si la table n'existe pas encore ou si < 1 row.
     """
     try:
-        cutoff = datetime.now(timezone.utc) - timedelta(hours=hours)
+        cutoff = datetime.now(UTC) - timedelta(hours=hours)
         rows = execute_query(
             """
             SELECT

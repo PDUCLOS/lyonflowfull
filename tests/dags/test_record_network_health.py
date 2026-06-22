@@ -6,7 +6,7 @@ Les queries SQL sont mockées via unittest.mock.
 from __future__ import annotations
 
 import sys
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta, timezone
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
@@ -47,7 +47,7 @@ def test_record_health_inserts_score() -> None:
         "tcl_available": True,
         "velov_available": False,
         "meteo_available": True,
-        "computed_at": datetime(2026, 6, 22, 12, 30, tzinfo=timezone.utc),
+        "computed_at": datetime(2026, 6, 22, 12, 30, tzinfo=UTC),
         "diagnosis": "healthy",
     }
     with patch.object(mod, "execute_query") as mock_execute:
@@ -88,7 +88,7 @@ def test_record_health_all_sources_unavailable() -> None:
         "tcl_available": False,
         "velov_available": False,
         "meteo_available": False,
-        "computed_at": datetime(2026, 6, 22, 12, 30, tzinfo=timezone.utc),
+        "computed_at": datetime(2026, 6, 22, 12, 30, tzinfo=UTC),
         "diagnosis": "critical",
     }
     with patch.object(mod, "execute_query") as mock_execute:
@@ -111,6 +111,6 @@ def test_purge_old_deletes_7d() -> None:
     assert "WHERE recorded_at < %s" in sql
     # Le cutoff doit être ~7 jours dans le passé (tolérance 5 min)
     cutoff = params[0]
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     delta = now - cutoff
     assert timedelta(days=6, hours=23, minutes=55) < delta < timedelta(days=7, minutes=5)
