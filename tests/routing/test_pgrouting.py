@@ -149,9 +149,11 @@ def test_compute_itinerary_builds_segments_from_pgrouting():
         },
     ]
 
-    with patch("src.routing.pathfinder.compute_route_pgrouting", return_value=mock_edges):
-        with patch("src.routing.pathfinder._compute_pgrouting_confidence", return_value=0.85):
-            itin = compute_itinerary(4.83, 45.76, 4.836, 45.764)
+    with (
+        patch("src.routing.pathfinder.compute_route_pgrouting", return_value=mock_edges),
+        patch("src.routing.pathfinder._compute_pgrouting_confidence", return_value=0.85),
+    ):
+        itin = compute_itinerary(4.83, 45.76, 4.836, 45.764)
 
     assert itin is not None
     assert len(itin.segments) == 2
