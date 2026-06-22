@@ -20,6 +20,7 @@ import streamlit as st
 
 from dashboard.components.colors import COLORS
 from dashboard.components.error_display import show_error
+from dashboard.components.loading_state import loading_wrapper
 from src.data.exceptions import DashboardDataError
 from src.routing.pathfinder_multimodal import (
     VelovItinerary,
@@ -57,84 +58,85 @@ def render_velov_trip(
         d'Usager_1. None si le trajet n'a pas pu être calculé (adresse non
         résolue, pas de station Vélov, erreur DB).
     """
-    # Résolution des adresses si pas fournies
-    if origin_coords is None:
-        try:
-            origin_coords = _resolve_lieu(origin)
-        except DashboardDataError as e:
-            show_error("db_down", str(e))
+    with loading_wrapper("Chargement Velov trip…", "⏳"):
+        # Résolution des adresses si pas fournies
+        if origin_coords is None:
+            try:
+                origin_coords = _resolve_lieu(origin)
+            except DashboardDataError as e:
+                show_error("db_down", str(e))
+                return
+        if dest_coords is None:
+            try:
+                dest_coords = _resolve_lieu(destination)
+            except DashboardDataError as e:
+                show_error("db_down", str(e))
+                return
+
+        if not origin_coords or not dest_coords:
+            show_error("geocoding_fail", f"❌ Adresses non résolues. Origin={origin!r} → {origin_coords}, Dest={destination!r} → {dest_coords}")
             return
-    if dest_coords is None:
-        try:
-            dest_coords = _resolve_lieu(destination)
-        except DashboardDataError as e:
-            show_error("db_down", str(e))
-            return
 
-    if not origin_coords or not dest_coords:
-        st.error(f"❌ Adresses non résolues. Origin={origin!r} → {origin_coords}, Dest={destination!r} → {dest_coords}")
-        return
+        origin_lon, origin_lat = origin_coords
+        dest_lon, dest_lat = dest_coords
 
-    origin_lon, origin_lat = origin_coords
-    dest_lon, dest_lat = dest_coords
+        # Calcul du trajet Vélov
+        with st.spinner("🚲 Recherche stations Vélov + calcul trajet…"):
+            try:
+                itin = plan_velov_trip(
+                    origin_lat=origin_lat,
+                    origin_lon=origin_lon,
+                    dest_lat=dest_lat,
+                    dest_lon=dest_lon,
+                    origin_label=origin,
+                    dest_label=destination,
+                )
+            except DashboardDataError as e:
+                show_error("db_down", str(e))
+                return
 
-    # Calcul du trajet Vélov
-    with st.spinner("🚲 Recherche stations Vélov + calcul trajet…"):
-        try:
-            itin = plan_velov_trip(
-                origin_lat=origin_lat,
-                origin_lon=origin_lon,
-                dest_lat=dest_lat,
-                dest_lon=dest_lon,
-                origin_label=origin,
-                dest_label=destination,
+        # Sprint 9+ (2026-06-17) — viré le check `itin.source == "demo"` :
+        # plan_velov_trip() ne retourne plus source="demo" (mode démo supprimé).
+
+        if not itin.segments:
+            st.warning(
+                "⚠️ Aucune station Vélov disponible à proximité. "
+                "Vérifiez que silver.velov_clean est alimentée (DAG collect_bronze)."
             )
-        except DashboardDataError as e:
-            show_error("db_down", str(e))
             return
 
-    # Sprint 9+ (2026-06-17) — viré le check `itin.source == "demo"` :
-    # plan_velov_trip() ne retourne plus source="demo" (mode démo supprimé).
-
-    if not itin.segments:
-        st.warning(
-            "⚠️ Aucune station Vélov disponible à proximité. "
-            "Vérifiez que silver.velov_clean est alimentée (DAG collect_bronze)."
+        _render_velov_summary(itin)
+        # Sprint 14 (2026-06-19) — Cards stations proéminentes (départ + arrivée)
+        # avec vélos/docks/méca-élec/statut coloré/distance à pied.
+        _render_station_cards(itin)
+        # Diagnostics VIDE/PLEINE
+        for diag in itin.diagnostics:
+            st.warning(diag)
+        # Alternatives smart-routed
+        _render_alternatives_card(
+            "Alternatives à la borne de départ",
+            itin.origin_alternatives,
+            "origin",
         )
-        return
+        _render_alternatives_card(
+            "Alternatives à la borne d'arrivée",
+            itin.dest_alternatives,
+            "dest",
+        )
+        # Légende maillage
+        _render_neighbors_legend(itin.origin_neighbors, itin.dest_neighbors)
+        # Carte + segments
+        _render_velov_map(itin, origin_coords, dest_coords, height=height)
+        _render_velov_segments(itin)
 
-    _render_velov_summary(itin)
-    # Sprint 14 (2026-06-19) — Cards stations proéminentes (départ + arrivée)
-    # avec vélos/docks/méca-élec/statut coloré/distance à pied.
-    _render_station_cards(itin)
-    # Diagnostics VIDE/PLEINE
-    for diag in itin.diagnostics:
-        st.warning(diag)
-    # Alternatives smart-routed
-    _render_alternatives_card(
-        "Alternatives à la borne de départ",
-        itin.origin_alternatives,
-        "origin",
-    )
-    _render_alternatives_card(
-        "Alternatives à la borne d'arrivée",
-        itin.dest_alternatives,
-        "dest",
-    )
-    # Légende maillage
-    _render_neighbors_legend(itin.origin_neighbors, itin.dest_neighbors)
-    # Carte + segments
-    _render_velov_map(itin, origin_coords, dest_coords, height=height)
-    _render_velov_segments(itin)
-
-    # Sprint 16 Axe C — Retour dict pour comparateur multimodal.
-    # itin.total_distance_m est en mètres, total_duration_min en minutes.
-    return {
-        "duration_min": float(itin.total_duration_min),
-        "distance_km": float(itin.total_distance_m) / 1000.0,
-        "feasible": True,
-        "source": "computed",
-    }
+        # Sprint 16 Axe C — Retour dict pour comparateur multimodal.
+        # itin.total_distance_m est en mètres, total_duration_min en minutes.
+        return {
+            "duration_min": float(itin.total_duration_min),
+            "distance_km": float(itin.total_distance_m) / 1000.0,
+            "feasible": True,
+            "source": "computed",
+        }
 
 
 def _render_velov_summary(itin: VelovItinerary) -> None:

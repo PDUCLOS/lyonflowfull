@@ -24,6 +24,8 @@ import json
 import streamlit as st
 
 from dashboard.components.data_cache import cached_xgb_accuracy_summary
+from dashboard.components.error_display import show_error
+from dashboard.components.loading_state import loading_wrapper
 from src.data.db_query import get_latest_drift_report
 from src.data.exceptions import DashboardDataError
 
@@ -112,54 +114,55 @@ def _classify(
 
 def render_drift_status_badge() -> None:
     """Affiche le bandeau de statut drift + MAE dans Elu_1_Synthese."""
-    # Lecture des 2 sources
-    try:
-        summary = cached_xgb_accuracy_summary(hours=24)
-        drift = get_latest_drift_report()
-    except DashboardDataError as e:
-        st.error(f"⚠️ Drift status indisponible : {e}")
-        return
+    with loading_wrapper("Chargement Drift status badge…", "⏳"):
+        # Lecture des 2 sources
+        try:
+            summary = cached_xgb_accuracy_summary(hours=24)
+            drift = get_latest_drift_report()
+        except DashboardDataError as e:
+            show_error("db_down", f"⚠️ Drift status indisponible : {e}")
+            return
 
-    # MAE 24h
-    mae_kmh: float | None = None
-    if not summary.empty and "mae_kmh" in summary.columns:
-        # Pondération par nombre de paires (les heures avec plus de données
-        # pèsent davantage — c'est le MAE global, pas une moyenne de MAE horaires)
-        weights = summary["n_pairs"].astype(float)
-        if weights.sum() > 0:
-            mae_kmh = float((summary["mae_kmh"] * weights).sum() / weights.sum())
+        # MAE 24h
+        mae_kmh: float | None = None
+        if not summary.empty and "mae_kmh" in summary.columns:
+            # Pondération par nombre de paires (les heures avec plus de données
+            # pèsent davantage — c'est le MAE global, pas une moyenne de MAE horaires)
+            weights = summary["n_pairs"].astype(float)
+            if weights.sum() > 0:
+                mae_kmh = float((summary["mae_kmh"] * weights).sum() / weights.sum())
 
-    # Drift share + diagnostic différentiel
-    drift_share: float | None = None
-    drift_diag: tuple[str, str] | None = None
-    if drift:
-        if "drift_share" in drift:
-            try:
-                drift_share = float(drift["drift_share"])
-            except (TypeError, ValueError):
-                drift_share = None
-        # Le rapport stocke les détails dans 'report' (JSONB).
-        # On reconstruit un dict compatible _diagnose_drift.
-        report_details = drift.get("report", {})
-        if report_details and isinstance(report_details, str):
-            try:
-                report_details = json.loads(report_details)
-            except (TypeError, ValueError):
-                report_details = {}
-        if report_details:
-            # report_details est le dict {col: {psi, status, ...}, ...}
-            # _diagnose_drift attend {"details": {col: {status, ...}, ...}}
-            drift_diag = _diagnose_drift({"details": report_details})
+        # Drift share + diagnostic différentiel
+        drift_share: float | None = None
+        drift_diag: tuple[str, str] | None = None
+        if drift:
+            if "drift_share" in drift:
+                try:
+                    drift_share = float(drift["drift_share"])
+                except (TypeError, ValueError):
+                    drift_share = None
+            # Le rapport stocke les détails dans 'report' (JSONB).
+            # On reconstruit un dict compatible _diagnose_drift.
+            report_details = drift.get("report", {})
+            if report_details and isinstance(report_details, str):
+                try:
+                    report_details = json.loads(report_details)
+                except (TypeError, ValueError):
+                    report_details = {}
+            if report_details:
+                # report_details est le dict {col: {psi, status, ...}, ...}
+                # _diagnose_drift attend {"details": {col: {status, ...}, ...}}
+                drift_diag = _diagnose_drift({"details": report_details})
 
-    color, icon, message = _classify(mae_kmh, drift_share, drift_diag)
-    st.markdown(
-        f"""
-        <div class="lyonflow-card" style="display:flex;align-items:center;gap:0.8rem;
-                    padding:0.6rem 0.9rem;border-left:4px solid {color};
-                    margin-bottom:0.5rem;">
-            <span style="font-size:1.4rem;">{icon}</span>
-            <span style="font-weight:600;">{message}</span>
-        </div>
-        """,
-        unsafe_allow_html=True,
-    )
+        color, icon, message = _classify(mae_kmh, drift_share, drift_diag)
+        st.markdown(
+            f"""
+            <div class="lyonflow-card" style="display:flex;align-items:center;gap:0.8rem;
+                        padding:0.6rem 0.9rem;border-left:4px solid {color};
+                        margin-bottom:0.5rem;">
+                <span style="font-size:1.4rem;">{icon}</span>
+                <span style="font-weight:600;">{message}</span>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )

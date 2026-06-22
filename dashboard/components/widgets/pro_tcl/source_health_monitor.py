@@ -24,6 +24,8 @@ import pandas as pd
 import streamlit as st
 
 from dashboard.components.data_cache import cached_data_completeness, cached_source_health
+from dashboard.components.error_display import show_error
+from dashboard.components.loading_state import loading_wrapper
 from dashboard.components.plotly_theme import apply_lyf_theme
 from src.data.exceptions import DashboardDataError
 
@@ -103,84 +105,85 @@ def _gauge_plotly(score: float) -> plotly.graph_objects.Figure:
 
 def render_source_health_monitor() -> None:
     """Affiche le monitoring multi-source dans Pro_6_Pipeline_Mgmt."""
-    try:
-        health_df = cached_source_health()
-        completeness_df = cached_data_completeness()
-    except DashboardDataError as e:
-        st.error(f"⚠️ Source health indisponible : {e}")
-        return
+    with loading_wrapper("Chargement Source health monitor…", "⏳"):
+        try:
+            health_df = cached_source_health()
+            completeness_df = cached_data_completeness()
+        except DashboardDataError as e:
+            show_error("db_down", f"⚠️ Source health indisponible : {e}")
+            return
 
-    if health_df.empty:
-        st.info("ℹ️ Aucune donnée de santé source (DB vide ?).")
-        return
+        if health_df.empty:
+            st.info("ℹ️ Aucune donnée de santé source (DB vide ?).")
+            return
 
-    # ── 1. Score global + jauge ────────────────────────────────────────────
-    global_score = _global_score(health_df)
-    col_gauge, col_kpi = st.columns([1, 2])
-    with col_gauge:
-        st.plotly_chart(_gauge_plotly(global_score), use_container_width=True)
-    with col_kpi:
-        n_healthy = int((health_df["status"] == "healthy").sum())
-        n_delayed = int((health_df["status"] == "delayed").sum())
-        n_stale = int((health_df["status"] == "stale").sum())
-        n_dead = int((health_df["status"] == "dead").sum())
-        st.markdown(
-            f"""
-            <div class="lyonflow-card" style="padding:0.8rem;">
-                <div class="lyf-sublabel">Statut par source (8 sources Bronze + 1 Gold)</div>
-                <div style="font-size:1.4rem;margin-top:0.4rem;">
-                    🟢 <b>{n_healthy}</b> healthy
-                    &nbsp; 🟡 <b>{n_delayed}</b> delayed
-                    &nbsp; 🟠 <b>{n_stale}</b> stale
-                    &nbsp; 🔴 <b>{n_dead}</b> dead
+        # ── 1. Score global + jauge ────────────────────────────────────────────
+        global_score = _global_score(health_df)
+        col_gauge, col_kpi = st.columns([1, 2])
+        with col_gauge:
+            st.plotly_chart(_gauge_plotly(global_score), use_container_width=True)
+        with col_kpi:
+            n_healthy = int((health_df["status"] == "healthy").sum())
+            n_delayed = int((health_df["status"] == "delayed").sum())
+            n_stale = int((health_df["status"] == "stale").sum())
+            n_dead = int((health_df["status"] == "dead").sum())
+            st.markdown(
+                f"""
+                <div class="lyonflow-card" style="padding:0.8rem;">
+                    <div class="lyf-sublabel">Statut par source (8 sources Bronze + 1 Gold)</div>
+                    <div style="font-size:1.4rem;margin-top:0.4rem;">
+                        🟢 <b>{n_healthy}</b> healthy
+                        &nbsp; 🟡 <b>{n_delayed}</b> delayed
+                        &nbsp; 🟠 <b>{n_stale}</b> stale
+                        &nbsp; 🔴 <b>{n_dead}</b> dead
+                    </div>
                 </div>
-            </div>
-            """,
-            unsafe_allow_html=True,
-        )
+                """,
+                unsafe_allow_html=True,
+            )
 
-    st.markdown("---")
+        st.markdown("---")
 
-    # ── 2. Grille source × statut ──────────────────────────────────────────
-    st.markdown("##### 📊 Santé par source (triée par score asc)")
-    # Renommage pour affichage
-    display = health_df.rename(columns={
-        "source": "Source",
-        "last_update": "Dernière MAJ",
-        "age_minutes": "Âge (min)",
-        "records_1h": "Records/1h",
-        "expected_interval_min": "Intervalle attendu (min)",
-        "health_score": "Score",
-        "status": "Statut",
-    }).copy()
-    # Pastille de couleur via emoji (Streamlit ne supporte pas la couleur HTML dans dataframe)
-    status_emoji = {
-        "healthy": "🟢",
-        "delayed": "🟡",
-        "stale": "🟠",
-        "dead": "🔴",
-    }
-    display["Statut"] = display["Statut"].map(lambda s: f"{status_emoji.get(s, '⚪')} {s}")
-    st.dataframe(display, use_container_width=True, hide_index=True)
+        # ── 2. Grille source × statut ──────────────────────────────────────────
+        st.markdown("##### 📊 Santé par source (triée par score asc)")
+        # Renommage pour affichage
+        display = health_df.rename(columns={
+            "source": "Source",
+            "last_update": "Dernière MAJ",
+            "age_minutes": "Âge (min)",
+            "records_1h": "Records/1h",
+            "expected_interval_min": "Intervalle attendu (min)",
+            "health_score": "Score",
+            "status": "Statut",
+        }).copy()
+        # Pastille de couleur via emoji (Streamlit ne supporte pas la couleur HTML dans dataframe)
+        status_emoji = {
+            "healthy": "🟢",
+            "delayed": "🟡",
+            "stale": "🟠",
+            "dead": "🔴",
+        }
+        display["Statut"] = display["Statut"].map(lambda s: f"{status_emoji.get(s, '⚪')} {s}")
+        st.dataframe(display, use_container_width=True, hide_index=True)
 
-    st.markdown("---")
+        st.markdown("---")
 
-    # ── 3. Complétude Silver (24h) ────────────────────────────────────────
-    st.markdown("##### 🧪 Complétude Silver (24h glissantes)")
-    if completeness_df.empty:
-        st.info("ℹ️ Aucune donnée de complétude Silver (24h).")
-        return
+        # ── 3. Complétude Silver (24h) ────────────────────────────────────────
+        st.markdown("##### 🧪 Complétude Silver (24h glissantes)")
+        if completeness_df.empty:
+            st.info("ℹ️ Aucune donnée de complétude Silver (24h).")
+            return
 
-    cols = st.columns(len(completeness_df))
-    for col, (_, row) in zip(cols, completeness_df.iterrows()):
-        with col:
-            total = int(row.get("total_rows", 0) or 0)
-            geo_pct = float(row.get("geo_pct", 0) or 0)
-            id_pct = float(row.get("id_pct", 0) or 0)
-            speed_pct = float(row.get("speed_pct", 0) or 0)
-            source_label = row["source"].replace("silver.", "").replace("_clean", "")
-            st.markdown(f"**{source_label}** ({total:,} rows)")
-            if speed_pct > 0:
-                st.progress(speed_pct / 100.0, text=f"Vitesse: {speed_pct:.1f}%")
-            st.progress(geo_pct / 100.0, text=f"Géo: {geo_pct:.1f}%")
-            st.progress(id_pct / 100.0, text=f"ID: {id_pct:.1f}%")
+        cols = st.columns(len(completeness_df))
+        for col, (_, row) in zip(cols, completeness_df.iterrows()):
+            with col:
+                total = int(row.get("total_rows", 0) or 0)
+                geo_pct = float(row.get("geo_pct", 0) or 0)
+                id_pct = float(row.get("id_pct", 0) or 0)
+                speed_pct = float(row.get("speed_pct", 0) or 0)
+                source_label = row["source"].replace("silver.", "").replace("_clean", "")
+                st.markdown(f"**{source_label}** ({total:,} rows)")
+                if speed_pct > 0:
+                    st.progress(speed_pct / 100.0, text=f"Vitesse: {speed_pct:.1f}%")
+                st.progress(geo_pct / 100.0, text=f"Géo: {geo_pct:.1f}%")
+                st.progress(id_pct / 100.0, text=f"ID: {id_pct:.1f}%")

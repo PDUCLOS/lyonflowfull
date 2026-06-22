@@ -292,7 +292,7 @@ def render_metrics_comparison() -> None:
         show_error("db_down", str(e))
         return
     except Exception as e:
-        st.error(f"🔴 MLflow a échoué — métriques modèles indisponibles ({e}).")
+        show_error("db_down", f"🔴 MLflow a échoué — métriques modèles indisponibles ({e}).")
         return
 
     if not models:

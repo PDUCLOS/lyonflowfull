@@ -22,6 +22,7 @@ import streamlit as st
 
 from dashboard.components.colors import COLORS
 from dashboard.components.data_cache import cached_network_health_score
+from dashboard.components.error_display import show_error
 from dashboard.components.loading_state import loading_wrapper
 from dashboard.components.plotly_theme import apply_lyf_theme
 from src.data.exceptions import DashboardDataError
@@ -191,7 +192,7 @@ def render_network_health_gauge() -> None:
     try:
         df = cached_network_health_score()
     except DashboardDataError as e:
-        st.error(f"⚠️ Score santé réseau indisponible : {e}")
+        show_error("db_down", f"⚠️ Score santé réseau indisponible : {e}")
         return
 
     if df.empty:

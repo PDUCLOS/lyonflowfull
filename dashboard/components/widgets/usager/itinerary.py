@@ -95,10 +95,10 @@ def render_itinerary_result(
 
     if not origin_coords:
         sample = ", ".join(_sample_addresses(5))
-        st.error(f"❌ Adresse d'origine non reconnue : '{origin}'. Essayez : {sample}...")
+        show_error("geocoding_fail", f"❌ Adresse d'origine non reconnue : '{origin}'. Essayez : {sample}...")
         return
     if not dest_coords:
-        st.error(f"❌ Adresse de destination non reconnue : '{destination}'.")
+        show_error("geocoding_fail", f"❌ Adresse de destination non reconnue : '{destination}'.")
         return
 
     # Calcul itinéraire

@@ -15,6 +15,8 @@ from __future__ import annotations
 import streamlit as st
 
 from dashboard.components.data_cache import cached_source_health
+from dashboard.components.error_display import show_error
+from dashboard.components.loading_state import loading_wrapper
 from src.data.exceptions import DashboardDataError
 
 
@@ -60,30 +62,31 @@ def _global_score(df) -> float:
 
 def render_data_quality_badge() -> None:
     """Affiche le bandeau data quality dans Elu_1_Synthese."""
-    try:
-        df = cached_source_health()
-    except DashboardDataError as e:
-        st.error(f"⚠️ Data quality indisponible : {e}")
-        return
+    with loading_wrapper("Chargement Data quality badge…", "⏳"):
+        try:
+            df = cached_source_health()
+        except DashboardDataError as e:
+            show_error("db_down", f"⚠️ Data quality indisponible : {e}")
+            return
 
-    if df.empty:
-        st.info("ℹ️ Données de santé source indisponibles.")
-        return
+        if df.empty:
+            st.info("ℹ️ Données de santé source indisponibles.")
+            return
 
-    n_healthy = int((df["status"] == "healthy").sum())
-    n_dead = int((df["status"] == "dead").sum())
-    n_stale = int((df["status"] == "stale").sum())
-    score = _global_score(df)
-    color, icon, message = _classify(n_healthy, n_dead, n_stale, score)
+        n_healthy = int((df["status"] == "healthy").sum())
+        n_dead = int((df["status"] == "dead").sum())
+        n_stale = int((df["status"] == "stale").sum())
+        score = _global_score(df)
+        color, icon, message = _classify(n_healthy, n_dead, n_stale, score)
 
-    st.markdown(
-        f"""
-        <div class="lyonflow-card" style="display:flex;align-items:center;gap:0.8rem;
-                    padding:0.6rem 0.9rem;border-left:4px solid {color};
-                    margin-bottom:0.5rem;">
-            <span style="font-size:1.4rem;">{icon}</span>
-            <span style="font-weight:600;">{message}</span>
-        </div>
-        """,
-        unsafe_allow_html=True,
-    )
+        st.markdown(
+            f"""
+            <div class="lyonflow-card" style="display:flex;align-items:center;gap:0.8rem;
+                        padding:0.6rem 0.9rem;border-left:4px solid {color};
+                        margin-bottom:0.5rem;">
+                <span style="font-size:1.4rem;">{icon}</span>
+                <span style="font-weight:600;">{message}</span>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )

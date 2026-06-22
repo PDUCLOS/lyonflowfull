@@ -89,10 +89,11 @@ def render_pipeline_status() -> None:
         st.markdown("##### 📊 Statut global")
 
     if not is_airflow_available():
-        st.error(
+        show_error(
+            "db_down",
             "🔴 **Airflow REST API non joignable** — le statut DAGs est indisponible. "
             "Vérifiez que le service Airflow tourne et que "
-            "`AIRFLOW_HOST`/`AIRFLOW_ADMIN_PASSWORD` sont corrects dans `.env`."
+            "`AIRFLOW_HOST`/`AIRFLOW_ADMIN_PASSWORD` sont corrects dans `.env`.",
         )
         return
 
@@ -232,10 +233,11 @@ def render_health_panel() -> None:
             show_error("db_down", str(e))
             return
         except Exception as e:
-            st.error(
+            show_error(
+                "db_down",
                 f"🔴 Health checks indisponibles ({e}). "
                 "Vérifier que PostgreSQL répond et que le DAG "
-                "data_quality_daily a tourné."
+                "data_quality_daily a tourné.",
             )
             return
 

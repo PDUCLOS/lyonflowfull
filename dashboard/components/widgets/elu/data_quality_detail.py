@@ -37,6 +37,7 @@ import pandas as pd
 import streamlit as st
 
 from dashboard.components.data_cache import cached_quality_report
+from dashboard.components.error_display import show_error
 from dashboard.components.loading_state import loading_wrapper
 from src.data.exceptions import DashboardDataError
 
@@ -204,7 +205,7 @@ def render_data_quality_detail() -> None:
     try:
         df = cached_quality_report(limit=200)
     except DashboardDataError as e:
-        st.error(f"⚠️ Data quality log indisponible : {e}")
+        show_error("db_down", f"⚠️ Data quality log indisponible : {e}")
         return
 
     if df.empty:

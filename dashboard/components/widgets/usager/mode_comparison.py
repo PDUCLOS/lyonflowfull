@@ -23,6 +23,8 @@ from __future__ import annotations
 
 import streamlit as st
 
+from dashboard.components.loading_state import loading_wrapper
+
 # Couleurs winner/alternatives — cohérent avec colors.py + spec §5.4
 _WINNER_ACCENT = "#4CAF50"  # vert (gagnant)
 _ALT_ACCENT = "#9E9E9E"  # gris (alternatives)
@@ -66,63 +68,64 @@ def render_mode_comparison(
     Raises:
         N/A — affiche ``st.warning`` / ``st.error`` si un mode manque.
     """
-    # Bannière trajet
-    if origin and destination:
-        st.markdown(
-            f"""
-            <div class="lyf-label" style="background:var(--bg-card);padding:0.7rem 1rem;border-radius:8px;border-left:4px solid {_WINNER_ACCENT};display:flex;align-items:center;gap:0.6rem;margin-bottom:1rem;flex-wrap:wrap;">
-                <span class="lyf-sublabel" style="background:#4CAF50;color:white;padding:0.2rem 0.6rem;border-radius:12px;font-weight:600;">🟢 DÉPART</span>
-                <span style="font-weight:600;">{origin}</span>
-                <span style="opacity:0.4;margin:0 0.5rem;">→</span>
-                <span class="lyf-sublabel" style="background:#F44336;color:white;padding:0.2rem 0.6rem;border-radius:12px;font-weight:600;">🔴 ARRIVÉE</span>
-                <span style="font-weight:600;">{destination}</span>
-                <span style="margin-left:auto;opacity:0.7;font-size:0.8rem;">
-                    Critère : <b>{"⏱️ Temps" if critere == "temps" else "💰 Coût"}</b>
-                </span>
-            </div>
-            """,
-            unsafe_allow_html=True,
-        )
-
-    # Calcul recommandation si pas fournie
-    if recommendation is None:
-        recommendation = _compute_recommendation(results, critere)
-
-    winner = recommendation.get("winner", "")
-
-    # Layout 3 colonnes : winner au centre si possible (TC par défaut),
-    # sinon première colonne
-    col_order = _order_columns_by_recommendation(results, winner)
-    cols = st.columns(3)
-
-    selected_mode: str | None = None
-    for col, mode_key in zip(cols, col_order):
-        with col:
-            result = results.get(mode_key, {})
-            is_winner = mode_key == winner
-            chosen = _render_mode_card(
-                mode_key=mode_key,
-                result=result,
-                is_winner=is_winner,
-                score=recommendation.get("scores", {}).get(mode_key),
+    with loading_wrapper("Chargement Mode comparison…", "⏳"):
+        # Bannière trajet
+        if origin and destination:
+            st.markdown(
+                f"""
+                <div class="lyf-label" style="background:var(--bg-card);padding:0.7rem 1rem;border-radius:8px;border-left:4px solid {_WINNER_ACCENT};display:flex;align-items:center;gap:0.6rem;margin-bottom:1rem;flex-wrap:wrap;">
+                    <span class="lyf-sublabel" style="background:#4CAF50;color:white;padding:0.2rem 0.6rem;border-radius:12px;font-weight:600;">🟢 DÉPART</span>
+                    <span style="font-weight:600;">{origin}</span>
+                    <span style="opacity:0.4;margin:0 0.5rem;">→</span>
+                    <span class="lyf-sublabel" style="background:#F44336;color:white;padding:0.2rem 0.6rem;border-radius:12px;font-weight:600;">🔴 ARRIVÉE</span>
+                    <span style="font-weight:600;">{destination}</span>
+                    <span style="margin-left:auto;opacity:0.7;font-size:0.8rem;">
+                        Critère : <b>{"⏱️ Temps" if critere == "temps" else "💰 Coût"}</b>
+                    </span>
+                </div>
+                """,
+                unsafe_allow_html=True,
             )
-            if chosen is not None:
-                selected_mode = chosen
 
-    # Insight contextuel
-    if winner and winner in results:
-        _render_insight(results, winner)
+        # Calcul recommandation si pas fournie
+        if recommendation is None:
+            recommendation = _compute_recommendation(results, critere)
 
-    # Explication textuelle
-    if recommendation.get("explanation"):
-        st.caption(f"💡 {recommendation['explanation']}")
+        winner = recommendation.get("winner", "")
 
-    return selected_mode
+        # Layout 3 colonnes : winner au centre si possible (TC par défaut),
+        # sinon première colonne
+        col_order = _order_columns_by_recommendation(results, winner)
+        cols = st.columns(3)
+
+        selected_mode: str | None = None
+        for col, mode_key in zip(cols, col_order):
+            with col:
+                result = results.get(mode_key, {})
+                is_winner = mode_key == winner
+                chosen = _render_mode_card(
+                    mode_key=mode_key,
+                    result=result,
+                    is_winner=is_winner,
+                    score=recommendation.get("scores", {}).get(mode_key),
+                )
+                if chosen is not None:
+                    selected_mode = chosen
+
+        # Insight contextuel
+        if winner and winner in results:
+            _render_insight(results, winner)
+
+        # Explication textuelle
+        if recommendation.get("explanation"):
+            st.caption(f"💡 {recommendation['explanation']}")
+
+        return selected_mode
 
 
-# =============================================================================
-# Helpers privés
-# =============================================================================
+    # =============================================================================
+    # Helpers privés
+    # =============================================================================
 
 
 def _render_mode_card(

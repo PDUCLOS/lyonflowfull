@@ -29,6 +29,7 @@ import plotly.graph_objects as go
 import streamlit as st
 
 from dashboard.components.data_cache import cached_xgb_accuracy_summary, cached_xgb_vs_tomtom
+from dashboard.components.error_display import show_error
 from dashboard.components.loading_state import loading_wrapper
 from dashboard.components.plotly_theme import apply_lyf_theme
 from src.data.exceptions import DashboardDataError
@@ -217,7 +218,7 @@ def render_backtest_dashboard(hours_pairs: int = 24, hours_summary: int = 168) -
         pairs = cached_xgb_vs_tomtom(hours=hours_pairs, limit=500)
         summary = cached_xgb_accuracy_summary(hours=hours_summary)
     except DashboardDataError as e:
-        st.error(f"⚠️ Backtest indisponible : {e}")
+        show_error("db_down", f"⚠️ Backtest indisponible : {e}")
         return
 
     if pairs.empty:
