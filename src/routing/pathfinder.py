@@ -19,11 +19,23 @@ from __future__ import annotations
 
 import logging
 import math
+import time
 from dataclasses import dataclass, field
 
 from src.routing.graph import compute_route_pgrouting
 
 logger = logging.getLogger(__name__)
+
+
+# -----------------------------------------------------------------------------
+# Cache TTL simple pour _compute_pgrouting_confidence
+# -----------------------------------------------------------------------------
+# La métrique "couverture capteurs" est globale (pas per-route) et change
+# lentement (1h suffit). On évite ainsi de re-calculer le COUNT/LEFT JOIN
+# sur gold.traffic_features_live à CHAQUE itinéraire calculé — ce qui
+# sature sdb en cas d'usage concurrent.
+_CONFIDENCE_CACHE: dict[str, tuple[float, float]] = {}
+_CONFIDENCE_TTL_S = 3600.0  # 1h
 
 
 def _haversine_m(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
@@ -89,9 +101,22 @@ def _compute_pgrouting_confidence() -> float:
     Sans capteur → utilise maxspeed_forward OSM (estimation moins fiable).
     Avec capteur → vitesse réelle = haute confiance.
 
+    **Cache TTL 1h** : la métrique est globale (pas per-route) et change
+    lentement. Sans cache, chaque appel fait un COUNT + LEFT JOIN lourd
+    sur ``gold.traffic_features_live`` qui sature sdb en cas d'usage
+    concurrent (cf. incident 2026-06-22).
+
     Returns:
         float entre 0.5 et 1.0
     """
+    cache_key = "pgrouting_confidence"
+    now = time.monotonic()
+    cached = _CONFIDENCE_CACHE.get(cache_key)
+    if cached is not None:
+        cached_at, value = cached
+        if now - cached_at < _CONFIDENCE_TTL_S:
+            return value
+
     try:
         from src.db import execute_query
 
@@ -117,10 +142,13 @@ def _compute_pgrouting_confidence() -> float:
         """)
         if rows and rows[0].get("coverage_ratio") is not None:
             cov = float(rows[0]["coverage_ratio"])
-            return min(1.0, max(0.5, 0.5 + 0.5 * cov))
+            value = min(1.0, max(0.5, 0.5 + 0.5 * cov))
+            _CONFIDENCE_CACHE[cache_key] = (now, value)
+            return value
     except Exception as e:
         logger.warning("Impossible de calculer coverage_ratio (%s) — fallback 0.75", e)
-    return 0.75  # fallback conservateur si DB indispo
+    # Fallback conservateur si DB indispo — ne PAS cacher (sinon on rate le retour DB)
+    return 0.75
 
 
 def compute_itinerary(
