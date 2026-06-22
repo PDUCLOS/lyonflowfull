@@ -13,10 +13,12 @@ import streamlit as st
 
 from dashboard.components.colors import COLORS
 from dashboard.components.data_cache import cached_bottlenecks_top
+from dashboard.components.loading_state import loading_wrapper
 
 
 def render_map_painter(height: int = 400) -> dict:
-    """Affiche un map painter (sélection manuelle pour Sprint 4).
+    with loading_wrapper("Chargement Map painter…", "⏳"):
+        """Affiche un map painter (sélection manuelle pour Sprint 4).
 
     Args:
         height: hauteur de la carte.

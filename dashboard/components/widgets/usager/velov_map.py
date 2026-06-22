@@ -19,6 +19,7 @@ import streamlit as st
 
 from dashboard.components.colors import COLORS
 from dashboard.components.data_cache import cached_velov_predictions
+from dashboard.components.loading_state import loading_wrapper
 from src.data.db_query import get_velov_stations_geo
 
 
@@ -88,7 +89,8 @@ def render_velov_map(
     show_horizon_selector: bool = True,
     key_suffix: str = "",
 ) -> None:
-    """Carte Vélo'v avec choix Maintenant / H+30 / H+1h.
+    with loading_wrapper("Chargement Velov map…", "⏳"):
+        """Carte Vélo'v avec choix Maintenant / H+30 / H+1h.
 
     Args:
         height: hauteur pydeck.
@@ -185,11 +187,12 @@ def render_velov_map(
 
 
 def render_velov_map_compact(*, height: int = 280, key_suffix: str = "") -> None:
-    """Version compacte (Usager) — Maintenant uniquement, pas de selectbox."""
-    df = _load_stations_with_predictions()
-    if df.empty:
-        st.caption("🟡 Carte Vélo'v indisponible (pas de stations en Silver)")
-        return
+    with loading_wrapper("Chargement Velov map compact…", "⏳"):
+        """Version compacte (Usager) — Maintenant uniquement, pas de selectbox."""
+        df = _load_stations_with_predictions()
+        if df.empty:
+            st.caption("🟡 Carte Vélo'v indisponible (pas de stations en Silver)")
+            return
 
     df["bikes_display"] = df["bikes_available"].fillna(0).astype(int)
     df["color"] = df["bikes_display"].apply(_bikes_to_color)

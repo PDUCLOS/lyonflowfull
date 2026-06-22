@@ -13,10 +13,12 @@ import streamlit as st
 
 from dashboard.components.colors import COLORS
 from dashboard.components.data_cache import cached_traffic
+from dashboard.components.loading_state import loading_wrapper
 
 
 def render_traffic_widget(traffic: dict | None = None) -> None:
-    """Affiche le résumé trafic routier.
+    with loading_wrapper("Chargement Traffic widget…", "⏳"):
+        """Affiche le résumé trafic routier.
 
     Args:
         traffic: dict de données. Si None, charge via DB Gold (fail loud si indispo).

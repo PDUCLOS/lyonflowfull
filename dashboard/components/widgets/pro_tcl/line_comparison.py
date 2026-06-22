@@ -10,10 +10,12 @@ import pandas as pd
 import streamlit as st
 
 from dashboard.components.data_cache import cached_line_kpis
+from dashboard.components.loading_state import loading_wrapper
 
 
 def render_line_comparison(line_ids: list | None = None) -> None:
-    """Affiche une comparaison multi-lignes en tableau + radar.
+    with loading_wrapper("Chargement Line comparison…", "⏳"):
+        """Affiche une comparaison multi-lignes en tableau + radar.
 
     Args:
         line_ids: lignes à comparer. Si None, toutes.

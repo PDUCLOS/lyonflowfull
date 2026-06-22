@@ -38,6 +38,7 @@ import streamlit as st
 
 from dashboard.components.data_cache import cached_meteo_impact
 from dashboard.components.error_display import show_error
+from dashboard.components.loading_state import loading_wrapper
 from dashboard.components.plotly_theme import apply_lyf_theme
 from src.data.exceptions import DashboardDataError
 
@@ -238,7 +239,8 @@ def _render_delta_chart(df: pd.DataFrame) -> None:
 
 
 def render_meteo_impact() -> None:
-    """Affiche l'impact météo sur les 3 modes (Axe 7, Sprint 17).
+    with loading_wrapper("Chargement Meteo impact…", "⏳"):
+        """Affiche l'impact météo sur les 3 modes (Axe 7, Sprint 17).
 
     Sprint 17 (2026-06-20). Si DB indispo → fail loud via DashboardDataError.
     Si vue matérialisée pas encore alimentée → message d'attente explicite.

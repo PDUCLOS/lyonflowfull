@@ -37,6 +37,7 @@ import pandas as pd
 import streamlit as st
 
 from dashboard.components.data_cache import cached_quality_report
+from dashboard.components.loading_state import loading_wrapper
 from src.data.exceptions import DashboardDataError
 
 # Couleurs par statut (cohérent avec data_quality_badge.py)
@@ -193,7 +194,8 @@ def _render_history(df: pd.DataFrame) -> None:
 
 
 def render_data_quality_detail() -> None:
-    """Affiche le drill-down data quality bounds dans Elu_1_Synthese.
+    with loading_wrapper("Chargement Data quality detail…", "⏳"):
+        """Affiche le drill-down data quality bounds dans Elu_1_Synthese.
 
     Sprint 17 Axe 6 (2026-06-21). Si DB indispo → fail loud via
     DashboardDataError. Si table log vide (DAG pas encore passé) →

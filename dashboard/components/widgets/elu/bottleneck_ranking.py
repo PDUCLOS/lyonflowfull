@@ -9,10 +9,12 @@ import streamlit as st
 
 from dashboard.components.colors import COLORS
 from dashboard.components.data_cache import cached_bottlenecks_top
+from dashboard.components.loading_state import loading_wrapper
 
 
 def render_bottleneck_ranking(top_n: int | None = None) -> None:
-    """Affiche le tableau ranké des bottlenecks.
+    with loading_wrapper("Chargement Bottleneck ranking…", "⏳"):
+        """Affiche le tableau ranké des bottlenecks.
 
     Args:
         top_n: nombre de bottlenecks à afficher. None = tous.

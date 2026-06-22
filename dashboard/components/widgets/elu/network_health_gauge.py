@@ -22,6 +22,7 @@ import streamlit as st
 
 from dashboard.components.colors import COLORS
 from dashboard.components.data_cache import cached_network_health_score
+from dashboard.components.loading_state import loading_wrapper
 from dashboard.components.plotly_theme import apply_lyf_theme
 from src.data.exceptions import DashboardDataError
 
@@ -179,7 +180,8 @@ def _render_subgauges(
 
 
 def render_network_health_gauge() -> None:
-    """Bandeau KPI santé réseau — page Élu Synthèse (Axe 5, Sprint 15+).
+    with loading_wrapper("Chargement Network health gauge…", "⏳"):
+        """Bandeau KPI santé réseau — page Élu Synthèse (Axe 5, Sprint 15+).
 
     Fail loud via DashboardDataError si DB indispo OU fonction SQL
     migration 019 non appliquée. Le widget affiche alors ``st.error``.

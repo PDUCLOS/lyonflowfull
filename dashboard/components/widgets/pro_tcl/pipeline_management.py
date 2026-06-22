@@ -19,6 +19,7 @@ import streamlit as st
 
 from dashboard.components.colors import COLORS
 from dashboard.components.error_display import show_error
+from dashboard.components.loading_state import loading_wrapper
 from src.data.airflow_client import (
     clear_stuck_dag_run,
     get_dags_status,
@@ -83,8 +84,9 @@ def _cached_freshness() -> list[dict]:
 
 
 def render_pipeline_status() -> None:
-    """Affiche le statut complet des pipelines."""
-    st.markdown("##### 📊 Statut global")
+    with loading_wrapper("Chargement Pipeline status…", "⏳"):
+        """Affiche le statut complet des pipelines."""
+        st.markdown("##### 📊 Statut global")
 
     if not is_airflow_available():
         st.error(
@@ -135,8 +137,9 @@ def render_pipeline_status() -> None:
 
 
 def render_dag_list() -> None:
-    """Affiche la liste des DAGs avec leur état."""
-    st.markdown("##### 📋 Liste des DAGs")
+    with loading_wrapper("Chargement Dag list…", "⏳"):
+        """Affiche la liste des DAGs avec leur état."""
+        st.markdown("##### 📋 Liste des DAGs")
 
     try:
         dags = _cached_dags()
@@ -218,8 +221,9 @@ def render_dag_list() -> None:
 
 
 def render_health_panel() -> None:
-    """Affiche les 6 health checks du module monitoring."""
-    st.markdown("##### 💓 Health checks (quotidien 04h15)")
+    with loading_wrapper("Chargement Health panel…", "⏳"):
+        """Affiche les 6 health checks du module monitoring."""
+        st.markdown("##### 💓 Health checks (quotidien 04h15)")
 
     with st.spinner("Exécution des 6 health checks..."):
         try:
@@ -285,8 +289,9 @@ def render_health_panel() -> None:
 
 
 def render_data_freshness() -> None:
-    """Affiche la fraîcheur des données par source Bronze."""
-    st.markdown("##### 📡 Fraîcheur des données (Bronze)")
+    with loading_wrapper("Chargement Data freshness…", "⏳"):
+        """Affiche la fraîcheur des données par source Bronze."""
+        st.markdown("##### 📡 Fraîcheur des données (Bronze)")
 
     try:
         freshness = _cached_freshness()
@@ -333,7 +338,8 @@ def render_data_freshness() -> None:
 
 
 def render_alerts_feed() -> None:
-    """Affiche le feed des alertes récentes.
+    with loading_wrapper("Chargement Alerts feed…", "⏳"):
+        """Affiche le feed des alertes récentes.
 
     Sprint 9+ (2026-06-17) — branché sur ``get_recent_alerts()``
     (rgpd.audit_log + chantiers). Plus de mock hardcodé.
@@ -392,13 +398,14 @@ def _trigger_dag(dag_id: str) -> None:
 
 
 def render_pipeline_management_page() -> None:
-    """Page complète Pipeline Management (point d'entrée)."""
-    render_pipeline_status()
-    st.markdown("---")
-    render_dag_list()
-    st.markdown("---")
-    render_health_panel()
-    st.markdown("---")
-    render_data_freshness()
-    st.markdown("---")
-    render_alerts_feed()
+    with loading_wrapper("Chargement Pipeline management page…", "⏳"):
+        """Page complète Pipeline Management (point d'entrée)."""
+        render_pipeline_status()
+        st.markdown("---")
+        render_dag_list()
+        st.markdown("---")
+        render_health_panel()
+        st.markdown("---")
+        render_data_freshness()
+        st.markdown("---")
+        render_alerts_feed()

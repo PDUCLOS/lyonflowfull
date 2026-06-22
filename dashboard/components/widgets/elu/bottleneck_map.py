@@ -8,10 +8,12 @@ from __future__ import annotations
 import streamlit as st
 
 from dashboard.components.data_cache import cached_bottlenecks_top
+from dashboard.components.loading_state import loading_wrapper
 
 
 def render_bottleneck_map(height: int = 500) -> None:
-    """Affiche la carte Folium des 10 bottlenecks.
+    with loading_wrapper("Chargement Bottleneck map…", "⏳"):
+        """Affiche la carte Folium des 10 bottlenecks.
 
     Args:
         height: hauteur de la carte.

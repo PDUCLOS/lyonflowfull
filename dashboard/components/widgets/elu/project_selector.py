@@ -8,10 +8,12 @@ from __future__ import annotations
 import streamlit as st
 
 from dashboard.components.data_cache import cached_amenagements_passes
+from dashboard.components.loading_state import loading_wrapper
 
 
 def render_project_selector(key_suffix: str = "default") -> dict | None:
-    """Affiche un sélecteur d'aménagement passé.
+    with loading_wrapper("Chargement Project selector…", "⏳"):
+        """Affiche un sélecteur d'aménagement passé.
 
     Args:
         key_suffix: suffixe pour la clé Streamlit.

@@ -31,6 +31,7 @@ from dashboard.components.data_cache import (
     cached_bus_traffic_spatial_diagnosis_counts,
 )
 from dashboard.components.error_display import show_error
+from dashboard.components.loading_state import loading_wrapper
 from dashboard.components.plotly_theme import apply_lyf_theme
 from src.data.db_query import clean_line_label
 from src.data.exceptions import DashboardDataError
@@ -196,7 +197,8 @@ def _render_top_zones(df: pd.DataFrame, top_n: int = 20) -> None:
 def render_bus_traffic_spatial(
     line_id: str | None = None,
 ) -> None:
-    """Affiche la corrélation bus × trafic spatialisée (Axe 3).
+    with loading_wrapper("Chargement Bus traffic spatial…", "⏳"):
+        """Affiche la corrélation bus × trafic spatialisée (Axe 3).
 
     Sprint 15+ (2026-06-19). Widget parallèle (Option B) — non-breaking.
     """

@@ -17,6 +17,7 @@ import streamlit as st
 from dashboard.components.colors import COLORS
 from dashboard.components.data_cache import cached_buses_positions
 from dashboard.components.error_display import show_error
+from dashboard.components.loading_state import loading_wrapper
 from src.data.db_query import clean_line_label  # Sprint 15+ : libellé lisible des lignes TCL.
 from src.data.exceptions import DashboardDataError
 
@@ -33,7 +34,8 @@ def _delay_to_color(delay_min: int) -> list:
 
 
 def render_network_map(buses: list | None = None, height: int = 400) -> None:
-    """Affiche la carte réseau temps réel des bus.
+    with loading_wrapper("Chargement Network map…", "⏳"):
+        """Affiche la carte réseau temps réel des bus.
 
     Args:
         buses: liste de bus (mock ou réel). Si None, charge via data_loader.

@@ -35,6 +35,7 @@ from dashboard.components.data_cache import (
     cached_velov_transit_coupling_summary,
 )
 from dashboard.components.error_display import show_error
+from dashboard.components.loading_state import loading_wrapper
 from dashboard.components.plotly_theme import apply_lyf_theme
 from src.data.exceptions import DashboardDataError
 
@@ -186,7 +187,8 @@ def _render_lines_chart(summary_df: pd.DataFrame) -> None:
 
 
 def render_modal_shift_alert() -> None:
-    """Affiche l'alerte report modal Vélov ↔ TC (Axe 4, Sprint 17).
+    with loading_wrapper("Chargement Modal shift alert…", "⏳"):
+        """Affiche l'alerte report modal Vélov ↔ TC (Axe 4, Sprint 17).
 
     Sprint 17 (2026-06-20). Si DB indispo → fail loud via DashboardDataError.
     Si vue matérialisée pas encore alimentée → message d'attente explicite.

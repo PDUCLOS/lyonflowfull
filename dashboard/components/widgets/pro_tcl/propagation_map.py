@@ -67,6 +67,7 @@ from dashboard.components.data_cache import (
     cached_traffic_speeds_for_propagation,
 )
 from dashboard.components.error_display import show_error
+from dashboard.components.loading_state import loading_wrapper
 from src.data.exceptions import DashboardDataError
 
 # -----------------------------------------------------------------------------
@@ -872,7 +873,8 @@ def render_propagation_map(
     granger_top_n: int = 200,
     height: int = 500,
 ) -> None:
-    """Affiche la carte de propagation de congestion (Axe 2, Sprint 17).
+    with loading_wrapper("Chargement Propagation map…", "⏳"):
+        """Affiche la carte de propagation de congestion (Axe 2, Sprint 17).
 
     Sprint 17 (2026-06-20). Enrichissement Sprint 17+ Axe 2 niveau 2 :
     test de causalité Granger (statsmodels) sur les top N paires par |r|

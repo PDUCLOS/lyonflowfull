@@ -9,10 +9,12 @@ import streamlit as st
 
 from dashboard.components.colors import COLORS
 from dashboard.components.data_cache import cached_recent_alerts
+from dashboard.components.loading_state import loading_wrapper
 
 
 def render_alert_ticker(alerts: list | None = None) -> None:
-    """Affiche un ticker horizontal défilant avec les alertes.
+    with loading_wrapper("Chargement Alert ticker…", "⏳"):
+        """Affiche un ticker horizontal défilant avec les alertes.
 
     Args:
         alerts: liste d'alertes. Si None, charge via data_loader.

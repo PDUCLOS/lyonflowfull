@@ -18,6 +18,7 @@ from dashboard.components.data_cache import (
     cached_velov_predictions,
     cached_velov_stations,
 )
+from dashboard.components.loading_state import loading_wrapper
 
 
 def _build_predictions_lookup(horizon_minutes: int) -> dict[str, int]:
@@ -35,7 +36,8 @@ def _build_predictions_lookup(horizon_minutes: int) -> dict[str, int]:
 
 
 def render_velov_widget(stations: list | None = None, max_stations: int = 3) -> None:
-    """Affiche la dispo Vélov des N stations les plus proches.
+    with loading_wrapper("Chargement Velov widget…", "⏳"):
+        """Affiche la dispo Vélov des N stations les plus proches.
 
     Args:
         stations: liste de stations Vélov. Si None, charge via DB Silver (fail loud).

@@ -29,6 +29,7 @@ import plotly.graph_objects as go
 import streamlit as st
 
 from dashboard.components.data_cache import cached_xgb_accuracy_summary, cached_xgb_vs_tomtom
+from dashboard.components.loading_state import loading_wrapper
 from dashboard.components.plotly_theme import apply_lyf_theme
 from src.data.exceptions import DashboardDataError
 
@@ -205,7 +206,8 @@ def _accuracy_distribution(pairs: pd.DataFrame) -> go.Figure:
 
 
 def render_backtest_dashboard(hours_pairs: int = 24, hours_summary: int = 168) -> None:
-    """Render le dashboard complet de backtest XGBoost vs TomTom.
+    with loading_wrapper("Chargement Backtest dashboard…", "⏳"):
+        """Render le dashboard complet de backtest XGBoost vs TomTom.
 
     Args:
         hours_pairs: fenêtre temporelle pour les paires (scatter + KPIs), défaut 24h.

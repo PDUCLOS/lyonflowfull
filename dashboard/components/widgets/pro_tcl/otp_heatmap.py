@@ -12,6 +12,7 @@ import streamlit as st
 
 from dashboard.components.colors import COLORS
 from dashboard.components.data_cache import cached_otp_heatmap_data
+from dashboard.components.loading_state import loading_wrapper
 from dashboard.components.plotly_theme import LYF_TEMPLATE
 
 
@@ -98,7 +99,8 @@ def render_otp_heatmap(
     top_n: int | None = None,
     compact: bool = False,
 ) -> None:
-    """Affiche la heatmap OTP Plotly (lignes × heures).
+    with loading_wrapper("Chargement Otp heatmap…", "⏳"):
+        """Affiche la heatmap OTP Plotly (lignes × heures).
 
     Args:
         otp_data: dict {line_id: {date: [otp_h0..h23]}}. Si None, charge via DB.
@@ -173,5 +175,6 @@ def render_otp_heatmap(
 
 
 def render_otp_heatmap_mini(otp_data: dict | None = None, height: int = 280) -> None:
-    """Version compacte PCC Live — top 15 pires lignes, sans text overlay."""
-    render_otp_heatmap(otp_data, days=1, height=height, top_n=15, compact=True)
+    with loading_wrapper("Chargement Otp heatmap mini…", "⏳"):
+        """Version compacte PCC Live — top 15 pires lignes, sans text overlay."""
+        render_otp_heatmap(otp_data, days=1, height=height, top_n=15, compact=True)

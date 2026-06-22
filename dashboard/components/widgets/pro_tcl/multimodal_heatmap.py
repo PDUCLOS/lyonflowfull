@@ -45,6 +45,7 @@ from dashboard.components.data_cache import (
     cached_multimodal_grid_diagnosis_counts,
 )
 from dashboard.components.error_display import show_error
+from dashboard.components.loading_state import loading_wrapper
 from src.data.exceptions import DashboardDataError
 
 # Libellés FR pour les diagnostics (cohérent avec labels.py)
@@ -278,7 +279,8 @@ def _render_top_saturated(df: pd.DataFrame, top_n: int = 15) -> None:
 
 
 def render_multimodal_heatmap(height: int = 500) -> None:
-    """Affiche la carte chaleur multimodale (Axe 1).
+    with loading_wrapper("Chargement Multimodal heatmap…", "⏳"):
+        """Affiche la carte chaleur multimodale (Axe 1).
 
     Sprint 15+ (2026-06-19). Si DB indispo → fail loud via DashboardDataError.
     Si vue matérialisée pas encore alimentée → message d'attente explicite.

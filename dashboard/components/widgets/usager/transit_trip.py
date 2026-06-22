@@ -26,6 +26,7 @@ import streamlit as st
 
 from dashboard.components.data_cache import cached_transit_itinerary
 from dashboard.components.error_display import show_error
+from dashboard.components.loading_state import loading_wrapper
 from src.data.exceptions import DashboardDataError
 
 # Couleur par mode TC (segment card)
@@ -38,7 +39,8 @@ _MODE_COLOR = {
 
 
 def render_transit_trip(origin: str, destination: str) -> dict | None:
-    """Affiche le trajet transport en commun entre 2 lieux du référentiel.
+    with loading_wrapper("Chargement Transit trip…", "⏳"):
+        """Affiche le trajet transport en commun entre 2 lieux du référentiel.
 
     Args:
         origin: label du lieu d'origine (peut être préfixé emoji).

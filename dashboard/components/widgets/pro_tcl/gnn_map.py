@@ -21,6 +21,7 @@ import streamlit as st
 
 from dashboard.components.colors import COLORS
 from dashboard.components.data_cache import cached_spatial_mapping
+from dashboard.components.loading_state import loading_wrapper
 from src.data.data_loader import load_traffic_predictions_for_map as load_traffic_predictions
 from src.ml.mlflow_integration import is_mlflow_available
 from src.ml.model_registry import is_gnn_map_visible, is_stgcn_enabled
@@ -172,7 +173,8 @@ def render_traffic_map(
     show_caption: bool = True,
     key_suffix: str = "",
 ) -> None:
-    """Carte trafic plein format. Pré-requis : flag activé + données disponibles.
+    with loading_wrapper("Chargement Traffic map…", "⏳"):
+        """Carte trafic plein format. Pré-requis : flag activé + données disponibles.
 
     Args:
         height: hauteur de la carte en pixels.
@@ -238,7 +240,8 @@ def render_traffic_map_compact(
     horizon_minutes: int = 60,
     key_suffix: str = "",
 ) -> None:
-    """Carte trafic compacte sans sélecteur (Usager / Elu).
+    with loading_wrapper("Chargement Traffic map compact…", "⏳"):
+        """Carte trafic compacte sans sélecteur (Usager / Elu).
 
     Args:
         height: hauteur réduite.
@@ -261,7 +264,8 @@ def render_traffic_map_compact(
 # API publique : section Pro_7 (bandeau status + carte)
 # -----------------------------------------------------------------------------
 def render_gnn_map_section() -> None:
-    """Section dédiée Pro_7 Model Monitoring — bandeau status + carte.
+    with loading_wrapper("Chargement Gnn map section…", "⏳"):
+        """Section dédiée Pro_7 Model Monitoring — bandeau status + carte.
 
     Wrapper rétro-compatible utilisé par Pro_7. Affiche un bandeau si le flag
     est désactivé. Sinon délègue à ``render_traffic_map()``.

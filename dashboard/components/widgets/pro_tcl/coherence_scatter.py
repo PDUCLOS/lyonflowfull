@@ -34,6 +34,7 @@ from dashboard.components.data_cache import (
     cached_tomtom_gl_drift,
 )
 from dashboard.components.error_display import show_error
+from dashboard.components.loading_state import loading_wrapper
 from dashboard.components.plotly_theme import apply_lyf_theme
 from src.data.exceptions import DashboardDataError
 
@@ -265,7 +266,8 @@ def _drift_table(drift_df: pd.DataFrame) -> None:
 
 
 def render_coherence_scatter() -> None:
-    """Affiche le widget Cohérence TomTom ↔ Grand Lyon.
+    with loading_wrapper("Chargement Coherence scatter…", "⏳"):
+        """Affiche le widget Cohérence TomTom ↔ Grand Lyon.
 
     Sprint 13+ (2026-06-18). Si DB indispo → fail loud via DashboardDataError.
     Si TomTom pas encore collecté (table vide) → bandeau info "TomTom vide".

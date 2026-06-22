@@ -18,6 +18,7 @@ import pandas as pd
 import streamlit as st
 
 from dashboard.components.data_cache import cached_line_kpis
+from dashboard.components.loading_state import loading_wrapper
 
 SORT_OPTIONS = {
     "OTP (%) ↓": ("otp_pct", False),
@@ -62,7 +63,8 @@ def render_line_kpis(
     compact: bool = False,
     kpis_dict: dict | None = None,
 ) -> None:
-    """Affiche les KPI cards denses par ligne.
+    with loading_wrapper("Chargement Line kpis…", "⏳"):
+        """Affiche les KPI cards denses par ligne.
 
     Args:
         line_ids: liste de line_id. Si None, toutes les lignes.

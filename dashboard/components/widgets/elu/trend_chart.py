@@ -9,11 +9,13 @@ import streamlit as st
 
 from dashboard.components.colors import COLORS
 from dashboard.components.data_cache import cached_elu_kpis_dict
+from dashboard.components.loading_state import loading_wrapper
 from dashboard.components.plotly_theme import LYF_TEMPLATE
 
 
 def render_trend_chart(kpi_key: str = "part_modale_tc") -> None:
-    """Affiche la courbe d'évolution d'un KPI sur 12 mois.
+    with loading_wrapper("Chargement Trend chart…", "⏳"):
+        """Affiche la courbe d'évolution d'un KPI sur 12 mois.
 
     Args:
         kpi_key: clé du KPI dans KPI_12_MONTHS.

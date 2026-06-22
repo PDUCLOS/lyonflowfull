@@ -16,11 +16,13 @@ import streamlit as st
 from dashboard.components.colors import COLORS
 from dashboard.components.data_cache import cached_weather_hourly
 from dashboard.components.error_display import show_error
+from dashboard.components.loading_state import loading_wrapper
 from src.data.exceptions import DashboardDataError
 
 
 def render_weather_widget(weather: dict | None = None) -> None:
-    """Affiche la météo compacte avec impact mobilité.
+    with loading_wrapper("Chargement Weather widget…", "⏳"):
+        """Affiche la météo compacte avec impact mobilité.
 
     Args:
         weather: dict météo ou None pour charger via data_loader.

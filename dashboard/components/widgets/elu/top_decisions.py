@@ -8,10 +8,12 @@ from __future__ import annotations
 import streamlit as st
 
 from dashboard.components.data_cache import cached_bottlenecks_top
+from dashboard.components.loading_state import loading_wrapper
 
 
 def render_top_decisions(n: int = 5) -> None:
-    """Affiche les N décisions à arbitrer ce trimestre.
+    with loading_wrapper("Chargement Top decisions…", "⏳"):
+        """Affiche les N décisions à arbitrer ce trimestre.
 
     Args:
         n: nombre de décisions à afficher.

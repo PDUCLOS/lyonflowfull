@@ -8,10 +8,12 @@ from __future__ import annotations
 import streamlit as st
 
 from dashboard.components.data_cache import cached_tcl_lines
+from dashboard.components.loading_state import loading_wrapper
 
 
 def render_line_selector(multiselect: bool = True, key_suffix: str = "") -> list:
-    """Affiche un sélecteur de ligne(s) TCL.
+    with loading_wrapper("Chargement Line selector…", "⏳"):
+        """Affiche un sélecteur de ligne(s) TCL.
 
     Args:
         multiselect: True pour multi-sélection, False pour une seule.

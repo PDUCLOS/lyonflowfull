@@ -8,10 +8,12 @@ from __future__ import annotations
 import streamlit as st
 
 from dashboard.components.data_cache import cached_bottlenecks_top
+from dashboard.components.loading_state import loading_wrapper
 
 
 def render_roi_calculator(line_id: str | None = None) -> None:
-    """Affiche un calculateur ROI interactif.
+    with loading_wrapper("Chargement Roi calculator…", "⏳"):
+        """Affiche un calculateur ROI interactif.
 
     Args:
         line_id: si fourni, focus sur le bottleneck de cette ligne.
