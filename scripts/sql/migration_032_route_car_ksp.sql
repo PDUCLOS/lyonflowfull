@@ -100,7 +100,7 @@ BEGIN
         CASE
             WHEN w.cost > 0 AND w.length_m > 0
                 THEN (w.length_m / w.cost) * 3.6
-            ELSE w.maxspeed_kmh
+            ELSE w.maxspeed_forward
         END AS speed_kmh,
         w.name AS road_name,
         ST_AsGeoJSON(w.the_geom)::TEXT AS geom_geojson,
