@@ -80,7 +80,7 @@ services:
   # PostgreSQL 16 + PostGIS
   # ---------------------------------------------------------------------------
   postgres:
-    image: postgis/postgis:16-3.4
+    image: pgrouting/pgrouting:16-3.5-3.7.3
     container_name: lyonflow-postgres
     restart: unless-stopped
     environment:
