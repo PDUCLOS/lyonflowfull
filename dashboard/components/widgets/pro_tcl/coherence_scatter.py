@@ -266,6 +266,14 @@ def _drift_table(drift_df: pd.DataFrame) -> None:
 
 
 def render_coherence_scatter() -> None:
+    with st.popover("ℹ️ Cross-validation TomTom vs GL ?"):
+        st.markdown(
+            "La **cross-validation** compare les prédictions XGBoost H+1h "
+            "aux observations TomTom (GPS flottes de véhicules, source "
+            "indépendante). Une ligne y=x = accord parfait. Les points "
+            "éloignés signalent un **désaccord** (delta > 20 km/h = capteur "
+            "GL potentiellement HS — voir vue `gold.v_tomtom_gl_drift`)."
+        )
     with loading_wrapper("Chargement Coherence scatter…", "⏳"):
         """Affiche le widget Cohérence TomTom ↔ Grand Lyon.
 

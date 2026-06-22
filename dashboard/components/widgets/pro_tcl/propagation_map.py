@@ -873,6 +873,14 @@ def render_propagation_map(
     granger_top_n: int = 200,
     height: int = 500,
 ) -> None:
+    with st.popover("ℹ️ Causalité de Granger ?"):
+        st.markdown(
+            "Le **test de Granger** vérifie si les valeurs passées d'un capteur "
+            "(A) améliorent la prédiction des valeurs futures d'un autre (B). "
+            "Une **p-value < 0.05** indique que A 'cause' B au sens de Granger. "
+            "Plus la p-value est faible, plus la causalité est statistiquement "
+            "significative (vs simple corrélation)."
+        )
     with loading_wrapper("Chargement Propagation map…", "⏳"):
         """Affiche la carte de propagation de congestion (Axe 2, Sprint 17).
 

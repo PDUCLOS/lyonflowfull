@@ -207,6 +207,13 @@ def _accuracy_distribution(pairs: pd.DataFrame) -> go.Figure:
 
 
 def render_backtest_dashboard(hours_pairs: int = 24, hours_summary: int = 168) -> None:
+    with st.popover("ℹ️ MAE vs MAPE ?"):
+        st.markdown(
+            "Le **MAE (Mean Absolute Error)** mesure l'erreur moyenne en km/h "
+            "entre les prédictions XGBoost et l'oracle TomTom. Le **MAPE** "
+            "exprime la même erreur en % relatif. **Plus c'est bas, plus le "
+            "modèle colle à la réalité**. Référence cible : MAE < 8 km/h."
+        )
     with loading_wrapper("Chargement Backtest dashboard…", "⏳"):
         """Render le dashboard complet de backtest XGBoost vs TomTom.
 

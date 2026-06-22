@@ -187,6 +187,13 @@ def _render_lines_chart(summary_df: pd.DataFrame) -> None:
 
 
 def render_modal_shift_alert() -> None:
+    with st.popover("ℹ️ Qu'est-ce que le z-score ?"):
+        st.markdown(
+            "Le **z-score** mesure combien la valeur actuelle s'écarte de la "
+            "moyenne horaire 7j. Un z-score < -2 signifie que la station a "
+            "significativement moins de vélos que d'habitude à cette heure "
+            "(probable **report modal** vers le Vélov suite à un incident TC)."
+        )
     with loading_wrapper("Chargement Modal shift alert…", "⏳"):
         """Affiche l'alerte report modal Vélov ↔ TC (Axe 4, Sprint 17).
 

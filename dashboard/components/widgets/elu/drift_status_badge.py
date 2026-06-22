@@ -114,6 +114,13 @@ def _classify(
 
 def render_drift_status_badge() -> None:
     """Affiche le bandeau de statut drift + MAE dans Elu_1_Synthese."""
+    with st.popover("ℹ️ Qu'est-ce que le PSI ?"):
+        st.markdown(
+            "Le **PSI (Population Stability Index)** compare la distribution "
+            "des features entre 2 périodes (J-14→J-7 vs J-7→J). "
+            "**PSI < 0.1** = stable, **0.1-0.2** = modéré, **> 0.2** = drift "
+            "significatif → **retrain recommandé** du modèle."
+        )
     with loading_wrapper("Chargement Drift status badge…", "⏳"):
         # Lecture des 2 sources
         try:
