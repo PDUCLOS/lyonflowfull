@@ -71,7 +71,7 @@ def render_sparkline(
         x=timestamps or list(range(len(values))),
         y=values,
         mode="lines",
-        line=dict(color=line_color, width=2, shape="spline", smoothing=0.5),
+        line={"color": line_color, "width": 2, "shape": "spline", "smoothing": 0.5},
         fill="tozeroy",
         fillcolor=fill_color,
         showlegend=False,
@@ -81,9 +81,9 @@ def render_sparkline(
     # Configuration sparkline : pas d'axes, pas de grille
     fig.update_layout(
         height=height,
-        margin=dict(l=0, r=0, t=5, b=5),
-        xaxis=dict(visible=False),
-        yaxis=dict(visible=False),
+        margin={"l": 0, "r": 0, "t": 5, "b": 5},
+        xaxis={"visible": False},
+        yaxis={"visible": False},
         showlegend=False,
         plot_bgcolor="rgba(0,0,0,0)",
         paper_bgcolor="rgba(0,0,0,0)",

@@ -15,7 +15,7 @@ Stratégie :
     Migration 031 (TODO) les ajoutera si le besoin se fait sentir pour debug.
 
 Rétention : 7 jours (purge auto par la 2ème task, cf. maintenance.py).
-Volume : 96 snapshots/jour × 7 jours = 672 rows (négligeable).
+Volume : 96 snapshots/jour * 7 jours = 672 rows (négligeable).  # noqa: RUF002 — multiplication sign intentional
 
 Usage:
     Auto-chargé par Airflow scheduler.
