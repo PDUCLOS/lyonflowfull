@@ -163,30 +163,51 @@ class XGBoostSpeedModel:
         X_test = test[FEATURE_COLS]
         y_test = test["target_speed"]
 
-        # Entraînement
-        model = xgb.XGBRegressor(
-            n_estimators=n_estimators,
-            max_depth=max_depth,
-            learning_rate=learning_rate,
-            objective="reg:squarederror",
-            random_state=42,
-            n_jobs=-1,
-        )
-        model.fit(X_train, y_train, eval_set=[(X_test, y_test)], verbose=False)
+        # Entraînement — 3 modèles quantile (P10, P50, P90) pour intervalles
+        # de confiance réels. XGBoost 2.0+ supporte nativement quantile error.
+        # Sprint 21 P4.2 : remplace l'heuristique ±5 km/h.
+        quantiles = {"p10": 0.1, "p50": 0.5, "p90": 0.9}
+        models = {}
+        metrics = {}
+        for label, alpha in quantiles.items():
+            model = xgb.XGBRegressor(
+                n_estimators=n_estimators,
+                max_depth=max_depth,
+                learning_rate=learning_rate,
+                objective="reg:quantileerror",
+                quantile_alpha=alpha,
+                random_state=42,
+                n_jobs=-1,
+            )
+            model.fit(X_train, y_train, eval_set=[(X_test, y_test)], verbose=False)
+            y_pred_q = model.predict(X_test)
+            models[label] = model
+            metrics[label] = {
+                "mae": float(np.mean(np.abs(y_test - y_pred_q))),
+                "rmse": float(np.sqrt(np.mean((y_test - y_pred_q) ** 2))),
+                "r2": float(
+                    1 - np.sum((y_test - y_pred_q) ** 2)
+                    / max(np.sum((y_test - y_test.mean()) ** 2), 1e-9)
+                ),
+            }
 
-        # Évaluation
-        y_pred = model.predict(X_test)
-        metrics = {
+        # Métrique agrégée = P50 (médiane) pour rétro-compat dashboard
+        y_pred = models["p50"].predict(X_test)
+        metrics.update({
             "mae": float(np.mean(np.abs(y_test - y_pred))),
             "rmse": float(np.sqrt(np.mean((y_test - y_pred) ** 2))),
-            "r2": float(1 - np.sum((y_test - y_pred) ** 2) / np.sum((y_test - y_test.mean()) ** 2)),
-        }
+            "r2": float(
+                1 - np.sum((y_test - y_pred) ** 2)
+                / max(np.sum((y_test - y_test.mean()) ** 2), 1e-9)
+            ),
+        })
 
-        # Sauvegarde
-        self.models[horizon_minutes] = model
-        model_path = self.model_dir / f"xgb_speed_h{horizon_minutes}.pkl"
-        model_path.parent.mkdir(parents=True, exist_ok=True)
-        joblib.dump(model, model_path)
+        # Sauvegarde : 1 dict {p10, p50, p90} par horizon (même path que
+        # l'ancien format mono-modèle pour rétro-compat loader MLflow/FS).
+        self.models[horizon_minutes] = models
+        models_path = self.model_dir / f"xgb_speed_h{horizon_minutes}.pkl"
+        models_path.parent.mkdir(parents=True, exist_ok=True)
+        joblib.dump(models, models_path)
 
         # MLflow tracking (Sprint 9 — opt-out via MLFLOW_TRACKING_URI=""
         # Le tracker gère le no-op gracieux si le serveur est down.)
@@ -320,18 +341,27 @@ class XGBoostSpeedModel:
             }
 
         X = pd.DataFrame([features])[FEATURE_COLS]
-        model = self.models[horizon_minutes]
-        pred = model.predict(X)[0]
-        pred = float(np.clip(pred, 1.0, 130.0))
+        # Sprint 21 P4.2 : 3 modèles quantile (P10, P50, P90) par horizon.
+        # Retourne vrais intervalles de confiance au lieu de l'heuristique ±5 km/h.
+        models = self.models[horizon_minutes]
+        if isinstance(models, dict):
+            # Nouveau format : dict {p10, p50, p90}
+            p10 = float(np.clip(models["p10"].predict(X)[0], 1.0, 130.0))
+            p50 = float(np.clip(models["p50"].predict(X)[0], 1.0, 130.0))
+            p90 = float(np.clip(models["p90"].predict(X)[0], 1.0, 130.0))
+        else:
+            # Rétro-compat : ancien format (1 seul modèle, fallback heuristique)
+            pred = float(np.clip(models.predict(X)[0], 1.0, 130.0))
+            p10 = max(1.0, pred - 5.0)
+            p50 = pred
+            p90 = min(130.0, pred + 5.0)
 
-        # Confidence interval : ±5 km/h (heuristique simple, à raffiner)
-        # TODO Sprint 6+ : quantile regression XGBoost pour vrais intervalles
         return {
-            "predicted_speed_kmh": round(pred, 2),
-            "confidence_low": round(max(1.0, pred - 5.0), 2),
-            "confidence_high": round(min(130.0, pred + 5.0), 2),
+            "predicted_speed_kmh": round(p50, 2),
+            "confidence_low": round(p10, 2),
+            "confidence_high": round(p90, 2),
             "model_name": "xgb_speed",
-            "model_version": "1.0.0",
+            "model_version": "1.1.0",  # bumped : quantile support
         }
 
     def _load_training_data(self, horizon_minutes: int) -> pd.DataFrame:
