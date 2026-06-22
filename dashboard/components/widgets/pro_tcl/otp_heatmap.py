@@ -10,6 +10,7 @@ from __future__ import annotations
 import pandas as pd
 import streamlit as st
 
+from dashboard.components.a11y import plotly_with_alt
 from dashboard.components.colors import COLORS
 from dashboard.components.data_cache import cached_otp_heatmap_data
 from dashboard.components.loading_state import loading_wrapper
@@ -164,7 +165,7 @@ def render_otp_heatmap(
             yaxis={"tickfont": {"size": 11 if not compact else 10}},
             xaxis={"tickfont": {"size": 10}},
         )
-        st.plotly_chart(fig, use_container_width=True)
+        plotly_with_alt(fig, use_container_width=True)
 
     except ImportError:
         df_display = pd.DataFrame(z_data, index=lines, columns=[f"{h}h" for h in range(24)])

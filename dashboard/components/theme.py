@@ -311,6 +311,36 @@ def inject_theme() -> None:
         font-size: 0.85rem !important;
         opacity: 0.65;
     }}
+    /* Sprint 20 Axe E — Accessibilité RGAA/WCAG 2.1 AA */
+    /* sr-only : texte lu par les lecteurs d'écran, invisible visuellement */
+    .sr-only {{
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        padding: 0;
+        margin: -1px;
+        overflow: hidden;
+        clip: rect(0, 0, 0, 0);
+        white-space: nowrap;
+        border: 0;
+    }}
+    /* sr-only-focusable : idem mais visible quand focus clavier (skip link) */
+    .sr-only-focusable:focus,
+    .sr-only-focusable:active {{
+        position: static;
+        width: auto;
+        height: auto;
+        overflow: visible;
+        clip: auto;
+        white-space: normal;
+        padding: 0.5rem 1rem;
+        background: var(--primary);
+        color: white;
+        z-index: 99999;
+        text-decoration: underline;
+        font-weight: 600;
+        border-radius: 4px;
+    }}
 
     /* Badges */
     .lyonflow-badge {{
@@ -378,3 +408,14 @@ def inject_theme() -> None:
     </style>
     """
     st.markdown(css, unsafe_allow_html=True)
+
+    # Sprint 20 Axe E — Accessibilité : lang="fr" + skip link
+    st.markdown(
+        '<script>document.documentElement.lang="fr";</script>',
+        unsafe_allow_html=True,
+    )
+    st.markdown(
+        '<a href="#main-content" class="sr-only sr-only-focusable">'
+        "Aller au contenu principal</a>",
+        unsafe_allow_html=True,
+    )

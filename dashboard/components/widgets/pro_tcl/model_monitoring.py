@@ -22,6 +22,7 @@ import html
 
 import streamlit as st
 
+from dashboard.components.a11y import plotly_with_alt
 from dashboard.components.colors import COLORS
 from dashboard.components.error_display import show_error
 from dashboard.components.plotly_theme import LYF_TEMPLATE
@@ -415,7 +416,7 @@ def render_training_history() -> None:
                 template=LYF_TEMPLATE,
                 height=350,
             )
-            st.plotly_chart(fig, use_container_width=True)
+            plotly_with_alt(fig, use_container_width=True)
         except ImportError:
             st.dataframe(history, use_container_width=True, hide_index=True)
     except Exception as e:
@@ -587,7 +588,7 @@ def render_velov_model_analysis() -> None:
                     height=240,
                 )
                 fig.update_layout(margin={"l": 0, "r": 0, "t": 10, "b": 0})
-                st.plotly_chart(fig, use_container_width=True)
+                plotly_with_alt(fig, use_container_width=True)
             except ImportError:
                 st.bar_chart(pred_30["predicted_bikes"].value_counts().sort_index())
 

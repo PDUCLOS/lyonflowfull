@@ -36,6 +36,7 @@ import pandas as pd
 import plotly.graph_objects as go
 import streamlit as st
 
+from dashboard.components.a11y import plotly_with_alt
 from dashboard.components.data_cache import cached_meteo_impact
 from dashboard.components.error_display import show_error
 from dashboard.components.loading_state import loading_wrapper
@@ -235,7 +236,7 @@ def _render_delta_chart(df: pd.DataFrame) -> None:
         hovermode="x unified",
     )
     apply_lyf_theme(fig)
-    st.plotly_chart(fig, use_container_width=True)
+    plotly_with_alt(fig, use_container_width=True)
 
 
 def render_meteo_impact() -> None:

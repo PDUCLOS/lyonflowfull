@@ -7,6 +7,7 @@ from __future__ import annotations
 
 import streamlit as st
 
+from dashboard.components.a11y import plotly_with_alt
 from dashboard.components.colors import COLORS
 from dashboard.components.data_cache import cached_elu_kpis_dict
 from dashboard.components.loading_state import loading_wrapper
@@ -83,7 +84,7 @@ def render_trend_chart(kpi_key: str = "part_modale_tc") -> None:
             template=LYF_TEMPLATE,
             showlegend=False,
         )
-        st.plotly_chart(fig, use_container_width=True)
+        plotly_with_alt(fig, use_container_width=True)
 
     except ImportError:
         # Fallback : barres markdown

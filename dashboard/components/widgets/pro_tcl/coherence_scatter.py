@@ -28,6 +28,7 @@ from __future__ import annotations
 import pandas as pd
 import streamlit as st
 
+from dashboard.components.a11y import plotly_with_alt
 from dashboard.components.colors import COLORS
 from dashboard.components.data_cache import (
     cached_tomtom_coherence,
@@ -174,7 +175,7 @@ def _scatter_tomtom_vs_gl(df: pd.DataFrame) -> None:
     fig.update_xaxes(range=[0, speed_max * 1.05])
     fig.update_yaxes(range=[0, speed_max * 1.05])
     apply_lyf_theme(fig)
-    st.plotly_chart(fig, use_container_width=True)
+    plotly_with_alt(fig, use_container_width=True)
 
 
 def _heatmap_delta(df: pd.DataFrame, top_n: int = 20) -> None:
@@ -224,7 +225,7 @@ def _heatmap_delta(df: pd.DataFrame, top_n: int = 20) -> None:
         margin=dict(l=10, r=10, t=40, b=10),
     )
     apply_lyf_theme(fig)
-    st.plotly_chart(fig, use_container_width=True)
+    plotly_with_alt(fig, use_container_width=True)
 
 
 def _drift_table(drift_df: pd.DataFrame) -> None:

@@ -28,6 +28,7 @@ import pandas as pd
 import plotly.graph_objects as go
 import streamlit as st
 
+from dashboard.components.a11y import plotly_with_alt
 from dashboard.components.data_cache import cached_xgb_accuracy_summary, cached_xgb_vs_tomtom
 from dashboard.components.error_display import show_error
 from dashboard.components.loading_state import loading_wrapper
@@ -285,19 +286,19 @@ def render_backtest_dashboard(hours_pairs: int = 24, hours_summary: int = 168) -
     st.markdown("---")
 
     # ── 2. Scatter XGBoost vs TomTom ────────────────────────────────────────
-    st.plotly_chart(_scatter_xgb_vs_tomtom(pairs), use_container_width=True)
+    plotly_with_alt(_scatter_xgb_vs_tomtom(pairs), use_container_width=True)
 
     st.markdown("---")
 
     # ── 3. Courbe MAE temporelle ────────────────────────────────────────────
-    st.plotly_chart(_mae_temporal_chart(summary), use_container_width=True)
+    plotly_with_alt(_mae_temporal_chart(summary), use_container_width=True)
 
     st.markdown("---")
 
     # ── 4. Distribution accuracy + Top 10 ───────────────────────────────────
     col_pie, col_table = st.columns([1, 2])
     with col_pie:
-        st.plotly_chart(_accuracy_distribution(pairs), use_container_width=True)
+        plotly_with_alt(_accuracy_distribution(pairs), use_container_width=True)
     with col_table:
         st.markdown("##### 🔻 Top 10 pires prédictions")
         top10 = (

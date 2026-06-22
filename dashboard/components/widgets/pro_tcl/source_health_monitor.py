@@ -23,6 +23,7 @@ from __future__ import annotations
 import pandas as pd
 import streamlit as st
 
+from dashboard.components.a11y import plotly_with_alt
 from dashboard.components.data_cache import cached_data_completeness, cached_source_health
 from dashboard.components.error_display import show_error
 from dashboard.components.loading_state import loading_wrapper
@@ -121,7 +122,7 @@ def render_source_health_monitor() -> None:
         global_score = _global_score(health_df)
         col_gauge, col_kpi = st.columns([1, 2])
         with col_gauge:
-            st.plotly_chart(_gauge_plotly(global_score), use_container_width=True)
+            plotly_with_alt(_gauge_plotly(global_score), use_container_width=True)
         with col_kpi:
             n_healthy = int((health_df["status"] == "healthy").sum())
             n_delayed = int((health_df["status"] == "delayed").sum())

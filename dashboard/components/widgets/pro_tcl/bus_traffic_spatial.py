@@ -26,6 +26,7 @@ from __future__ import annotations
 import pandas as pd
 import streamlit as st
 
+from dashboard.components.a11y import plotly_with_alt
 from dashboard.components.data_cache import (
     cached_bus_traffic_spatial,
     cached_bus_traffic_spatial_diagnosis_counts,
@@ -147,7 +148,7 @@ def _render_scatter(df: pd.DataFrame) -> None:
         legend=dict(orientation="h", yanchor="bottom", y=1.02),
     )
     apply_lyf_theme(fig)
-    st.plotly_chart(fig, use_container_width=True)
+    plotly_with_alt(fig, use_container_width=True)
 
 
 def _render_top_zones(df: pd.DataFrame, top_n: int = 20) -> None:

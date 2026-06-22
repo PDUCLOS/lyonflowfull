@@ -30,6 +30,7 @@ import pandas as pd
 import plotly.graph_objects as go
 import streamlit as st
 
+from dashboard.components.a11y import plotly_with_alt
 from dashboard.components.data_cache import (
     cached_velov_transit_coupling,
     cached_velov_transit_coupling_summary,
@@ -183,7 +184,7 @@ def _render_lines_chart(summary_df: pd.DataFrame) -> None:
         showlegend=False,
     )
     apply_lyf_theme(fig)
-    st.plotly_chart(fig, use_container_width=True)
+    plotly_with_alt(fig, use_container_width=True)
 
 
 def render_modal_shift_alert() -> None:

@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import streamlit as st
 
+from dashboard.components.a11y import plotly_with_alt
 from dashboard.components.colors import COLORS
 from dashboard.components.plotly_theme import LYF_TEMPLATE
 
@@ -53,7 +54,7 @@ def render_before_after_chart(base_value: float, new_value: float, label: str = 
             template=LYF_TEMPLATE,
             showlegend=False,
         )
-        st.plotly_chart(fig, use_container_width=True)
+        plotly_with_alt(fig, use_container_width=True)
 
     except ImportError:
         # Fallback markdown

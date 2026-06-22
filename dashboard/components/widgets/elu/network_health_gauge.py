@@ -20,6 +20,7 @@ from __future__ import annotations
 import plotly.graph_objects as go
 import streamlit as st
 
+from dashboard.components.a11y import plotly_with_alt
 from dashboard.components.colors import COLORS
 from dashboard.components.data_cache import cached_network_health_score
 from dashboard.components.error_display import show_error
@@ -77,7 +78,7 @@ def _render_main_gauge(score: float, diagnosis: str) -> None:
         plot_bgcolor="rgba(0,0,0,0)",
     )
     apply_lyf_theme(fig)
-    st.plotly_chart(fig, use_container_width=True)
+    plotly_with_alt(fig, use_container_width=True)
 
 
 def _render_subgauges(
@@ -174,7 +175,7 @@ def _render_subgauges(
                 title={"text": label, "font": {"size": 13}},
             )
             apply_lyf_theme(fig)
-            st.plotly_chart(fig, use_container_width=True)
+            plotly_with_alt(fig, use_container_width=True)
             st.caption(sublabel)
             if not available:
                 st.caption("⚠️ Source indisponible (poids redistribué)")
