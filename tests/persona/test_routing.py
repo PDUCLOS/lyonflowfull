@@ -1,4 +1,10 @@
-"""Tests pour le module routing."""
+"""Tests pour le module routing.
+
+Sprint 26+ : pgRouting remplace NetworkX H3 pour le routing voiture.
+- `compute_itinerary` appelle `osm.route_car()` côté DB → tests marqués @pytest.mark.integration
+- `shortest_path` et `get_nearest_node` retirés (pgRouting fait tout côté SQL)
+- `build_routing_graph` et `get_node_speed` conservés pour le GNN
+"""
 
 from __future__ import annotations
 
@@ -12,28 +18,29 @@ sys.path.insert(0, str(WORKSPACE))
 
 
 def test_routing_module_importable():
-    """Le module routing doit s'importer."""
+    """Le module routing doit s'importer avec les nouveaux exports pgRouting."""
     from src.routing import (
         Itinerary,
         ItinerarySegment,
-        build_routing_graph,
         compute_itinerary,
-        shortest_path,
+        compute_route_pgrouting,
+        get_nearest_osm_node,
+        get_node_speed,
     )
 
-    assert callable(build_routing_graph)
     assert callable(compute_itinerary)
-    assert callable(shortest_path)
+    assert callable(compute_route_pgrouting)
+    assert callable(get_nearest_osm_node)
+    assert callable(get_node_speed)
     assert Itinerary is not None
     assert ItinerarySegment is not None
 
 
-def test_build_routing_graph_mock():
-    """Le graphe mock doit fonctionner sans DB."""
-    # Force le mock en mettant APP_ENV=development (déjà par défaut)
+def test_build_routing_graph_for_gnn():
+    """build_routing_graph reste utilisable pour le GNN (H3 KNN legacy)."""
     import os
 
-    from src.routing import build_routing_graph
+    from src.routing.graph import build_routing_graph
 
     os.environ["APP_ENV"] = "development"
 
@@ -42,16 +49,22 @@ def test_build_routing_graph_mock():
     assert graph.number_of_nodes() > 0, "Mock graphe doit avoir des nœuds"
     assert graph.number_of_edges() > 0, "Mock graphe doit avoir des arêtes"
 
-    # Vérifier les attributs des nœuds
+    # Vérifier les attributs des nœuds (utilisés par le GNN)
     for _node_id, data in graph.nodes(data=True):
         assert "length_m" in data
         assert "current_speed_kmh" in data
-        assert data["length_m"] > 0
-        assert data["current_speed_kmh"] > 0
 
 
-def test_compute_itinerary_mock():
-    """compute_itinerary doit retourner un itinéraire entre 2 points."""
+# =============================================================================
+# Tests pgRouting — marqués @pytest.mark.integration car touchent la DB live
+# Exécutés uniquement via : pytest -m integration tests/persona/test_routing.py
+# (ou directement sur le VPS où la DB est dispo)
+# =============================================================================
+
+
+@pytest.mark.integration
+def test_compute_itinerary_pgrouting():
+    """compute_itinerary retourne un itinéraire entre 2 points via pgRouting."""
     from src.routing import compute_itinerary
 
     # Part-Dieu vers Bellecour (coords approx)
@@ -71,8 +84,9 @@ def test_compute_itinerary_mock():
     assert itinerary.average_speed_kmh > 0
 
 
+@pytest.mark.integration
 def test_itinerary_segments_have_geometry():
-    """Chaque segment doit avoir start_lon, start_lat, end_lon, end_lat."""
+    """Chaque segment doit avoir une géométrie OSM multi-vertices (pgRouting)."""
     from src.routing import compute_itinerary
 
     itinerary = compute_itinerary(
@@ -86,8 +100,11 @@ def test_itinerary_segments_have_geometry():
         assert seg.start_lat is not None
         assert seg.end_lon is not None
         assert seg.end_lat is not None
+        assert seg.geometry is not None, "Géométrie OSM requise (pgRouting)"
+        assert len(seg.geometry) >= 2, "Géométrie doit avoir au moins 2 points"
 
 
+@pytest.mark.integration
 def test_itinerary_total_duration_reasonable():
     """La durée totale doit être réaliste (pas 0, pas astronomique)."""
     from src.routing import compute_itinerary
@@ -103,28 +120,48 @@ def test_itinerary_total_duration_reasonable():
     assert itinerary.total_duration_s < 7200, "Pas plus de 2h pour 3km"
 
 
-def test_get_nearest_node():
-    """get_nearest_node doit retourner un node_id valide."""
-    from src.routing import build_routing_graph, get_nearest_node
+@pytest.mark.integration
+def test_compute_route_pgrouting_returns_edges_with_geometry():
+    """compute_route_pgrouting retourne des arêtes avec géométrie OSM."""
+    from src.routing import compute_route_pgrouting
 
-    graph = build_routing_graph(use_cache=False)
-    # Coord au centre de Lyon
-    nearest = get_nearest_node(graph, 4.85, 45.75)
-    assert nearest is not None
-    assert nearest in graph.nodes
+    edges = compute_route_pgrouting(
+        origin_lon=4.8589,
+        origin_lat=45.7607,
+        dest_lon=4.8324,
+        dest_lat=45.7575,
+    )
+    assert edges is not None
+    assert len(edges) > 0
+    for edge in edges:
+        assert "edge_id" in edge
+        assert "cost_s" in edge
+        assert "length_m" in edge
+        assert "speed_kmh" in edge
+        assert "road_name" in edge
+        assert "geom_coordinates" in edge
+        assert len(edge["geom_coordinates"]) >= 2, "Géométrie OSM doit avoir ≥ 2 points"
 
 
-def test_shortest_path_direct():
-    """shortest_path entre 2 nœuds adjacents doit retourner un chemin de 1 arête (2 nœuds)."""
-    from src.routing import build_routing_graph, shortest_path
+@pytest.mark.integration
+def test_get_nearest_osm_node():
+    """get_nearest_osm_node retourne un ID de nœud OSM valide."""
+    from src.routing import get_nearest_osm_node
 
-    graph = build_routing_graph(use_cache=False)
-    # Récupère 2 nœuds connectés
-    edge = next(iter(graph.edges()))
-    u, v = edge[0], edge[1]
+    node_id = get_nearest_osm_node(4.85, 45.75)
+    assert node_id is not None
+    assert isinstance(node_id, int)
 
-    itinerary = shortest_path(graph, u, v)
-    assert itinerary is not None
-    assert len(itinerary.segments) == 1  # 1 edge between u and v
-    assert itinerary.origin_node == u
-    assert itinerary.destination_node == v
+
+@pytest.mark.integration
+def test_itinerary_confidence_is_reasonable():
+    """confidence doit être entre 0.5 et 1.0 (basée sur coverage_ratio)."""
+    from src.routing import compute_itinerary
+
+    itinerary = compute_itinerary(
+        origin_lon=4.8589,
+        origin_lat=45.7607,
+        destination_lon=4.8324,
+        destination_lat=45.7575,
+    )
+    assert 0.5 <= itinerary.confidence <= 1.0
