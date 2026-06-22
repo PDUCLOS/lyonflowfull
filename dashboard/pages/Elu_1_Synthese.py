@@ -7,6 +7,7 @@ import streamlit as st
 from dashboard.components.auto_refresh import setup_auto_refresh
 from dashboard.components.data_cache import cached_bottlenecks_top, cached_elu_kpis_dict
 from dashboard.components.data_status import render_data_status_banner
+from dashboard.components.deferred_widget import deferred_render
 from dashboard.components.freshness_badge import render_freshness_badge
 from dashboard.components.navigation import render_sidebar_navigation
 from dashboard.components.persona_guard import apply_persona_guard
@@ -86,7 +87,12 @@ st.markdown("---")
 col1, col2 = st.columns([3, 2])
 with col1:
     st.markdown("##### 📈 Tendance — Part modale TC")
-    render_trend_chart("part_modale_tc")
+    deferred_render(
+        "trend_chart_part_modale_tc",
+        "Charger la tendance Part modale TC",
+        render_trend_chart,
+        metric_key="part_modale_tc",
+    )
 with col2:
     render_top_decisions(n=3)
 
