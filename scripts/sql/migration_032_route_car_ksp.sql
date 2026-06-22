@@ -62,7 +62,7 @@ BEGIN
     RETURN QUERY
     WITH ksp AS (
         SELECT
-            k.path_id::INTEGER                 AS route_id,
+            k.path_id::INTEGER                 AS path_id_int,
             k.path_seq::INTEGER                AS path_seq,
             k.edge::BIGINT                     AS edge_id,
             k.node::BIGINT                     AS node_id,
@@ -82,16 +82,16 @@ BEGIN
     ),
     agg AS (
         SELECT
-            route_id,
+            path_id_int,
             SUM(length_m) AS total_length_m,
             SUM(cost_s)   AS total_cost_s
         FROM ksp
         JOIN osm.ways w ON w.gid = ksp.edge_id
-        GROUP BY route_id
+        GROUP BY path_id_int
     )
     SELECT
-        k.route_id,
-        (ROW_NUMBER() OVER (PARTITION BY k.route_id ORDER BY k.path_seq))::INTEGER AS seq,
+        k.path_id_int                         AS route_id,
+        (ROW_NUMBER() OVER (PARTITION BY k.path_id_int ORDER BY k.path_seq))::INTEGER AS seq,
         k.edge_id,
         k.node_id,
         k.cost_s,
@@ -108,8 +108,8 @@ BEGIN
         a.total_cost_s
     FROM ksp k
     JOIN osm.ways w ON w.gid = k.edge_id
-    JOIN agg a ON a.route_id = k.route_id
-    ORDER BY k.route_id, k.path_seq;
+    JOIN agg a ON a.path_id_int = k.path_id_int
+    ORDER BY k.path_id_int, k.path_seq;
 END;
 $$ LANGUAGE plpgsql STABLE;
 
