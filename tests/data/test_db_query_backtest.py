@@ -37,7 +37,6 @@ def test_get_xgb_vs_tomtom_empty_when_db_down():
     (pas de DashboardDataError) — le caller gère l'absence de données.
     """
     result = db_query.get_xgb_vs_tomtom(hours=24, limit=500)
-    import pandas as pd
     assert isinstance(result, pd.DataFrame)
     assert result.empty
 
@@ -55,7 +54,6 @@ def test_get_xgb_vs_tomtom_importable():
 def test_get_xgb_accuracy_summary_empty_when_db_down():
     """get_xgb_accuracy_summary() doit retourner un DataFrame vide si DB indispo."""
     result = db_query.get_xgb_accuracy_summary(hours=168)
-    import pandas as pd
     assert isinstance(result, pd.DataFrame)
     assert result.empty
 

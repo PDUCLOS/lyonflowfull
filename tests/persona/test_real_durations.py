@@ -16,9 +16,9 @@ sys.path.insert(0, str(WORKSPACE))
 
 def test_velov_trip_returns_dict_signature():
     """render_velov_trip doit avoir la nouvelle signature -> dict | None."""
-    from dashboard.components.widgets.usager.velov_trip import render_velov_trip
-
     import inspect
+
+    from dashboard.components.widgets.usager.velov_trip import render_velov_trip
 
     sig = inspect.signature(render_velov_trip)
     assert sig.return_annotation is not type(None) or "dict" in str(sig.return_annotation)
@@ -28,9 +28,9 @@ def test_velov_trip_returns_dict_signature():
 
 def test_transit_trip_returns_dict_signature():
     """render_transit_trip doit retourner dict | None."""
-    from dashboard.components.widgets.usager.transit_trip import render_transit_trip
-
     import inspect
+
+    from dashboard.components.widgets.usager.transit_trip import render_transit_trip
 
     sig = inspect.signature(render_transit_trip)
     assert "dict" in str(sig.return_annotation)
@@ -38,9 +38,9 @@ def test_transit_trip_returns_dict_signature():
 
 def test_itinerary_returns_dict_signature():
     """render_itinerary_result doit retourner dict | None."""
-    from dashboard.components.widgets.usager.itinerary import render_itinerary_result
-
     import inspect
+
+    from dashboard.components.widgets.usager.itinerary import render_itinerary_result
 
     sig = inspect.signature(render_itinerary_result)
     assert "dict" in str(sig.return_annotation)
@@ -55,7 +55,8 @@ def test_mode_comparison_source_badge_logic():
     from dashboard.components.widgets.usager import mode_comparison
 
     # Vérif que la constante source_badge utilise 'computed'/'estimated'
-    src = open(WORKSPACE / "dashboard/components/widgets/usager/mode_comparison.py").read()
+    with open(WORKSPACE / "dashboard/components/widgets/usager/mode_comparison.py") as f:
+        src = f.read()
     assert '"computed"' in src or "'computed'" in src
     assert '"estimated"' in src or "'estimated'" in src
     assert "✅ Durée calculée" in src

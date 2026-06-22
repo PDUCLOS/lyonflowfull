@@ -89,10 +89,7 @@ def migrate_text(content: str) -> tuple[str, int, int]:
         decls = [d.strip() for d in full_style.split(";") if d.strip()]
         # Filtrer le font-size de la liste (au cas où il serait dans before/after)
         decls = [d for d in decls if not d.lower().startswith("font-size:")]
-        if decls:
-            new_style_attr = f' style="{";".join(decls)};"'
-        else:
-            new_style_attr = ""
+        new_style_attr = f' style="{";".join(decls)};"' if decls else ""
 
         # Ajout de la classe à la balise parente
         new_tag = add_class_to_tag(match.group(1), lyf_class)
@@ -118,14 +115,14 @@ def main() -> int:
     # Fichiers à NE PAS migrer (f-strings complexes où la regex casse
     # la syntaxe Python, ex: `{p["color_primary"]}` interprété à tort
     # comme une déclaration CSS). Patch manuel requis pour ces cas.
-    BLACKLIST = {
+    blacklist = {
         "dashboard/components/persona_switcher.py",
     }
     targets = sorted(
         p
         for p in dashboard.rglob("*.py")
         if "__pycache__" not in str(p)
-        and str(p) not in BLACKLIST
+        and str(p) not in blacklist
     )
 
     total_found = 0

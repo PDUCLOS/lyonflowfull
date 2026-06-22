@@ -305,12 +305,8 @@ def list_registered_models(experiment: str | None = None, max_results: int = 50)
         ``params``, ``trained_at``, ``run_id``.
 
     Raises:
-        DashboardDataError: en mode prod, si MLflow indispo ou serveur non
-            joignable. Sprint VPS-6 — fail loud.
-
-    Note:
-        Mode démo (``LYONFLOW_DEMO_MODE=1``) : retourne liste vide (le
-        data_loader fait le fallback mock).
+        DashboardDataError: si MLflow indispo ou serveur non joignable.
+            Sprint VPS-6 — fail loud.
     """
     from src.data.exceptions import DashboardDataError
 

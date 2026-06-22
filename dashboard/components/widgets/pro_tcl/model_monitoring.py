@@ -11,7 +11,6 @@ Affiche :
 
 Sprint 9+ (2026-06-17) — politique "zéro mock" :
 * MOCK_MODELS viré.
-* Helper ``_is_demo_mode()`` viré (retournait toujours False depuis Sprint 8).
 * ``render_drift_panel()`` lit ``get_latest_drift_report()`` (Sprint 10+).
 * ``render_training_history()`` lit MLflow runs (à brancher Sprint 10+ — fallback
   explicite en attendant).

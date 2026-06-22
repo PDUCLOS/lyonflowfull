@@ -27,7 +27,6 @@ from dashboard.components.data_cache import cached_xgb_accuracy_summary
 from src.data.db_query import get_latest_drift_report
 from src.data.exceptions import DashboardDataError
 
-
 # Seuils MAE pour le badge (km/h)
 MAE_GREEN = 7.0
 MAE_YELLOW = 12.0

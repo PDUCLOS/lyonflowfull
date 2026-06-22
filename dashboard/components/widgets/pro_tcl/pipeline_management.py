@@ -7,8 +7,7 @@ Affiche :
 - Boutons trigger manuel
 
 Sprint 9+ (2026-06-17) — fail loud strict :
-* Mode prod : Airflow indispo → ``DashboardDataError`` propagé.
-* Plus de branche ``_is_demo_mode()`` (helper déprécié, retourne toujours False).
+* Airflow indispo → ``DashboardDataError`` propagé.
 * Alertes feed branché sur ``gold.alerts`` (vue matérialisée Sprint 9+).
 """
 
@@ -86,9 +85,6 @@ def render_pipeline_status() -> None:
     """Affiche le statut complet des pipelines."""
     st.markdown("##### 📊 Statut global")
 
-    # Sprint 9+ — viré la branche `_is_demo_mode()` (helper déprécié,
-    # retournait toujours False depuis Sprint 8). Comportement unique :
-    # Airflow indispo → st.error + return.
     if not is_airflow_available():
         st.error(
             "🔴 **Airflow REST API non joignable** — le statut DAGs est indisponible. "
@@ -224,10 +220,6 @@ def render_health_panel() -> None:
     """Affiche les 6 health checks du module monitoring."""
     st.markdown("##### 💓 Health checks (quotidien 04h15)")
 
-    # Sprint 9+ — viré toute la branche mock (results=None + fallback
-    # `if not results: if _is_demo_mode(): results = [...]`). Le helper
-    # `_is_demo_mode()` est déprécié et retournait toujours False depuis
-    # Sprint 8 : le bloc MOCK_HEALTH_RESULTS était donc du dead code.
     with st.spinner("Exécution des 6 health checks..."):
         try:
             results = run_all_checks()

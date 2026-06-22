@@ -31,7 +31,6 @@ from src.monitoring.drift_detector import (
 )
 from src.monitoring.psi import compute_dataset_drift, compute_psi
 
-
 # =============================================================================
 # 9.1. Tests PSI core (src/monitoring/psi.py)
 # =============================================================================
@@ -305,5 +304,5 @@ class TestDiagnoseDrift:
             "error_pct": {"status": "moderate"},
             "tomtom_confidence": {"status": "stable"},
         }
-        status, msg = drift_status_badge._diagnose_drift({"details": details})
+        status, _msg = drift_status_badge._diagnose_drift({"details": details})
         assert status == "warning"

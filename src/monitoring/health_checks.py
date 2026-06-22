@@ -180,7 +180,7 @@ def check_drift_evidently() -> CheckResult:
 
     try:
         report = get_latest_drift_report()
-    except Exception as e:  # noqa: BLE001
+    except Exception as e:
         return CheckResult(
             name="drift_evidently",
             status="warning",
@@ -292,7 +292,7 @@ def check_all_sources() -> list:
 
     try:
         df = get_source_health()
-    except Exception as e:  # noqa: BLE001
+    except Exception as e:
         return [CheckResult(
             name="source_health_global",
             status="critical",

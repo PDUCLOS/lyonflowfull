@@ -2,14 +2,11 @@
 
 Sprint VPS-6 (2026-06-11) — fail loud en production.
 
-Quand le dashboard tourne en mode production (``LYONFLOW_DEMO_MODE!=1``),
-les fonctions ``load_X()`` du data_loader et certains widgets lèvent
-``DashboardDataError`` au lieu de tomber sur les mocks quand la source
-de données (PostgreSQL, Airflow, MLflow) est indisponible. Les widgets
-catchent l'exception et affichent un ``st.error(...)`` explicite.
-
-Mode démo (``LYONFLOW_DEMO_MODE=1``) : le comportement historique est
-préservé (fallback mock transparent) pour le dev local et les démos.
+Les fonctions ``load_X()`` du data_loader et certains widgets lèvent
+``DashboardDataError`` quand la source de données (PostgreSQL, Airflow,
+MLflow) est indisponible. Les widgets catchent l'exception et affichent
+un ``st.error(...)`` explicite. Politique "zéro mock" (Sprint 8+) : aucune
+source n'a de fallback silencieux.
 """
 
 from __future__ import annotations

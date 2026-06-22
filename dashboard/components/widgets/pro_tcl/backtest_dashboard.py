@@ -31,7 +31,6 @@ import streamlit as st
 from dashboard.components.data_cache import cached_xgb_accuracy_summary, cached_xgb_vs_tomtom
 from src.data.exceptions import DashboardDataError
 
-
 # Seuils d'accuracy (cf SPEC_SPRINT_16.md §A.1)
 MAE_GREEN_THRESHOLD = 5.0   # km/h — accurate
 MAE_YELLOW_THRESHOLD = 15.0  # km/h — acceptable au-delà
@@ -64,7 +63,7 @@ def _compute_kpis(pairs: pd.DataFrame) -> dict:
         "mae_kmh": round(mae, 2),
         "mape_pct": round(mape, 1),
         "p90_kmh": round(p90, 2),
-        "n_pairs": int(len(pairs)),
+        "n_pairs": len(pairs),
     }
 
 

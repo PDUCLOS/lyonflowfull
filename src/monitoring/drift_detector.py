@@ -23,6 +23,7 @@ from __future__ import annotations
 
 import json
 import logging
+from datetime import UTC
 from typing import Any
 
 import pandas as pd
@@ -186,7 +187,7 @@ def generate_html_drift_report(
         report = EvidentlyReport(metrics=[DataDriftPreset()])
         snapshot = report.run(current_data=cur, reference_data=ref)
         return snapshot.get_html_str()
-    except Exception as e:  # noqa: BLE001
+    except Exception as e:
         logger.error("Evidently HTML report failed: %s", e)
         return None
 
@@ -201,9 +202,9 @@ def persist_drift_report(report: dict[str, Any], db_connection) -> bool:
     Returns:
         True si insertion OK, False sinon.
     """
-    from datetime import datetime, timedelta, timezone
+    from datetime import datetime, timedelta
 
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     ref_from = now - timedelta(days=7)
     ref_to = now - timedelta(days=1)
     cur_from = now - timedelta(hours=24)
@@ -232,7 +233,7 @@ def persist_drift_report(report: dict[str, Any], db_connection) -> bool:
             )
         db_connection.commit()
         return True
-    except Exception as e:  # noqa: BLE001
+    except Exception as e:
         logger.error("persist_drift_report failed: %s", e)
         db_connection.rollback()
         return False

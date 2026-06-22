@@ -38,7 +38,7 @@ def test_drift_badge_classify_green_no_drift():
 
 def test_drift_badge_classify_green_with_drift():
     """MAE < green mais drift > 0 → orange (warning)."""
-    color, icon, msg = drift_status_badge._classify(mae_kmh=5.0, drift_share=0.5)
+    color, icon, _msg = drift_status_badge._classify(mae_kmh=5.0, drift_share=0.5)
     assert color == "#FF9800"
     assert icon == "🟡"
 
@@ -61,7 +61,7 @@ def test_drift_badge_classify_red():
 
 def test_drift_badge_classify_no_mae():
     """mae_kmh=None → gris, message 'indisponibles'."""
-    color, icon, msg = drift_status_badge._classify(mae_kmh=None, drift_share=None)
+    color, _icon, msg = drift_status_badge._classify(mae_kmh=None, drift_share=None)
     assert color == "#9E9E9E"
     assert "indisponibles" in msg.lower()
 

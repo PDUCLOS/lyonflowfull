@@ -26,7 +26,6 @@ import streamlit as st
 from dashboard.components.data_cache import cached_data_completeness, cached_source_health
 from src.data.exceptions import DashboardDataError
 
-
 # Poids par source pour le score global
 SOURCE_WEIGHTS = {
     "bronze.trafic_boucles": 3,
@@ -64,7 +63,7 @@ def _global_score(df: pd.DataFrame) -> float:
     return round(weighted_sum / total_weight, 1) if total_weight > 0 else 0.0
 
 
-def _gauge_plotly(score: float) -> "plotly.graph_objects.Figure":
+def _gauge_plotly(score: float) -> plotly.graph_objects.Figure:
     """Jauge Plotly 0-100 avec seuils colorés."""
     import plotly.graph_objects as go
 
