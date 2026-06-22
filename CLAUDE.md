@@ -13,6 +13,20 @@ LyonFlowFull est une plateforme MLOps end-to-end de prédiction et d'analyse du 
 **Version actuelle** : **v0.11.0** (Sprints 1-7 + VPS 1-8 + 9+ + 11+ + 12+ + 13 + 13+ + 15+ + 17 + 17+ + 18 + 20 + 21) — branche `vps` ACTIVE
 **Statut** : production VPS stable. Voir CHANGELOG.md pour le détail de chaque sprint.
 
+### État au 2026-06-22 (Ops cleanup VPS — sda1 88% → 47%)
+
+- sda1 libéré de **40 GB** (88% → **47%**, 52G libres).
+- **Cleanup Docker** : `docker builder prune -a` (-34.52 GB cache) + containerd overlayfs snapshotter GC (`/var/lib/containerd` 48G → 20G, snapshots **253 → 161**/255 max).
+- **Backup obsolète purgé** : `/opt/lyonflow/backups/backup_pre_028_*.dump` (13G, pre-migration 028 vérifiée OK : `osm.sensor_positions` 1159 + `osm.mv_sensor_to_way` 41737).
+- **Backup-offsite systemd timer CRÉÉ** (était absent malgré la doc — corrigé) :
+  - `/etc/systemd/system/lyonflow-backup.service` (oneshot, env from `/opt/lyonflow/.backup-offsite.conf`)
+  - `/etc/systemd/system/lyonflow-backup.timer` (Quotidien **03:00 UTC** ± 15min random, `Persistent=true`)
+  - Config `/opt/lyonflow/.backup-offsite.conf` (chmod 600) avec template + instructions `rclone config` interactif
+  - Status : `Active: active (waiting)` next `Tue 2026-06-23 03:03:33 UTC`
+  - **Action user requise** : `sudo rclone config` (Google Drive OAuth) + décommenter `GDRIVE_BACKUP_DEST=backups/lyonflow` dans `.backup-offsite.conf`
+- **Prometheus absent confirmé** (intentionnel, Sprint 15+) — voir commentaires `docker-compose.monitoring.yml:14-18`. Exporters (node/postgres/nginx) + Grafana + Alertmanager UP mais affichent "no data".
+- **Nginx restart-loop résolu** (était "Restarting 1141 fois" → maintenant healthy).
+
 ### État au 2026-06-22 (Sprint 21 — v0.11.0 — UX + Quantile + Sparkline + Docs cleanup)
 
 - 18 pages × 3 personas · **~60 widgets** · **8 collecteurs Bronze** · **15 DAGs Airflow**
