@@ -82,12 +82,12 @@ BEGIN
     ),
     agg AS (
         SELECT
-            path_id_int,
-            SUM(length_m) AS total_length_m,
-            SUM(cost_s)   AS total_cost_s
-        FROM ksp
-        JOIN osm.ways w ON w.gid = ksp.edge_id
-        GROUP BY path_id_int
+            k2.path_id_int,
+            SUM(w2.length_m) AS tot_len_m,
+            SUM(k2.cost_s)   AS tot_cost_s
+        FROM ksp k2
+        JOIN osm.ways w2 ON w2.gid = k2.edge_id
+        GROUP BY k2.path_id_int
     )
     SELECT
         k.path_id_int                         AS route_id,
@@ -104,8 +104,8 @@ BEGIN
         END AS speed_kmh,
         w.name AS road_name,
         ST_AsGeoJSON(w.the_geom)::TEXT AS geom_geojson,
-        a.total_length_m,
-        a.total_cost_s
+        a.tot_len_m                           AS total_length_m,
+        a.tot_cost_s                          AS total_cost_s
     FROM ksp k
     JOIN osm.ways w ON w.gid = k.edge_id
     JOIN agg a ON a.path_id_int = k.path_id_int
