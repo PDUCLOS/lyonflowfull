@@ -16,6 +16,7 @@ import logging
 
 import streamlit as st
 
+from dashboard.components.a11y import st_folium_with_alt
 from dashboard.components.colors import COLORS
 from dashboard.components.error_display import show_error
 from src.data.data_loader import load_lyon_addresses
@@ -203,7 +204,6 @@ def _render_map(
     """
     try:
         import folium
-        from streamlit_folium import st_folium
 
         o_lat, o_lon = origin_coords[1], origin_coords[0]
         d_lat, d_lon = dest_coords[1], dest_coords[0]
@@ -276,7 +276,7 @@ def _render_map(
             [[min(all_lats) - 0.003, min(all_lons) - 0.003], [max(all_lats) + 0.003, max(all_lons) + 0.003]],
         )
 
-        st_folium(m, width=None, height=400, returned_objects=[])
+        st_folium_with_alt(m, width=None, height=400, returned_objects=[])
 
         st.markdown(
             "**Légende trafic** : 🟢 Fluide (>40 km/h) · 🟡 Modéré (25-40) · 🟠 Dense (15-25) · 🔴 Bloqué (<15)"

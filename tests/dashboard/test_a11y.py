@@ -16,7 +16,6 @@ import plotly.graph_objects as go
 
 from dashboard.components.a11y import data_table_expander, plotly_with_alt
 
-
 # -----------------------------------------------------------------------------
 # plotly_with_alt
 # -----------------------------------------------------------------------------
@@ -72,7 +71,6 @@ class TestDataTableExpander:
 
     def test_accepte_pandas_dataframe(self) -> None:
         """La fonction ne raise pas avec un DataFrame vide."""
-        df = pd.DataFrame()
         # On ne peut pas vraiment tester st.expander sans streamlit runtime,
         # mais on peut au moins vérifier que la fonction existe et accepte df.
         sig = inspect.signature(data_table_expander)

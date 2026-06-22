@@ -69,3 +69,29 @@ def data_table_expander(df: pd.DataFrame, label: str = "📋 Données du graphiq
     """
     with st.expander(label):
         st.dataframe(df, use_container_width=True, hide_index=True)
+
+
+def st_folium_with_alt(map_, alt_text: str = "Carte interactive — description textuelle à raffiner", **kwargs):
+    """Wrapper st_folium avec texte alternatif sr-only.
+
+    Streamlit-folium a son propre composant qui ne passe pas par
+    ``st.components.v1.html``. On wrap l'appel et on ajoute le texte
+    sr-only après. Le retour de st_folium (last_clicked, etc.) est
+    forwardé tel quel.
+
+    Args:
+        map_: objet folium.Map à rendre.
+        alt_text: Description textuelle de la carte.
+        **kwargs: kwargs passés à ``st_folium`` (width, height, returned_objects).
+
+    Returns:
+        Le retour de ``st_folium`` (dict des interactions utilisateur).
+    """
+    from streamlit_folium import st_folium  # import paresseux (deps lourde)
+
+    result = st_folium(map_, **kwargs)
+    st.markdown(
+        f'<p class="sr-only">{alt_text}</p>',
+        unsafe_allow_html=True,
+    )
+    return result

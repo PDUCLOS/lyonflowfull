@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import streamlit as st
 
+from dashboard.components.a11y import st_folium_with_alt
 from dashboard.components.colors import COLORS
 from dashboard.components.data_cache import cached_bottlenecks_top
 from dashboard.components.loading_state import loading_wrapper
@@ -35,7 +36,6 @@ def render_map_painter(height: int = 400) -> dict:
 
     try:
         import folium
-        from streamlit_folium import st_folium
 
         # Carte avec marqueurs des bottlenecks existants
         m = folium.Map(location=[45.76, 4.84], zoom_start=12, tiles="CartoDB positron")
@@ -63,7 +63,7 @@ def render_map_painter(height: int = 400) -> dict:
                 tooltip=zone,
             ).add_to(m)
 
-        result = st_folium(m, width=None, height=height, returned_objects=["last_clicked"])
+        result = st_folium_with_alt(m, width=None, height=height, returned_objects=["last_clicked"])
 
         clicked = result.get("last_clicked") if result else None
         selected_zone = None

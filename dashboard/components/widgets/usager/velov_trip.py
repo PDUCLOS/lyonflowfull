@@ -18,6 +18,7 @@ from __future__ import annotations
 
 import streamlit as st
 
+from dashboard.components.a11y import st_folium_with_alt
 from dashboard.components.colors import COLORS
 from dashboard.components.error_display import show_error
 from dashboard.components.loading_state import loading_wrapper
@@ -289,7 +290,6 @@ def _render_velov_map(
     """Carte Folium avec polylines par segment + markers."""
     try:
         import folium
-        from streamlit_folium import st_folium
     except ImportError:
         st.warning("⚠️ folium/streamlit-folium non disponible — affichage liste uniquement")
         return
@@ -366,7 +366,7 @@ def _render_velov_map(
                     icon=folium.Icon(color="blue", icon="bicycle", prefix="fa"),
                 ).add_to(m)
 
-    st_folium(m, width=None, height=height, returned_objects=[])
+    st_folium_with_alt(m, width=None, height=height, returned_objects=[])
 
 
 def _render_velov_segments(itin: VelovItinerary) -> None:

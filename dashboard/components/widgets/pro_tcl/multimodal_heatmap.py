@@ -40,6 +40,7 @@ from __future__ import annotations
 import pandas as pd
 import streamlit as st
 
+from dashboard.components.a11y import folium_with_alt
 from dashboard.components.data_cache import (
     cached_multimodal_grid,
     cached_multimodal_grid_diagnosis_counts,
@@ -316,11 +317,12 @@ def render_multimodal_heatmap(height: int = 500) -> None:
     with col1:
         st.markdown(f"##### Carte multimodale Lyon — {n_total} cellules 0.01°")
         fmap = _build_folium_map(df)
-        # Folium retourne un objet .render() ou directement via st_folium/st.components
-        # On utilise st.components.v1.html pour inliner le HTML.
-        import streamlit.components.v1 as components
-
-        components.html(fmap.get_root().render(), height=height)
+        # Folium rendu via folium_with_alt (a11y sr-only + components.html)
+        folium_with_alt(
+            fmap,
+            "Carte chaleur multimodale — score par cellule 1km",
+            height=height,
+        )
     with col2:
         st.markdown("##### Top cellules saturées / tendues")
         _render_top_saturated(df, top_n=15)

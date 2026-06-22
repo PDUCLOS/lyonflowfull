@@ -62,6 +62,7 @@ import streamlit as st
 if TYPE_CHECKING:
     import folium
 
+from dashboard.components.a11y import folium_with_alt
 from dashboard.components.data_cache import (
     cached_congestion_propagation_pairs,
     cached_traffic_speeds_for_propagation,
@@ -991,9 +992,11 @@ def render_propagation_map(
         # On garde les N meilleures pour la carte (perf)
         plot_df = corr_df.head(max_pairs)
         fmap = _build_folium_map(plot_df)
-        import streamlit.components.v1 as components
-
-        components.html(fmap.get_root().render(), height=height)
+        folium_with_alt(
+            fmap,
+            "Carte propagation congestion — corrélations spatiales",
+            height=height,
+        )
     with col2:
         st.markdown("##### Top 20 paires par |r|")
         _render_top_pairs(corr_df, top_n=20)

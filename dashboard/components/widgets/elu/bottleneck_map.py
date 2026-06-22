@@ -7,6 +7,7 @@ from __future__ import annotations
 
 import streamlit as st
 
+from dashboard.components.a11y import st_folium_with_alt
 from dashboard.components.data_cache import cached_bottlenecks_top
 from dashboard.components.loading_state import loading_wrapper
 
@@ -39,7 +40,6 @@ def render_bottleneck_map(height: int = 500) -> None:
 
     try:
         import folium
-        from streamlit_folium import st_folium
 
         # Centre Lyon
         m = folium.Map(location=[45.76, 4.84], zoom_start=12, tiles="CartoDB positron")
@@ -69,7 +69,7 @@ def render_bottleneck_map(height: int = 500) -> None:
                 tooltip=f"#{b.get('rank')} {zone}",
             ).add_to(m)
 
-        st_folium(m, width=None, height=height, returned_objects=[])
+        st_folium_with_alt(m, width=None, height=height, returned_objects=[])
 
     except ImportError:
         # Fallback : tableau simple

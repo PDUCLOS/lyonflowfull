@@ -82,7 +82,7 @@ def render_lieux_velov_map(
     # Markers lieux + polylines vers la borne Vélov la plus proche + markers bornes.
     # Sprint 9+ (2026-06-17) — fix carte jamais rendue : la boucle précédente
     # ne faisait que du st.markdown et n'ajoutait rien à `m`. Maintenant on
-    # peuple la carte et on appelle st_folium() à la fin.
+    # peuple la carte et on appelle st_folium_with_alt() à la fin.
     for lieu in lieux_with_velov:
         icon = _TYPE_ICON.get(lieu["lieu_type"], "📍")
         folium.Marker(
@@ -115,9 +115,8 @@ def render_lieux_velov_map(
                     icon=folium.Icon(color="green", icon="bicycle", prefix="fa"),
                 ).add_to(m)
 
-    from streamlit_folium import st_folium
 
-    st_folium(m, width=None, height=height, returned_objects=[])
+    st_folium_with_alt(m, width=None, height=height, returned_objects=[])
 
 
 def _lieu_popup_html(lieu: dict) -> str:
