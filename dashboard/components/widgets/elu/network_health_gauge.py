@@ -251,8 +251,25 @@ def render_network_health_gauge() -> None:
             f"— leurs poids ont été redistribués sur les autres composantes."
         )
 
-    # TODO Sprint suivant : sparkline 24h. Nécessite table
-    # ``gold.network_health_history`` populée par un DAG */15 min (cf.
-    # Axe 5 backlog). V1 sans historique est acceptable car la jauge
-    # principale donne déjà le score temps réel — la tendance sera
-    # ajoutée quand on aura 7 jours de données.
+    # Sprint 21 P4.3 : sparkline 24h via gold.network_health_history.
+    # Lit les 96 derniers snapshots (24h × 4/h) et affiche une mini-tendance.
+    # Si la table est vide (< 24h de données après déploiement du DAG), la
+    # sparkline affiche "Historique bientôt disponible".
+    from dashboard.components.sparkline import render_sparkline
+    from src.data.db_query import get_network_health_history
+
+    history = get_network_health_history(hours=24)
+    if history:
+        timestamps = [row["recorded_at"] for row in history]
+        scores = [float(row["score"]) for row in history]
+        fig = render_sparkline(values=scores, timestamps=timestamps, height=80)
+        st.plotly_chart(
+            fig,
+            use_container_width=True,
+            config={"displayModeBar": False},
+        )
+    else:
+        st.caption(
+            "📈 Sparkline 24h — l'historique s'affichera après 24h de collecte "
+            "(DAG `record_network_health` */15 min, table `gold.network_health_history`)."
+        )
