@@ -19,9 +19,16 @@ from dashboard.components.error_display import _MESSAGES, get_error_message
 
 
 class TestMessagesCoverage:
-    """Chaque persona doit avoir les 5 types d'erreur définis."""
+    """Chaque persona doit avoir les 6 types d'erreur définis."""
 
-    EXPECTED_TYPES = {"db_down", "no_data", "geocoding_fail", "routing_fail", "generic"}
+    EXPECTED_TYPES = {
+        "db_down",
+        "no_data",
+        "geocoding_fail",
+        "routing_fail",
+        "config_missing",
+        "generic",
+    }
     EXPECTED_PERSONAS = {"usager", "pro_tcl", "elu"}
 
     def test_trois_personas(self) -> None:
