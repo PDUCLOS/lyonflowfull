@@ -21,7 +21,7 @@ from dashboard.components.colors import COLORS
 from dashboard.components.error_display import show_error
 from src.data.data_loader import load_lyon_addresses
 from src.data.exceptions import DashboardDataError
-from src.routing import Itinerary, compute_itinerary
+from src.routing import Itinerary, compute_itinerary, compute_itinerary_alternatives
 
 logger = logging.getLogger(__name__)
 
@@ -102,19 +102,20 @@ def render_itinerary_result(
         show_error("geocoding_fail", f"❌ Adresse de destination non reconnue : '{destination}'.")
         return
 
-    # Calcul itinéraire
+    # Calcul itinéraire — Sprint 22 : 3 alternatives via pgr_ksp
     from dashboard.components.loading_state import empty_state, loading_wrapper
 
-    with loading_wrapper("Calcul itinéraire en cours…", "🔍"):
-        itinerary = compute_itinerary(
+    with loading_wrapper("Calcul des itinéraires en cours… (3 alternatives)", "🔍"):
+        alternatives = compute_itinerary_alternatives(
             origin_lon=origin_coords[0],
             origin_lat=origin_coords[1],
             destination_lon=dest_coords[0],
             destination_lat=dest_coords[1],
+            k=3,
             horizon_minutes=horizon_minutes,
         )
 
-    if not itinerary or not itinerary.segments:
+    if not alternatives:
         empty_state(
             icon="🗺️",
             title="Aucun itinéraire trouvé",
@@ -124,7 +125,27 @@ def render_itinerary_result(
         )
         return
 
-    # Comparaison si horizon > 0
+    # Sprint 22 — Sélecteur d'alternatives (radio buttons)
+    if len(alternatives) > 1:
+        options = [
+            f"Itinéraire {i+1} — {_fmt_route_label(it)}"
+            for i, it in enumerate(alternatives)
+        ]
+        chosen_idx = st.radio(
+            "🛣️ Choisis ton itinéraire",
+            options=range(len(alternatives)),
+            format_func=lambda i: options[i],
+            index=0,
+            key="itin_alt_choice",
+            horizontal=True,
+            help="3 alternatives calculées par pgr_ksp (algorithme Yen). "
+                 "Différentes rues principales pour comparer les temps.",
+        )
+        itinerary = alternatives[chosen_idx]
+    else:
+        itinerary = alternatives[0]
+
+    # Comparaison si horizon > 0 (sur la route choisie)
     comparison = None
     if horizon_minutes > 0:
         with loading_wrapper(f"Comparaison avec H+{horizon_minutes}min…", "🔮"):
@@ -156,6 +177,29 @@ def render_itinerary_result(
         "avg_speed_kmh": float(getattr(itinerary, "average_speed_kmh", 0.0) or 0.0),
         "source": "computed",
     }
+
+
+def _fmt_route_label(itin: Itinerary) -> str:
+    """Label compact pour radio button d'alternative (Sprint 22).
+
+    Format : "8.0 km · 24 min · Bd Eugène Derelle → Rue Servient"
+    Tronqué si trop long.
+    """
+    km = itin.total_length_m / 1000.0
+    minutes = itin.total_duration_s / 60.0
+    # Première rue ≠ dernière rue (rues principales du trajet)
+    first_road = next(
+        (s.channel_id for s in itin.segments if s.channel_id and not s.channel_id.startswith("edge_")),
+        "?",
+    )
+    last_road = next(
+        (s.channel_id for s in reversed(itin.segments) if s.channel_id and not s.channel_id.startswith("edge_")),
+        "?",
+    )
+    label = f"{km:.1f} km · {minutes:.0f} min · {first_road} → {last_road}"
+    if len(label) > 70:
+        label = f"{km:.1f} km · {minutes:.0f} min · {first_road[:20]}…"
+    return label
 
 
 def _render_summary(

@@ -22,7 +22,7 @@ import math
 import time
 from dataclasses import dataclass, field
 
-from src.routing.graph import compute_route_pgrouting
+from src.routing.graph import compute_route_pgrouting, compute_route_pgrouting_ksp
 
 logger = logging.getLogger(__name__)
 
@@ -228,3 +228,112 @@ def compute_itinerary(
         average_speed_kmh=avg_speed,
         confidence=_compute_pgrouting_confidence(),
     )
+
+
+def _build_itinerary_from_edges(edges: list[dict], horizon_minutes: int) -> Itinerary | None:
+    """Construit un Itinerary à partir d'une liste d'arêtes (DRY pour Dijkstra + KSP).
+
+    Helper interne partagé par ``compute_itinerary`` (Dijkstra) et
+    ``compute_itinerary_alternatives`` (KSP). Ne lance PAS la query SQL —
+    les edges viennent déjà de ``compute_route_pgrouting`` ou
+    ``compute_route_pgrouting_ksp``.
+    """
+    if not edges:
+        return None
+
+    segments: list[ItinerarySegment] = []
+    total_length = 0.0
+    total_duration = 0.0
+
+    for edge in edges:
+        coords = edge.get("geom_coordinates") or []
+        if coords:
+            start_lon, start_lat = float(coords[0][0]), float(coords[0][1])
+            end_lon, end_lat = float(coords[-1][0]), float(coords[-1][1])
+        else:
+            start_lon = start_lat = end_lon = end_lat = 0.0
+            logger.warning("Edge %s sans géométrie OSM", edge.get("edge_id"))
+
+        seg = ItinerarySegment(
+            channel_id=edge.get("road_name") or f"edge_{edge['edge_id']}",
+            length_m=edge["length_m"],
+            speed_kmh=edge["speed_kmh"],
+            duration_s=edge["cost_s"],
+            start_lon=start_lon,
+            start_lat=start_lat,
+            end_lon=end_lon,
+            end_lat=end_lat,
+            geometry=coords if coords else None,
+        )
+        segments.append(seg)
+        total_length += edge["length_m"]
+        total_duration += edge["cost_s"]
+
+    avg_speed = (total_length / (total_duration / 3600 * 1000)) if total_duration > 0 else 0.0
+
+    return Itinerary(
+        origin_node=str(edges[0]["edge_id"]),
+        destination_node=str(edges[-1]["edge_id"]),
+        horizon_minutes=horizon_minutes,
+        segments=segments,
+        total_length_m=total_length,
+        total_duration_s=total_duration,
+        average_speed_kmh=avg_speed,
+        confidence=_compute_pgrouting_confidence(),
+    )
+
+
+def compute_itinerary_alternatives(
+    origin_lon: float,
+    origin_lat: float,
+    destination_lon: float,
+    destination_lat: float,
+    k: int = 3,
+    horizon_minutes: int = 0,
+) -> list[Itinerary] | None:
+    """Calcule K itinéraires voiture alternatifs via pgr_ksp (Sprint 22).
+
+    Wrapper sur ``compute_route_pgrouting_ksp()`` côté PostgreSQL.
+    Retourne jusqu'à K ``Itinerary`` distincts que l'usager peut comparer.
+
+    Args:
+        origin_lon, origin_lat: coords GPS du point de départ.
+        destination_lon, destination_lat: coords GPS du point d'arrivée.
+        k: nombre d'alternatives (1..5, défaut 3).
+        horizon_minutes: focus temporel (ignoré par KSP qui utilise les
+            coûts courants de osm.ways, refresh toutes les 15 min par DAG).
+
+    Returns:
+        Liste de K ``Itinerary`` distincts (les moins chers en tête),
+        ou ``None`` si DB indispo / pas de chemin.
+    """
+    routes_edges = compute_route_pgrouting_ksp(
+        origin_lon=origin_lon,
+        origin_lat=origin_lat,
+        dest_lon=destination_lon,
+        dest_lat=destination_lat,
+        k=k,
+    )
+    if not routes_edges:
+        return None
+
+    # Une seule confidence (métrique globale), partagée par tous les itinéraires
+    confidence = _compute_pgrouting_confidence()
+
+    itineraries: list[Itinerary] = []
+    for route_edges in routes_edges:
+        itin = _build_itinerary_from_edges(route_edges, horizon_minutes)
+        if itin is not None:
+            # Override la confidence (sinon recalcul 3x pour rien)
+            itin = Itinerary(
+                origin_node=itin.origin_node,
+                destination_node=itin.destination_node,
+                horizon_minutes=itin.horizon_minutes,
+                segments=itin.segments,
+                total_length_m=itin.total_length_m,
+                total_duration_s=itin.total_duration_s,
+                average_speed_kmh=itin.average_speed_kmh,
+                confidence=confidence,
+            )
+            itineraries.append(itin)
+    return itineraries if itineraries else None
