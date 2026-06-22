@@ -10,7 +10,8 @@
         deploy-vps deploy-vps-fast rollback-vps tag-vps certbot-init certbot-renew \
         healthcheck-vps coherence-check check-deploy-env tls-status \
         monitoring-up monitoring-down monitoring-status monitoring-logs \
-        migrate migrate-dry-run migrate-status migrate-force
+        migrate migrate-dry-run migrate-status migrate-force \
+        install-systemd uninstall-systemd
 
 # Variables
 PYTHON := python3
@@ -340,6 +341,55 @@ monitoring-status:  ## Status des services monitoring
 
 monitoring-logs:  ## Logs monitoring
 	$(MONITORING_COMPOSE) logs -f prometheus alertmanager grafana
+
+# -----------------------------------------------------------------------------
+# Systemd units (Sprint 22 — backup offsite) — sprint 2026-06-22
+# -----------------------------------------------------------------------------
+# Units versionnés dans deploy/systemd/, à copier sur le VPS via ce Makefile
+# (utilisable en local OU en ssh depuis la machine de dev).
+
+SYSTEMD_DIR := /etc/systemd/system
+SYSTEMD_UNITS := lyonflow-backup.service lyonflow-backup.timer
+BACKUP_CONF := /opt/lyonflow/.backup-offsite.conf
+
+install-systemd:  ## Installe les units systemd + active le timer (backup offsite)
+	@echo "==[ Install systemd units depuis deploy/systemd/ ]=="
+	@for unit in $(SYSTEMD_UNITS); do \
+	    sudo install -m 0644 deploy/systemd/$$unit $(SYSTEMD_DIR)/$$unit && \
+	    echo "  ✅ $$unit installé"; \
+	done
+	@echo ""
+	@echo "==[ Vérif /opt/lyonflow/.backup-offsite.conf ]=="
+	@if [ ! -f $(BACKUP_CONF) ]; then \
+	    sudo install -m 0600 -o ubuntu -g ubuntu /dev/null $(BACKUP_CONF) && \
+	    echo "  ⚠️  $(BACKUP_CONF) créé vide (chmod 600)."; \
+	    echo "  ⚠️  Édite ce fichier et configure GDRIVE_BACKUP_DEST ou OFFSITE_SSH."; \
+	    echo "  ⚠️  Ou lance : sudo bash scripts/rclone-setup.sh"; \
+	else \
+	    echo "  ✅ $(BACKUP_CONF) existe déjà"; \
+	fi
+	@echo ""
+	@echo "==[ Reload + enable timer ]=="
+	sudo systemctl daemon-reload
+	sudo systemctl enable --now lyonflow-backup.timer
+	@echo ""
+	@echo "==[ Status ]=="
+	sudo systemctl status lyonflow-backup.timer --no-pager | head -10
+	@echo ""
+	sudo systemctl list-timers | grep lyonflow || true
+	@echo ""
+	@echo "✅ Install OK. Pour forcer un run de test :"
+	@echo "   sudo systemctl start lyonflow-backup.service"
+	@echo "   sudo journalctl -u lyonflow-backup.service -f"
+
+uninstall-systemd:  ## Désinstalle les units systemd + désactive le timer
+	@echo "==[ Disable + remove systemd units ]=="
+	sudo systemctl disable --now lyonflow-backup.timer 2>/dev/null || true
+	@for unit in $(SYSTEMD_UNITS); do \
+	    sudo rm -f $(SYSTEMD_DIR)/$$unit && echo "  ✅ $$unit removed"; \
+	done
+	sudo systemctl daemon-reload
+	@echo "✅ Désinstall OK."
 
 # -----------------------------------------------------------------------------
 # Docs

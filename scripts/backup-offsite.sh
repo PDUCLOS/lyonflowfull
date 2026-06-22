@@ -26,7 +26,9 @@
 # Configure rclone avec root_folder_id=1TO-4OwTlFr5s3v9-apu1MbA5jZ-yfNDR
 # pour que tous les chemins soient relatifs a ce folder.
 #
-# Cron : systemd timer lyonflow-backup.timer (deja en place Sprint VPS-2)
+# Cron : systemd timer lyonflow-backup.timer (active 2026-06-22 — Sprint 22 ops cleanup VPS).
+# Units versionnees dans deploy/systemd/ + Makefile cible install-systemd.
+# Setup destination offsite : sudo bash scripts/rclone-setup.sh
 # =============================================================================
 
 set -euo pipefail

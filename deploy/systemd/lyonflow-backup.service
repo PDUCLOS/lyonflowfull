@@ -1,0 +1,35 @@
+[Unit]
+Description=LyonFlowFull offsite PostgreSQL backup
+Documentation=https://github.com/PDUCLOS/lyonflowfull
+# Stream pg_dump | gzip | gpg | rclone rcat vers Google Drive (ou SSH).
+# Politique stricte : JAMAIS de backup persistant sur le VPS.
+Requires=docker.service
+After=docker.service
+ConditionPathExists=/opt/lyonflow/scripts/backup-offsite.sh
+
+[Service]
+Type=oneshot
+User=ubuntu
+Group=ubuntu
+WorkingDirectory=/opt/lyonflow
+
+# Env vars : source depuis le fichier de config dédié
+EnvironmentFile=/opt/lyonflow/.backup-offsite.conf
+
+# Logs : timestamp + stdout/stderr dans journalctl
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=lyonflow-backup
+
+# Sécurité minimale
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=full
+ProtectHome=true
+ReadWritePaths=/opt/lyonflow /var/log
+
+ExecStart=/opt/lyonflow/scripts/backup-offsite.sh
+TimeoutStartSec=3600
+
+[Install]
+WantedBy=multi-user.target

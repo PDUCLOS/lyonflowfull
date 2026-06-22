@@ -1,0 +1,16 @@
+[Unit]
+Description=Daily LyonFlowFull offsite PostgreSQL backup (03:00 UTC)
+Documentation=https://github.com/PDUCLOS/lyonflowfull
+
+[Timer]
+# Tous les jours a 03:00 UTC (= 05:00 heure de Paris en ete, 04:00 en hiver)
+OnCalendar=*-*-* 03:00:00 UTC
+# Si on loupe un run (VPS eteint a 03h), rattraper au boot
+Persistent=true
+# Random delay 0-15min pour eviter pic si plusieurs VPS
+RandomizedDelaySec=900
+# Le service est defini dans lyonflow-backup.service
+Unit=lyonflow-backup.service
+
+[Install]
+WantedBy=timers.target
