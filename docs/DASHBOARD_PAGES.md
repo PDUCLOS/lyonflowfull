@@ -6,18 +6,12 @@ La navigation est gérée dynamiquement par `dashboard/components/navigation.py`
 
 ---
 
-## Mode démo vs Mode production (Sprint VPS-6, 2026-06-11)
+## Politique données (Sprint 8+)
 
-Sur le **VPS** (production), le dashboard applique une politique **fail loud** :
-toute source de données indisponible (PostgreSQL, Airflow, MLflow) lève
-`DashboardDataError` (`src/data/exceptions.py`) et le widget affiche un
-`st.error("⚠️ …")` explicite. Aucune donnée simulée n'est servie.
-
-Sur le **poste de dev local**, la variable d'env `LYONFLOW_DEMO_MODE=1` active
-le mode démo : les widgets lisent les mocks `src/data/mock/*` quand la DB est
-indispo (utile pour dev sans Docker, screenshots, démos Jedha).
-
-Plus de détails : [PLAN_NO_MOCK_VPS.md](PLAN_NO_MOCK_VPS.md).
+Le dashboard applique une politique **fail loud** : toute source de données
+indisponible (PostgreSQL, Airflow, MLflow) lève `DashboardDataError`
+(`src/data/exceptions.py`) et le widget affiche un message via `show_error()`
+(Sprint 20). Aucune donnée simulée. Zéro mock dans le projet.
 
 ---
 
@@ -46,7 +40,7 @@ Interface orientée "B2C", gratuite et sans mot de passe, axée sur le confort d
 **Logique :** Moteur de recherche d'itinéraire multimodal (Transport en commun, Vélo, Marche, Voiture).
 - Contient une barre de recherche élégante avec auto-complétion sur les adresses lyonnaises (résolues via `referentiel.lieux_lyon` en DB — pas de mock depuis Sprint VPS-6).
 - **Trajet Vélov + marche** (Sprint VPS-6) : carte Folium avec 3 segments (marche → Vélov → marche), stations Vélov les plus proches avec dispo temps réel (`silver.velov_clean`), calcul via `referentiel.nearest_velov_stations` + `referentiel.estimate_velov_trip`. Widget : `dashboard/components/widgets/usager/velov_trip.py`.
-- **Trajet voiture traffic-aware** : Dijkstra sur graphe routier (NetworkX, alimenté par `silver.trafic_boucles_clean`), avec prédictions H+h via `gold.trafic_predictions`. Widget : `dashboard/components/widgets/usager/itinerary.py`.
+- **Trajet voiture traffic-aware** (Sprint 18) : `pgr_dijkstra` sur réseau routier OSM réel (~101k arêtes, trafic temps réel `*/15 min`). Widget : `dashboard/components/widgets/usager/itinerary.py`.
 - Fournit le contexte en temps réel : Météo (`silver.meteo_hourly`), disponibilité Vélo'v (`silver.velov_clean`), et une carte de trafic compacte basée sur le modèle GNN.
 
 ### `Usager_2_Alertes.py`

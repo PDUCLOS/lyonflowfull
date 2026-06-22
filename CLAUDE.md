@@ -1,6 +1,6 @@
 # CLAUDE.md — LyonFlowFull
 
-> Mémoire projet — **dernière mise à jour : 2026-06-21, Sprint 18 (v0.10.0)** (pgRouting — routing voiture sur réseau routier OSM réel, trafic temps réel, plus de zigzag).
+> Mémoire projet — **dernière mise à jour : 2026-06-22, Sprint 21 (v0.11.0)** (UX unifiée + quantile regression P10/P50/P90 + sparkline 24h + accessibilité + cleanup docs).
 
 ## Projet
 
@@ -10,8 +10,28 @@ LyonFlowFull est une plateforme MLOps end-to-end de prédiction et d'analyse du 
 **Repo** : PDUCLOS/lyonflowfull
 **Cible production** : **VPS unique** `51.83.159.224` (Ubuntu, 6 CPU, 12 Go RAM, **2× 100 Go SSD** : sda = OS + code, sdb = PostgreSQL + MinIO + **Docker data-root** depuis Sprint 9+).
 
-**Version actuelle** : **v0.10.0** (Sprints 1-7 + VPS 1-8 + 9+ + 11+ + 12+ + 13 + 13+ + 15+ + 17 + 17+ + 18) — branche `vps` ACTIVE
+**Version actuelle** : **v0.11.0** (Sprints 1-7 + VPS 1-8 + 9+ + 11+ + 12+ + 13 + 13+ + 15+ + 17 + 17+ + 18 + 20 + 21) — branche `vps` ACTIVE
 **Statut** : production VPS stable. Voir CHANGELOG.md pour le détail de chaque sprint.
+
+### État au 2026-06-22 (Sprint 21 — v0.11.0 — UX + Quantile + Sparkline + Docs cleanup)
+
+- 18 pages × 3 personas · **~60 widgets** · **8 collecteurs Bronze** · **15 DAGs Airflow**
+- ~180 fichiers Python · ~24 000 lignes
+- **615 tests verts** · ruff clean
+- **Sprint 20 (UX unifiée) — 4 axes livrés** :
+  - **Axe B — Plotly theme** : `plotly_theme.py` (`LYF_TEMPLATE` + `COLORS` dict). 11/11 widgets migrés, 0 `plotly_dark` restant.
+  - **Axe D — Error display** : `error_display.py` (`show_error(error_type, detail)` adapté par persona). 16 widgets migrés.
+  - **Axe A — Loading wrapper** : `loading_state.py` (`loading_wrapper()` context manager). 32/32 widgets DB-hitting wrappés.
+  - **Axe F — Freshness badge** : `freshness_badge.py` (badge prochaine MAJ). 15/15 pages câblées.
+  - **Axe E — Accessibilité** : `a11y.py` (`plotly_with_alt`, `sr_only`). 18 alt texts pré-écrits.
+- **Sprint 21 (bonus)** :
+  - **Quantile regression XGBoost** : `XGBoostQuantileModel` (P10/P50/P90). Migration 029 `gold.trafic_predictions_quantile`. Bandes d'incertitude Plotly.
+  - **Sparkline 24h** : `sparkline.py` widget + migration 030 `gold.mv_network_health_history`. Câblé dans `network_health_gauge`.
+  - **Backup template** : `scripts/backup-template.sh` (pg_dump structuré).
+- **Documentation cleanup (Sprint 21)** :
+  - 13 docs stale archivés (`archive/sprints/`, `archive/audits/`, `archive/misc/`).
+  - Merge `tests/ml/test_drift_detector.py` (doublon) → `tests/monitoring/`.
+  - `SECURITY.md` version 0.1.x → 0.11.x. `DASHBOARD_PAGES.md` section "mode démo" supprimée.
 
 ### État au 2026-06-21 (Sprint 18 — v0.10.0 — pgRouting routing voiture OSM)
 
@@ -361,7 +381,19 @@ Chaque table Bronze : `fetched_at TIMESTAMPTZ` + `raw_data JSONB` + colonnes ext
 
 ## Dashboard — Architecture 3 personas
 
-**18 pages × 3 personas** (Usager, Pro TCL, Élu) + Accueil.
+**18 pages × 3 personas** (Usager, Pro TCL, Élu) + Accueil. **~60 widgets**.
+
+### Composants UX transversaux (Sprint 20+)
+
+| Fichier | Rôle |
+|---------|------|
+| `dashboard/components/plotly_theme.py` | `LYF_TEMPLATE` + `COLORS` dict. `apply_lyf_theme(fig)`. |
+| `dashboard/components/error_display.py` | `show_error(error_type, detail)` — message adapté par persona. |
+| `dashboard/components/loading_state.py` | `loading_wrapper(msg, icon)` — context manager spinner. |
+| `dashboard/components/freshness_badge.py` | Badge prochaine MAJ par persona (30s/60s/300s). |
+| `dashboard/components/a11y.py` | `plotly_with_alt(fig)`, `sr_only(text)` — accessibilité. |
+| `dashboard/components/sparkline.py` | Sparkline 24h pour jauge santé réseau. |
+| `dashboard/components/auto_refresh.py` | Auto-refresh par persona (streamlit-autorefresh). |
 
 ### Couleurs bottlenecks (carte Folium)
 
@@ -399,7 +431,7 @@ Le widget `dashboard/components/widgets/pro_tcl/line_kpis.py` expose :
 | FastAPI endpoints | LyonFlow | Structure API avancée |
 | Pathfinding H3 Dijkstra | LyonFlow | Sprint 8 hotfix 2 — graphe routier Sprint 5 |
 
-### Supprimé (Sprint 8)
+### Supprimé / Archivé
 
 | Composant | Raison |
 |-----------|--------|
@@ -413,6 +445,9 @@ Le widget `dashboard/components/widgets/pro_tcl/line_kpis.py` expose :
 | **Mode démo / mocks** | **VIRÉ Sprint 8**. Politique "zéro mock" — `src/data/mock/` → `tests/fixtures/mock_data/`. Cleanup `_is_demo_mode` (7× F401) en cours Sprint 9+ |
 | **snap_to_roads.py** | **VIRÉ Sprint 18**. Dead code (Overpass snap), inutile avec pgRouting. Jamais importé |
 | **NetworkX A* routing** | **VIRÉ Sprint 18**. Remplacé par pgRouting `pgr_dijkstra` côté SQL. Exports retirés : `build_routing_graph`, `shortest_path`, `get_nearest_node`, `CACHE_TTL_SECONDS` |
+| **13 docs stale** | **ARCHIVÉS Sprint 21**. 5 root-level + 8 docs/ → `archive/{sprints,audits,misc}/`. Convention : déplacer, jamais supprimer (RNCP). |
+| **tests/ml/test_drift_detector.py** | **MERGÉ Sprint 21**. Doublon de `tests/monitoring/test_drift_detector.py` (même module, couverture inférieure). |
+| **PROJECT_STATUS_AND_GOALS.md** | **ARCHIVÉ Sprint 21**. Figé Sprint 8, supplanté par CLAUDE.md. |
 
 ---
 

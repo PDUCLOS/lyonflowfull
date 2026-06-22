@@ -4,8 +4,9 @@
 
 | Version | Supportée        |
 |---------|------------------|
-| 0.1.x   | ✅ Active        |
-| < 0.1   | ❌ EOL           |
+| 0.11.x  | ✅ Active        |
+| 0.10.x  | ⚠️ Maintenance   |
+| < 0.10  | ❌ EOL           |
 
 ## Signaler une vulnérabilité
 
@@ -51,6 +52,16 @@ Réponse sous 48h ouvrées.
 - `trivy` — scan images Docker
 
 ## Changelog sécurité
+
+### 0.11.0 (2026-06-22)
+- pgRouting routing voiture OSM (SQL paramétré, pas d'injection)
+- Quantile regression XGBoost (P10/P50/P90)
+- UX Sprint 20 : error_display unifié, a11y helpers
+- Aucun CVE connu
+
+### 0.10.0 (2026-06-21)
+- pgRouting intégration, schéma `osm.*`
+- Image Docker `pgrouting/pgrouting:16-3.5-3.7.3`
 
 ### 0.1.0 (2026-06-06)
 - Initial release

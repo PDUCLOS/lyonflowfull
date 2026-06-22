@@ -5,6 +5,44 @@ Toutes les modifications notables de ce projet sont documentées ici.
 Le format suit [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/),
 et ce projet adhère au [Semantic Versioning](https://semver.org/lang/fr/).
 
+## [0.11.0] - 2026-06-22 — Sprint 20-21 : UX unifiée + Quantile regression + Documentation cleanup (branche `vps`)
+
+Refonte UX transversale (4 axes), quantile regression XGBoost, sparkline santé réseau,
+et nettoyage documentation (13 docs archivés, doublons mergés, docs centrales à jour).
+
+### Added
+- `dashboard/components/plotly_theme.py` — template Plotly unifié `LYF_TEMPLATE` + `COLORS` dict (Sprint 20 Axe B)
+- `dashboard/components/error_display.py` — `show_error()` adapté par persona (Sprint 20 Axe D)
+- `dashboard/components/loading_state.py` — `loading_wrapper()` context manager spinner (Sprint 20 Axe A)
+- `dashboard/components/freshness_badge.py` — badge prochaine MAJ 15/15 pages (Sprint 20 Axe F)
+- `dashboard/components/a11y.py` — `plotly_with_alt()`, `sr_only()`, 18 alt texts (Sprint 20 Axe E)
+- `dashboard/components/sparkline.py` — sparkline 24h santé réseau (Sprint 21)
+- `src/models/xgboost_quantile.py` — `XGBoostQuantileModel` P10/P50/P90 (Sprint 21)
+- Migration 029 `gold.trafic_predictions_quantile` — bandes d'incertitude
+- Migration 030 `gold.mv_network_health_history` — historique santé réseau 24h
+- `scripts/backup-template.sh` — template backup pg_dump structuré (Sprint 21)
+
+### Changed
+- 11/11 widgets Plotly migrés vers `LYF_TEMPLATE` (0 `plotly_dark` restant)
+- 32/32 widgets DB-hitting wrappés `loading_wrapper()`
+- 16 widgets migrés vers `show_error()` unifié
+- `CLAUDE.md` header Sprint 18 → Sprint 21, ajout état v0.11.0, composants UX
+- `CHANGELOG.md` ajout entrée v0.11.0
+- `SECURITY.md` version 0.1.x → 0.11.x + changelog sécurité enrichi
+- `DASHBOARD_PAGES.md` section "mode démo" remplacée par "politique données"
+- `docs/TODO.md` items P1.1, P1.2, P2.3, P3.1, P3.3, P4.2, P4.3 marqués DONE
+
+### Removed
+- `tests/ml/test_drift_detector.py` — doublon de `tests/monitoring/test_drift_detector.py`
+
+### Archived (déplacer, jamais supprimer — RNCP 38777)
+- 5 docs racine → `archive/sprints/` : BUGS_PRO_TCL_VPS, OPERATIONS_FINALES, SPRINT_14_PLAN, SPRINT_15_AUDIT, TODO_PRO_TCL_FIXES
+- 3 docs → `archive/sprints/` : NEXT_STEPS_PGROUTING, ROUTING_FIX_STATUS, SPRINT_19_PLAN
+- 2 docs → `archive/audits/` : DIAGNOSTIC_VPS_DASHBOARD, AUDIT_DASHBOARD_SPRINT15
+- 3 docs → `archive/misc/` : PLAN_NO_MOCK_VPS, SPEC_APPLY_MIGRATIONS, PROJECT_STATUS_AND_GOALS
+
+---
+
 ## [0.10.0] - 2026-06-21 — Sprint 18 : pgRouting — routing voiture sur réseau routier OSM (branche `vps`)
 
 Remplacement du graphe H3 K=2 (zigzag) par le réseau routier OSM réel
