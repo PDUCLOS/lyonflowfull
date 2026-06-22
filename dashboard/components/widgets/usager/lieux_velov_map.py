@@ -14,6 +14,7 @@ from __future__ import annotations
 
 import streamlit as st
 
+from dashboard.components.a11y import st_folium_with_alt
 from src.data.exceptions import DashboardDataError
 
 # Icônes par type de lieu
