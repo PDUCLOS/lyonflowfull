@@ -21,13 +21,14 @@ import streamlit as st
 from src.persona.manager import get_current_persona
 
 # Messages par persona × type d'erreur.
-# Type d'erreur = clé métier (db_down, no_data, geocoding_fail, etc.)
+# Type d'erreur = clé métier (db_down, no_data, geocoding_fail, config_missing, etc.)
 _MESSAGES: dict[str, dict[str, str]] = {
     "usager": {
         "db_down": "Les données sont temporairement indisponibles. Réessayez dans quelques minutes.",
         "no_data": "Pas encore de données pour cette période.",
         "geocoding_fail": "Adresse non reconnue. Essayez un lieu connu (Part-Dieu, Bellecour…).",
         "routing_fail": "Itinéraire indisponible. Réessayez ou choisissez un autre trajet.",
+        "config_missing": "Service en cours de configuration. Réessayez dans quelques heures.",
         "generic": "Une erreur est survenue. Réessayez dans quelques instants.",
     },
     "pro_tcl": {
@@ -35,6 +36,7 @@ _MESSAGES: dict[str, dict[str, str]] = {
         "no_data": "Aucune donnée pour ce filtre. Vérifier la fenêtre temporelle et les seuils.",
         "geocoding_fail": "Géocodage échoué. Adresse hors périmètre Lyon Métropole ?",
         "routing_fail": "Calcul itinéraire échoué — vérifier connectivité pgRouting et réseau OSM importé.",
+        "config_missing": "Migration non appliquée. Vérifier le backlog des migrations dans scripts/sql/.",
         "generic": "Erreur inattendue. Consulter les logs Airflow pour le diagnostic complet.",
     },
     "elu": {
@@ -42,6 +44,7 @@ _MESSAGES: dict[str, dict[str, str]] = {
         "no_data": "Données non disponibles pour la période sélectionnée.",
         "geocoding_fail": "Lieu non trouvé.",
         "routing_fail": "Service de calcul d'itinéraire temporairement indisponible.",
+        "config_missing": "Configuration en cours de finalisation.",
         "generic": "Données temporairement indisponibles.",
     },
 }

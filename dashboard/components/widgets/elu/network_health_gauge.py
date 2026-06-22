@@ -197,9 +197,12 @@ def render_network_health_gauge() -> None:
         return
 
     if df.empty:
-        st.error(
-            "⚠️ ``gold.fn_network_health_score()`` ne retourne aucune ligne. "
-            "Vérifier que la migration 019 est appliquée."
+        # Sprint 21 P1.2 (fin) : migré en show_error persona-aware.
+        # "config_missing" = action de configuration requise côté ops.
+        show_error(
+            "config_missing",
+            "gold.fn_network_health_score() ne retourne aucune ligne. "
+            "Vérifier que la migration 019 est appliquée (scripts/sql/migration_019_*.sql).",
         )
         return
 
