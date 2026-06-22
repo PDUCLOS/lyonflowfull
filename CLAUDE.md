@@ -1,6 +1,6 @@
 # CLAUDE.md — LyonFlowFull
 
-> Mémoire projet — **dernière mise à jour : 2026-06-19, Sprint 15+ (v0.7.0)** (Grille multimodale Axe 1 + bus × trafic spatialisé Axe 3 + comparateur modes Usager + spec 7 axes interdépendances).
+> Mémoire projet — **dernière mise à jour : 2026-06-21, Sprint 18 (v0.10.0)** (pgRouting — routing voiture sur réseau routier OSM réel, trafic temps réel, plus de zigzag).
 
 ## Projet
 
@@ -10,8 +10,22 @@ LyonFlowFull est une plateforme MLOps end-to-end de prédiction et d'analyse du 
 **Repo** : PDUCLOS/lyonflowfull
 **Cible production** : **VPS unique** `51.83.159.224` (Ubuntu, 6 CPU, 12 Go RAM, **2× 100 Go SSD** : sda = OS + code, sdb = PostgreSQL + MinIO + **Docker data-root** depuis Sprint 9+).
 
-**Version actuelle** : **v0.7.0** (Sprints 1-7 + VPS 1-8 + 9+ + 11+ + 12+ + 13 + 13+ + 15+) — branche `vps` ACTIVE
-**Statut** : production VPS stable. Voir [archive/sprints/SPRINT_11_REPORT.md](archive/sprints/SPRINT_11_REPORT.md) pour le détail du dernier sprint formel (Sprint 15+ = extension sans rapport dédié, voir CHANGELOG.md).
+**Version actuelle** : **v0.10.0** (Sprints 1-7 + VPS 1-8 + 9+ + 11+ + 12+ + 13 + 13+ + 15+ + 17 + 17+ + 18) — branche `vps` ACTIVE
+**Statut** : production VPS stable. Voir CHANGELOG.md pour le détail de chaque sprint.
+
+### État au 2026-06-21 (Sprint 18 — v0.10.0 — pgRouting routing voiture OSM)
+
+- 18 pages × 3 personas · **51 widgets** · **8 collecteurs Bronze** · **14 DAGs Airflow** (+1 `refresh_osm_traffic_costs` */15)
+- ~175 fichiers Python · ~23 000 lignes
+- **35 tests routing (26 unit + 9 pgRouting)** · ruff clean
+- **Sprint 18 (2026-06-21) — pgRouting : routing voiture sur réseau routier OSM** :
+  - **Root cause zigzag** : graphe H3 K=2 (GNN) utilisé pour le pathfinding voiture → itinéraires traversant le Rhône. Fix : `pgr_dijkstra` sur réseau routier OSM réel (~101k arêtes).
+  - **Image Docker** : `postgis/postgis:16-3.4` → `pgrouting/pgrouting:16-3.5-3.7.3` (PGDATA byte-compatible).
+  - **Import OSM** : Geofabrik Rhône-Alpes → osmium extract bbox Lyon → osm2pgrouting. 87k vertices, 101k arêtes, 14 types highway.
+  - **Trafic temps réel** : `osm.sensor_positions` (1159 capteurs GiST) → `osm.mv_sensor_to_way` (41 737 arêtes, LATERAL KNN <->). DAG `refresh_osm_traffic_costs` `*/15 min` (~39 597 arêtes updated, ~20s).
+  - **Refacto Python** : `graph.py` + `compute_route_pgrouting()`, `pathfinder.py` via pgRouting, `itinerary.py` polylines OSM multi-vertices. Contrat `plan_car_trip()`/`_road_itinerary_between()` préservé.
+  - **Supprimé** : `snap_to_roads.py` (dead code). Exports retirés : `build_routing_graph`, `shortest_path`, `get_nearest_node`.
+  - **Schéma `osm.*`** : `ways`, `ways_vertices_pgr`, `sensor_positions`, `mv_sensor_to_way`, fonctions `route_car()` + `refresh_traffic_costs()`.
 
 ### État au 2026-06-19 (Sprint 15+ — v0.7.1 — mypy clean + training/stgcn package)
 
@@ -157,8 +171,8 @@ Voir [AGENTS.md](AGENTS.md) pour les conventions et la mémoire projet.
 
 | Couche | Technologie |
 |--------|-------------|
-| Orchestration | Apache Airflow 2.9 (**10 DAGs actifs** + 1 cron backfill + 1 archive silver + 1 TomTom */15) |
-| Base de données | PostgreSQL 16 + PostGIS (3 schémas : bronze/silver/gold + referentiel) |
+| Orchestration | Apache Airflow 2.9 (**10 DAGs actifs** + 1 cron backfill + 1 archive silver + 1 TomTom */15 + 1 **refresh_osm_traffic_costs** */15) |
+| Base de données | PostgreSQL 16 + PostGIS 3.5 + **pgRouting 3.7.3** (4 schémas : bronze/silver/gold/osm + referentiel). Image Docker : `pgrouting/pgrouting:16-3.5-3.7.3` |
 | ML Tracking / Registry | MLflow 2.12 |
 | ML Trafic (spatial) | ST-GRU-GNN (PyTorch Geometric) — **daily 03h** |
 | ML Trafic (réactif) | XGBoost **H+1h uniquement** (1 modèle, focus fiabilité VPS) — toutes les 30 min |
@@ -216,7 +230,7 @@ Voir [AGENTS.md](AGENTS.md) pour les conventions et la mémoire projet.
 ### 4. Recommandation trajet multimodale
 
 Pour chaque mode (voiture, bus/tram, vélov, marche, métro) :
-- **Voiture** : Dijkstra sur graphe routier H3 (Sprint 8 hotfix 2) — `compute_itinerary()` lit `gold.dim_spatial_grid_mapping` + `gold.dim_gnn_adjacency`
+- **Voiture** : **pgRouting `pgr_dijkstra` sur réseau routier OSM** (Sprint 18) — `compute_itinerary()` → `osm.route_car()` (~87k vertices, ~101k arêtes). Trafic temps réel injecté `*/15 min` via `osm.refresh_traffic_costs()` (41 737 arêtes mappées à capteurs Grand Lyon < 200m). Graphe H3 K=2 conservé uniquement pour le GNN.
 - **Bus/Tram** : prédiction retard SIRI → temps ajusté
 - **Vélov** : smart routing (Sprint VPS-6) — `plan_velov_trip()` avec scoring composite (distance + vélos/docks dispo), alternatives si borne #1 VIDE/PLEINE, maillage voisines < 200m
 - **Marche** : distance (toujours disponible)
@@ -296,6 +310,17 @@ Chaque table Bronze : `fetched_at TIMESTAMPTZ` + `raw_data JSONB` + colonnes ext
 | `gold.velov_features` | station_id label-encoded, temporel, météo, vacances, lags, rolling |
 | `gold.velov_predictions` | H+30min, H+1h |
 
+### Schéma OSM (Sprint 18 — pgRouting)
+
+| Table / Vue | Rôle |
+|-------------|------|
+| `osm.ways` | Réseau routier OSM (~101k arêtes, importé via osm2pgrouting). Colonnes `cost` / `reverse_cost` mises à jour `*/15 min` par `refresh_traffic_costs()` |
+| `osm.ways_vertices_pgr` | Nœuds du réseau routier (~87k vertices) |
+| `osm.sensor_positions` | 1 159 capteurs Grand Lyon (channel_id + point GiST). Peuplé depuis `traffic_features_live` |
+| `osm.mv_sensor_to_way` | Vue matérialisée : mapping capteur → arête OSM la plus proche (LATERAL KNN `<->`, seuil 200m). 41 737 arêtes couvertes |
+| `osm.route_car(lon1, lat1, lon2, lat2)` | Fonction SQL : `pgr_dijkstra` dirigé, retourne chemin avec géométrie GeoJSON par arête |
+| `osm.refresh_traffic_costs()` | Fonction SQL : injecte vitesses capteurs dans `cost` / `reverse_cost` des arêtes |
+
 ---
 
 ## Scheduling Airflow — Sans conflit
@@ -308,6 +333,7 @@ Chaque table Bronze : `fetched_at TIMESTAMPTZ` + `raw_data JSONB` + colonnes ext
 :20  dag_live_speed_retrain (Sprint VPS-5, focus H+1h) — train XGBoost H+1h + INSERT gold.trafic_predictions
 */30  Idem, toutes les 30 min (cf. v0.6.5 — focus H+1h)
 */5   backfill_dim_spatial_lat_lon (Sprint 8 cron, idempotent)
+*/15  refresh_osm_traffic_costs (Sprint 18 — injecte vitesses capteurs dans osm.ways.cost, ~20s)
 :25  Retrain XGBoost trafic (legacy, 4 horizons, ~10 min)
 :50  Retrain Vélov (2 horizons : H+30min, H+1h, ~5 min)
 03h  Retrain GNN daily (lourd, GPU si dispo)
@@ -385,6 +411,8 @@ Le widget `dashboard/components/widgets/pro_tcl/line_kpis.py` expose :
 | Ray cluster HPO | Optuna local suffit |
 | **TomTom API** | Réactivé Sprint 13+ (v0.6.7). Classe `TomTomTrafficFlow(DataCollector)` wrappe `collect_lyon_tiles()` + `save_lyon_tiles_to_bronze()`. DAG `collect_tomtom_traffic` tourne */15 min sur 12 tuiles Lyon (1152 req/jour, free tier 2500). Vue `gold.v_coherence_tomtom_vs_grandlyon` (migration 14) fait le JOIN spatial PostGIS `ST_DWithin < 200 m` pour la cross-validation vs boucles inductives Grand Lyon. Détecteur automatique de capteurs HS via `gold.v_tomtom_gl_drift`. |
 | **Mode démo / mocks** | **VIRÉ Sprint 8**. Politique "zéro mock" — `src/data/mock/` → `tests/fixtures/mock_data/`. Cleanup `_is_demo_mode` (7× F401) en cours Sprint 9+ |
+| **snap_to_roads.py** | **VIRÉ Sprint 18**. Dead code (Overpass snap), inutile avec pgRouting. Jamais importé |
+| **NetworkX A* routing** | **VIRÉ Sprint 18**. Remplacé par pgRouting `pgr_dijkstra` côté SQL. Exports retirés : `build_routing_graph`, `shortest_path`, `get_nearest_node`, `CACHE_TTL_SECONDS` |
 
 ---
 

@@ -5,6 +5,80 @@ Toutes les modifications notables de ce projet sont documentées ici.
 Le format suit [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/),
 et ce projet adhère au [Semantic Versioning](https://semver.org/lang/fr/).
 
+## [0.10.0] - 2026-06-21 — Sprint 18 : pgRouting — routing voiture sur réseau routier OSM (branche `vps`)
+
+Remplacement du graphe H3 K=2 (zigzag) par le réseau routier OSM réel
+via pgRouting (extension PostgreSQL). Le routing voiture suit maintenant
+les vraies rues de Lyon avec trafic temps réel.
+
+### Root cause corrigée
+
+Le routing voiture utilisait un graphe H3 hexagonal (K=2 nearest neighbors)
+conçu pour le GNN, pas pour le pathfinding. Résultat : itinéraires en zigzag
+traversant le Rhône et coupant des bâtiments. **pgRouting** résout le problème
+à la racine avec `pgr_dijkstra` dirigé sur ~101k arêtes OSM réelles.
+
+### Infrastructure
+
+- **Image Docker PostgreSQL** : `postgis/postgis:16-3.4` → `pgrouting/pgrouting:16-3.5-3.7.3`
+  (PostGIS 3.4 → 3.5, PGDATA byte-compatible, zéro dump/restore)
+- **Extension** : `CREATE EXTENSION pgrouting` — Dijkstra dirigé côté SQL
+- **Réseau OSM Lyon** : ~87k vertices + ~101k arêtes importées via `osm2pgrouting`
+  (Geofabrik Rhône-Alpes → osmium extract bbox Lyon → 14 types highway)
+- **Schéma** : `osm.ways`, `osm.ways_vertices_pgr`, `osm.sensor_positions`,
+  `osm.mv_sensor_to_way` (41 737 arêtes mappées à un capteur Grand Lyon < 200m)
+- **Migrations** : 026 (schéma + fonctions), 027 (réconciliation osm2pgrouting),
+  028b (fix mv_sensor_to_way avec LATERAL KNN <-> operator, 6.6s au lieu de >1h)
+
+### Routing voiture (refacto Python)
+
+- **`src/routing/graph.py`** : + `compute_route_pgrouting()` (appel SQL `osm.route_car()`),
+  + `get_nearest_osm_node()`. Graphe H3 conservé pour le GNN uniquement.
+- **`src/routing/pathfinder.py`** : `compute_itinerary()` appelle pgRouting au lieu de
+  `nx.astar_path()`. `ItinerarySegment.geometry` = polyline OSM multi-vertices.
+  Confidence basée sur couverture capteurs (coverage-based, 50-100%).
+- **`dashboard/components/widgets/usager/itinerary.py`** : `_render_map()` dessine
+  `seg.geometry` (polylines OSM) au lieu de lignes droites entre nœuds H3.
+- **`src/api/main.py`** : `ItinerarySegmentResponse.geometry` ajouté.
+- **Contrat préservé** : `plan_car_trip()` et `_road_itinerary_between()` inchangés.
+
+### Trafic temps réel
+
+- **DAG `refresh_osm_traffic_costs`** (`*/15 min`) : injecte les vitesses capteurs
+  Grand Lyon dans `osm.ways.cost` via `osm.refresh_traffic_costs()` (~39 597 arêtes).
+- **Mapping capteur → arête** : `osm.sensor_positions` (1 159 capteurs, index GiST) →
+  `osm.mv_sensor_to_way` (LATERAL KNN, couverture 41%).
+- **Distribution observée** : 18 km/h (dense) → 56 km/h (fluide) sur Part-Dieu → Bellecour.
+
+### Supprimé
+
+- `src/routing/snap_to_roads.py` — dead code (Overpass snap), inutile avec pgRouting.
+- Exports retirés de `__init__.py` : `build_routing_graph`, `shortest_path`,
+  `get_nearest_node`, `CACHE_TTL_SECONDS`.
+
+### Tests
+
+- **+9 tests unitaires** (`tests/routing/test_pgrouting.py`) : parsing GeoJSON,
+  dataclasses, geometry field, null/invalid handling, itinerary construction.
+- **+7 tests intégration** (`tests/persona/test_routing.py`) : pgRouting end-to-end,
+  géométrie multi-vertices, confidence, durée réaliste.
+- 35 passed / 13 deselected (integration) · ruff clean.
+
+### Fichiers ajoutés
+
+| Fichier | Rôle |
+|---------|------|
+| `scripts/sql/migration_026_pgrouting_osm_network.sql` | Schéma `osm.*` + fonctions SQL |
+| `scripts/sql/migration_027_reconcile_pgrouting_schema.sql` | Réconciliation post-osm2pgrouting |
+| `scripts/sql/migration_028b_fix_mv_sensor_to_way_fast.sql` | Fix LATERAL KNN (perf) |
+| `scripts/import_osm_lyon.sh` | Import OSM Lyon via osm2pgrouting |
+| `scripts/osm2pgrouting_mapconfig.xml` | 14 types highway voiture |
+| `dags/maintenance/refresh_osm_traffic_costs.py` | DAG `*/15 min` refresh coûts |
+| `tests/routing/test_pgrouting.py` | 9 tests unitaires pgRouting |
+| `docs/SPEC_PGROUTING_INTEGRATION.md` | Spec complète (15 sections) |
+| `docs/ROUTING_FIX_STATUS.md` | Status + décisions |
+| `docs/NEXT_STEPS_PGROUTING.md` | Next steps |
+
 ## [0.9.0] - 2026-06-21 — Sprint 17+ : Axe 2 niveau 2 — Granger statsmodels (branche `vps`)
 
 Enrichissement de l'Axe 2 (Sprint 17) avec le test de causalité Granger
