@@ -51,6 +51,7 @@ from src.data.db_query import (
     get_velov_stations_geo,
 )
 from src.data.exceptions import DashboardDataError
+from src.data._constants import FRESHNESS_LIVE_MAX_S, FRESHNESS_STALE_MAX_S
 from src.db.connection import execute_query
 
 logger = logging.getLogger(__name__)
@@ -179,9 +180,9 @@ def load_traffic() -> dict[str, Any]:
         data_age_s = (now_utc - last_computed).total_seconds()
         if data_age_s < 0:
             data_age_s = 0.0
-        if data_age_s < 300:  # < 5 min — le DAG tourne toutes les 10 min
+        if data_age_s < FRESHNESS_LIVE_MAX_S:
             freshness_status = "live"
-        elif data_age_s < 1800:  # < 30 min
+        elif data_age_s < FRESHNESS_STALE_MAX_S:
             freshness_status = "stale"
         else:
             freshness_status = "stuck"

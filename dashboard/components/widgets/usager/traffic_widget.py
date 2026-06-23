@@ -5,6 +5,11 @@ Sprint 8 — binding DB Gold via data_loader (zéro mock) :
   Gold. Si DB down, lève ``DashboardDataError`` (fail loud).
 * Le widget reste 100% compatible avec l'ancien contrat (accepte toujours
   un dict ``traffic`` en arg, utilisé en tests).
+
+Sprint 22+ — Seuils de fraîcheur importés depuis ``src.data._constants``
+(plus de magic numbers dupliqués). Le widget consomme ``data_age_seconds``
++ ``freshness_status`` calculés par ``load_traffic()`` (single source of
+truth).
 """
 
 from __future__ import annotations
@@ -14,6 +19,7 @@ import streamlit as st
 from dashboard.components.colors import COLORS
 from dashboard.components.data_cache import cached_traffic
 from dashboard.components.loading_state import loading_wrapper
+from src.data._constants import FRESHNESS_LIVE_MAX_S, FRESHNESS_STALE_MAX_S
 
 
 def render_traffic_widget(traffic: dict | None = None) -> None:
@@ -30,19 +36,19 @@ def render_traffic_widget(traffic: dict | None = None) -> None:
     level = traffic.get("congestion_level", "—")
     level_color = traffic.get("congestion_color", COLORS["text_muted"])
     n_bottlenecks = traffic.get("bottlenecks_count", 0)
-    data_source = traffic.get("data_source", "unknown")
 
     data_age = traffic.get("data_age_seconds", -1)
-    if data_age >= 0 and data_age < 300:
-        st.caption(f"🟢 Live · dernière mesure il y a {int(data_age / 60)} min")
-    elif data_age >= 0 and data_age < 1800:
-        st.caption(f"🟡 Stale · dernière mesure il y a {int(data_age / 60)} min")
-    elif data_age >= 1800:
-        st.caption(f"🔴 Figé · dernière mesure il y a {int(data_age / 3600)}h — vérifier DAG")
-    elif data_source == "db_gold":
-        st.caption("🟢 Données temps réel (DB Gold)")
+    freshness = traffic.get("freshness_status", "unknown")
+    if data_age >= 0 and freshness == "live":
+        st.caption(f"🟢 Live · dernière mesure il y a {data_age // 60} min")
+    elif data_age >= 0 and freshness == "stale":
+        st.caption(f"🟡 Stale · dernière mesure il y a {data_age // 60} min")
+    elif data_age >= 0 and freshness == "stuck":
+        st.caption(
+            f"🔴 Figé · dernière mesure il y a {data_age // 3600:.1f}h — vérifier DAG"
+        )
     else:
-        st.caption("🟡 Source inconnue — données potentiellement stales")
+        st.caption("⚪ Fraîcheur inconnue — DB n'a pas remonté d'âge")
 
     col1, col2, col3 = st.columns(3)
     with col1:
