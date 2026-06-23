@@ -200,3 +200,187 @@ def test_compute_route_pgrouting_handles_invalid_geojson():
 
     assert result is not None
     assert result[0]["geom_coordinates"] == []
+
+
+# ─── KSP (K-shortest paths) — Sprint 22 ────────────────────────────────────
+
+
+def _make_ksp_rows(n_routes: int = 3, edges_per_route: int = 2) -> list[dict]:
+    """Helper — mock rows from osm.route_car_ksp()."""
+    rows = []
+    for route_id in range(1, n_routes + 1):
+        total_len = edges_per_route * 100.0 * route_id
+        total_cost = edges_per_route * 10.0 * route_id
+        for seq in range(1, edges_per_route + 1):
+            rows.append({
+                "route_id": route_id,
+                "seq": seq,
+                "edge_id": route_id * 100 + seq,
+                "node_id": seq,
+                "cost_s": 10.0 * route_id,
+                "agg_cost_s": 10.0 * route_id * seq,
+                "length_m": 100.0 * route_id,
+                "speed_kmh": 30.0 + route_id * 5,
+                "road_name": f"Rue {route_id}-{seq}" if seq == 1 else "",
+                "geom_geojson": json.dumps({
+                    "type": "LineString",
+                    "coordinates": [[4.83 + seq * 0.001, 45.76], [4.83 + seq * 0.002, 45.761]],
+                }),
+                "total_length_m": total_len,
+                "total_cost_s": total_cost,
+            })
+    return rows
+
+
+def test_compute_route_pgrouting_ksp_groups_by_route():
+    """KSP groups rows by route_id into separate lists."""
+    from src.routing.graph import compute_route_pgrouting_ksp
+
+    mock_rows = _make_ksp_rows(n_routes=3, edges_per_route=2)
+
+    with patch("src.db.execute_query", return_value=mock_rows):
+        routes = compute_route_pgrouting_ksp(4.83, 45.76, 4.84, 45.77, k=3)
+
+    assert routes is not None
+    assert len(routes) == 3
+    for route in routes:
+        assert len(route) == 2
+        assert route[0]["seq"] < route[1]["seq"]
+
+
+def test_compute_route_pgrouting_ksp_returns_none_on_empty():
+    """KSP returns None when DB returns no rows."""
+    from src.routing.graph import compute_route_pgrouting_ksp
+
+    with patch("src.db.execute_query", return_value=[]):
+        result = compute_route_pgrouting_ksp(4.83, 45.76, 4.84, 45.77)
+
+    assert result is None
+
+
+def test_compute_route_pgrouting_ksp_parses_geojson():
+    """KSP parses GeoJSON coordinates per edge."""
+    from src.routing.graph import compute_route_pgrouting_ksp
+
+    mock_rows = _make_ksp_rows(n_routes=1, edges_per_route=1)
+
+    with patch("src.db.execute_query", return_value=mock_rows):
+        routes = compute_route_pgrouting_ksp(4.83, 45.76, 4.84, 45.77, k=1)
+
+    assert routes is not None
+    edge = routes[0][0]
+    assert len(edge["geom_coordinates"]) == 2
+    assert edge["road_name"] == "Rue 1-1"
+
+
+def test_compute_itinerary_alternatives_returns_k_itineraries():
+    """compute_itinerary_alternatives returns K Itinerary objects."""
+    from src.routing.pathfinder import compute_itinerary_alternatives
+
+    mock_routes = [
+        [
+            {"edge_id": 10, "cost_s": 15.0, "length_m": 200.0, "speed_kmh": 48.0,
+             "road_name": "Avenue Foch", "geom_coordinates": [[4.83, 45.76], [4.834, 45.762]]},
+        ],
+        [
+            {"edge_id": 20, "cost_s": 20.0, "length_m": 300.0, "speed_kmh": 40.0,
+             "road_name": "Rue Garibaldi", "geom_coordinates": [[4.83, 45.76], [4.836, 45.764]]},
+        ],
+        [
+            {"edge_id": 30, "cost_s": 25.0, "length_m": 350.0, "speed_kmh": 35.0,
+             "road_name": "", "geom_coordinates": [[4.83, 45.76], [4.838, 45.766]]},
+        ],
+    ]
+
+    with (
+        patch("src.routing.pathfinder.compute_route_pgrouting_ksp", return_value=mock_routes),
+        patch("src.routing.pathfinder._compute_pgrouting_confidence", return_value=0.80),
+    ):
+        alts = compute_itinerary_alternatives(4.83, 45.76, 4.84, 45.77, k=3)
+
+    assert alts is not None
+    assert len(alts) == 3
+    assert alts[0].total_length_m == pytest.approx(200.0)
+    assert alts[1].segments[0].channel_id == "Rue Garibaldi"
+    assert alts[2].segments[0].channel_id == ""
+    for itin in alts:
+        assert itin.confidence == pytest.approx(0.80)
+
+
+def test_compute_itinerary_alternatives_returns_none_when_no_route():
+    """compute_itinerary_alternatives returns None when KSP finds nothing."""
+    from src.routing.pathfinder import compute_itinerary_alternatives
+
+    with patch("src.routing.pathfinder.compute_route_pgrouting_ksp", return_value=None):
+        result = compute_itinerary_alternatives(4.83, 45.76, 10.0, 50.0)
+
+    assert result is None
+
+
+def test_build_itinerary_unnamed_road_gets_empty_string():
+    """Unnamed roads get empty channel_id (not 'edge_12345')."""
+    from src.routing.pathfinder import _build_itinerary_from_edges
+
+    edges = [
+        {"edge_id": 999, "cost_s": 5.0, "length_m": 50.0, "speed_kmh": 30.0,
+         "road_name": None, "geom_coordinates": [[4.83, 45.76], [4.831, 45.761]]},
+        {"edge_id": 1000, "cost_s": 5.0, "length_m": 50.0, "speed_kmh": 30.0,
+         "road_name": "", "geom_coordinates": [[4.831, 45.761], [4.832, 45.762]]},
+    ]
+
+    with patch("src.routing.pathfinder._compute_pgrouting_confidence", return_value=0.75):
+        itin = _build_itinerary_from_edges(edges, 0)
+
+    assert itin is not None
+    assert itin.segments[0].channel_id == ""
+    assert itin.segments[1].channel_id == ""
+    assert "edge_" not in itin.segments[0].channel_id
+
+
+def test_fmt_route_label_named_roads():
+    """_fmt_route_label shows first→last named roads."""
+    from src.routing.pathfinder import Itinerary, ItinerarySegment
+
+    itin = Itinerary(
+        origin_node="1", destination_node="2", horizon_minutes=0,
+        total_length_m=5000.0, total_duration_s=600.0,
+        segments=[
+            ItinerarySegment(channel_id="Rue A", length_m=2000, speed_kmh=30,
+                             duration_s=240, start_lon=0, start_lat=0, end_lon=0, end_lat=0),
+            ItinerarySegment(channel_id="", length_m=1000, speed_kmh=25,
+                             duration_s=144, start_lon=0, start_lat=0, end_lon=0, end_lat=0),
+            ItinerarySegment(channel_id="Rue B", length_m=2000, speed_kmh=30,
+                             duration_s=240, start_lon=0, start_lat=0, end_lon=0, end_lat=0),
+        ],
+    )
+
+    from dashboard.components.widgets.usager.itinerary import _fmt_route_label
+
+    label = _fmt_route_label(itin)
+    assert "Rue A" in label
+    assert "Rue B" in label
+    assert "5.0 km" in label
+    assert "10 min" in label
+
+
+def test_fmt_route_label_all_unnamed():
+    """_fmt_route_label handles all-unnamed segments gracefully."""
+    from src.routing.pathfinder import Itinerary, ItinerarySegment
+
+    itin = Itinerary(
+        origin_node="1", destination_node="2", horizon_minutes=0,
+        total_length_m=3000.0, total_duration_s=360.0,
+        segments=[
+            ItinerarySegment(channel_id="", length_m=1500, speed_kmh=30,
+                             duration_s=180, start_lon=0, start_lat=0, end_lon=0, end_lat=0),
+            ItinerarySegment(channel_id="", length_m=1500, speed_kmh=30,
+                             duration_s=180, start_lon=0, start_lat=0, end_lon=0, end_lat=0),
+        ],
+    )
+
+    from dashboard.components.widgets.usager.itinerary import _fmt_route_label
+
+    label = _fmt_route_label(itin)
+    assert "3.0 km" in label
+    assert "6 min" in label
+    assert "edge_" not in label

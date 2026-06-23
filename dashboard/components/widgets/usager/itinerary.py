@@ -1,13 +1,13 @@
-"""Widget — Affichage d'un itinéraire avec carte et segments.
+"""Widget — Affichage d'un itinéraire voiture avec carte et segments.
 
 Affiche :
+- 3 alternatives pgr_ksp (radio selector, Sprint 22)
 - Carte Folium avec polyline colorée par vitesse (vert→rouge)
 - Liste des segments avec longueur / vitesse / durée
-- Comparaison temps actuel vs temps prédit (H+30min par défaut)
-- Bouton "recommencer"
+- KPI résumé (durée, distance, vitesse moyenne, confiance capteurs)
 
-Sprint VPS-6 (2026-06-11) — démoctisé : résolution d'adresse via
-``referentiel.lieux_lyon`` (PostgreSQL) au lieu du mock ``lyon_addresses``.
+Résolution d'adresse via ``referentiel.lieux_lyon`` (PostgreSQL).
+Alternatives cachées en session_state pour survivre aux reruns Streamlit.
 """
 
 from __future__ import annotations
@@ -21,7 +21,7 @@ from dashboard.components.colors import COLORS
 from dashboard.components.error_display import show_error
 from src.data.data_loader import load_lyon_addresses
 from src.data.exceptions import DashboardDataError
-from src.routing import Itinerary, compute_itinerary, compute_itinerary_alternatives
+from src.routing import Itinerary, compute_itinerary_alternatives
 
 logger = logging.getLogger(__name__)
 
@@ -73,47 +73,60 @@ def _sample_addresses(n: int = 5) -> list[str]:
 def render_itinerary_result(
     origin: str,
     destination: str,
-    horizon_minutes: int = 60,  # Sprint 8+ : focus H+1h (0 = maintenant)
+    origin_coords: tuple[float, float] | None = None,
+    dest_coords: tuple[float, float] | None = None,
 ) -> dict | None:
     """Affiche l'itinéraire entre 2 adresses.
 
     Args:
         origin: adresse d'origine (texte)
         destination: adresse de destination (texte)
-        horizon_minutes: 60 = H+1h (défaut Sprint 8+), 0 = maintenant
+        origin_coords: (lon, lat) pré-résolu, évite double query DB.
+        dest_coords: (lon, lat) pré-résolu.
 
     Returns:
-        Sprint 16 Axe C — Dict ``{"duration_min", "distance_km", "feasible",
+        Dict ``{"duration_min", "distance_km", "feasible",
         "avg_speed_kmh", "source": "computed"}`` pour intégration au comparateur
         multimodal d'Usager_1. None si itinéraire non calculé.
     """
     try:
-        origin_coords = _resolve_address(origin)
-        dest_coords = _resolve_address(destination)
+        if origin_coords is None:
+            origin_coords = _resolve_address(origin)
+        if dest_coords is None:
+            dest_coords = _resolve_address(destination)
     except DashboardDataError as e:
         show_error("db_down", str(e))
-        return
+        return None
 
     if not origin_coords:
         sample = ", ".join(_sample_addresses(5))
         show_error("geocoding_fail", f"❌ Adresse d'origine non reconnue : '{origin}'. Essayez : {sample}...")
-        return
+        return None
     if not dest_coords:
         show_error("geocoding_fail", f"❌ Adresse de destination non reconnue : '{destination}'.")
-        return
+        return None
 
-    # Calcul itinéraire — Sprint 22 : 3 alternatives via pgr_ksp
     from dashboard.components.loading_state import empty_state, loading_wrapper
 
-    with loading_wrapper("Calcul des itinéraires en cours… (3 alternatives)", "🔍"):
-        alternatives = compute_itinerary_alternatives(
-            origin_lon=origin_coords[0],
-            origin_lat=origin_coords[1],
-            destination_lon=dest_coords[0],
-            destination_lat=dest_coords[1],
-            k=3,
-            horizon_minutes=horizon_minutes,
-        )
+    # Cache alternatives in session_state to survive radio reruns
+    cache_key = "itin_cached_alts"
+    cached = st.session_state.get(cache_key)
+    if cached and cached["origin"] == origin and cached["dest"] == destination:
+        alternatives = cached["alternatives"]
+    else:
+        with loading_wrapper("Calcul des itinéraires en cours… (3 alternatives)", "🔍"):
+            alternatives = compute_itinerary_alternatives(
+                origin_lon=origin_coords[0],
+                origin_lat=origin_coords[1],
+                destination_lon=dest_coords[0],
+                destination_lat=dest_coords[1],
+                k=3,
+            )
+        st.session_state[cache_key] = {
+            "origin": origin,
+            "dest": destination,
+            "alternatives": alternatives,
+        }
 
     if not alternatives:
         empty_state(
@@ -123,9 +136,8 @@ def render_itinerary_result(
             "que les données Gold sont à jour ou choisis un autre point "
             "d'arrivée.",
         )
-        return
+        return None
 
-    # Sprint 22 — Sélecteur d'alternatives (radio buttons)
     if len(alternatives) > 1:
         options = [
             f"Itinéraire {i+1} — {_fmt_route_label(it)}"
@@ -145,31 +157,10 @@ def render_itinerary_result(
     else:
         itinerary = alternatives[0]
 
-    # Comparaison si horizon > 0 (sur la route choisie)
-    comparison = None
-    if horizon_minutes > 0:
-        with loading_wrapper(f"Comparaison avec H+{horizon_minutes}min…", "🔮"):
-            current_itin = compute_itinerary(
-                origin_lon=origin_coords[0],
-                origin_lat=origin_coords[1],
-                destination_lon=dest_coords[0],
-                destination_lat=dest_coords[1],
-                horizon_minutes=0,
-            )
-            if current_itin:
-                comparison = {
-                    "current_duration_s": current_itin.total_duration_s,
-                    "current_avg_speed": current_itin.average_speed_kmh,
-                    "delta_s": itinerary.total_duration_s - current_itin.total_duration_s,
-                }
-
-    # Affichage
-    _render_summary(itinerary, comparison, horizon_minutes)
+    _render_summary(itinerary)
     _render_map(itinerary, origin_coords, dest_coords)
     _render_segments(itinerary)
 
-    # Sprint 16 Axe C — Retour dict pour comparateur multimodal.
-    # itinerary.total_duration_s est en secondes, total_length_m en mètres.
     return {
         "duration_min": float(itinerary.total_duration_s) / 60.0,
         "distance_km": float(itinerary.total_length_m) / 1000.0,
@@ -183,57 +174,34 @@ def _fmt_route_label(itin: Itinerary) -> str:
     """Label compact pour radio button d'alternative (Sprint 22).
 
     Format : "8.0 km · 24 min · Bd Eugène Derelle → Rue Servient"
-    Tronqué si trop long.
     """
     km = itin.total_length_m / 1000.0
     minutes = itin.total_duration_s / 60.0
-    # Première rue ≠ dernière rue (rues principales du trajet)
-    first_road = next(
-        (s.channel_id for s in itin.segments if s.channel_id and not s.channel_id.startswith("edge_")),
-        "?",
-    )
-    last_road = next(
-        (s.channel_id for s in reversed(itin.segments) if s.channel_id and not s.channel_id.startswith("edge_")),
-        "?",
-    )
-    label = f"{km:.1f} km · {minutes:.0f} min · {first_road} → {last_road}"
-    if len(label) > 70:
-        label = f"{km:.1f} km · {minutes:.0f} min · {first_road[:20]}…"
+    named = [s.channel_id for s in itin.segments if s.channel_id]
+    first_road = named[0] if named else None
+    last_road = named[-1] if len(named) > 1 else None
+    if first_road and last_road and first_road != last_road:
+        label = f"{km:.1f} km · {minutes:.0f} min · {first_road} → {last_road}"
+        if len(label) > 70:
+            label = f"{km:.1f} km · {minutes:.0f} min · {first_road[:20]}…"
+    elif first_road:
+        label = f"{km:.1f} km · {minutes:.0f} min · via {first_road}"
+    else:
+        label = f"{km:.1f} km · {minutes:.0f} min"
     return label
 
 
-def _render_summary(
-    itinerary: Itinerary,
-    comparison: dict | None,
-    horizon_minutes: int,
-) -> None:
-    """Affiche le résumé (durée, distance, vitesse moyenne, comparaison)."""
+def _render_summary(itinerary: Itinerary) -> None:
+    """Affiche le résumé (durée, distance, vitesse moyenne, confiance)."""
     col1, col2, col3, col4 = st.columns(4)
     with col1:
-        st.metric(
-            "🕐 Durée totale",
-            f"{itinerary.total_duration_min:.1f} min",
-            delta=(
-                f"+{comparison['delta_s'] / 60:.1f} min vs maintenant"
-                if comparison and comparison["delta_s"] > 0
-                else f"{comparison['delta_s'] / 60:.1f} min vs maintenant"
-                if comparison
-                else None
-            ),
-            delta_color="inverse" if comparison and comparison["delta_s"] > 0 else "normal",
-        )
+        st.metric("🕐 Durée totale", f"{itinerary.total_duration_min:.1f} min")
     with col2:
         st.metric("📏 Distance", f"{itinerary.total_length_m / 1000:.2f} km")
     with col3:
         st.metric("🚗 Vitesse moyenne", f"{itinerary.average_speed_kmh:.1f} km/h")
     with col4:
         st.metric("🎯 Confiance", f"{int(itinerary.confidence * 100)}%")
-
-    if comparison:
-        st.caption(
-            f"📊 Comparaison : maintenant = {comparison['current_duration_s'] / 60:.1f} min · "
-            f"H+{horizon_minutes}min = {itinerary.total_duration_min:.1f} min"
-        )
 
 
 def _render_map(
@@ -335,6 +303,7 @@ def _render_segments(itinerary: Itinerary) -> None:
     with st.expander(f"🛣️ Détail des {len(itinerary.segments)} segments", expanded=False):
         for i, seg in enumerate(itinerary.segments, 1):
             color = _speed_to_color(seg.speed_kmh)
+            road_label = seg.channel_id or "Voie sans nom"
             st.markdown(
                 f"""
                 <div style="display:flex;align-items:center;gap:0.8rem;
@@ -344,7 +313,7 @@ def _render_segments(itinerary: Itinerary) -> None:
                         {i}
                     </div>
                     <div style="flex:1;">
-                        <div style="font-weight:600;font-size:0.9rem;">{seg.channel_id}</div>
+                        <div style="font-weight:600;font-size:0.9rem;">{road_label}</div>
                         <div style="font-size:0.8rem;opacity:0.7;">
                             📏 {seg.length_m:.0f} m · 🚗 {seg.speed_kmh:.0f} km/h · 🕐 {seg.duration_s / 60:.1f} min
                         </div>

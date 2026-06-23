@@ -184,50 +184,7 @@ def compute_itinerary(
         dest_lon=destination_lon,
         dest_lat=destination_lat,
     )
-    if not edges:
-        return None
-
-    segments: list[ItinerarySegment] = []
-    total_length = 0.0
-    total_duration = 0.0
-
-    for edge in edges:
-        coords = edge.get("geom_coordinates") or []
-        if coords:
-            start_lon, start_lat = float(coords[0][0]), float(coords[0][1])
-            end_lon, end_lat = float(coords[-1][0]), float(coords[-1][1])
-        else:
-            # Fallback rare (pas de géométrie OSM) — utilise coords uniques
-            start_lon = start_lat = end_lon = end_lat = 0.0
-            logger.warning("Edge %s sans géométrie OSM", edge.get("edge_id"))
-
-        seg = ItinerarySegment(
-            channel_id=edge.get("road_name") or f"edge_{edge['edge_id']}",
-            length_m=edge["length_m"],
-            speed_kmh=edge["speed_kmh"],
-            duration_s=edge["cost_s"],
-            start_lon=start_lon,
-            start_lat=start_lat,
-            end_lon=end_lon,
-            end_lat=end_lat,
-            geometry=coords if coords else None,
-        )
-        segments.append(seg)
-        total_length += edge["length_m"]
-        total_duration += edge["cost_s"]
-
-    avg_speed = (total_length / (total_duration / 3600 * 1000)) if total_duration > 0 else 0.0
-
-    return Itinerary(
-        origin_node=str(edges[0]["edge_id"]),
-        destination_node=str(edges[-1]["edge_id"]),
-        horizon_minutes=horizon_minutes,
-        segments=segments,
-        total_length_m=total_length,
-        total_duration_s=total_duration,
-        average_speed_kmh=avg_speed,
-        confidence=_compute_pgrouting_confidence(),
-    )
+    return _build_itinerary_from_edges(edges, horizon_minutes) if edges else None
 
 
 def _build_itinerary_from_edges(edges: list[dict], horizon_minutes: int) -> Itinerary | None:
@@ -255,7 +212,7 @@ def _build_itinerary_from_edges(edges: list[dict], horizon_minutes: int) -> Itin
             logger.warning("Edge %s sans géométrie OSM", edge.get("edge_id"))
 
         seg = ItinerarySegment(
-            channel_id=edge.get("road_name") or f"edge_{edge['edge_id']}",
+            channel_id=edge.get("road_name") or "",
             length_m=edge["length_m"],
             speed_kmh=edge["speed_kmh"],
             duration_s=edge["cost_s"],

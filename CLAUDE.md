@@ -502,13 +502,15 @@ Branche `vps` = source de vérité du déploiement actif.
 | Réseau | Ports internes sur 127.0.0.1 uniquement, Nginx seul exposé 80/443 |
 | Secrets | `.env` chmod 600, jamais en repo |
 
-### ⚠️ Gotchas déploiement VPS (mis à jour Sprint 8)
+### ⚠️ Gotchas déploiement VPS (mis à jour Sprint 18)
 
 - **`/opt/lyonflow/logs/`** doit être `chown 50000:0` récursivement après chaque `rsync` frais. Sinon le worker Celery crash en boucle sur `PermissionError` (Sprint VPS-5).
 - **DNS `lyonflowfull.fr` mort** (NXDOMAIN) + cert TLS Let's Encrypt expiré → accès par IP `https://51.83.159.224` (warning cert self-signed).
 - **Disque sda1 à 64%** (35 Go libres) après migration Docker data-root (Sprint 9+). Plus de migration à prévoir pour le moment.
 - **Cache Python .pyc** dans les containers Airflow : purger `find /opt/airflow -name __pycache__ -type d -exec rm -rf {} +` après chaque modification de `src/`. Sinon les DAGs chargent l'ancienne version (Sprint 8+ leçon apprise).
 - **Mapping `dim_spatial_grid_mapping.properties_twgid`** (entiers ou strings) ≠ `traffic_features_live.channel_id` (format LYO000xx) — **Sprint 8+ : backfill via h3-py résout lat/lon mais le mapping d'identité est toujours à réconcilier**.
+- **Image Docker PostgreSQL changée Sprint 18** : `pgrouting/pgrouting:16-3.5-3.7.3` (était `postgis/postgis:16-3.4`). PostGIS 3.4 → 3.5 upgrade est backward-compatible (PGDATA inchangé), mais nécessite `ALTER EXTENSION postgis UPDATE` au premier démarrage. **NE PAS revenir à l'image postgis/postgis** — pgRouting serait perdu.
+- **mv_sensor_to_way vide = routing sans trafic réel** : si la vue matérialisée est vide, `refresh_traffic_costs()` ne met rien à jour → toutes les arêtes gardent `cost_default` (maxspeed OSM fixe). Vérifier : `SELECT COUNT(*) FROM osm.mv_sensor_to_way;` doit retourner ~41k.
 
 ### Commandes déploiement VPS
 

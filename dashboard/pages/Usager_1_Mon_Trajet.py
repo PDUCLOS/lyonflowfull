@@ -69,6 +69,9 @@ st.markdown("---")
 
 if search_clicked:
     st.session_state["results_loaded"] = True
+    st.session_state.pop("itin_compute", None)
+    st.session_state.pop("itin_cached_alts", None)
+    st.session_state.pop("itin_alt_choice", None)
 elif "results_loaded" not in st.session_state:
     st.session_state["results_loaded"] = False
 
@@ -271,11 +274,16 @@ if st.session_state.get("results_loaded"):
             use_container_width=True,
             key="itin_calc_btn",
         ):
-            # Sprint 16 Axe C — Stocke la durée réelle dans session_state.
+            st.session_state["itin_compute"] = True
+            st.session_state.pop("itin_cached_alts", None)
+            st.session_state.pop("itin_alt_choice", None)
+
+        if st.session_state.get("itin_compute"):
             voiture_result = render_itinerary_result(
                 origin=search["origin"],
                 destination=search["destination"],
-                horizon_minutes=60,
+                origin_coords=origin_coords,
+                dest_coords=dest_coords,
             )
             if voiture_result:
                 st.session_state["trip_voiture"] = voiture_result

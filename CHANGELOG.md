@@ -43,6 +43,34 @@ et nettoyage documentation (13 docs archivés, doublons mergés, docs centrales 
 
 ---
 
+## [0.10.1] - 2026-06-23 — Sprint 18+ : 3 alternatives d'itinéraire via pgr_ksp (branche `vps`)
+
+3 itinéraires alternatifs pour le routing voiture, sélectionnables par radio button.
+
+### Added
+
+- **`osm.route_car_ksp()`** — fonction SQL pgr_ksp (Yen K-shortest paths, `heap_paths := false`)
+  retourne jusqu'à K chemins distincts avec géométrie + coût + label des rues principales.
+- **`compute_route_pgrouting_ksp()`** (`graph.py`) — wrapper Python, groupement par `route_id`.
+- **`compute_itinerary_alternatives()`** (`pathfinder.py`) — retourne `list[Itinerary]` (K max).
+- **`_build_itinerary_from_edges()`** (`pathfinder.py`) — helper DRY partagé Dijkstra + KSP.
+- **`_fmt_route_label()`** (`itinerary.py`) — label compact : "via Rue X, Rue Y (2.1 km · 5 min)".
+- **Radio button UI** (`itinerary.py`) — sélecteur "Itinéraire" avec labels compacts.
+  Alternatives cachées en `st.session_state` pour survivre aux reruns radio.
+
+### Changed
+
+- **`_compute_pgrouting_confidence()`** : cache TTL 1h (métrique globale, change lentement).
+  Avant : recalcul COUNT + LEFT JOIN à chaque itinéraire → saturation sdb. Fix : `_CONFIDENCE_CACHE`.
+- `_build_itinerary_from_edges()` : `road_name` fallback = `""` (au lieu de `f"edge_{id}"`).
+
+### Tests
+
+- +8 tests unitaires KSP (`test_pgrouting.py`) : groupement route_id, parsing GeoJSON,
+  alternatives list, None handling, label formatting, unnamed roads.
+
+---
+
 ## [0.10.0] - 2026-06-21 — Sprint 18 : pgRouting — routing voiture sur réseau routier OSM (branche `vps`)
 
 Remplacement du graphe H3 K=2 (zigzag) par le réseau routier OSM réel
