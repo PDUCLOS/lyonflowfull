@@ -269,8 +269,14 @@ def recommend_mode(
     if feasible:
         winner = min(feasible, key=lambda k: feasible[k])
     else:
-        # Aucune durée fournie : fallback sur le mode le moins coûteux
-        winner = min(comparison, key=lambda k: comparison[k].get("cost_eur", 0.0))
+        # Sprint 22+ — Fail loud : si aucun mode n'a de durée, on NE TOMBE PAS
+        # sur le mode le moins coûteux (= Vélov gratuit, trompeur). L'appelant
+        # DOIT passer ``durations`` non-vide.
+        raise ValueError(
+            "recommend_mode appelé sans ``durations`` pour aucun mode. "
+            "Impossible de recommander sans info temps. Caller doit passer "
+            "durations={'voiture': min, 'tc': min, 'velov': min} (au moins 1)."
+        )
 
     explanation = _build_explanation(winner, comparison, scores, critere, durations)
 

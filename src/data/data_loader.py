@@ -69,31 +69,6 @@ def _require_db_or_raise(source: str) -> None:
         )
 
 
-def _approx_lonlat_from_channel_id(channel_id: Any) -> tuple[float, float]:
-    """Position approximative (lat, lon) dérivée déterministe du channel_id.
-
-    Contexte (Sprint VPS-5 + dette schéma v0.3.1) :
-        ``get_traffic_bottlenecks()`` ne ramène plus ``node_idx`` ni lat/lon.
-        Le mapping ``channel_id`` (str 'LYO00xxx') ↔ ``properties_twgid``
-        (int) est cassé côté DB (cf. AGENTS.md). On dérive donc une
-        pseudo-position dans la bounding box de Lyon à partir d'un hash
-        stable, pour que les markers sur la carte soient distincts et
-        reproductibles.
-
-    Bounding box Lyon (approx) : lat 45.72-45.81, lon 4.81-4.90.
-    """
-    base_lat, base_lon = 45.72, 4.81
-    span_lat, span_lon = 0.09, 0.09
-    if channel_id is None or (isinstance(channel_id, float) and pd.isna(channel_id)):
-        return base_lat + span_lat / 2, base_lon + span_lon / 2
-    key = str(channel_id)
-    h = abs(hash(key))
-    return (
-        base_lat + ((h % 1000) / 1000.0) * span_lat,
-        base_lon + (((h // 1000) % 1000) / 1000.0) * span_lon,
-    )
-
-
 # =============================================================================
 # Trafic routier
 # =============================================================================
@@ -150,11 +125,15 @@ def load_traffic() -> dict[str, Any]:
     else:
         level, color = "bloqué", "#B71C1C"
 
-    # Top 4 jams depuis bottlenecks
+    # Top 4 jams depuis bottlenecks (Sprint 22+ : lat/lon réels via LATERAL JOIN)
     main_jams = []
     for _, row in bottlenecks_df.head(4).iterrows():
         speed_val = float(row.get("avg_speed") or 0.0) if not pd.isna(row.get("avg_speed")) else 0.0
-        lat_jam, lon_jam = _approx_lonlat_from_channel_id(row.get("channel_id"))
+        # lat/lon viennent maintenant de la query SQL (cf. get_traffic_bottlenecks
+        # Sprint 22+). Si lat/lon sont NULL (capteur sans coords), fallback
+        # explicite sur le centre Lyon plutôt qu'un hash pseudo-aléatoire.
+        lat_jam = float(row["lat"]) if pd.notna(row.get("lat")) else 45.7640
+        lon_jam = float(row["lon"]) if pd.notna(row.get("lon")) else 4.8357
         main_jams.append(
             {
                 "road": f"Channel {row['channel_id']}",

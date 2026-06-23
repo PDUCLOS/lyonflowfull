@@ -274,20 +274,43 @@ def get_traffic_bottlenecks(top: int = 20) -> pd.DataFrame:
     ``node_idx`` ni ``measurement_time``. La clé d'agrégation est ``channel_id``
     et la colonne temps est ``computed_at``.
 
+    Sprint 22+ — Enrichi avec lat/lon via LATERAL JOIN sur la dernière
+    mesure par channel. Avant : la fonction data_loader
+    ``_approx_lonlat_from_channel_id`` hashait le channel_id et plaçait
+    les markers au hasard dans la bbox Lyon. Maintenant : vraies
+    coordonnées GPS des capteurs.
+
     Returns:
-        DataFrame: channel_id, avg_speed, min_speed, observations.
+        DataFrame: channel_id, avg_speed, min_speed, observations, lat, lon.
     """
     query = """
-        SELECT channel_id,
-               AVG(speed_kmh) AS avg_speed,
-               MIN(speed_kmh) AS min_speed,
-               COUNT(*) AS observations
-        FROM gold.traffic_features_live
-        WHERE computed_at >= NOW() - INTERVAL '1 hour'
-          AND speed_kmh IS NOT NULL
-        GROUP BY channel_id
-        ORDER BY avg_speed ASC
-        LIMIT %s
+        SELECT b.channel_id,
+               b.avg_speed,
+               b.min_speed,
+               b.observations,
+               f.lat,
+               f.lon
+        FROM (
+            SELECT channel_id,
+                   AVG(speed_kmh) AS avg_speed,
+                   MIN(speed_kmh) AS min_speed,
+                   COUNT(*) AS observations
+            FROM gold.traffic_features_live
+            WHERE computed_at >= NOW() - INTERVAL '1 hour'
+              AND speed_kmh IS NOT NULL
+            GROUP BY channel_id
+            ORDER BY avg_speed ASC
+            LIMIT %s
+        ) b
+        LEFT JOIN LATERAL (
+            SELECT lat, lon
+            FROM gold.traffic_features_live
+            WHERE channel_id = b.channel_id
+              AND lat IS NOT NULL
+              AND lon IS NOT NULL
+            ORDER BY computed_at DESC
+            LIMIT 1
+        ) f ON true
     """
     df = _df_from_query(query, (top,))
     return df

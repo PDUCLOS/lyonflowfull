@@ -94,8 +94,32 @@ if st.session_state.get("results_loaded"):
     # AVANT les détails par mode. Sprint 16 : si une durée réelle est déjà
     # calculée pour un mode (session_state["trip_<key>"]), on l'utilise.
     # Sinon, fallback estimation par vitesses moyennes Lyon.
+    # Sprint 22+ : vitesse voiture = ``cached_traffic()`` (live), pas hardcodée ;
+    # détection congestion via ``_is_congested_from_speed()`` (vraie valeur).
     if origin_coords and dest_coords and len(modes) >= 2:
         import math
+
+        from dashboard.components.data_cache import cached_traffic
+        from src.routing.eco_calculator import _is_congested_from_speed
+
+        # Récupère la vitesse moyenne Lyon live (avec gestion d'erreur propre)
+        try:
+            traffic_live = cached_traffic()
+            real_avg_speed = float(traffic_live.get("average_speed_kmh", 0) or 0)
+            traffic_unavailable = False
+        except Exception:
+            real_avg_speed = 0.0
+            traffic_unavailable = True
+
+        # Vitesses moyennes par mode. Voiture = live si dispo, sinon fallback
+        # 25 km/h (ref ADEME "urbain France"). Vélov + TC = hypothèses
+        # documentées (cf. SPEC_COMPARATEUR_MODES_USAGER.md).
+        speed_kmh = {
+            "velov": 12.0,  # moyenne Lyon (ADEME + obs terrain)
+            "tc": 18.0,     # moyen bus/tram/métro SYTRAL
+            "voiture": real_avg_speed if real_avg_speed > 0 else 25.0,
+        }
+        is_congested_voiture = _is_congested_from_speed(real_avg_speed)
 
         R_KM = 6371.0
         lat1, lon1 = math.radians(origin_coords[1]), math.radians(origin_coords[0])
@@ -104,8 +128,6 @@ if st.session_state.get("results_loaded"):
         dlon = lon2 - lon1
         a = math.sin(dlat / 2) ** 2 + math.cos(lat1) * math.cos(lat2) * math.sin(dlon / 2) ** 2
         dist_km = 2 * R_KM * math.asin(math.sqrt(a))
-        # Vitesses moyennes Lyon (hypothèses explicites, fallback estimation)
-        speed_kmh = {"velov": 12.0, "tc": 18.0, "voiture": 25.0}
         # Mapping display name (search_bar) → key (mode_comparison)
         mode_to_key = {
             "Vélov": "velov",
@@ -120,13 +142,16 @@ if st.session_state.get("results_loaded"):
             if not any(display_name in m for m in modes):
                 continue
             trip_real = st.session_state.get(f"trip_{key}")
+            # Sprint 22+ : is_congested n'est True QUE pour voiture ET QUE si
+            # la vitesse moyenne Lyon le justifie (réel, pas un proxy bidon).
+            is_congested = (key == "voiture" and is_congested_voiture)
             if trip_real:
                 dur_min = float(trip_real["duration_min"])
                 impact = calculate_impact(
                     mode=key,
                     distance_km=float(trip_real.get("distance_km", dist_km)),
                     duration_min=dur_min,
-                    is_congested=key == "voiture",
+                    is_congested=is_congested,
                 )
                 results[key] = {
                     "duration_min": dur_min,
@@ -142,14 +167,18 @@ if st.session_state.get("results_loaded"):
                     mode=key,
                     distance_km=dist_km,
                     duration_min=dur_min,
-                    is_congested=key == "voiture",
+                    is_congested=is_congested,
                 )
+                # Tag "live" pour la voiture si on a la vitesse réelle
+                source_tag = "estimated"
+                if key == "voiture" and not traffic_unavailable:
+                    source_tag = "live_estimated"
                 results[key] = {
                     "duration_min": dur_min,
                     "distance_km": dist_km,
                     "impact": impact,
                     "feasible": True,
-                    "source": "estimated",  # approximation vitesses moyennes
+                    "source": source_tag,
                 }
         if results:
             st.markdown("---")
