@@ -196,13 +196,15 @@ def get_traffic_for_node(node_idx: int, hours: int = 24) -> pd.DataFrame:
     return _df_from_query(query, (node_idx, hours))
 
 
-def get_traffic_predictions(horizon_minutes: int = 60, limit: int = 200) -> pd.DataFrame:
+def get_traffic_predictions(horizon_minutes: int, limit: int = 200) -> pd.DataFrame:
     """Prédictions de trafic Gold (XGBoost + GNN si dispo) — H+1h uniquement.
 
     Args:
         horizon_minutes: Horizon de prédiction en minutes. Doit valoir 60
             (règle projet focus H+1h — cf. Sprint VPS-6). Toute autre valeur
-            lève ``ValueError`` via ``_minutes_to_hours``.
+            lève ``ValueError`` via ``_minutes_to_hours``. **Obligatoire**
+            depuis Sprint 22+ (plus de default silencieux qui masquerait
+            des bugs d'appelants).
         limit: Nombre max de lignes.
 
     Returns:
