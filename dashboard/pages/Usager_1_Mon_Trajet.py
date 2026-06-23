@@ -233,20 +233,21 @@ if st.session_state.get("results_loaded"):
         render_weather_widget()
 
     # ── Trajet transport en commun (si TC sélectionné, Sprint 14) ─────────
+    # Sprint 22+ — button-gate (deferred_render) au lieu d'expander seul :
+    # render_transit_trip() fait des appels GTFS lourds (1-3s) — on attend
+    # le clic explicite de l'user pour déclencher le calcul. Sans ça, le
+    # seul `with st.expander()` exécute le code à l'ouverture (cf. P0-1
+    # Sprint 15+ dans deferred_widget.py:3).
     if has_tc:
         st.markdown("---")
-        with st.expander("🚌 Trajet transport en commun", expanded=False):
-            try:
-                # Sprint 16 Axe C — Stocke la durée réelle dans session_state
-                # pour le comparateur multimodal.
-                tc_result = render_transit_trip(
-                    origin=search["origin"],
-                    destination=search["destination"],
-                )
-                if tc_result:
-                    st.session_state["trip_tc"] = tc_result
-            except DashboardDataError as e:
-                st.error(f"⚠️ {e}")
+        deferred_render(
+            "usager_transit_trip",
+            "Charger le trajet transport en commun",
+            _render_transit_trip_for_user,
+            origin=search["origin"],
+            destination=search["destination"],
+            button_icon="🚌",
+        )
 
     # ── Trafic routier (si Voiture sélectionné) ──────────────────────────
     if has_voiture:
@@ -337,3 +338,27 @@ if st.session_state.get("results_loaded"):
     st.markdown("---")
 
 st.caption(f"LyonFlowFull v{get_settings().app_version} · 100% pipeline (PostgreSQL, Airflow, MLflow)")
+
+
+# === Helpers privés Sprint 22+ — appelés par deferred_render (button-gate) ===
+# Avant : ces appels étaient inline dans des ``with st.expander()`` (P2
+# du quick wins Sprint 22+). Le seul expander ne différait PAS le calcul,
+# donc le code s'exécutait à l'ouverture (coût GTFS 1-3s). Le wrapping
+# dans ``deferred_render`` (button-gate) attend le clic explicite de
+# l'user avant de lancer le calcul. Cf. P0-1 Sprint 15+ dans
+# deferred_widget.py:3.
+
+
+def _render_transit_trip_for_user(origin: str, destination: str) -> None:
+    """Helper pour deferred_render : appel GTFS + stockage session_state."""
+    try:
+        # Sprint 16 Axe C — Stocke la durée réelle dans session_state
+        # pour le comparateur multimodal.
+        tc_result = render_transit_trip(
+            origin=origin,
+            destination=destination,
+        )
+        if tc_result:
+            st.session_state["trip_tc"] = tc_result
+    except DashboardDataError as e:
+        st.error(f"⚠️ {e}")

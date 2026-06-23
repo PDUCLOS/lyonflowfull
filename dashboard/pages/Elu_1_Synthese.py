@@ -86,13 +86,15 @@ st.markdown("---")
 # 2 colonnes : tendance + décisions
 col1, col2 = st.columns([3, 2])
 with col1:
-    with st.expander("📈 Tendance — Part modale TC", expanded=False):
-        deferred_render(
-            "trend_chart_part_modale_tc",
-            "Charger la tendance Part modale TC",
-            render_trend_chart,
-            metric_key="part_modale_tc",
-        )
+    # Sprint 22+ — double-wrap expander+deferred_render retiré (P6) :
+    # le button-gate seul suffit (le calcul Plotly ne s'exécute qu'au
+    # clic, pas à l'ouverture de l'expander).
+    deferred_render(
+        "trend_chart_part_modale_tc",
+        "Charger la tendance Part modale TC",
+        render_trend_chart,
+        metric_key="part_modale_tc",
+    )
 with col2:
     st.markdown("##### 🏆 Top Décisions")
     render_top_decisions(n=3)
