@@ -1702,6 +1702,36 @@ def get_otp_heatmap(days: int = 7) -> pd.DataFrame:
     return df
 
 
+def get_sensor_saturation() -> pd.DataFrame:
+    """Saturation + amplitude + statut par capteur (Sprint 22+, migration 033).
+
+    Vue Gold ``gold.v_sensor_saturation`` qui calcule pour chaque capteur
+    actif :
+    * ``v85_7j`` : 85e percentile des vitesses sur 7j
+    * ``sat_now_pct`` : vitesse actuelle / v85 * 100
+    * ``amp_pct`` : (max_24h - min_24h) / v85 * 100
+    * ``status`` : 'ok' | 'stale' | 'stuck' | 'no_data'
+
+    Returns:
+        DataFrame avec colonnes : channel_id, n_obs_7d, v85_7j, last_7d_at,
+        n_obs_24h, vmin_24h, vmax_24h, std_24h, avg_24h, last_24h_at,
+        sat_now_pct, current_speed_kmh, amp_pct, status.
+
+    Raises:
+        DashboardDataError: si la DB ne répond pas ou si la migration 033
+            n'est pas appliquée (vue absente).
+    """
+    query = """
+        SELECT
+            channel_id, n_obs_7d, v85_7j, last_7d_at,
+            n_obs_24h, vmin_24h, vmax_24h, std_24h, avg_24h, last_24h_at,
+            sat_now_pct, current_speed_kmh, amp_pct, status
+        FROM gold.v_sensor_saturation
+        ORDER BY status, sat_now_pct DESC NULLS LAST
+    """
+    return _df_from_query(query)
+
+
 def get_latest_drift_report() -> dict | None:
     """Retourne le dernier rapport de drift persisté par build_xgb_training_set.
 

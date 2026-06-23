@@ -395,6 +395,32 @@ def load_otp_heatmap_data() -> pd.DataFrame:
     return get_otp_heatmap()
 
 
+def load_sensor_saturation() -> pd.DataFrame:
+    """Saturation + amplitude + statut par capteur (Sprint 22+).
+
+    Source : vue Gold ``gold.v_sensor_saturation`` (migration 033).
+
+    Pour chaque capteur actif, calcule :
+    * ``v85_7j`` : 85e percentile des vitesses sur 7j (= vitesse libre
+      typique, indicateur engineering standard — option B validée
+      par Patrice).
+    * ``sat_now_pct`` : vitesse actuelle / v85 * 100.
+      > 100% = congestion, < 50% = fluide.
+    * ``amp_pct`` : (max_24h - min_24h) / v85 * 100.
+      < 2% = capteur stuck (cf. seuil Sprint 22+).
+    * ``status`` : 'ok' | 'stale' (> 15 min sans mesure) | 'stuck'
+      (amp < 2% ET std < 1 km/h) | 'no_data' (> 7j sans mesure).
+
+    Raises:
+        DashboardDataError: si la DB ne répond pas ou si la vue
+            migration 033 n'est pas appliquée.
+    """
+    from src.data.db_query import get_sensor_saturation
+
+    _require_db_or_raise("v_sensor_saturation")
+    return get_sensor_saturation()
+
+
 # =============================================================================
 # Élu — agrégats ville
 # =============================================================================
