@@ -56,6 +56,8 @@ def _parse_grandlyon_vitesse(raw: object) -> float | None:
       - "56.5 km/h"      → 56.5
       - "Vitesse réglementaire"  → None (capteur en vitesse libre, vitesse_kmh inconnue)
       - "" / None        → None
+      - "0 km/h"         → None (Sprint 22+ audit saturation : un capteur à 0
+        est suspect, on l'écarte pour ne pas fausser la moyenne)
 
     Returns:
         Vitesse en km/h (float) ou None si non exploitable.
@@ -64,15 +66,19 @@ def _parse_grandlyon_vitesse(raw: object) -> float | None:
         return None
     if not isinstance(raw, str):
         try:
-            return float(raw)  # type: ignore[arg-type]  # mypy: raw est Any après le isinstance check
+            value = float(raw)  # type: ignore[arg-type]  # mypy: raw est Any
         except (TypeError, ValueError):
             return None
+        # Sprint 22+ : filter les 0 (capteurs bloqués au sens "no data")
+        return value if value > 0 else None
     s = raw.strip()
     if not s:
         return None
     m = re.match(r"^\s*(\d+(?:[.,]\d+)?)\s*km/h", s)
     if m:
-        return float(m.group(1).replace(",", "."))
+        value = float(m.group(1).replace(",", "."))
+        # Sprint 22+ : filter les 0 (cf. ci-dessus)
+        return value if value > 0 else None
     return None
 
 
