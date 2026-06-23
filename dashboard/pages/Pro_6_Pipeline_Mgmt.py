@@ -11,6 +11,7 @@ from dashboard.components.navigation import render_sidebar_navigation
 from dashboard.components.persona_guard import apply_persona_guard
 from dashboard.components.theme import inject_theme
 from dashboard.components.widgets.pro_tcl import render_pipeline_management_page
+from dashboard.components.widgets.pro_tcl.sensor_saturation import render_sensor_saturation
 from dashboard.components.widgets.pro_tcl.source_health_monitor import render_source_health_monitor
 
 st.set_page_config(
@@ -35,6 +36,13 @@ st.caption(
 
 # Sprint 16 Axe B — Monitoring multi-source (remplace les health checks séquentiels)
 render_source_health_monitor()
+
+st.markdown("---")
+
+# Sprint 22+ — Saturation + amplitude par capteur (gold.v_sensor_saturation,
+# migration 033). Dépendance : la migration 033 doit être appliquée sur
+# le VPS (`psql -f scripts/sql/migration_033_sensor_saturation.sql`).
+render_sensor_saturation()
 
 st.markdown("---")
 
