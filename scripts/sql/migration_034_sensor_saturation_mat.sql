@@ -17,8 +17,15 @@
 --     15 min ne change rien à l'UX.
 
 DROP VIEW IF EXISTS gold.v_sensor_saturation CASCADE;
+DROP MATERIALIZED VIEW IF EXISTS gold.mv_sensor_saturation CASCADE;
 
-CREATE OR REPLACE MATERIALIZED VIEW gold.mv_sensor_saturation AS
+-- Note : ``CREATE OR REPLACE MATERIALIZED VIEW`` n'est PAS supporté
+-- par PostgreSQL (la syntaxe standard est juste ``CREATE MATERIALIZED VIEW``
+-- + DROP manuel pour remplacer). On fait donc DROP IF EXISTS en début
+-- de migration (idempotent). Pour rejouer la migration, le DROP ci-dessus
+-- gère le cleanup. Corrigé Sprint 22+ suite erreur déploiement VPS.
+
+CREATE MATERIALIZED VIEW gold.mv_sensor_saturation AS
 WITH
     -- Mesures des 7 derniers jours (fenêtre large pour v85)
     measurements_7d AS (

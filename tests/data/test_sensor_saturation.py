@@ -78,7 +78,7 @@ class TestSensorSaturationViewSQL:
 
         path = Path(__file__).resolve().parent.parent.parent / self.MIGRATION_PATH
         content = path.read_text()
-        assert "CREATE OR REPLACE MATERIALIZED VIEW gold.mv_sensor_saturation" in content
+        assert "CREATE MATERIALIZED VIEW gold.mv_sensor_saturation AS" in content
 
     def test_migration_computes_v85_amp_sat(self):
         from pathlib import Path
