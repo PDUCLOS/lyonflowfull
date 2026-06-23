@@ -7,7 +7,7 @@ Affiche pour chaque capteur du réseau routier lyonnais :
 * Code couleur : 🟢 ok · 🟡 stale · 🔴 stuck · ⚪ no_data
 
 Sources :
-* ``gold.v_sensor_saturation`` (migration 033) via
+* ``gold.mv_sensor_saturation`` (migration 034 (matérialisée)) via
   ``cached_sensor_saturation()`` (TTL 60s)
 
 Câblage : Pro_6_Pipeline_Mgmt (cohérent avec render_source_health_monitor
@@ -131,7 +131,7 @@ def render_sensor_saturation() -> None:
     """Affiche le dashboard saturation + amplitude par capteur.
 
     Fail loud via ``DashboardDataError`` si PostgreSQL indispo ou si
-    la migration 033 n'est pas appliquée.
+    la migration 034 (matérialisée) n'est pas appliquée.
     """
     st.markdown("##### 📡 Saturation + amplitude par capteur (Sprint 22+)")
 
@@ -144,7 +144,7 @@ def render_sensor_saturation() -> None:
 
     if df.empty:
         st.info(
-            "Aucune donnée de saturation. Vérifier : (1) migration 033 "
+            "Aucune donnée de saturation. Vérifier : (1) migration 034 (matérialisée) "
             "appliquée (`scripts/sql/migration_033_sensor_saturation.sql`), "
             "(2) `gold.traffic_features_live` alimentée (DAG `*/10min`), "
             "(3) ≥ 7 jours d'historique pour le calcul v85."
@@ -165,7 +165,7 @@ def render_sensor_saturation() -> None:
     _render_status_table(df, top_n=20)
 
     st.caption(
-        f"Source : `gold.v_sensor_saturation` (migration 033) — "
+        f"Source : `gold.mv_sensor_saturation` (migration 034 (matérialisée)) — "
         f"v85 sur 7j + amplitude 24h + seuil stuck à 2%. "
         f"Refresh via vue (cache Streamlit 60s)."
     )

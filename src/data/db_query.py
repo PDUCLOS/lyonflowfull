@@ -1703,9 +1703,9 @@ def get_otp_heatmap(days: int = 7) -> pd.DataFrame:
 
 
 def get_sensor_saturation() -> pd.DataFrame:
-    """Saturation + amplitude + statut par capteur (Sprint 22+, migration 033).
+    """Saturation + amplitude + statut par capteur (Sprint 22+, migration 034 (matérialisée)).
 
-    Vue Gold ``gold.v_sensor_saturation`` qui calcule pour chaque capteur
+    Vue Gold ``gold.mv_sensor_saturation`` qui calcule pour chaque capteur
     actif :
     * ``v85_7j`` : 85e percentile des vitesses sur 7j
     * ``sat_now_pct`` : vitesse actuelle / v85 * 100
@@ -1718,7 +1718,7 @@ def get_sensor_saturation() -> pd.DataFrame:
         sat_now_pct, current_speed_kmh, amp_pct, status.
 
     Raises:
-        DashboardDataError: si la DB ne répond pas ou si la migration 033
+        DashboardDataError: si la DB ne répond pas ou si la migration 034 (matérialisée)
             n'est pas appliquée (vue absente).
     """
     query = """
@@ -1726,7 +1726,7 @@ def get_sensor_saturation() -> pd.DataFrame:
             channel_id, n_obs_7d, v85_7j, last_7d_at,
             n_obs_24h, vmin_24h, vmax_24h, std_24h, avg_24h, last_24h_at,
             sat_now_pct, current_speed_kmh, amp_pct, status
-        FROM gold.v_sensor_saturation
+        FROM gold.mv_sensor_saturation
         ORDER BY status, sat_now_pct DESC NULLS LAST
     """
     return _df_from_query(query)

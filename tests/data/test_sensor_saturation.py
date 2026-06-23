@@ -1,13 +1,13 @@
-"""Tests Sprint 22+ audit saturation (Patrice) — couverture gold.v_sensor_saturation.
+"""Tests Sprint 22+ audit saturation (Patrice) — couverture gold.mv_sensor_saturation.
 
 Couvre les 4 quick wins du sprint :
 - F4 : _parse_grandlyon_vitesse() filter ``0`` → None
-- Migration 033 : vue ``gold.v_sensor_saturation`` (v85, sat, amp, status)
+- Migration 033 : vue ``gold.mv_sensor_saturation`` (v85, sat, amp, status)
 - Seuils stuck : amp_pct < 2 ET std_24h < 1 km/h
 - Loader + cache : ``load_sensor_saturation()`` + ``cached_sensor_saturation()``
 
 Tests marqués ``@pytest.mark.integration`` requièrent un VPS
-accessible (PostgreSQL + migration 033 appliquée).
+accessible (PostgreSQL + migration 034 (matérialisée) appliquée).
 """
 
 from __future__ import annotations
@@ -58,14 +58,14 @@ class TestParseGrandlyonVitesse:
 
 
 # =============================================================================
-# Migration 033 — Vue gold.v_sensor_saturation
+# Migration 033 — Vue gold.mv_sensor_saturation
 # =============================================================================
 
 
 class TestSensorSaturationViewSQL:
-    """Vérifie que la migration 033 est bien formée (parse SQL)."""
+    """Vérifie que la migration 034 (matérialisée) est bien formée (parse SQL)."""
 
-    MIGRATION_PATH = "scripts/sql/migration_033_sensor_saturation.sql"
+    MIGRATION_PATH = "scripts/sql/migration_034_sensor_saturation_mat.sql"
 
     def test_migration_file_exists(self):
         from pathlib import Path
@@ -78,7 +78,7 @@ class TestSensorSaturationViewSQL:
 
         path = Path(__file__).resolve().parent.parent.parent / self.MIGRATION_PATH
         content = path.read_text()
-        assert "CREATE OR REPLACE VIEW gold.v_sensor_saturation" in content
+        assert "CREATE OR REPLACE MATERIALIZED VIEW gold.mv_sensor_saturation" in content
 
     def test_migration_computes_v85_amp_sat(self):
         from pathlib import Path
@@ -87,8 +87,8 @@ class TestSensorSaturationViewSQL:
         content = path.read_text()
         # v85 : percentile_cont(0.85) WITHIN GROUP (ORDER BY speed_kmh)
         assert "PERCENTILE_CONT(0.85)" in content
-        # amplitude = vmax_24h - vmin_24h
-        assert "vmax_24h - vmin_24h" in content
+        # amplitude = a24.vmax_24h - a24.vmin_24h (préfixe a24. car CTE)
+        assert "a24.vmax_24h - a24.vmin_24h" in content
         # saturation = current_speed / v85_7j * 100
         assert "current_speed / NULLIF(a7.v85_7j, 0)" in content
 
@@ -183,7 +183,7 @@ class TestStuckSeuilLogic:
 
 @pytest.mark.integration
 class TestSensorSaturationLive:
-    """Tests live : requièrent PostgreSQL + migration 033 appliquée."""
+    """Tests live : requièrent PostgreSQL + migration 034 (matérialisée) appliquée."""
 
     def test_vue_retourne_dataframe_non_vide(self):
         """Avec données live, la vue doit retourner au moins 100 capteurs."""

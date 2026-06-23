@@ -39,8 +39,8 @@ render_source_health_monitor()
 
 st.markdown("---")
 
-# Sprint 22+ — Saturation + amplitude par capteur (gold.v_sensor_saturation,
-# migration 033). Dépendance : la migration 033 doit être appliquée sur
+# Sprint 22+ — Saturation + amplitude par capteur (gold.mv_sensor_saturation,
+# migration 034 (matérialisée)). Dépendance : la migration 034 (matérialisée) doit être appliquée sur
 # le VPS (`psql -f scripts/sql/migration_033_sensor_saturation.sql`).
 render_sensor_saturation()
 

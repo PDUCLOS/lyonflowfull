@@ -398,7 +398,7 @@ def load_otp_heatmap_data() -> pd.DataFrame:
 def load_sensor_saturation() -> pd.DataFrame:
     """Saturation + amplitude + statut par capteur (Sprint 22+).
 
-    Source : vue Gold ``gold.v_sensor_saturation`` (migration 033).
+    Source : vue Gold ``gold.mv_sensor_saturation`` (migration 034 (matérialisée)).
 
     Pour chaque capteur actif, calcule :
     * ``v85_7j`` : 85e percentile des vitesses sur 7j (= vitesse libre
@@ -413,11 +413,11 @@ def load_sensor_saturation() -> pd.DataFrame:
 
     Raises:
         DashboardDataError: si la DB ne répond pas ou si la vue
-            migration 033 n'est pas appliquée.
+            migration 034 (matérialisée) n'est pas appliquée.
     """
     from src.data.db_query import get_sensor_saturation
 
-    _require_db_or_raise("v_sensor_saturation")
+    _require_db_or_raise("mv_sensor_saturation")
     return get_sensor_saturation()
 
 

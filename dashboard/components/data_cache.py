@@ -163,7 +163,7 @@ def cached_kpis_12_months() -> pd.DataFrame:
 # =============================================================================
 # Sprint 22+ : saturation + amplitude par capteur
 # =============================================================================
-# Vue gold.v_sensor_saturation (migration 033). Refresh implicite (vue),
+# Vue gold.mv_sensor_saturation (migration 034 (matérialisée)). Refresh implicite (vue),
 # mais on cache 5 min (TTL_FAST) pour éviter de re-query la base à
 # chaque render Streamlit. La vue elle-même scanne ~889k rows (7j ×
 # 5min × 1520 nœuds), donc on garde le cache court pour rester réactif.
