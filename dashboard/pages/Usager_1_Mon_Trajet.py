@@ -235,51 +235,50 @@ if st.session_state.get("results_loaded"):
     # ── Trajet transport en commun (si TC sélectionné, Sprint 14) ─────────
     if has_tc:
         st.markdown("---")
-        st.markdown("### 🚌 Trajet transport en commun")
-        try:
-            # Sprint 16 Axe C — Stocke la durée réelle dans session_state
-            # pour le comparateur multimodal.
-            tc_result = render_transit_trip(
-                origin=search["origin"],
-                destination=search["destination"],
-            )
-            if tc_result:
-                st.session_state["trip_tc"] = tc_result
-        except DashboardDataError as e:
-            st.error(f"⚠️ {e}")
+        with st.expander("🚌 Trajet transport en commun", expanded=False):
+            try:
+                # Sprint 16 Axe C — Stocke la durée réelle dans session_state
+                # pour le comparateur multimodal.
+                tc_result = render_transit_trip(
+                    origin=search["origin"],
+                    destination=search["destination"],
+                )
+                if tc_result:
+                    st.session_state["trip_tc"] = tc_result
+            except DashboardDataError as e:
+                st.error(f"⚠️ {e}")
 
     # ── Trafic routier (si Voiture sélectionné) ──────────────────────────
     if has_voiture:
         st.markdown("##### 🚦 État du trafic routier")
         render_traffic_widget()
 
-        st.markdown("##### 🗺️ Carte du trafic — H+1h")
-        render_traffic_map_compact(height=320, horizon_minutes=60, key_suffix="usager")
+        with st.expander("🗺️ Carte du trafic — H+1h", expanded=False):
+            render_traffic_map_compact(height=320, horizon_minutes=60, key_suffix="usager")
 
     # ── Trajet Vélov (si Vélov sélectionné) ──────────────────────────────
     if has_velov:
         st.markdown("---")
-        st.markdown("### 🚲 Trajet Vélov + marche")
-
-        if origin_coords and dest_coords:
-            try:
-                # Sprint 16 Axe C — Stocke la durée réelle dans session_state.
-                velov_result = render_velov_trip(
-                    origin=search["origin"],
-                    destination=search["destination"],
-                    origin_coords=origin_coords,
-                    dest_coords=dest_coords,
+        with st.expander("🚲 Trajet Vélov + marche", expanded=False):
+            if origin_coords and dest_coords:
+                try:
+                    # Sprint 16 Axe C — Stocke la durée réelle dans session_state.
+                    velov_result = render_velov_trip(
+                        origin=search["origin"],
+                        destination=search["destination"],
+                        origin_coords=origin_coords,
+                        dest_coords=dest_coords,
+                    )
+                    if velov_result:
+                        st.session_state["trip_velov"] = velov_result
+                except DashboardDataError as e:
+                    st.error(f"⚠️ {e}")
+            else:
+                st.warning(
+                    f"Impossible de résoudre les coordonnées GPS : "
+                    f"{search['origin']} → {origin_coords}, "
+                    f"{search['destination']} → {dest_coords}"
                 )
-                if velov_result:
-                    st.session_state["trip_velov"] = velov_result
-            except DashboardDataError as e:
-                st.error(f"⚠️ {e}")
-        else:
-            st.warning(
-                f"Impossible de résoudre les coordonnées GPS : "
-                f"{search['origin']} → {origin_coords}, "
-                f"{search['destination']} → {dest_coords}"
-            )
 
     # ── Itinéraire voiture (si Voiture sélectionné) ──────────────────────
     if has_voiture:
@@ -312,27 +311,28 @@ if st.session_state.get("results_loaded"):
             st.session_state.pop("itin_alt_choice", None)
 
         if st.session_state.get("itin_compute"):
-            voiture_result = render_itinerary_result(
-                origin=search["origin"],
-                destination=search["destination"],
-                origin_coords=origin_coords,
-                dest_coords=dest_coords,
-            )
-            if voiture_result:
-                st.session_state["trip_voiture"] = voiture_result
+            with st.expander("Voir l'itinéraire voiture détaillé", expanded=True):
+                voiture_result = render_itinerary_result(
+                    origin=search["origin"],
+                    destination=search["destination"],
+                    origin_coords=origin_coords,
+                    dest_coords=dest_coords,
+                )
+                if voiture_result:
+                    st.session_state["trip_voiture"] = voiture_result
 
     # ── Cartes informatives Vélov (si Vélov sélectionné) ─────────────────
     if has_velov:
         st.markdown("---")
 
-        st.markdown("##### 🗺️ Couverture Vélov des lieux emblématiques")
-        try:
-            render_lieux_velov_map(height=400)
-        except DashboardDataError as e:
-            st.error(f"⚠️ {e}")
+        with st.expander("🗺️ Couverture Vélov des lieux emblématiques", expanded=False):
+            try:
+                render_lieux_velov_map(height=400)
+            except DashboardDataError as e:
+                st.error(f"⚠️ {e}")
 
-        st.markdown("##### 🚲 Toutes les stations Vélo'v")
-        render_velov_map_compact(height=320, key_suffix="usager")
+        with st.expander("🚲 Toutes les stations Vélo'v", expanded=False):
+            render_velov_map_compact(height=320, key_suffix="usager")
 
     st.markdown("---")
 

@@ -78,64 +78,66 @@ render_kpi_cards()
 st.markdown("---")
 
 # Carte charge trafic — synthèse exécutive (Sprint 10)
-st.markdown("##### 🗺️ Charge du trafic — projection H+1h")
-render_traffic_map_compact(height=340, horizon_minutes=60, key_suffix="elu")
+with st.expander("🗺️ Charge du trafic — projection H+1h", expanded=False):
+    render_traffic_map_compact(height=340, horizon_minutes=60, key_suffix="elu")
 
 st.markdown("---")
 
 # 2 colonnes : tendance + décisions
 col1, col2 = st.columns([3, 2])
 with col1:
-    st.markdown("##### 📈 Tendance — Part modale TC")
-    deferred_render(
-        "trend_chart_part_modale_tc",
-        "Charger la tendance Part modale TC",
-        render_trend_chart,
-        metric_key="part_modale_tc",
-    )
+    with st.expander("📈 Tendance — Part modale TC", expanded=False):
+        deferred_render(
+            "trend_chart_part_modale_tc",
+            "Charger la tendance Part modale TC",
+            render_trend_chart,
+            metric_key="part_modale_tc",
+        )
 with col2:
+    st.markdown("##### 🏆 Top Décisions")
     render_top_decisions(n=3)
 
 st.markdown("---")
 
 # Bloc À annoncer
-render_news_section()
+with st.expander("📢 À annoncer (News)", expanded=False):
+    render_news_section()
 
 st.markdown("---")
 
 # Bouton PDF synthèse — données live via data_loader (Sprint 8 — fail loud si DB indispo)
-st.markdown("##### 📄 Génération rapport PDF")
-kpis_dict = cached_elu_kpis_dict()
-bottlenecks_top = cached_bottlenecks_top()
-sections = {
-    "title": "Synthèse exécutive — Métropole de Lyon",
-    "kpis": [
-        {
-            "label": k.get("label", "—"),
-            "value": k.get("current", 0),
-            "unit": k.get("unit", ""),
-            "delta_ytd": k.get("delta_ytd", 0),
-        }
-        for k in kpis_dict.values()
-    ],
-    "bottlenecks": [
-        {
-            "rank": b.get("rank", i + 1),
-            "zone": b.get("zone", "—"),
-            "lines_impacted": b.get("lines_impacted", []) or [],
-            "voyageurs_jour": b.get("voyageurs_jour", 0) or 0,
-            "gain_min": b.get("gain_min", 0) or 0,
-            "cout_M_euros": b.get("cout_M_euros", 0) or 0,
-            "roi_mois": b.get("roi_mois", 0) or 0,
-        }
-        for i, b in enumerate(bottlenecks_top[:5])
-    ],
-    "decisions": [
-        f"{b.get('zone', '—')} — {b.get('gain_min', 0)} min gagnées, "
-        f"{b.get('cout_M_euros', 0)} M€, ROI {int(b.get('roi_mois', 0) or 0)} mois"
-        for b in bottlenecks_top[:5]
-    ],
-}
-render_pdf_generator(sections)
+with st.expander("📄 Génération rapport PDF", expanded=False):
+    kpis_dict = cached_elu_kpis_dict()
+    bottlenecks_top = cached_bottlenecks_top()
+    sections = {
+        "title": "Synthèse exécutive — Métropole de Lyon",
+        "kpis": [
+            {
+                "label": k.get("label", "—"),
+                "value": k.get("current", 0),
+                "unit": k.get("unit", ""),
+                "delta_ytd": k.get("delta_ytd", 0),
+            }
+            for k in kpis_dict.values()
+        ],
+        "bottlenecks": [
+            {
+                "rank": b.get("rank", i + 1),
+                "zone": b.get("zone", "—"),
+                "lines_impacted": b.get("lines_impacted", []) or [],
+                "voyageurs_jour": b.get("voyageurs_jour", 0) or 0,
+                "gain_min": b.get("gain_min", 0) or 0,
+                "cout_M_euros": b.get("cout_M_euros", 0) or 0,
+                "roi_mois": b.get("roi_mois", 0) or 0,
+            }
+            for i, b in enumerate(bottlenecks_top[:5])
+        ],
+        "decisions": [
+            f"{b.get('zone', '—')} — {b.get('gain_min', 0)} min gagnées, "
+            f"{b.get('cout_M_euros', 0)} M€, ROI {int(b.get('roi_mois', 0) or 0)} mois"
+            for b in bottlenecks_top[:5]
+        ],
+    }
+    render_pdf_generator(sections)
 
 st.caption("LyonFlowFull · Synthèse exécutive · Données 12 mois glissants")
