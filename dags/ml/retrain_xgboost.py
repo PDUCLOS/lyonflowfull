@@ -61,12 +61,23 @@ def _train_xgboost_velov_wrapped() -> dict:
 
 
 def _train_xgboost_speed():
-    """Entraîne les 4 horizons XGBoost speed (5min, 1h, 3h, 6h)."""
+    """Entraîne H+1h XGBoost speed uniquement (Sprint 22+ — H+1h strict).
+
+    Avant : 4 horizons (5min, 1h, 3h, 6h) — en contradiction avec la
+    règle projet focus H+1h strict (Sprint VPS-6). Le DAG
+    ``dag_daily_speed_train`` (1×/jour 03h) le remplace fonctionnellement
+    pour H+1h.
+
+    Action Sprint 22+ : on garde SEUL H+1h ici pour ne pas perdre
+    silencieusement des runs historiques (dead data → models jamais
+    chargés → fail loud au predict). Toggle ``LYONFLOW_XGBOOST_TRAINING``
+    permet de désactiver complètement ce DAG.
+    """
     from src.models.xgboost_speed import XGBoostSpeedModel
 
     model = XGBoostSpeedModel()
     results = {}
-    for horizon in [5, 60, 180, 360]:
+    for horizon in [60]:
         try:
             metrics = model.train_one(horizon_minutes=horizon)
             results[f"h{horizon}"] = metrics
@@ -76,13 +87,12 @@ def _train_xgboost_speed():
 
 
 def _train_xgboost_velov():
-    """Entraîne les 2 horizons XGBoost Velov (30min, 1h)."""
+    """Entraîne H+1h XGBoost Velov uniquement (Sprint 22+ — H+1h strict)."""
     from src.models.xgboost_velov import XGBoostVelovModel
 
     model = XGBoostVelovModel()
     results = {}
-    # 2 horizons uniquement (CLAUDE.md : "2 horizons, économe")
-    for horizon in [30, 60]:
+    for horizon in [60]:
         try:
             metrics = model.train_one(horizon_minutes=horizon)
             results[f"h{horizon}"] = metrics

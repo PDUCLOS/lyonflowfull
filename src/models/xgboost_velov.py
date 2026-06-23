@@ -52,7 +52,11 @@ class XGBoostVelovModel:
 
         from src.ml.mlflow_integration import is_mlflow_available
 
-        horizons = horizons or [30, 60]
+        # Sprint 22+ : focus H+1h strict. Avant : [30, 60] — H+30min n'est
+        # plus alimenté par le DAG retrain_xgboost_velov (cf. règle
+        # projet Sprint VPS-6). Conserver [30, 60] chargerait un modèle
+        # .pkl potentiellement absent → fail loud au runtime.
+        horizons = horizons or [60]
         for h in horizons:
             model_name = f"xgb_velov_h{h}"
             model_path = self.model_dir / f"{model_name}.pkl"
