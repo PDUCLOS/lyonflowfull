@@ -286,11 +286,14 @@ def load_nearest_velov_stations(
     )
 
 
-def load_velov_predictions(horizon_minutes: int = 30) -> pd.DataFrame:
-    """Prédictions disponibilité Vélov.
+def load_velov_predictions(horizon_minutes: int = 60) -> pd.DataFrame:
+    """Prédictions disponibilité Vélov — H+1h uniquement.
+
+    Sprint 22+ : default=60 (avant : 30). Règle projet focus H+1h strict.
 
     Raises:
         DashboardDataError: en mode prod, si PostgreSQL ne répond pas.
+        ValueError: si ``horizon_minutes != 60`` (propagé de ``get_velov_predictions``).
     """
     _require_db_or_raise("velov_predictions")
     return get_velov_predictions(horizon_minutes=horizon_minutes, limit=200)

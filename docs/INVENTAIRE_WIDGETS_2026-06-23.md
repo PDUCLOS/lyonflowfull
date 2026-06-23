@@ -240,31 +240,23 @@
 
 ---
 
-## 🗑️ Dead code — widgets DÉFINIS mais jamais appelés (17 widgets)
+## 🗑️ Code Mort (Nettoyage Sprint 22+)
 
-Identifiés par `comm -23` entre les widgets définis et les widgets utilisés dans les pages :
+L'inventaire initial avait identifié 17 widgets potentiellement morts via un `comm -23` basique. Cependant, une vérification manuelle approfondie révèle que la majorité d'entre eux sont des **sous-composants actifs** appelés récursivement par d'autres widgets (ex: `render_health_panel` appelé par `render_pipeline_management_page`).
 
-| Widget | Fichier | Statut |
-|--------|---------|--------|
-| `render_alerts_feed` | `dashboard/components/widgets/pro_tcl/pipeline_management.py` | 🗑️ Dead |
-| `render_dag_list` | `dashboard/components/widgets/pro_tcl/pipeline_management.py` | 🗑️ Dead |
-| `render_data_freshness` | `dashboard/components/widgets/pro_tcl/pipeline_management.py` | 🗑️ Dead |
-| `render_data_quality_panel` | `dashboard/components/widgets/pro_tcl/model_monitoring.py` | 🗑️ Dead |
-| `render_drift_panel` | `dashboard/components/widgets/pro_tcl/model_monitoring.py` | 🗑️ Dead |
-| `render_format_selector` | `dashboard/components/widgets/pro_tcl/format_selector.py` | 🗑️ Dead |
-| `render_health_panel` | `dashboard/components/widgets/pro_tcl/pipeline_management.py` | 🗑️ Dead |
-| `render_metrics_comparison` | `dashboard/components/widgets/pro_tcl/model_monitoring.py` | 🗑️ Dead |
-| `render_model_registry` | `dashboard/components/widgets/pro_tcl/model_monitoring.py` | 🗑️ Dead |
-| `render_model_registry_status` | `dashboard/components/widgets/pro_tcl/model_monitoring.py` | 🗑️ Dead |
-| `render_persona_switcher` | `dashboard/components/persona_switcher.py` | 🗑️ Dead (à vérifier si c'est intentionnel) |
-| `render_pipeline_status` | `dashboard/components/widgets/pro_tcl/pipeline_management.py` | 🗑️ Dead |
-| `render_report_builder` | `dashboard/components/widgets/pro_tcl/report_builder.py` | 🗑️ Dead |
-| `render_sparkline` | `dashboard/components/sparkline.py` | 🗑️ Dead (Sprint 21 a câblé via `network_health_gauge` interne, pas via render) |
-| `render_training_history` | `dashboard/components/widgets/pro_tcl/model_monitoring.py` | 🗑️ Dead |
-| `render_velov_map` | `dashboard/components/widgets/usager/velov_map.py` | 🗑️ Dead (seul `_render_velov_map` privé est utilisé par `velov_trip.py`) |
-| `render_velov_model_analysis` | `dashboard/components/widgets/pro_tcl/model_monitoring.py` | 🗑️ Dead |
+**Statut réel des 17 widgets** :
+* 🟢 **Actifs (13 widgets, appel interne)** :
+  * `render_alerts_feed`, `render_dag_list`, `render_data_freshness`, `render_health_panel`, `render_pipeline_status` (utilisés dans `pipeline_management.py`)
+  * `render_data_quality_panel`, `render_drift_panel`, `render_metrics_comparison`, `render_model_registry`, `render_model_registry_status`, `render_training_history`, `render_velov_model_analysis` (utilisés dans `model_monitoring.py`)
+  * `render_sparkline` (utilisé dans `network_health_gauge.py`)
 
-> **Recommandation Sprint 22+** : déplacer ces 17 fichiers vers `archive/widgets_dead/` (convention Sprint 11+ : déplacer, jamais supprimer). Sprint 22+ les virer proprement.
+* 🗑️ **Vraiment Morts & Archivés (4 widgets)** :
+  * `render_format_selector` -> Archivé dans `archive/widgets_dead/format_selector.py`
+  * `render_persona_switcher` -> *Restauré car utilisé dans `Accueil.py` (échappé au script d'inventaire initial).*
+  * `render_report_builder` -> Archivé dans `archive/widgets_dead/report_builder.py`
+  * `render_velov_map` -> Fonction extraite et archivée dans `archive/widgets_dead/velov_map_legacy.py`
+
+> **Action Sprint 22+ (Terminée)** : Les 3 fichiers/fonctions véritablement morts ont été déplacés dans `archive/widgets_dead/` pour respecter la traçabilité RNCP. Le nombre de pages documentées a été corrigé (18 → 15) dans `CLAUDE.md` et `AGENTS.md`.
 
 ---
 

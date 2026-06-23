@@ -366,7 +366,7 @@ def render_training_history() -> None:
                 DATE_TRUNC('day', start_time) AS day,
                 run_name,
                 metrics_mae_speed_h1 AS mae_speed,
-                metrics_mae_velov_h30 AS mae_velov
+                metrics_mae_velov_h1 AS mae_velov
             FROM mlflow.runs_history
             WHERE start_time >= NOW() - INTERVAL '7 days'
             ORDER BY start_time ASC
@@ -375,8 +375,9 @@ def render_training_history() -> None:
         if history.empty:
             st.info(
                 "Historique entraînement vide — branche Sprint 10+. "
-                "DAG `retrain_xgboost` (quotidien 03h00) et `retrain_velov` "
-                "(horaire :50) alimentent `mlflow.runs_history`."
+                "DAG `dag_daily_speed_train` (quotidien 03h00) et "
+                "`retrain_xgboost_velov` (horaire :50) alimentent "
+                "`mlflow.runs_history`."
             )
             return
         try:
@@ -532,7 +533,7 @@ def render_velov_model_analysis() -> None:
     * Confidence interval moyen (largeur)
     * Backtest MAE si ``gold.predictions_vs_actuals`` contient des vélov rows.
     """
-    st.markdown("##### 🚲 Analyse modèle Vélo'v (XGBoost)")
+    st.markdown("##### 🚲 Analyse modèle Vélo'v (XGBoost) — H+1h")
     try:
         from dashboard.components.data_cache import cached_velov_predictions
         from src.data.db_query import get_velov_stations_geo
@@ -540,45 +541,46 @@ def render_velov_model_analysis() -> None:
         st.warning(f"Imports indisponibles : {e}")
         return
 
-    pred_30 = cached_velov_predictions(horizon_minutes=30)
-    pred_60 = cached_velov_predictions(horizon_minutes=60)
+    # Sprint 22+ : H+1h uniquement (règle projet focus H+1h strict).
+    # Avant : 2 horizons (H+30min + H+1h) mais H+30min était du dead code
+    # silencieux (DAG n'insérait que H+1h).
+    pred_h1 = cached_velov_predictions(horizon_minutes=60)
     stations = get_velov_stations_geo()
     n_stations_total = len(stations) if not stations.empty else 0
 
-    if pred_30.empty and pred_60.empty:
+    if pred_h1.empty:
         st.info(
             "Aucune prédiction Vélo'v dans `gold.velov_predictions`. "
-            "Lancer le DAG `retrain_velov` puis `predict_velov`."
+            "Lancer le DAG `retrain_xgboost_velov` (hourly :50)."
         )
         return
 
-    cols = st.columns(4)
-    last_30 = (
-        pred_30["prediction_timestamp"].max()
-        if not pred_30.empty and "prediction_timestamp" in pred_30.columns
+    cols = st.columns(3)
+    last_h1 = (
+        pred_h1["prediction_timestamp"].max()
+        if "prediction_timestamp" in pred_h1.columns
         else None
     )
-    coverage_30 = pred_30["station_id"].nunique() if "station_id" in pred_30.columns else 0
-    coverage_pct = f"{coverage_30}/{n_stations_total}" if n_stations_total else f"{coverage_30}"
+    coverage_h1 = pred_h1["station_id"].nunique() if "station_id" in pred_h1.columns else 0
+    coverage_pct = f"{coverage_h1}/{n_stations_total}" if n_stations_total else f"{coverage_h1}"
 
     cols[0].metric(
-        "Dernière prédiction H+30",
-        str(last_30)[:16] if last_30 is not None else "—",
+        "Dernière prédiction H+1h",
+        str(last_h1)[:16] if last_h1 is not None else "—",
     )
     cols[1].metric("Stations couvertes", coverage_pct)
-    cols[2].metric("Lignes H+30", f"{len(pred_30):,}")
-    cols[3].metric("Lignes H+1h", f"{len(pred_60):,}")
+    cols[2].metric("Lignes H+1h", f"{len(pred_h1):,}")
 
     # Distribution + confidence
-    if not pred_30.empty and "predicted_bikes" in pred_30.columns:
+    if "predicted_bikes" in pred_h1.columns:
         col_a, col_b = st.columns(2)
         with col_a:
-            st.markdown("**Distribution predicted_bikes (H+30)**")
+            st.markdown("**Distribution predicted_bikes (H+1h)**")
             try:
                 import plotly.express as px
 
                 fig = px.histogram(
-                    pred_30,
+                    pred_h1,
                     x="predicted_bikes",
                     nbins=20,
                     template=LYF_TEMPLATE,
@@ -587,12 +589,12 @@ def render_velov_model_analysis() -> None:
                 fig.update_layout(margin={"l": 0, "r": 0, "t": 10, "b": 0})
                 plotly_with_alt(fig, use_container_width=True)
             except ImportError:
-                st.bar_chart(pred_30["predicted_bikes"].value_counts().sort_index())
+                st.bar_chart(pred_h1["predicted_bikes"].value_counts().sort_index())
 
         with col_b:
-            if {"confidence_low", "confidence_high"}.issubset(pred_30.columns):
-                width = (pred_30["confidence_high"] - pred_30["confidence_low"]).dropna()
-                st.markdown("**Confidence interval width (H+30)**")
+            if {"confidence_low", "confidence_high"}.issubset(pred_h1.columns):
+                width = (pred_h1["confidence_high"] - pred_h1["confidence_low"]).dropna()
+                st.markdown("**Confidence interval width (H+1h)**")
                 if not width.empty:
                     st.metric("Moy", f"{width.mean():.2f} vélos")
                     st.metric("Médiane", f"{width.median():.2f} vélos")

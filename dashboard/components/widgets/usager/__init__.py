@@ -10,10 +10,7 @@ from dashboard.components.widgets.usager.mode_summary import render_mode_summary
 from dashboard.components.widgets.usager.search_bar import render_search_bar
 from dashboard.components.widgets.usager.traffic_widget import render_traffic_widget
 from dashboard.components.widgets.usager.transit_trip import render_transit_trip
-from dashboard.components.widgets.usager.velov_map import (
-    render_velov_map,
-    render_velov_map_compact,
-)
+from dashboard.components.widgets.usager.velov_map import render_velov_map_compact
 from dashboard.components.widgets.usager.velov_trip import render_velov_trip
 from dashboard.components.widgets.usager.velov_widget import render_velov_widget
 from dashboard.components.widgets.usager.weather_widget import render_weather_widget
@@ -29,7 +26,6 @@ __all__ = [
     "render_search_bar",
     "render_traffic_widget",
     "render_transit_trip",
-    "render_velov_map",
     "render_velov_map_compact",
     "render_velov_trip",
     "render_velov_widget",

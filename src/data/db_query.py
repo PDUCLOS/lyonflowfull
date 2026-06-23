@@ -426,17 +426,36 @@ def get_nearest_velov_stations(
     ]
 
 
-def get_velov_predictions(horizon_minutes: int = 30, limit: int = 500) -> pd.DataFrame:
-    """Prédictions de disponibilité Vélov.
+def get_velov_predictions(horizon_minutes: int, limit: int = 500) -> pd.DataFrame:
+    """Prédictions de disponibilité Vélov — H+1h uniquement.
 
     Args:
-        horizon_minutes: Horizon (30 ou 60).
+        horizon_minutes: Horizon (doit valoir 60, règle projet focus H+1h
+            strict — cf. Sprint VPS-6). Toute autre valeur lève
+            ``ValueError``.
         limit: Nombre max de lignes.
 
     Returns:
         DataFrame: prediction_timestamp, target_timestamp, station_id,
         station_id_encoded, predicted_bikes, confidence_low, confidence_high.
+
+    Raises:
+        ValueError: si ``horizon_minutes != 60`` (cf. règle H+1h strict).
+
+    EXPLICATION MÉTIER (Analyse) :
+    Avant Sprint 8+, le projet entraînait 2 horizons Vélov (H+30min et
+    H+1h). Depuis Sprint VPS-6, focus H+1h strict : seul ``horizon_minutes=60``
+    est alimenté par ``retrain_xgboost_velov``. Conserver H+30min était
+    du dead code silencieux (DAG insérait, widget lisait 2 horizons, mais
+    le `gold.velov_predictions` n'avait que H+1h réellement).
     """
+    if horizon_minutes != 60:
+        raise ValueError(
+            f"horizon_minutes={horizon_minutes} non supporté. "
+            "Règle projet : focus H+1h strict (seul 60 est accepté). "
+            "Voir retrain_xgboost_velov (DAG, hourly :50) qui alimente "
+            "uniquement H+1h."
+        )
     # Schema réel gold.velov_predictions : pas de station_id_encoded ni confidence_low/high.
     # Colonnes : prediction_timestamp, target_timestamp, horizon_minutes, station_id,
     # predicted_bikes, actual_bikes, model_name, model_version
