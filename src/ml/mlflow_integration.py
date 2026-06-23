@@ -40,8 +40,15 @@ for m in models:
 
 Variables d'env :
 * ``MLFLOW_TRACKING_URI`` : URL du serveur (défaut ``http://localhost:5000``)
-* ``MLFLOW_EXPERIMENT_NAME`` : nom par défaut (utilisé si non spécifié)
 * ``MLFLOW_S3_ENDPOINT_URL`` : pour le backend artifacts S3
+
+Note Sprint 22+ : il n'y a **pas** de variable d'env globale pour
+l'experiment name. Chaque modèle spécifie le sien explicitement :
+* ``xgboost_speed`` — XGBoost Speed H+1h
+* ``xgboost_velov`` — XGBoost Vélov H+30min + H+1h
+
+L'ancien default global ``DEFAULT_EXPERIMENT = "lyonflow-traffic"`` a
+été supprimé (cf. note au-dessus de ``DEFAULT_TRACKING_URI``).
 * ``AWS_ACCESS_KEY_ID`` / ``AWS_SECRET_ACCESS_KEY`` : credentials S3
 
 Note : tous les modèles du projet sont loggés dans le même experiment
@@ -96,7 +103,13 @@ def is_tracking_server_reachable() -> bool:
 
 
 DEFAULT_TRACKING_URI = "http://localhost:5000"
-DEFAULT_EXPERIMENT = "lyonflow-traffic"
+# NOTE (Sprint 22+) — DEFAULT_EXPERIMENT retiré. Chaque modèle log dans
+# sa propre expérience dédiée (séparation = bonne pratique MLflow) :
+# * xgboost_speed (cf. src/models/xgboost_speed.py)
+# * xgboost_velov (cf. src/models/xgboost_velov.py)
+# Un default global "lyonflow-traffic" existait mais n'était jamais utilisé
+# (callers hardcodaient). Supprimé pour éviter qu'un futur caller oublie
+# de spécifier et log dans une 3e expérience orpheline.
 DEFAULT_ARTIFACT_ROOT = "./mlruns"
 
 
@@ -128,9 +141,23 @@ class MLflowTracker:
 
     def __init__(
         self,
-        experiment_name: str = DEFAULT_EXPERIMENT,
+        experiment_name: str | None = None,
         tracking_uri: str | None = None,
     ):
+        # ``experiment_name`` est volontairement sans default "canonique"
+        # ici (cf. note Sprint 22+ au-dessus de DEFAULT_TRACKING_URI) :
+        # chaque caller DOIT spécifier sa propre expérience dédiée.
+        # On tolère ``None`` pour rétro-compat avec les tests legacy
+        # (cf. tests/ml/test_mlflow_integration.py qui instancient
+        # ``MLflowTracker()`` sans argument) mais on log un warning
+        # explicite pour qu'un caller prod oublieux soit visible.
+        if experiment_name is None:
+            logger.warning(
+                "MLflowTracker instancié sans experiment_name — fallback "
+                "MLFLOW_EXPERIMENT_NAME env ou 'lyonflow-default'. À éviter "
+                "en prod (séparation par modèle = bonne pratique MLflow)."
+            )
+            experiment_name = os.getenv("MLFLOW_EXPERIMENT_NAME", "lyonflow-default")
         self.experiment_name = experiment_name
         self.tracking_uri = tracking_uri or get_tracking_uri()
         self._mlflow: Any = None
@@ -423,8 +450,13 @@ def compare_models(model_a: str, model_b: str, metric: str = "mae", experiment: 
     }
 
 
-def get_experiment_summary(experiment: str = DEFAULT_EXPERIMENT) -> dict:
+def get_experiment_summary(experiment: str) -> dict:
     """Résumé d'un experiment : nb runs, dates, modèles présents.
+
+    Note Sprint 22+ : ``experiment`` est désormais obligatoire. Le default
+    global ``DEFAULT_EXPERIMENT = "lyonflow-traffic"`` a été supprimé (cf.
+    note au-dessus de ``DEFAULT_TRACKING_URI``) — chaque caller doit
+    spécifier explicitement l'expérience dédiée.
 
     Returns:
         Dict avec ``name``, ``run_count``, ``latest_run_at``, ``model_names``.

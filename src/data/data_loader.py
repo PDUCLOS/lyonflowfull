@@ -1408,10 +1408,14 @@ def load_mlflow_models(
     return out
 
 
-def load_mlflow_experiment_summary(
-    experiment: str = "lyonflow-traffic",
-) -> dict:
+def load_mlflow_experiment_summary(experiment: str) -> dict:
     """Résumé d'un experiment MLflow (nb runs, modeles, etc.).
+
+    Note Sprint 22+ : ``experiment`` est désormais obligatoire. Le default
+    global ``"lyonflow-traffic"`` a été supprimé (cf.
+    ``src/ml/mlflow_integration.py``) — chaque caller doit spécifier
+    explicitement l'expérience dédiée (``"xgboost_speed"`` ou
+    ``"xgboost_velov"``).
 
     Si MLflow est indisponible, lève ``DashboardDataError``.
 

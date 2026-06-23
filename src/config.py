@@ -96,10 +96,19 @@ class RedisSettings(BaseSettings):
 
 
 class MLflowSettings(BaseSettings):
-    """MLflow tracking."""
+    """MLflow tracking.
+
+    Note : le nom d'expérience (``experiment_name``) n'est PAS un setting
+    global. Chaque modèle log dans sa propre expérience dédiée (séparation
+    par modèle = bonne pratique MLflow) :
+    * ``xgboost_speed`` — XGBoost Speed H+1h (cf. ``src/models/xgboost_speed.py``)
+    * ``xgboost_velov`` — XGBoost Vélov H+30min + H+1h (cf. ``src/models/xgboost_velov.py``)
+
+    Un setting ``experiment_name`` global avait été introduit par erreur
+    (jamais câblé runtime). Supprimé Sprint 22+ pour éviter la confusion.
+    """
 
     tracking_uri: str = Field(default="http://localhost:5000", alias="MLFLOW_TRACKING_URI")
-    experiment_name: str = "lyonflow-traffic"
 
 
 class APISettings(BaseSettings):

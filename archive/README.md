@@ -14,6 +14,7 @@ archive/
 ├── sprints/      # Rapports de sprint livrés (sprints 1-9+, VPS-5/6/8)
 ├── audits/       # Audits ponctuels (qualité, infra, sécurité, dashboards)
 ├── analysis/     # Analyses des 3 repos sources (pré-fusion, obsolète)
+├── dags_disabled/# DAGs Airflow archivés (training/inf séparés, etc.)
 └── misc/         # Documents divers annulés ou contextuels
 ```
 

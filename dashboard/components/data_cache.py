@@ -218,8 +218,11 @@ def cached_mlflow_models() -> list[dict]:
 
 
 @st.cache_data(ttl=TTL_SLOW, show_spinner=False)
-def cached_mlflow_experiment_summary() -> dict:
-    return dl.load_mlflow_experiment_summary()
+def cached_mlflow_experiment_summary(experiment: str = "xgboost_speed") -> dict:
+    # Sprint 22+ — default aligné sur l'experiment canonique XGBoost Speed
+    # (cf. src/ml/mlflow_integration.py). Pour afficher aussi Vélov, le
+    # widget Model Monitoring devra agréger les 2 expériences (TODO).
+    return dl.load_mlflow_experiment_summary(experiment=experiment)
 
 
 # =============================================================================
