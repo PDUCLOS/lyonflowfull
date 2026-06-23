@@ -101,8 +101,11 @@ SELECT
     --   > 100% = congestion (trafic plus lent que la vitesse libre)
     --   < 50%  = fluide
     --   ~ 100% = vitesse libre typique
+    -- Cast ``::numeric`` requis avant ``ROUND(x, 1)`` (PostgreSQL
+    -- n'accepte pas round(double, integer) sans cast explicite —
+    -- corrigé Sprint 22+ suite erreur déploiement VPS).
     ROUND(
-        (l.current_speed / NULLIF(a7.v85_7j, 0)) * 100,
+        ((l.current_speed / NULLIF(a7.v85_7j, 0)) * 100)::numeric,
         1
     )                                                       AS sat_now_pct,
     l.current_speed                                        AS current_speed_kmh,
@@ -110,7 +113,7 @@ SELECT
     --   > 50% = variation typique (fluide ↔ bouchon)
     --   < 2%  = suspect (capteur stuck)
     ROUND(
-        ((a24.vmax_24h - a24.vmin_24h) / NULLIF(a7.v85_7j, 0)) * 100,
+        (((a24.vmax_24h - a24.vmin_24h) / NULLIF(a7.v85_7j, 0)) * 100)::numeric,
         1
     )                                                       AS amp_pct,
     -- Statut de santé
