@@ -32,8 +32,14 @@ def render_traffic_widget(traffic: dict | None = None) -> None:
     n_bottlenecks = traffic.get("bottlenecks_count", 0)
     data_source = traffic.get("data_source", "unknown")
 
-    # Bandeau source (transparence)
-    if data_source == "db_gold":
+    data_age = traffic.get("data_age_seconds", -1)
+    if data_age >= 0 and data_age < 300:
+        st.caption(f"🟢 Live · dernière mesure il y a {int(data_age / 60)} min")
+    elif data_age >= 0 and data_age < 1800:
+        st.caption(f"🟡 Stale · dernière mesure il y a {int(data_age / 60)} min")
+    elif data_age >= 1800:
+        st.caption(f"🔴 Figé · dernière mesure il y a {int(data_age / 3600)}h — vérifier DAG")
+    elif data_source == "db_gold":
         st.caption("🟢 Données temps réel (DB Gold)")
     else:
         st.caption("🟡 Source inconnue — données potentiellement stales")

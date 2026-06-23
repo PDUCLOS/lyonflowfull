@@ -53,12 +53,54 @@ def test_velov_widget_uses_pred_60():
 
 
 def test_itinerary_default_h1h():
-    """render_itinerary_result a horizon_minutes=60 par défaut (H+1h)."""
+    """render_itinerary_result : H+1h strict (pas de param horizon_minutes — calculé en interne)."""
     from dashboard.components.widgets.usager.itinerary import render_itinerary_result
 
     sig = inspect.signature(render_itinerary_result)
-    default = sig.parameters["horizon_minutes"].default
-    assert default == 60, f"itinerary default doit être 60 (H+1h), trouvé {default}"
+    # Plus de paramètre horizon_minutes : la requête passe par pgr_ksp qui
+    # consomme directement gold.trafic_predictions. Le widget applique
+    # implicitement H+1h via compute_itinerary_alternatives().
+    assert "horizon_minutes" not in sig.parameters, (
+        "render_itinerary_result ne doit plus exposer horizon_minutes — H+1h est strict"
+    )
+    src = inspect.getsource(render_itinerary_result)
+    # Sanity check : aucune référence à 30/180/360 min dans la signature
+    for forbidden in ("30,", "180,", "360,"):
+        assert forbidden not in src, f"itinerary contient encore {forbidden!r} (autre horizon que H+1h)"
+
+
+def test_minutes_to_hours_fails_loud():
+    """_minutes_to_hours : fail loud si horizon != 60 (règle focus H+1h)."""
+    from src.data.db_query import _minutes_to_hours
+
+    # Cas OK
+    assert _minutes_to_hours(60) == 1
+
+    # Cas KO : tout autre horizon doit lever ValueError
+    for bad in (5, 15, 30, 120, 180, 360):
+        try:
+            _minutes_to_hours(bad)
+        except ValueError as e:
+            assert "60" in str(e) and "H+1h" in str(e), f"ValueError message doit mentionner 60/H+1h, got: {e}"
+        else:
+            raise AssertionError(f"_minutes_to_hours({bad}) aurait dû lever ValueError (règle H+1h strict)")
+
+
+def test_load_traffic_predictions_h1h_only():
+    """data_loader.load_traffic() ne contient plus que H+1h dans le dict predictions."""
+    from src.data import data_loader
+
+    src = inspect.getsource(data_loader.load_traffic)
+    # Avant : boucle 3 horizons, dict initialisé avec 3 clés
+    assert "h_plus_30min" not in src, "load_traffic construit encore h_plus_30min"
+    assert "h_plus_3h" not in src, "load_traffic construit encore h_plus_3h"
+    assert "(30, " not in src, "load_traffic boucle encore sur (30, ...)"
+    assert "(180, " not in src, "load_traffic boucle encore sur (180, ...)"
+    # Doit contenir H+1h
+    assert "h_plus_1h" in src, "load_traffic doit construire h_plus_1h"
+    # Doit calculer la fraîcheur réelle
+    assert "freshness_status" in src, "load_traffic doit calculer freshness_status"
+    assert "data_age_seconds" in src, "load_traffic doit propager data_age_seconds"
 
 
 def test_gnn_map_horizons_h1h_only():

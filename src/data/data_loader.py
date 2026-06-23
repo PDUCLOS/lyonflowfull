@@ -113,7 +113,10 @@ def load_traffic() -> dict[str, Any]:
                 "congestion_color": "#...",
                 "bottlenecks_count": N,
                 "main_jams": [{road, lat, lon, speed_kmh, delay_min, severity}],
-                "predictions": {h_plus_30min, h_plus_1h, h_plus_3h}
+                "predictions": {h_plus_1h: dict},
+                "data_age_seconds": int,
+                "freshness_status": "live"|"stale"|"stuck",
+                "last_computed_at": "ISO8601",
             }
 
     Raises:
@@ -163,32 +166,53 @@ def load_traffic() -> dict[str, Any]:
             }
         )
 
-    # Prédictions
-    predictions: dict[str, dict] = {"h_plus_30min": {}, "h_plus_1h": {}, "h_plus_3h": {}}
-    for horizon, key in [(30, "h_plus_30min"), (60, "h_plus_1h"), (180, "h_plus_3h")]:
-        pred_df = get_traffic_predictions(horizon_minutes=horizon, limit=200)
-        # Nouveau schéma : speed_pred (alias predicted_speed posé par db_query)
-        speed_col = "predicted_speed" if "predicted_speed" in pred_df.columns else "speed_pred"
-        if not pred_df.empty and speed_col in pred_df.columns:
-            mean_pred = float(pred_df[speed_col].mean())
-            if mean_pred >= 35:
-                pred_level = "fluide"
-            elif mean_pred >= 25:
-                pred_level = "modéré"
-            elif mean_pred >= 15:
-                pred_level = "dense"
-            else:
-                pred_level = "bloqué"
-            predictions[key] = {"average_speed_kmh": round(mean_pred, 1), "congestion_level": pred_level}
+    # Prédictions — Règle projet (Sprint VPS-6) : H+1h uniquement.
+    # Le DAG ``dag_inference_xgboost`` n'insère que ``horizon_h = 1``
+    # (HORIZON_MAP = {60: 1}). Conserver les autres horizons dans le
+    # dict était du dead code (silent empty). On garde un dict plat avec
+    # uniquement la clé H+1h pour rétro-compat widget.
+    predictions: dict[str, dict] = {}
+    pred_df = get_traffic_predictions(horizon_minutes=60, limit=200)
+    speed_col = "predicted_speed" if "predicted_speed" in pred_df.columns else "speed_pred"
+    if not pred_df.empty and speed_col in pred_df.columns:
+        mean_pred = float(pred_df[speed_col].mean())
+        if mean_pred >= 35:
+            pred_level = "fluide"
+        elif mean_pred >= 25:
+            pred_level = "modéré"
+        elif mean_pred >= 15:
+            pred_level = "dense"
+        else:
+            pred_level = "bloqué"
+        predictions["h_plus_1h"] = {
+            "average_speed_kmh": round(mean_pred, 1),
+            "congestion_level": pred_level,
+        }
 
-    # Si une fenêtre de prédiction est absente, on laisse le dict vide —
-    # le widget affichera "—" pour cette fenêtre. C'est le comportement
-    # attendu si dag_live_speed_retrain n'a pas encore tourné pour
-    # certains horizons.
+    # Fraîcheur réelle des données (audit #2 : plus de ``data_source:
+    # "db_gold"`` hardcodé — on calcule l'âge réel + un status dérivé
+    # consommable par le widget).
+    last_computed = df["measurement_time"].max()
+    now_utc = pd.Timestamp.now(tz="UTC")
+    if pd.notna(last_computed):
+        if last_computed.tzinfo is None:
+            last_computed = last_computed.tz_localize("UTC")
+        data_age_s = (now_utc - last_computed).total_seconds()
+        if data_age_s < 0:
+            data_age_s = 0.0
+        if data_age_s < 300:  # < 5 min — le DAG tourne toutes les 10 min
+            freshness_status = "live"
+        elif data_age_s < 1800:  # < 30 min
+            freshness_status = "stale"
+        else:
+            freshness_status = "stuck"
+    else:
+        data_age_s = -1.0
+        freshness_status = "unknown"
 
     return {
         "city": "Lyon",
-        "timestamp": str(pd.Timestamp.now(tz="UTC")),
+        "timestamp": str(last_computed) if pd.notna(last_computed) else str(now_utc),
         "average_speed_kmh": round(avg_speed, 1),
         "congestion_level": level,
         "congestion_color": color,
@@ -196,6 +220,9 @@ def load_traffic() -> dict[str, Any]:
         "main_jams": main_jams,
         "predictions": predictions,
         "data_source": "db_gold",
+        "data_age_seconds": data_age_s,
+        "freshness_status": freshness_status,
+        "last_computed_at": last_computed.isoformat() if pd.notna(last_computed) else None,
     }
 
 

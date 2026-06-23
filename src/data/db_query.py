@@ -197,11 +197,12 @@ def get_traffic_for_node(node_idx: int, hours: int = 24) -> pd.DataFrame:
 
 
 def get_traffic_predictions(horizon_minutes: int = 60, limit: int = 200) -> pd.DataFrame:
-    """Prédictions de trafic Gold (XGBoost + GNN si dispo).
+    """Prédictions de trafic Gold (XGBoost + GNN si dispo) — H+1h uniquement.
 
     Args:
-        horizon_minutes: Horizon de prédiction en minutes (5/15/30/60/180/360).
-            Mappé vers horizon_h en DB : 5min→0, 30min→0, 60min→1, 180min→3, 360min→6.
+        horizon_minutes: Horizon de prédiction en minutes. Doit valoir 60
+            (règle projet focus H+1h — cf. Sprint VPS-6). Toute autre valeur
+            lève ``ValueError`` via ``_minutes_to_hours``.
         limit: Nombre max de lignes.
 
     Returns:
@@ -211,20 +212,18 @@ def get_traffic_predictions(horizon_minutes: int = 60, limit: int = 200) -> pd.D
         Pour rétro-compat, expose aussi ``predicted_speed`` (= speed_pred)
         et ``prediction_timestamp`` (= calculated_at).
 
+    Raises:
+        ValueError: si ``horizon_minutes != 60`` (cf. ``_minutes_to_hours``).
+
     EXPLICATION MÉTIER (Analyse) :
     Le schéma de la table `gold.trafic_predictions` a évolué au Sprint 5 (v0.3.1).
-    Plutôt que d'utiliser des minutes, la table partitionne les données en "heures"
-    d'horizon (0, 1, 3, 6).
-    C'est pourquoi une conversion `horizon_minutes -> horizon_h` est effectuée ici.
-    Cette fonction est sollicitée massivement par le Pathfinding (Voiture) pour
-    calculer les itinéraires prospectifs.
+    Plutôt que d'utiliser des minutes, la table stocke ``horizon_h`` en heures
+    (0, 1, 3, 6). Règle projet (Sprint VPS-6) : seul ``horizon_h = 1`` (H+1h)
+    est alimenté par ``dag_inference_xgboost``. Cette fonction est sollicitée
+    par le Pathfinding (Voiture) et le widget trafic Usager.
     """
-    # Mapping horizon_minutes -> horizon_h
-    # Le schéma gold stocke en heures : 0=H+5min, 1=H+1h, 3=H+3h, 6=H+6h
+    # Mapping horizon_minutes -> horizon_h (fail loud si != 60)
     horizon_h = _minutes_to_hours(horizon_minutes)
-    if horizon_h is None:
-        logger.warning("horizon_minutes=%s non mappable vers horizon_h", horizon_minutes)
-        return pd.DataFrame()
 
     query = """
         SELECT axis_key, horizon_h, calculated_at, speed_pred, etat_pred,
@@ -244,18 +243,28 @@ def get_traffic_predictions(horizon_minutes: int = 60, limit: int = 200) -> pd.D
     return df
 
 
-def _minutes_to_hours(horizon_minutes: int) -> int | None:
+def _minutes_to_hours(horizon_minutes: int) -> int:
     """Convertit un horizon en minutes vers l'unité heures du schéma gold.
 
+    Règle projet (Sprint VPS-6) — focus H+1h strict : seul ``horizon_minutes=60``
+    est accepté. Toute autre valeur lève ``ValueError`` (fail loud).
+
     Mapping convention (cf init-db.sql ligne 1244) ::
-        5min  -> 0  (H+5min)
-        30min -> 0  (H+30min — vu dans la même fenêtre que H+5min pour 1h-granularité)
-        60min -> 1
-        180min -> 3
-        360min -> 6
+        60min -> 1  (H+1h — seul horizon supporté)
+
+    Raises:
+        ValueError: si ``horizon_minutes != 60``. Côté data, le DAG
+            ``dag_inference_xgboost`` n'insère que ``horizon_h = 1`` (cf.
+            ``HORIZON_MAP = {60: 1}``). Demander un autre horizon retournerait
+            silencieusement un DataFrame vide, ce qui masque des bugs.
     """
-    mapping = {5: 0, 15: 0, 30: 0, 60: 1, 180: 3, 360: 6}
-    return mapping.get(horizon_minutes)
+    if horizon_minutes != 60:
+        raise ValueError(
+            f"horizon_minutes={horizon_minutes} non supporté. "
+            "Règle projet : focus H+1h strict (seul 60 est accepté). "
+            "Voir dag_inference_xgboost.HORIZON_MAP = {60: 1}."
+        )
+    return 1
 
 
 def get_traffic_bottlenecks(top: int = 20) -> pd.DataFrame:
