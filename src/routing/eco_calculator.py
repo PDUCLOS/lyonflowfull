@@ -66,7 +66,8 @@ VELOV_COST_JOUR_EUR = 1.50  # € — ticket 1 jour (cas non-abonné)
 CALORIES_PER_KM = {"velov": 46.0, "marche": 50.0}
 
 # Détection congestion voiture (< 25 km/h vitesse moyenne = bouchons)
-_CONGESTION_SPEED_THRESHOLD_KMH = 25.0
+# Sprint 22+ : importé depuis src.data._constants (single source of truth).
+from src.data._constants import CONGESTION_SPEED_THRESHOLD_KMH as _CONGESTION_SPEED_THRESHOLD_KMH  # noqa: E402,F401
 
 # Scoring composite (cf. spec Annexe A) — 1 min vaut ~0.30 € pour l'usager
 # Source : valeur du temps CEREMA 2023 (~18 €/h).
@@ -329,14 +330,31 @@ def _build_explanation(
     )
 
 
-def _is_congested_from_speed(avg_speed_kmh: float) -> bool:
+def is_congested_from_speed(avg_speed_kmh: float) -> bool:
     """Détecte la congestion voiture depuis la vitesse moyenne.
 
     Seuil : < 25 km/h = bouchon (référence ADEME, étude impact trafic urbain).
     Utilisé par ``Usager_1_Mon_Trajet`` pour passer le flag à ``calculate_impact``
     sans dupliquer la logique.
+
+    Sprint 22+ : helper public (avant : préfixe ``_``). Le seuil est importé
+    depuis ``src.data._constants`` (single source of truth, plus de magic
+    number 25.0 dupliqué).
+
+    Args:
+        avg_speed_kmh: vitesse moyenne du trafic routier en km/h. Si 0 ou
+            négatif, retourne ``False`` (= pas de données = pas de congestion).
+
+    Returns:
+        True si vitesse > 0 ET vitesse < seuil ADEME (25 km/h).
     """
     return avg_speed_kmh > 0 and avg_speed_kmh < _CONGESTION_SPEED_THRESHOLD_KMH
+
+
+# Backward-compat alias (Sprint 22+) — pour ne pas casser les imports
+# privés existants (``from src.routing.eco_calculator import _is_congested_from_speed``).
+# À virer Sprint 23+ une fois tous les callers migrés vers l'API publique.
+_is_congested_from_speed = is_congested_from_speed
 
 
 def _voiture_parking_cost_placeholder(duration_min: float) -> float:

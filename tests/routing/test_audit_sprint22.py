@@ -124,9 +124,9 @@ def test_usager_uses_real_traffic_for_voiture_speed():
     assert "cached_traffic" in src, (
         "Usager_1 doit importer cached_traffic pour la vitesse voiture live"
     )
-    # Doit utiliser _is_congested_from_speed
-    assert "_is_congested_from_speed" in src, (
-        "Usager_1 doit utiliser _is_congested_from_speed pour la vraie détection"
+    # Doit utiliser is_congested_from_speed (helper public Sprint 22+)
+    assert "is_congested_from_speed" in src, (
+        "Usager_1 doit utiliser is_congested_from_speed (helper public) pour la vraie détection"
     )
     # Ne doit plus avoir le proxy `is_congested=key == "voiture"` hardcodé
     assert 'is_congested=key == "voiture"' not in src, (

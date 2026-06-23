@@ -10,9 +10,15 @@ Recherche d'itineraire multimodale Lyon. Widgets :
 
 from __future__ import annotations
 
+import logging
+import math
+
 import streamlit as st
 
+logger = logging.getLogger(__name__)
+
 from dashboard.components.auto_refresh import setup_auto_refresh
+from dashboard.components.data_cache import cached_traffic
 from dashboard.components.data_status import render_data_status_banner
 from dashboard.components.freshness_badge import render_freshness_badge
 from dashboard.components.navigation import render_sidebar_navigation
@@ -34,7 +40,7 @@ from dashboard.components.widgets.usager import (
 )
 from src.config import get_settings
 from src.data.exceptions import DashboardDataError
-from src.routing.eco_calculator import calculate_impact
+from src.routing.eco_calculator import calculate_impact, is_congested_from_speed
 
 st.set_page_config(
     page_title="Mon trajet — LyonFlowFull",
@@ -95,19 +101,17 @@ if st.session_state.get("results_loaded"):
     # calculée pour un mode (session_state["trip_<key>"]), on l'utilise.
     # Sinon, fallback estimation par vitesses moyennes Lyon.
     # Sprint 22+ : vitesse voiture = ``cached_traffic()`` (live), pas hardcodée ;
-    # détection congestion via ``_is_congested_from_speed()`` (vraie valeur).
+    # détection congestion via ``is_congested_from_speed()`` (vraie valeur).
     if origin_coords and dest_coords and len(modes) >= 2:
-        import math
-
-        from dashboard.components.data_cache import cached_traffic
-        from src.routing.eco_calculator import _is_congested_from_speed
-
-        # Récupère la vitesse moyenne Lyon live (avec gestion d'erreur propre)
+        # Récupère la vitesse moyenne Lyon live (avec gestion d'erreur
+        # explicite : on catche DashboardDataError uniquement, pas Exception
+        # — un KeyboardInterrupt ou SystemExit doit remonter).
         try:
             traffic_live = cached_traffic()
             real_avg_speed = float(traffic_live.get("average_speed_kmh", 0) or 0)
             traffic_unavailable = False
-        except Exception:
+        except DashboardDataError as e:
+            logger.warning("cached_traffic() indispo dans comparateur : %s", e)
             real_avg_speed = 0.0
             traffic_unavailable = True
 
@@ -119,7 +123,7 @@ if st.session_state.get("results_loaded"):
             "tc": 18.0,     # moyen bus/tram/métro SYTRAL
             "voiture": real_avg_speed if real_avg_speed > 0 else 25.0,
         }
-        is_congested_voiture = _is_congested_from_speed(real_avg_speed)
+        is_congested_voiture = is_congested_from_speed(real_avg_speed)
 
         R_KM = 6371.0
         lat1, lon1 = math.radians(origin_coords[1]), math.radians(origin_coords[0])
