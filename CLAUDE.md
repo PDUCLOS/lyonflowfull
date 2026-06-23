@@ -43,7 +43,7 @@ LyonFlowFull est une plateforme MLOps end-to-end de prédiction et d'analyse du 
 
 ### État au 2026-06-22 (Sprint 21 — v0.11.0 — UX + Quantile + Sparkline + Docs cleanup)
 
-- 18 pages × 3 personas · **~60 widgets** · **8 collecteurs Bronze** · **15 DAGs Airflow**
+- 15 pages × 3 personas · **~60 widgets** · **8 collecteurs Bronze** · **15 DAGs Airflow**
 - ~180 fichiers Python · ~24 000 lignes
 - **615 tests verts** · ruff clean
 - **Sprint 20 (UX unifiée) — 4 axes livrés** :
@@ -63,7 +63,7 @@ LyonFlowFull est une plateforme MLOps end-to-end de prédiction et d'analyse du 
 
 ### État au 2026-06-21 (Sprint 18 — v0.10.0 — pgRouting routing voiture OSM)
 
-- 18 pages × 3 personas · **51 widgets** · **8 collecteurs Bronze** · **14 DAGs Airflow** (+1 `refresh_osm_traffic_costs` */15)
+- 15 pages × 3 personas · **51 widgets** · **8 collecteurs Bronze** · **14 DAGs Airflow** (+1 `refresh_osm_traffic_costs` */15)
 - ~175 fichiers Python · ~23 000 lignes
 - **35 tests routing (26 unit + 9 pgRouting)** · ruff clean
 - **Sprint 18 (2026-06-21) — pgRouting : routing voiture sur réseau routier OSM** :
@@ -77,7 +77,7 @@ LyonFlowFull est une plateforme MLOps end-to-end de prédiction et d'analyse du 
 
 ### État au 2026-06-19 (Sprint 15+ — v0.7.1 — mypy clean + training/stgcn package)
 
-- 18 pages × 3 personas · **51 widgets** · **8 collecteurs Bronze** · **13 DAGs Airflow**
+- 15 pages × 3 personas · **51 widgets** · **8 collecteurs Bronze** · **13 DAGs Airflow**
 - ~170 fichiers Python · ~22 000 lignes
 - **301 tests verts / 4 SKIP / 14 deselected** · ruff clean · **mypy clean (82 fichiers, 0 erreur)**
 - **Sprint 15+ v0.7.1 — Type safety** :
@@ -89,7 +89,7 @@ LyonFlowFull est une plateforme MLOps end-to-end de prédiction et d'analyse du 
 
 ### État au 2026-06-19 (Sprint 15+ — v0.7.0 — Interdépendances multimodales)
 
-- 18 pages × 3 personas · **51 widgets** (+3 : multimodal_heatmap, bus_traffic_spatial, mode_comparison) · **8 collecteurs Bronze** · **13 DAGs Airflow** (10 actifs + 1 cron backfill + 1 archive silver + 1 TomTom actif)
+- 15 pages × 3 personas · **51 widgets** (+3 : multimodal_heatmap, bus_traffic_spatial, mode_comparison) · **8 collecteurs Bronze** · **13 DAGs Airflow** (10 actifs + 1 cron backfill + 1 archive silver + 1 TomTom actif)
 - 9 endpoints API · 3 modèles ML · RGPD complet · ~170 fichiers Python · ~22 000 lignes
 - **283 tests verts (+65 nouveaux) / 4 SKIP / 14 deselected** · ruff clean
 - **Sprint 15+ (2026-06-19) — Analyse interdépendances multimodales (Axes 1 + 3)** :
@@ -110,7 +110,7 @@ LyonFlowFull est une plateforme MLOps end-to-end de prédiction et d'analyse du 
 
 ### État au 2026-06-18 (Sprint 13+ — v0.6.7 — TomTom Niveau 1)
 
-- 18 pages × 3 personas · **48 widgets** (+1 coherence_scatter) · **8 collecteurs Bronze** (TomTom réactivé) · **13 DAGs Airflow** (10 actifs + 1 cron backfill + 1 archive silver + 1 **TomTom actif**)
+- 15 pages × 3 personas · **48 widgets** (+1 coherence_scatter) · **8 collecteurs Bronze** (TomTom réactivé) · **13 DAGs Airflow** (10 actifs + 1 cron backfill + 1 archive silver + 1 **TomTom actif**)
 - 9 endpoints API · 3 modèles ML · RGPD complet · ~165 fichiers Python · ~21 000 lignes
 - **218 tests verts (+15 nouveaux) / 10 SKIP / 7 deselected** · ruff clean
 - **Sprint 13+ (2026-06-18) — TomTom Niveau 1 (cross-validation sources)** :
@@ -129,7 +129,7 @@ LyonFlowFull est une plateforme MLOps end-to-end de prédiction et d'analyse du 
 
 ### État au 2026-06-17 (Sprint 11+)
 
-- 18 pages × 3 personas · 47 widgets · 8 collecteurs Bronze · **13 DAGs Airflow** (10 actifs + 1 cron backfill + 1 TomTom no-op + 1 archive silver-to-minio)
+- 15 pages × 3 personas · 47 widgets · 8 collecteurs Bronze · **13 DAGs Airflow** (10 actifs + 1 cron backfill + 1 TomTom no-op + 1 archive silver-to-minio)
 - 9 endpoints API · 3 modèles ML (XGBoost H+1h focus + SpatioTemporalGCN sur données réelles) · RGPD complet
 - ~165 fichiers Python · ~21 000 lignes · **206 tests verts / 3 SKIP / 7 deselected (integration)** · ruff 54 → 6 erreurs cosmétiques
 - Couche data complète (db_query + data_loader) — `gold.trafic_predictions` repeuplée toutes les 15 min par `dag_inference_xgboost`
@@ -141,12 +141,12 @@ LyonFlowFull est une plateforme MLOps end-to-end de prédiction et d'analyse du 
 
 ### État au 2026-06-18 (Sprint 13 — v0.6.6)
 
-- 18 pages × 3 personas · 47 widgets · 8 collecteurs Bronze · 13 DAGs Airflow
+- 15 pages × 3 personas · 47 widgets · 8 collecteurs Bronze · 13 DAGs Airflow
 - 9 endpoints API · 3 modèles ML · RGPD complet · ~165 fichiers Python · ~21 000 lignes
 - **203 tests verts / 4 SKIP / 7 deselected** · ruff clean (6 cosmétiques pré-existantes)
 - **Sprint 13 (2026-06-18) — Audit cohérence pipeline + UX** :
   - **Version unique** : source de vérité `src/config.py` (`get_settings().app_version`). Sidebar, A_Propos, RGPD, Usager_1 — tous importent dynamiquement. Zéro version hardcodée dans le dashboard.
-  - **Auto-refresh par persona** : `dashboard/components/auto_refresh.py` + `streamlit-autorefresh`. Pro TCL 30s, Usager 60s, Élu 300s. Câblé dans les 18 pages.
+  - **Auto-refresh par persona** : `dashboard/components/auto_refresh.py` + `streamlit-autorefresh`. Pro TCL 30s, Usager 60s, Élu 300s. Câblé dans les 15 pages.
   - **Nettoyage complet `force_mock`** : suppression de `_is_demo_mode()`, `_maybe_force_mock()`, `_demo_mode_cache` dans `data_loader.py`. Param `force_mock` viré de ~60 signatures (data_loader + data_cache). Docstrings nettoyées dans 5 widgets.
   - **Cross-persona widgets** : `dashboard/components/widgets/common/__init__.py` re-exporte `render_traffic_map_compact`. `Usager_1` et `Elu_1` importent depuis `widgets.common` (plus de dépendance directe Pro TCL → Usager).
   - **Script cohérence** : `scripts/coherence-check.sh` (12 checks) + target `make coherence-check`. Vérifie : version unique, zéro mock, auto-refresh, cross-persona, TTL cohérence.
@@ -154,7 +154,7 @@ LyonFlowFull est une plateforme MLOps end-to-end de prédiction et d'analyse du 
 
 ### État au 2026-06-18 (Sprint 12+ — v0.6.5)
 
-- 18 pages × 3 personas · 47 widgets · 8 collecteurs Bronze · 13 DAGs Airflow
+- 15 pages × 3 personas · 47 widgets · 8 collecteurs Bronze · 13 DAGs Airflow
 - 9 endpoints API · 3 modèles ML · RGPD complet · ~165 fichiers Python · ~21 000 lignes
 - **198 tests verts / 0 régression** · ruff clean
 - **Sprint 12+ (2026-06-18, commit `862d991`) — Cleanup final audits Pro TCL + Usager** :
@@ -167,7 +167,7 @@ LyonFlowFull est une plateforme MLOps end-to-end de prédiction et d'analyse du 
 
 ### État au 2026-06-12
 
-- 18 pages × 3 personas · 47 widgets · 8 collecteurs Bronze · **13 DAGs Airflow** (10 actifs + 1 cron backfill + 1 TomTom no-op + 1 archive silver-to-minio)
+- 15 pages × 3 personas · 47 widgets · 8 collecteurs Bronze · **13 DAGs Airflow** (10 actifs + 1 cron backfill + 1 TomTom no-op + 1 archive silver-to-minio)
 - 9 endpoints API · 3 modèles ML (XGBoost H+1h focus + SpatioTemporalGCN sur données réelles) · RGPD complet
 - ~165 fichiers Python · ~21 000 lignes · **176 tests verts / 3 SKIP / 7 deselected (integration)** · ruff 54 erreurs cosmétiques (Sprint 9+ : cleanup `_is_demo_mode` + fix W291/I001 en cours)
 - Couche data complète (db_query + data_loader) — `gold.trafic_predictions` repeuplée toutes les 15 min par `dag_inference_xgboost`
@@ -227,7 +227,7 @@ Voir [AGENTS.md](AGENTS.md) pour les conventions et la mémoire projet.
 | ML Vélov | XGBoost (label encoding, 2 horizons H+30min + H+1h) — toutes les heures :50 |
 | ML Bus | XGBoost delay (phase analyse — collecte SIRI Lite en prod) |
 | API | FastAPI |
-| Dashboard | Streamlit multi-pages (18 pages × 3 personas) |
+| Dashboard | Streamlit multi-pages (15 pages × 3 personas) |
 | Monitoring | Prometheus + Alertmanager + Grafana (stack monitoring Sprint 8+) |
 | Transformation | psycopg2 pur (pas de Polars dans Airflow) |
 | CI/CD | GitHub Actions |
@@ -409,7 +409,7 @@ Chaque table Bronze : `fetched_at TIMESTAMPTZ` + `raw_data JSONB` + colonnes ext
 
 ## Dashboard — Architecture 3 personas
 
-**18 pages × 3 personas** (Usager, Pro TCL, Élu) + Accueil. **~60 widgets**.
+**15 pages × 3 personas** (Usager, Pro TCL, Élu) + Accueil. **~60 widgets**.
 
 ### Composants UX transversaux (Sprint 20+)
 
@@ -572,7 +572,7 @@ lyonflowfull/
 │   ├── sql/                # 20+ migrations (referentiel, vues matérialisées, audit)
 │   ├── maintenance/        # backfill scripts
 │   └── healthcheck-vps.sh  # NOUVEAU Sprint 8
-├── dashboard/              # 18 pages × 3 personas
+├── dashboard/              # 15 pages × 3 personas
 ├── tests/
 │   ├── conftest.py             # NOUVEAU Sprint 8 : MockDB + 3 fixtures
 │   ├── data/                   # tests unitaires data_loader/db_query

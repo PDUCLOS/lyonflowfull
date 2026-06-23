@@ -17,7 +17,7 @@
 #
 # PHASE 2 (ACTIVE) — Déploiement VPS production (branche `vps`)
 # - Cible production unique : VPS 51.83.159.224 (Ubuntu, 6 CPU, 12 Go RAM, 2× 100 Go SSD)
-# - **v0.11.0** — 615 tests verts, ~60 widgets, 18 pages × 3 personas, 15 DAGs Airflow
+# - **v0.11.0** — 615 tests verts, ~60 widgets, 15 pages × 3 personas, 15 DAGs Airflow
 # - Sprints livrés : VPS 1-8, 9+, 11+, 12+, 13, 13+, 15+, 17, 17+, 18, 20, 21
 #
 # Résumé des sprints majeurs :
