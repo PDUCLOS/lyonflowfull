@@ -36,6 +36,7 @@ from typing import Any
 
 import pandas as pd
 
+from src.data._constants import FRESHNESS_LIVE_MAX_S, FRESHNESS_STALE_MAX_S
 from src.data.db_query import (
     _is_db_available,
     clean_line_label,
@@ -51,7 +52,6 @@ from src.data.db_query import (
     get_velov_stations_geo,
 )
 from src.data.exceptions import DashboardDataError
-from src.data._constants import FRESHNESS_LIVE_MAX_S, FRESHNESS_STALE_MAX_S
 from src.db.connection import execute_query
 
 logger = logging.getLogger(__name__)

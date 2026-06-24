@@ -39,15 +39,15 @@ def render_report_builder() -> dict:
         "Sections",
         [
             "KPIs par ligne (OTP, retard, charge)",
-            "Heatmap OTP lignes × heures",
-            "Matrice corrélation bus × trafic",
+            "Heatmap OTP lignes x heures",
+            "Matrice corrélation bus x trafic",
             "Top bottlenecks",
             "Alertes prédites",
             "Backtesting vs réel",
         ],
         default=[
             "KPIs par ligne (OTP, retard, charge)",
-            "Matrice corrélation bus × trafic",
+            "Matrice corrélation bus x trafic",
         ],
         key="rb_sections",
     )

@@ -54,6 +54,47 @@ tab1, tab2, tab3, tab4 = st.tabs([
     "Propagation",
 ])
 
+
+def _render_segments_and_cause(line_id: str | None) -> None:
+    """Render grouped : table des segments + analyse causale."""
+    from dashboard.components.data_cache import cached_infra_bottlenecks
+
+    col1, col2 = st.columns([3, 2])
+    with col1:
+        st.markdown("##### Table des segments")
+        render_segment_table(line_id=line_id, height=350)
+    with col2:
+        st.markdown("##### Analyse causale (1er segment problématique)")
+        bn_df = cached_infra_bottlenecks(top=500)
+        if not bn_df.empty:
+            if line_id:
+                bn_df = bn_df[bn_df["line_ref"] == line_id]
+            infra_rows = (
+                bn_df[bn_df["diagnosis"] == "infra"]
+                if "diagnosis" in bn_df.columns
+                else bn_df.iloc[:0]
+            )
+            if not infra_rows.empty:
+                row = infra_rows.iloc[0]
+                delay_s = row.get("bus_delay_seconds", 0) or 0
+                render_cause_analysis(
+                    {
+                        "line_id": row.get("line_ref", "?"),
+                        "name": row.get("segment_id", "—"),
+                        "bus_state": "delayed" if delay_s > 120 else "on_time",
+                        "traffic_state": "jammed"
+                        if (row.get("traffic_speed_kmh", 50) or 50) < 25
+                        else "fluid",
+                        "diagnosis": row.get("diagnosis", "ok"),
+                        "delay_min": round(delay_s / 60, 1),
+                    }
+                )
+            else:
+                render_cause_analysis(None)
+        else:
+            render_cause_analysis(None)
+
+
 with tab1:
     # Sprint 22+ P1 — Les 3 widgets de Tab1 (matrice corrélation +
     # segment_table + cause_analysis) sont en ``button-gate`` au lieu de
@@ -189,49 +230,3 @@ st.caption(
 )
 
 
-# === Helper privé Sprint 22+ P1 — appelé par deferred_render (button-gate) ===
-# Avant (commit 071fcce) : les 2 widgets étaient rendus systématiquement
-# à l'ouverture de Tab1 (consommait 0.5-2s de cached_infra_bottlenecks
-# en pure perte si l'user n'ouvrait pas le tab). Maintenant : 1 seul
-# button-gate pour les 2 widgets (factorisation du hit DB).
-
-
-def _render_segments_and_cause(line_id: str | None) -> None:
-    """Render grouped : table des segments + analyse causale."""
-    from dashboard.components.data_cache import cached_infra_bottlenecks
-
-    # Layout 2 colonnes : table à gauche (3), analyse causale à droite (2)
-    col1, col2 = st.columns([3, 2])
-    with col1:
-        st.markdown("##### Table des segments")
-        render_segment_table(line_id=line_id, height=350)
-    with col2:
-        st.markdown("##### Analyse causale (1er segment problématique)")
-        bn_df = cached_infra_bottlenecks(top=500)
-        if not bn_df.empty:
-            if line_id:
-                bn_df = bn_df[bn_df["line_ref"] == line_id]
-            infra_rows = (
-                bn_df[bn_df["diagnosis"] == "infra"]
-                if "diagnosis" in bn_df.columns
-                else bn_df.iloc[:0]
-            )
-            if not infra_rows.empty:
-                row = infra_rows.iloc[0]
-                delay_s = row.get("bus_delay_seconds", 0) or 0
-                render_cause_analysis(
-                    {
-                        "line_id": row.get("line_ref", "?"),
-                        "name": row.get("segment_id", "—"),
-                        "bus_state": "delayed" if delay_s > 120 else "on_time",
-                        "traffic_state": "jammed"
-                        if (row.get("traffic_speed_kmh", 50) or 50) < 25
-                        else "fluid",
-                        "diagnosis": row.get("diagnosis", "ok"),
-                        "delay_min": round(delay_s / 60, 1),
-                    }
-                )
-            else:
-                render_cause_analysis(None)
-        else:
-            render_cause_analysis(None)

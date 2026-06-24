@@ -10,7 +10,6 @@ préfixe underscore. Les helpers privés restent en lowercase.
 
 from __future__ import annotations
 
-
 # =============================================================================
 # Freshness — âge maximal d'une mesure DB pour la classifier
 # =============================================================================

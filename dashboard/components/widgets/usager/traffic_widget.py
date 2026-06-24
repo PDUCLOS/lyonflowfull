@@ -19,7 +19,6 @@ import streamlit as st
 from dashboard.components.colors import COLORS
 from dashboard.components.data_cache import cached_traffic
 from dashboard.components.loading_state import loading_wrapper
-from src.data._constants import FRESHNESS_LIVE_MAX_S, FRESHNESS_STALE_MAX_S
 
 
 def render_traffic_widget(traffic: dict | None = None) -> None:

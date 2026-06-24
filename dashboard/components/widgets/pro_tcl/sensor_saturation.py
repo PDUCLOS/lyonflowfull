@@ -24,7 +24,6 @@ from dashboard.components.error_display import show_error
 from dashboard.components.loading_state import loading_wrapper
 from src.data.exceptions import DashboardDataError
 
-
 _STATUS_COLOR = {
     "ok": "#4CAF50",       # vert
     "stale": "#FFC107",    # jaune (warning)
@@ -165,7 +164,7 @@ def render_sensor_saturation() -> None:
     _render_status_table(df, top_n=20)
 
     st.caption(
-        f"Source : `gold.mv_sensor_saturation` (migration 034 (matérialisée)) — "
-        f"v85 sur 7j + amplitude 24h + seuil stuck à 2%. "
-        f"Refresh via vue (cache Streamlit 60s)."
+        "Source : `gold.mv_sensor_saturation` (migration 034 (matérialisée)) — "
+        "v85 sur 7j + amplitude 24h + seuil stuck à 2%. "
+        "Refresh via vue (cache Streamlit 60s)."
     )

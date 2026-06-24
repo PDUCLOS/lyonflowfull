@@ -65,7 +65,7 @@ def _train_xgboost_speed():
 
     Avant : 4 horizons (5min, 1h, 3h, 6h) — en contradiction avec la
     règle projet focus H+1h strict (Sprint VPS-6). Le DAG
-    ``dag_daily_speed_train`` (1×/jour 03h) le remplace fonctionnellement
+    ``dag_daily_speed_train`` (1x/jour 03h) le remplace fonctionnellement
     pour H+1h.
 
     Action Sprint 22+ : on garde SEUL H+1h ici pour ne pas perdre

@@ -17,15 +17,16 @@ import streamlit as st
 
 logger = logging.getLogger(__name__)
 
-from dashboard.components.auto_refresh import setup_auto_refresh
-from dashboard.components.data_cache import cached_traffic
-from dashboard.components.data_status import render_data_status_banner
-from dashboard.components.freshness_badge import render_freshness_badge
-from dashboard.components.navigation import render_sidebar_navigation
-from dashboard.components.persona_guard import apply_persona_guard
-from dashboard.components.theme import inject_theme
-from dashboard.components.widgets.common import render_traffic_map_compact
-from dashboard.components.widgets.usager import (
+from dashboard.components.auto_refresh import setup_auto_refresh  # noqa: E402
+from dashboard.components.data_cache import cached_traffic  # noqa: E402
+from dashboard.components.data_status import render_data_status_banner  # noqa: E402
+from dashboard.components.deferred_widget import deferred_render  # noqa: E402
+from dashboard.components.freshness_badge import render_freshness_badge  # noqa: E402
+from dashboard.components.navigation import render_sidebar_navigation  # noqa: E402
+from dashboard.components.persona_guard import apply_persona_guard  # noqa: E402
+from dashboard.components.theme import inject_theme  # noqa: E402
+from dashboard.components.widgets.common import render_traffic_map_compact  # noqa: E402
+from dashboard.components.widgets.usager import (  # noqa: E402
     render_itinerary_result,
     render_lieux_velov_map,
     render_mode_comparison,
@@ -38,15 +39,29 @@ from dashboard.components.widgets.usager import (
     render_velov_widget,
     render_weather_widget,
 )
-from src.config import get_settings
-from src.data.exceptions import DashboardDataError
-from src.routing.eco_calculator import calculate_impact, is_congested_from_speed
+from src.config import get_settings  # noqa: E402
+from src.data.exceptions import DashboardDataError  # noqa: E402
+from src.routing.eco_calculator import calculate_impact, is_congested_from_speed  # noqa: E402
 
 st.set_page_config(
     page_title="Mon trajet — LyonFlowFull",
     page_icon="🧭",
     layout="wide",
 )
+
+
+def _render_transit_trip_for_user(origin: str, destination: str) -> None:
+    """Helper pour deferred_render : appel GTFS + stockage session_state."""
+    try:
+        tc_result = render_transit_trip(
+            origin=origin,
+            destination=destination,
+        )
+        if tc_result:
+            st.session_state["trip_tc"] = tc_result
+    except DashboardDataError as e:
+        st.error(f"⚠️ {e}")
+
 
 apply_persona_guard(expected_persona="usager")
 inject_theme()
@@ -233,11 +248,6 @@ if st.session_state.get("results_loaded"):
         render_weather_widget()
 
     # ── Trajet transport en commun (si TC sélectionné, Sprint 14) ─────────
-    # Sprint 22+ — button-gate (deferred_render) au lieu d'expander seul :
-    # render_transit_trip() fait des appels GTFS lourds (1-3s) — on attend
-    # le clic explicite de l'user pour déclencher le calcul. Sans ça, le
-    # seul `with st.expander()` exécute le code à l'ouverture (cf. P0-1
-    # Sprint 15+ dans deferred_widget.py:3).
     if has_tc:
         st.markdown("---")
         deferred_render(
@@ -340,25 +350,3 @@ if st.session_state.get("results_loaded"):
 st.caption(f"LyonFlowFull v{get_settings().app_version} · 100% pipeline (PostgreSQL, Airflow, MLflow)")
 
 
-# === Helpers privés Sprint 22+ — appelés par deferred_render (button-gate) ===
-# Avant : ces appels étaient inline dans des ``with st.expander()`` (P2
-# du quick wins Sprint 22+). Le seul expander ne différait PAS le calcul,
-# donc le code s'exécutait à l'ouverture (coût GTFS 1-3s). Le wrapping
-# dans ``deferred_render`` (button-gate) attend le clic explicite de
-# l'user avant de lancer le calcul. Cf. P0-1 Sprint 15+ dans
-# deferred_widget.py:3.
-
-
-def _render_transit_trip_for_user(origin: str, destination: str) -> None:
-    """Helper pour deferred_render : appel GTFS + stockage session_state."""
-    try:
-        # Sprint 16 Axe C — Stocke la durée réelle dans session_state
-        # pour le comparateur multimodal.
-        tc_result = render_transit_trip(
-            origin=origin,
-            destination=destination,
-        )
-        if tc_result:
-            st.session_state["trip_tc"] = tc_result
-    except DashboardDataError as e:
-        st.error(f"⚠️ {e}")

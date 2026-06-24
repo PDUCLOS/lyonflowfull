@@ -67,7 +67,7 @@ CALORIES_PER_KM = {"velov": 46.0, "marche": 50.0}
 
 # Détection congestion voiture (< 25 km/h vitesse moyenne = bouchons)
 # Sprint 22+ : importé depuis src.data._constants (single source of truth).
-from src.data._constants import CONGESTION_SPEED_THRESHOLD_KMH as _CONGESTION_SPEED_THRESHOLD_KMH  # noqa: E402,F401
+from src.data._constants import CONGESTION_SPEED_THRESHOLD_KMH as _CONGESTION_SPEED_THRESHOLD_KMH  # noqa: E402
 
 # Scoring composite (cf. spec Annexe A) — 1 min vaut ~0.30 € pour l'usager
 # Source : valeur du temps CEREMA 2023 (~18 €/h).

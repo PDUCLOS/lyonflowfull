@@ -11,7 +11,7 @@ le recompute.
 
 Pourquoi ce DAG existe :
 - La migration 033 créait une VIEW (non matérialisée) qui scannait
-  ~889k rows × 2 fenêtres temporelles + percentiles + STDDEV + 3
+  ~889k rows x 2 fenêtres temporelles + percentiles + STDDEV + 3
   LEFT JOINs → > 60 s en prod (timeout widget Streamlit).
 - Migration 034 matérialise la vue + index unique.
 - Ce DAG re-calcule la matérialisation toutes les 15 min → 0-15 min
@@ -28,7 +28,6 @@ from airflow.decorators import dag, task
 from airflow.operators.empty import EmptyOperator
 
 from src.config import get_settings
-
 
 _DAG_ID = "refresh_sensor_saturation"
 _DAG_SCHEDULE = "7,22,37,52 * * * *"  # toutes les 15 min, décalé :07
