@@ -92,7 +92,8 @@ def run_drift_report(
     # Fetch si non fourni
     if reference_df is None or current_df is None:
         reference_df, current_df = _fetch_reference_current(
-            hours_current=hours_current, hours_reference=hours_reference,
+            hours_current=hours_current,
+            hours_reference=hours_reference,
         )
 
     base_result = {
@@ -110,10 +111,7 @@ def run_drift_report(
         return base_result
 
     # Filtre colonnes disponibles
-    available = [
-        c for c in NUMERICAL_FEATURES
-        if c in reference_df.columns and c in current_df.columns
-    ]
+    available = [c for c in NUMERICAL_FEATURES if c in reference_df.columns and c in current_df.columns]
     if not available:
         base_result["details"] = {"info": "no numerical features available"}
         return base_result
@@ -168,13 +166,11 @@ def generate_html_drift_report(
     # Fetch si non fourni
     if reference_df is None or current_df is None:
         reference_df, current_df = _fetch_reference_current(
-            hours_current=hours_current, hours_reference=hours_reference,
+            hours_current=hours_current,
+            hours_reference=hours_reference,
         )
 
-    available = [
-        c for c in NUMERICAL_FEATURES
-        if c in reference_df.columns and c in current_df.columns
-    ]
+    available = [c for c in NUMERICAL_FEATURES if c in reference_df.columns and c in current_df.columns]
     if not available:
         return None
 
@@ -227,7 +223,10 @@ def persist_drift_report(report: dict[str, Any], db_connection) -> bool:
                     report["share_drifted_features"],
                     report["n_ref"],
                     report["n_current"],
-                    ref_from, ref_to, cur_from, cur_to,
+                    ref_from,
+                    ref_to,
+                    cur_from,
+                    cur_to,
                     json.dumps(report["details"], default=str),
                 ),
             )

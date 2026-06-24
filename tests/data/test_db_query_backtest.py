@@ -46,6 +46,7 @@ def test_get_xgb_vs_tomtom_importable():
     assert callable(db_query.get_xgb_vs_tomtom)
     # Vérif signature via inspect
     import inspect
+
     sig = inspect.signature(db_query.get_xgb_vs_tomtom)
     assert "hours" in sig.parameters
     assert "limit" in sig.parameters
@@ -62,5 +63,6 @@ def test_get_xgb_accuracy_summary_importable():
     """get_xgb_accuracy_summary() doit être importable avec signature correcte."""
     assert callable(db_query.get_xgb_accuracy_summary)
     import inspect
+
     sig = inspect.signature(db_query.get_xgb_accuracy_summary)
     assert "hours" in sig.parameters

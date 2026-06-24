@@ -72,7 +72,9 @@ def render_mode_summary(
     # Bandeau compact : libellé mode + distance + durée en haut
     st.markdown(
         f"""
-        <div class="lyf-label" style="background:var(--bg-card);padding:0.7rem 1rem;border-radius:8px;border-left:4px solid {accent};display:flex;align-items:center;gap:0.8rem;margin:0.5rem 0 0.7rem 0;flex-wrap:wrap;">
+        <div class="lyf-label" style="background:var(--bg-card);padding:0.7rem 1rem;border-radius:8px;border-left:4px solid {
+            accent
+        };display:flex;align-items:center;gap:0.8rem;margin:0.5rem 0 0.7rem 0;flex-wrap:wrap;">
             <span style="background:{accent};color:white;padding:0.25rem 0.7rem;
                          border-radius:12px;font-size:0.8rem;font-weight:600;">
                 {mode_label}

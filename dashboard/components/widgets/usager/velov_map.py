@@ -64,16 +64,13 @@ def _load_stations_with_predictions() -> pd.DataFrame:
         pred_h1_latest = (
             pred_h1.sort_values("prediction_timestamp", ascending=False)
             .drop_duplicates(subset=["station_id"])
-            .rename(columns={"predicted_bikes": "predicted_bikes_h1"})[
-                ["station_id", "predicted_bikes_h1"]
-            ]
+            .rename(columns={"predicted_bikes": "predicted_bikes_h1"})[["station_id", "predicted_bikes_h1"]]
         )
         stations = stations.merge(pred_h1_latest, on="station_id", how="left")
     else:
         stations["predicted_bikes_h1"] = None
 
     return stations
-
 
 
 def render_velov_map_compact(*, height: int = 280, key_suffix: str = "") -> None:

@@ -107,8 +107,8 @@ class TestGlobalScoreWrapper:
         df = pd.DataFrame(
             [
                 ("bronze.trafic_boucles", 80.0),  # poids 3
-                ("bronze.tcl_vehicles", 60.0),    # poids 2
-                ("bronze.velov", 40.0),            # poids 2
+                ("bronze.tcl_vehicles", 60.0),  # poids 2
+                ("bronze.velov", 40.0),  # poids 2
             ],
             columns=["source", "health_score"],
         )

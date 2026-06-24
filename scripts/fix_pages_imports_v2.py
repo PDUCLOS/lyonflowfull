@@ -1,12 +1,22 @@
 """Fix le bloc d'import cassé dans les pages (v2)."""
+
 import re
 from pathlib import Path
 
 files = [
-    "Elu_3_Avant_Apres.py", "Elu_4_Simulateur.py", "Elu_5_Rapport.py",
-    "Pro_1_PCC_Live.py", "Pro_2_Heatmap_OTP.py", "Pro_3_Correlation.py",
-    "Pro_4_Simulateur.py", "Usager_1_Mon_Trajet.py", "Usager_2_Alertes.py",
-    "9_RGPD_Conformite.py", "A_Propos.py", "Elu_1_Synthese.py", "Elu_2_Bottlenecks.py",
+    "Elu_3_Avant_Apres.py",
+    "Elu_4_Simulateur.py",
+    "Elu_5_Rapport.py",
+    "Pro_1_PCC_Live.py",
+    "Pro_2_Heatmap_OTP.py",
+    "Pro_3_Correlation.py",
+    "Pro_4_Simulateur.py",
+    "Usager_1_Mon_Trajet.py",
+    "Usager_2_Alertes.py",
+    "9_RGPD_Conformite.py",
+    "A_Propos.py",
+    "Elu_1_Synthese.py",
+    "Elu_2_Bottlenecks.py",
 ]
 
 # Pattern: from X import (\n...freshness_badge...\n) — block contenant un freshness_badge
@@ -37,9 +47,7 @@ def fix_file(path: Path) -> int:
             continue
         # Extraire les imports valides (sans freshness_badge)
         inner = m.group(2)
-        cleaned_inner = re.sub(
-            r"^.*freshness_badge.*\n", "", inner, flags=re.MULTILINE
-        ).rstrip("\n")
+        cleaned_inner = re.sub(r"^.*freshness_badge.*\n", "", inner, flags=re.MULTILINE).rstrip("\n")
         # Si cleaned est vide ou ne contient que des whitespace, ne pas garder le bloc
         if not cleaned_inner.strip():
             # Supprime tout le bloc (incluant le from X import () et l'import cassé)

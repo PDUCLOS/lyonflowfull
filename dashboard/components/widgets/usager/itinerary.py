@@ -139,10 +139,7 @@ def render_itinerary_result(
         return None
 
     if len(alternatives) > 1:
-        options = [
-            f"Itinéraire {i+1} — {_fmt_route_label(it)}"
-            for i, it in enumerate(alternatives)
-        ]
+        options = [f"Itinéraire {i + 1} — {_fmt_route_label(it)}" for i, it in enumerate(alternatives)]
         chosen_idx = st.radio(
             "🛣️ Choisis ton itinéraire",
             options=range(len(alternatives)),
@@ -151,7 +148,7 @@ def render_itinerary_result(
             key="itin_alt_choice",
             horizontal=True,
             help="3 alternatives calculées par pgr_ksp (algorithme Yen). "
-                 "Différentes rues principales pour comparer les temps.",
+            "Différentes rues principales pour comparer les temps.",
         )
         itinerary = alternatives[chosen_idx]
     else:
@@ -256,10 +253,7 @@ def _render_map(
                     [seg.end_lat, seg.end_lon],
                 ]
 
-            popup = (
-                f"🚗 <b>{seg.speed_kmh:.0f} km/h</b><br>"
-                f"📏 {seg.length_m:.0f} m · 🕐 {seg.duration_s:.0f}s"
-            )
+            popup = f"🚗 <b>{seg.speed_kmh:.0f} km/h</b><br>📏 {seg.length_m:.0f} m · 🕐 {seg.duration_s:.0f}s"
             if seg.channel_id:
                 popup += f"<br>🛣️ {seg.channel_id}"
 

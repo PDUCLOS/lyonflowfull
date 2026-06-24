@@ -470,12 +470,15 @@ def plan_velov_trip(
     # Haversine x 1.3 (facteur detour urbain) — pas de Dijkstra pour velo,
     # le graphe routier est taille pour voitures et coute 3-8s a construire.
     road_factor = 1.3
-    cycle_dist_m = _haversine_m(
-        float(origin_station["velov_lat"]),
-        float(origin_station["velov_lon"]),
-        float(dest_station["velov_lat"]),
-        float(dest_station["velov_lon"]),
-    ) * road_factor
+    cycle_dist_m = (
+        _haversine_m(
+            float(origin_station["velov_lat"]),
+            float(origin_station["velov_lon"]),
+            float(dest_station["velov_lat"]),
+            float(dest_station["velov_lon"]),
+        )
+        * road_factor
+    )
     cycle_dur_min = round(cycle_dist_m / 1000.0 / cyclist_speed_kmh * 60.0, 1)
     cycle_note = f"Distance estimee (x{road_factor}, ~{cyclist_speed_kmh} km/h)"
     seg2 = VelovSegment(

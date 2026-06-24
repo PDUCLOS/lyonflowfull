@@ -36,15 +36,15 @@ from dashboard.components.plotly_theme import apply_lyf_theme
 from src.data.exceptions import DashboardDataError
 
 # Seuils d'accuracy (cf SPEC_SPRINT_16.md §A.1)
-MAE_GREEN_THRESHOLD = 5.0   # km/h — accurate
+MAE_GREEN_THRESHOLD = 5.0  # km/h — accurate
 MAE_YELLOW_THRESHOLD = 15.0  # km/h — acceptable au-delà
 MAE_ALERT_THRESHOLD = 10.0  # km/h — bande grise sur la courbe temporelle
 
 # Couleurs accuracy_band
 _BAND_COLORS = {
-    "accurate": "#4CAF50",   # vert
+    "accurate": "#4CAF50",  # vert
     "acceptable": "#FF9800",  # orange
-    "poor": "#F44336",        # rouge
+    "poor": "#F44336",  # rouge
 }
 
 
@@ -77,7 +77,11 @@ def _scatter_xgb_vs_tomtom(pairs: pd.DataFrame) -> go.Figure:
     if pairs.empty:
         fig.add_annotation(
             text="Aucune paire (XGBoost, TomTom) à afficher",
-            xref="paper", yref="paper", x=0.5, y=0.5, showarrow=False,
+            xref="paper",
+            yref="paper",
+            x=0.5,
+            y=0.5,
+            showarrow=False,
         )
         return fig
 
@@ -144,7 +148,11 @@ def _mae_temporal_chart(summary: pd.DataFrame) -> go.Figure:
     if summary.empty:
         fig.add_annotation(
             text="Aucune donnée historique (7 derniers jours)",
-            xref="paper", yref="paper", x=0.5, y=0.5, showarrow=False,
+            xref="paper",
+            yref="paper",
+            x=0.5,
+            y=0.5,
+            showarrow=False,
         )
         return fig
 
@@ -182,11 +190,7 @@ def _mae_temporal_chart(summary: pd.DataFrame) -> go.Figure:
 
 def _accuracy_distribution(pairs: pd.DataFrame) -> go.Figure:
     """Bar chart distribution accuracy_band (accurate / acceptable / poor)."""
-    counts = (
-        pairs["accuracy_band"].value_counts().reindex(
-            ["accurate", "acceptable", "poor"], fill_value=0
-        )
-    )
+    counts = pairs["accuracy_band"].value_counts().reindex(["accurate", "acceptable", "poor"], fill_value=0)
     fig = go.Figure(
         go.Bar(
             x=counts.index.tolist(),
@@ -240,43 +244,39 @@ def render_backtest_dashboard(hours_pairs: int = 24, hours_summary: int = 168) -
     # ── 1. KPIs (4 cards HTML inline) ──────────────────────────────────────
     k = _compute_kpis(pairs)
     kpi_mae_color = (
-        "#4CAF50" if k["mae_kmh"] < MAE_GREEN_THRESHOLD
-        else "#FF9800" if k["mae_kmh"] < MAE_YELLOW_THRESHOLD
+        "#4CAF50"
+        if k["mae_kmh"] < MAE_GREEN_THRESHOLD
+        else "#FF9800"
+        if k["mae_kmh"] < MAE_YELLOW_THRESHOLD
         else "#F44336"
     )
-    kpi_mape_color = (
-        "#4CAF50" if k["mape_pct"] < 15
-        else "#FF9800" if k["mape_pct"] < 30
-        else "#F44336"
-    )
+    kpi_mape_color = "#4CAF50" if k["mape_pct"] < 15 else "#FF9800" if k["mape_pct"] < 30 else "#F44336"
     kpi_p90_color = (
-        "#4CAF50" if k["p90_kmh"] < MAE_YELLOW_THRESHOLD
-        else "#FF9800" if k["p90_kmh"] < MAE_YELLOW_THRESHOLD * 2
+        "#4CAF50"
+        if k["p90_kmh"] < MAE_YELLOW_THRESHOLD
+        else "#FF9800"
+        if k["p90_kmh"] < MAE_YELLOW_THRESHOLD * 2
         else "#F44336"
     )
-    kpi_n_color = (
-        "#4CAF50" if k["n_pairs"] >= 50
-        else "#FF9800" if k["n_pairs"] >= 10
-        else "#F44336"
-    )
+    kpi_n_color = "#4CAF50" if k["n_pairs"] >= 50 else "#FF9800" if k["n_pairs"] >= 10 else "#F44336"
     st.markdown(
         f"""
         <div style="display:flex;gap:0.8rem;margin-bottom:1rem;flex-wrap:wrap;">
             <div class="lyonflow-card" style="flex:1;min-width:180px;padding:0.8rem;border-left:4px solid {kpi_mae_color};">
                 <div class="lyf-sublabel">MAE (km/h)</div>
-                <div style="font-size:1.8rem;font-weight:700;color:{kpi_mae_color};">{k['mae_kmh']:.2f}</div>
+                <div style="font-size:1.8rem;font-weight:700;color:{kpi_mae_color};">{k["mae_kmh"]:.2f}</div>
             </div>
             <div class="lyonflow-card" style="flex:1;min-width:180px;padding:0.8rem;border-left:4px solid {kpi_mape_color};">
                 <div class="lyf-sublabel">MAPE (%)</div>
-                <div style="font-size:1.8rem;font-weight:700;color:{kpi_mape_color};">{k['mape_pct']:.1f}</div>
+                <div style="font-size:1.8rem;font-weight:700;color:{kpi_mape_color};">{k["mape_pct"]:.1f}</div>
             </div>
             <div class="lyonflow-card" style="flex:1;min-width:180px;padding:0.8rem;border-left:4px solid {kpi_p90_color};">
                 <div class="lyf-sublabel">P90 erreur (km/h)</div>
-                <div style="font-size:1.8rem;font-weight:700;color:{kpi_p90_color};">{k['p90_kmh']:.2f}</div>
+                <div style="font-size:1.8rem;font-weight:700;color:{kpi_p90_color};">{k["p90_kmh"]:.2f}</div>
             </div>
             <div class="lyonflow-card" style="flex:1;min-width:180px;padding:0.8rem;border-left:4px solid {kpi_n_color};">
                 <div class="lyf-sublabel">Paires validées (n)</div>
-                <div style="font-size:1.8rem;font-weight:700;color:{kpi_n_color};">{k['n_pairs']}</div>
+                <div style="font-size:1.8rem;font-weight:700;color:{kpi_n_color};">{k["n_pairs"]}</div>
             </div>
         </div>
         """,
@@ -301,18 +301,16 @@ def render_backtest_dashboard(hours_pairs: int = 24, hours_summary: int = 168) -
         plotly_with_alt(_accuracy_distribution(pairs), use_container_width=True)
     with col_table:
         st.markdown("##### 🔻 Top 10 pires prédictions")
-        top10 = (
-            pairs.nlargest(10, "error_abs_kmh")[
-                ["axis_key", "xgb_speed_kmh", "tomtom_speed_kmh",
-                 "error_abs_kmh", "accuracy_band", "calculated_at"]
-            ]
-            .rename(columns={
+        top10 = pairs.nlargest(10, "error_abs_kmh")[
+            ["axis_key", "xgb_speed_kmh", "tomtom_speed_kmh", "error_abs_kmh", "accuracy_band", "calculated_at"]
+        ].rename(
+            columns={
                 "axis_key": "Canal",
                 "xgb_speed_kmh": "XGBoost (km/h)",
                 "tomtom_speed_kmh": "TomTom (km/h)",
                 "error_abs_kmh": "|Δ| (km/h)",
                 "accuracy_band": "Bande",
                 "calculated_at": "Date",
-            })
+            }
         )
         st.dataframe(top10, use_container_width=True, hide_index=True)

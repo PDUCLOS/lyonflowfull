@@ -38,18 +38,14 @@ def _refresh_mv_congestion_propagation(**context) -> None:
     try:
         # CONCURRENTLY evite les locks en lecture. Necessite UNIQUE INDEX
         # sur (node_a, node_b) (cree dans migration_024 v3).
-        execute_query(
-            "REFRESH MATERIALIZED VIEW CONCURRENTLY gold.mv_congestion_propagation_pairs"
-        )
+        execute_query("REFRESH MATERIALIZED VIEW CONCURRENTLY gold.mv_congestion_propagation_pairs")
         logger.info("gold.mv_congestion_propagation_pairs refreshed OK (CONCURRENTLY)")
     except Exception as e:
         # Si CONCURRENTLY echoue (1er run sans index unique, lock
         # concurrent, etc.), on retombe sur un REFRESH standard.
         logger.warning("CONCURRENTLY refresh failed, fallback standard: %s", e)
         execute_query("REFRESH MATERIALIZED VIEW gold.mv_congestion_propagation_pairs")
-        logger.info(
-            "gold.mv_congestion_propagation_pairs refreshed OK (fallback standard)"
-        )
+        logger.info("gold.mv_congestion_propagation_pairs refreshed OK (fallback standard)")
 
 
 default_args = {

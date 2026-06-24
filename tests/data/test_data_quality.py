@@ -167,16 +167,28 @@ class TestDataclasses:
     def test_is_critical_property(self) -> None:
         """is_critical True si overall_status == critical, False sinon."""
         r_crit = QualityReport(
-            table="t", timestamp="t", overall_status=STATUS_CRITICAL,
-            checks_passed=0, checks_failed=1, details=[],
+            table="t",
+            timestamp="t",
+            overall_status=STATUS_CRITICAL,
+            checks_passed=0,
+            checks_failed=1,
+            details=[],
         )
         r_ok = QualityReport(
-            table="t", timestamp="t", overall_status=STATUS_OK,
-            checks_passed=1, checks_failed=0, details=[],
+            table="t",
+            timestamp="t",
+            overall_status=STATUS_OK,
+            checks_passed=1,
+            checks_failed=0,
+            details=[],
         )
         r_warn = QualityReport(
-            table="t", timestamp="t", overall_status=STATUS_WARNING,
-            checks_passed=0, checks_failed=1, details=[],
+            table="t",
+            timestamp="t",
+            overall_status=STATUS_WARNING,
+            checks_passed=0,
+            checks_failed=1,
+            details=[],
         )
         assert r_crit.is_critical is True
         assert r_ok.is_critical is False
@@ -282,30 +294,36 @@ class TestCheckDuplicateRatio:
     """_check_duplicate_ratio : ratio doublons sur subset < max."""
 
     def test_no_duplicates(self) -> None:
-        df = pd.DataFrame({
-            "k1": [1, 2, 3, 4, 5],
-            "k2": ["a", "b", "c", "d", "e"],
-        })
+        df = pd.DataFrame(
+            {
+                "k1": [1, 2, 3, 4, 5],
+                "k2": ["a", "b", "c", "d", "e"],
+            }
+        )
         d = _check_duplicate_ratio(df, ["k1", "k2"], max_duplicate_ratio=0.05)
         assert d.status == STATUS_OK
         assert d.metric_value == 0.0
 
     def test_acceptable_duplicates(self) -> None:
         """1/20 = 5% = seuil → OK (≤ seuil)."""
-        df = pd.DataFrame({
-            "k1": [1, 2, 1, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20],
-            "k2": ["a"] * 20,
-        })
+        df = pd.DataFrame(
+            {
+                "k1": [1, 2, 1, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20],
+                "k2": ["a"] * 20,
+            }
+        )
         # 1 doublon / 20 = 5% → OK (seuil = 5%, on accepte l'égalité)
         d = _check_duplicate_ratio(df, ["k1", "k2"], max_duplicate_ratio=0.05)
         assert d.status == STATUS_OK
 
     def test_too_many_duplicates_critical(self) -> None:
         """10/100 = 10% > 5% → critical."""
-        df = pd.DataFrame({
-            "k1": [1] * 10 + list(range(2, 92)),  # 10 rows avec k1=1
-            "k2": ["a"] * 100,
-        })
+        df = pd.DataFrame(
+            {
+                "k1": [1] * 10 + list(range(2, 92)),  # 10 rows avec k1=1
+                "k2": ["a"] * 100,
+            }
+        )
         d = _check_duplicate_ratio(df, ["k1", "k2"], max_duplicate_ratio=0.05)
         assert d.status == STATUS_CRITICAL
 

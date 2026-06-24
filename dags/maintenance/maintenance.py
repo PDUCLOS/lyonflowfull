@@ -282,16 +282,12 @@ def _data_quality_check(check_name: str) -> dict:
         # log un warning mais on ne fail pas le check (la migration est
         # appliquée séparément). Comportement fail-loud préservé.
         logger.warning(
-            f"Impossible de log dans gold.data_quality_log ({e}). "
-            "Vérifier que migration_025 a été appliquée."
+            f"Impossible de log dans gold.data_quality_log ({e}). Vérifier que migration_025 a été appliquée."
         )
 
     # Log structuré (visible dans Airflow logs)
     if report.is_critical:
-        logger.error(
-            f"[{check_name}] CRITICAL sur {report.table} : "
-            f"{report.checks_failed} checks failed"
-        )
+        logger.error(f"[{check_name}] CRITICAL sur {report.table} : {report.checks_failed} checks failed")
         # Raise pour que Airflow marque la task en rouge + alertes
         raise AirflowException(
             f"Data quality CRITICAL sur {report.table} — "
@@ -317,8 +313,7 @@ def _data_quality_check(check_name: str) -> dict:
 with DAG(
     dag_id="data_quality_daily",
     description=(
-        "6 checks qualité quotidien (Sprint 17 Axe 6 — "
-        "src.transformation.data_quality, log dans gold.data_quality_log)"
+        "6 checks qualité quotidien (Sprint 17 Axe 6 — src.transformation.data_quality, log dans gold.data_quality_log)"
     ),
     schedule="15 4 * * *",
     start_date=datetime(2026, 1, 1),

@@ -43,8 +43,7 @@ class TestPlotlyWithAlt:
         """**kwargs forwarded to st.plotly_chart (ex: use_container_width)."""
         sig = inspect.signature(plotly_with_alt)
         assert sig.parameters.get("kwargs") is not None or any(
-            p.kind == inspect.Parameter.VAR_KEYWORD
-            for p in sig.parameters.values()
+            p.kind == inspect.Parameter.VAR_KEYWORD for p in sig.parameters.values()
         )
 
 
@@ -75,10 +74,14 @@ class TestDataTableExpander:
         # mais on peut au moins vérifier que la fonction existe et accepte df.
         sig = inspect.signature(data_table_expander)
         # Vérifier que df est bien le 1er paramètre
-        assert sig.parameters["df"].annotation in (
-            "pd.DataFrame",
-            inspect.Parameter.empty,
-        ) or sig.parameters["df"].name == "df"
+        assert (
+            sig.parameters["df"].annotation
+            in (
+                "pd.DataFrame",
+                inspect.Parameter.empty,
+            )
+            or sig.parameters["df"].name == "df"
+        )
 
 
 # -----------------------------------------------------------------------------
@@ -92,6 +95,7 @@ class TestFoliumWithAlt:
     def test_folium_with_alt_importable(self) -> None:
         """Le module importe folium paresseusement (pas d'erreur si absent)."""
         from dashboard.components.a11y import folium_with_alt
+
         sig = inspect.signature(folium_with_alt)
         params = list(sig.parameters.keys())
         assert "map_" in params

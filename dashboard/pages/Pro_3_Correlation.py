@@ -47,12 +47,14 @@ st.markdown("---")
 selected_lines = render_line_selector(multiselect=True, key_suffix="corr")
 target_line = selected_lines[0] if selected_lines else None
 
-tab1, tab2, tab3, tab4 = st.tabs([
-    "Bus × Trafic",
-    "Spatial & TomTom",
-    "Multimodal",
-    "Propagation",
-])
+tab1, tab2, tab3, tab4 = st.tabs(
+    [
+        "Bus × Trafic",
+        "Spatial & TomTom",
+        "Multimodal",
+        "Propagation",
+    ]
+)
 
 
 def _render_segments_and_cause(line_id: str | None) -> None:
@@ -69,11 +71,7 @@ def _render_segments_and_cause(line_id: str | None) -> None:
         if not bn_df.empty:
             if line_id:
                 bn_df = bn_df[bn_df["line_ref"] == line_id]
-            infra_rows = (
-                bn_df[bn_df["diagnosis"] == "infra"]
-                if "diagnosis" in bn_df.columns
-                else bn_df.iloc[:0]
-            )
+            infra_rows = bn_df[bn_df["diagnosis"] == "infra"] if "diagnosis" in bn_df.columns else bn_df.iloc[:0]
             if not infra_rows.empty:
                 row = infra_rows.iloc[0]
                 delay_s = row.get("bus_delay_seconds", 0) or 0
@@ -82,9 +80,7 @@ def _render_segments_and_cause(line_id: str | None) -> None:
                         "line_id": row.get("line_ref", "?"),
                         "name": row.get("segment_id", "—"),
                         "bus_state": "delayed" if delay_s > 120 else "on_time",
-                        "traffic_state": "jammed"
-                        if (row.get("traffic_speed_kmh", 50) or 50) < 25
-                        else "fluid",
+                        "traffic_state": "jammed" if (row.get("traffic_speed_kmh", 50) or 50) < 25 else "fluid",
                         "diagnosis": row.get("diagnosis", "ok"),
                         "delay_min": round(delay_s / 60, 1),
                     }
@@ -228,5 +224,3 @@ st.caption(
     "depuis gold.mv_congestion_propagation_pairs (migration 024 v3, "
     "refresh */30 min)."
 )
-
-

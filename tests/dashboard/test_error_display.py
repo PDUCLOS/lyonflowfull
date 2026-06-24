@@ -71,7 +71,10 @@ class TestGetErrorMessage:
         ],
     )
     def test_messages_par_persona(
-        self, persona: str, error_type: str, expected_substr: str,
+        self,
+        persona: str,
+        error_type: str,
+        expected_substr: str,
     ) -> None:
         msg = get_error_message(persona, error_type, "detail-xyz")
         assert expected_substr in msg, f"{persona}/{error_type}: {msg!r}"

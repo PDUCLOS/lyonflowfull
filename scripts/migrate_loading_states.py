@@ -65,7 +65,7 @@ FILES = [
 # Widgets déjà migrés manuellement (skip)
 ALREADY_MIGRATED = {
     "pro_tcl/model_monitoring.py",  # utilise déjà loading_wrapper
-    "usager/itinerary.py",          # utilise déjà loading_wrapper
+    "usager/itinerary.py",  # utilise déjà loading_wrapper
 }
 
 # Pattern pour trouver le body d'une def render_X():
@@ -119,7 +119,7 @@ def migrate_file(path: Path) -> tuple[int, int]:
         # Vérifier que ce render_X n'est pas déjà dans un with loading_wrapper
         # (regex: chercher "with loading_wrapper" dans les 50 chars après la def)
         start_pos = m.end() + offset
-        if "loading_wrapper" in new_content[start_pos:start_pos + 200]:
+        if "loading_wrapper" in new_content[start_pos : start_pos + 200]:
             continue
 
         def_line = m.group(1)
@@ -127,7 +127,7 @@ def migrate_file(path: Path) -> tuple[int, int]:
         # Le label est dérivé du nom de la fonction
         func_name = re.search(r"def\s+(render_\w+)", def_line).group(1)
         widget_label = func_name.replace("render_", "").replace("_", " ").capitalize()
-        loading_call = f"    with loading_wrapper(\"Chargement {widget_label}…\", \"⏳\"):\n"
+        loading_call = f'    with loading_wrapper("Chargement {widget_label}…", "⏳"):\n'
 
         # Indenter le body
         indented_body = indent_block(body, 4)
@@ -137,7 +137,7 @@ def migrate_file(path: Path) -> tuple[int, int]:
         new_pos = new_content.find(old_block, start_pos - len(def_line) - 200 if start_pos > 200 else 0)
         if new_pos == -1:
             continue
-        new_content = new_content[:new_pos] + def_line + new_block + new_content[new_pos + len(old_block):]
+        new_content = new_content[:new_pos] + def_line + new_block + new_content[new_pos + len(old_block) :]
         offset += len(new_block) - len(old_block)
         migrated += 1
 

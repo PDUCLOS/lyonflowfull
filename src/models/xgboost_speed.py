@@ -185,22 +185,18 @@ class XGBoostSpeedModel:
             metrics[label] = {
                 "mae": float(np.mean(np.abs(y_test - y_pred_q))),
                 "rmse": float(np.sqrt(np.mean((y_test - y_pred_q) ** 2))),
-                "r2": float(
-                    1 - np.sum((y_test - y_pred_q) ** 2)
-                    / max(np.sum((y_test - y_test.mean()) ** 2), 1e-9)
-                ),
+                "r2": float(1 - np.sum((y_test - y_pred_q) ** 2) / max(np.sum((y_test - y_test.mean()) ** 2), 1e-9)),
             }
 
         # Métrique agrégée = P50 (médiane) pour rétro-compat dashboard
         y_pred = models["p50"].predict(X_test)
-        metrics.update({
-            "mae": float(np.mean(np.abs(y_test - y_pred))),
-            "rmse": float(np.sqrt(np.mean((y_test - y_pred) ** 2))),
-            "r2": float(
-                1 - np.sum((y_test - y_pred) ** 2)
-                / max(np.sum((y_test - y_test.mean()) ** 2), 1e-9)
-            ),
-        })
+        metrics.update(
+            {
+                "mae": float(np.mean(np.abs(y_test - y_pred))),
+                "rmse": float(np.sqrt(np.mean((y_test - y_pred) ** 2))),
+                "r2": float(1 - np.sum((y_test - y_pred) ** 2) / max(np.sum((y_test - y_test.mean()) ** 2), 1e-9)),
+            }
+        )
 
         # Sauvegarde : 1 dict {p10, p50, p90} par horizon (même path que
         # l'ancien format mono-modèle pour rétro-compat loader MLflow/FS).

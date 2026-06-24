@@ -104,11 +104,7 @@ def _render_kpi_banner(latest_df: pd.DataFrame) -> None:
         color = STATUS_COLORS[status]
         icon = STATUS_ICONS[status]
         last_check = sub["checked_at"].max() if not sub.empty else None
-        last_str = (
-            pd.Timestamp(last_check).strftime("%Y-%m-%d %H:%M")
-            if last_check is not None
-            else "—"
-        )
+        last_str = pd.Timestamp(last_check).strftime("%Y-%m-%d %H:%M") if last_check is not None else "—"
         n_total = len(sub)
         n_ok = int((sub["status"] == "ok").sum())
         with col:

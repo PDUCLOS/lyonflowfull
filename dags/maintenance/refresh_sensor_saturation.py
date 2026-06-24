@@ -67,9 +67,7 @@ def refresh_sensor_saturation_dag() -> None:
             with conn.cursor() as cur:
                 # CONCURRENTLY = pas de blocage des reads (besoin
                 # de l'UNIQUE INDEX idx_mv_sensor_saturation_channel).
-                cur.execute(
-                    "REFRESH MATERIALIZED VIEW CONCURRENTLY gold.mv_sensor_saturation;"
-                )
+                cur.execute("REFRESH MATERIALIZED VIEW CONCURRENTLY gold.mv_sensor_saturation;")
             conn.commit()
         finally:
             conn.close()

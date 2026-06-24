@@ -207,9 +207,7 @@ def compute_propagation_correlations(
     # On ne garde que les paires où BOTH nœuds ont assez d'obs
     obs_counts = wide.count()  # Series indexed by properties_twgid
     valid = obs_counts[obs_counts >= min_obs].index
-    cand = pairs_df[
-        pairs_df["node_a"].isin(valid) & pairs_df["node_b"].isin(valid)
-    ].copy()
+    cand = pairs_df[pairs_df["node_a"].isin(valid) & pairs_df["node_b"].isin(valid)].copy()
 
     if cand.empty:
         return pd.DataFrame(
@@ -338,9 +336,7 @@ def compute_propagation_correlations(
             else "noise"
         )
     )
-    return out.sort_values("correlation", key=lambda s: s.abs(), ascending=False).reset_index(
-        drop=True
-    )
+    return out.sort_values("correlation", key=lambda s: s.abs(), ascending=False).reset_index(drop=True)
 
 
 # -----------------------------------------------------------------------------
@@ -547,9 +543,7 @@ def _granger_min_p(
     # Capturer stdout + stderr pour éviter de polluer les logs Streamlit
     # (et absorber le FutureWarning sur verbose déprécié en 0.14).
     # verbose=False déprécié depuis statsmodels 0.14, on ne le passe plus.
-    with contextlib.redirect_stdout(io.StringIO()), contextlib.redirect_stderr(
-        io.StringIO()
-    ):
+    with contextlib.redirect_stdout(io.StringIO()), contextlib.redirect_stderr(io.StringIO()):
         try:
             results = grangercausalitytests(data, maxlag=maxlag)
         except Exception:
@@ -755,9 +749,7 @@ def _render_kpi_banner(corr_df: pd.DataFrame, granger_df: pd.DataFrame) -> None:
         if not granger_df.empty and "granger_significant" in granger_df.columns
         else 0
     )
-    n_granger_tested = (
-        len(granger_df) if not granger_df.empty else 0
-    )
+    n_granger_tested = len(granger_df) if not granger_df.empty else 0
 
     cards = [
         (
@@ -837,11 +829,7 @@ def _render_top_pairs(corr_df: pd.DataFrame, top_n: int = 20) -> None:
                 "Intensité": _corr_to_label(r["correlation"]),
                 "Direction CORR": direction,
                 "Granger p-val": granger_str,
-                "Distance (m)": int(
-                    _haversine_m(
-                        r["lat_a"], r["lon_a"], r["lat_b"], r["lon_b"]
-                    )
-                ),
+                "Distance (m)": int(_haversine_m(r["lat_a"], r["lon_a"], r["lat_b"], r["lon_b"])),
                 "N obs": int(r["n_points"]),
             }
         )
@@ -923,10 +911,7 @@ def render_propagation_map(
         return
 
     # Calcul CORR (pur Python, vectorisé, ~5s pour 5k paires)
-    with st.spinner(
-        f"Calcul des corrélations croisées sur {hours_window}h × "
-        f"{len(pairs_df)} paires…"
-    ):
+    with st.spinner(f"Calcul des corrélations croisées sur {hours_window}h × {len(pairs_df)} paires…"):
         corr_df = compute_propagation_correlations(
             pairs_df=pairs_df,
             speeds_df=speeds_df,
@@ -946,8 +931,7 @@ def render_propagation_map(
     granger_df = pd.DataFrame()
     try:
         with st.spinner(
-            f"Test de causalité Granger sur les top {min(granger_top_n, len(corr_df))} "
-            f"paires (statsmodels, ~5-10s)…"
+            f"Test de causalité Granger sur les top {min(granger_top_n, len(corr_df))} paires (statsmodels, ~5-10s)…"
         ):
             granger_df = compute_granger_causality(
                 pairs_df=corr_df,
@@ -966,9 +950,7 @@ def render_propagation_map(
 
     # Merge Granger dans le corr_df (LEFT JOIN sur node_a, node_b)
     if not granger_df.empty:
-        corr_df = corr_df.merge(
-            granger_df, on=["node_a", "node_b"], how="left"
-        )
+        corr_df = corr_df.merge(granger_df, on=["node_a", "node_b"], how="left")
         # Pour les paires SANS test Granger (hors top N) : direction = "n/a"
         corr_df["granger_significant"] = corr_df["granger_significant"].fillna(False)
         corr_df["granger_direction"] = corr_df["granger_direction"].fillna("n/a")
@@ -985,10 +967,7 @@ def render_propagation_map(
     # Carte Folium + tableau top paires
     col1, col2 = st.columns([3, 2])
     with col1:
-        st.markdown(
-            f"##### Carte de propagation — top {min(max_pairs, len(corr_df))} "
-            f"paires par |r|"
-        )
+        st.markdown(f"##### Carte de propagation — top {min(max_pairs, len(corr_df))} paires par |r|")
         # On garde les N meilleures pour la carte (perf)
         plot_df = corr_df.head(max_pairs)
         fmap = _build_folium_map(plot_df)

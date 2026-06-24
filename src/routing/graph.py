@@ -367,16 +367,18 @@ def compute_route_pgrouting(
                 geom_coords = geom.get("coordinates", [])
             except (json.JSONDecodeError, TypeError, AttributeError):
                 logger.warning("geom_geojson invalide pour edge_id=%s", r.get("edge_id"))
-        result.append({
-            "seq": int(r["seq"]),
-            "edge_id": int(r["edge_id"]),
-            "cost_s": float(r["cost_s"] or 0.0),
-            "agg_cost_s": float(r["agg_cost_s"] or 0.0),
-            "length_m": float(r["length_m"] or 0.0),
-            "speed_kmh": float(r["speed_kmh"] or 30.0),
-            "road_name": r.get("road_name") or "",
-            "geom_coordinates": geom_coords,
-        })
+        result.append(
+            {
+                "seq": int(r["seq"]),
+                "edge_id": int(r["edge_id"]),
+                "cost_s": float(r["cost_s"] or 0.0),
+                "agg_cost_s": float(r["agg_cost_s"] or 0.0),
+                "length_m": float(r["length_m"] or 0.0),
+                "speed_kmh": float(r["speed_kmh"] or 30.0),
+                "road_name": r.get("road_name") or "",
+                "geom_coordinates": geom_coords,
+            }
+        )
     return result
 
 
@@ -434,18 +436,20 @@ def compute_route_pgrouting_ksp(
             except (json.JSONDecodeError, TypeError, AttributeError):
                 logger.warning("geom_geojson invalide pour route=%s edge=%s", route_id, r.get("edge_id"))
 
-        routes_dict.setdefault(route_id, []).append({
-            "seq": int(r["seq"]),
-            "edge_id": int(r["edge_id"]),
-            "cost_s": float(r["cost_s"] or 0.0),
-            "agg_cost_s": float(r["agg_cost_s"] or 0.0),
-            "length_m": float(r["length_m"] or 0.0),
-            "speed_kmh": float(r["speed_kmh"] or 30.0),
-            "road_name": r.get("road_name") or "",
-            "geom_coordinates": geom_coords,
-            "total_length_m": float(r["total_length_m"] or 0.0),
-            "total_cost_s": float(r["total_cost_s"] or 0.0),
-        })
+        routes_dict.setdefault(route_id, []).append(
+            {
+                "seq": int(r["seq"]),
+                "edge_id": int(r["edge_id"]),
+                "cost_s": float(r["cost_s"] or 0.0),
+                "agg_cost_s": float(r["agg_cost_s"] or 0.0),
+                "length_m": float(r["length_m"] or 0.0),
+                "speed_kmh": float(r["speed_kmh"] or 30.0),
+                "road_name": r.get("road_name") or "",
+                "geom_coordinates": geom_coords,
+                "total_length_m": float(r["total_length_m"] or 0.0),
+                "total_cost_s": float(r["total_cost_s"] or 0.0),
+            }
+        )
 
     # Trier par route_id pour ordre stable, et par seq dans chaque route
     routes = []

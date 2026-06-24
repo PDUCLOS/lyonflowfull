@@ -101,15 +101,16 @@ def _classify(
 
     if mae_kmh < MAE_GREEN:
         if drift_share and drift_share > 0.0:
-            return ("#FF9800", "🟡",
-                    f"MAE {mae_kmh:.1f} km/h, {drift_share * 100:.0f}% features en drift")
+            return ("#FF9800", "🟡", f"MAE {mae_kmh:.1f} km/h, {drift_share * 100:.0f}% features en drift")
         return ("#4CAF50", "🟢", f"Modèle stable — MAE {mae_kmh:.1f} km/h")
     if mae_kmh < MAE_YELLOW:
-        return ("#FF9800", "🟡",
-                f"Attention — MAE {mae_kmh:.1f} km/h"
-                + (f", {drift_share * 100:.0f}% features en drift" if drift_share else ""))
-    return ("#F44336", "🔴",
-            f"Drift détecté — MAE {mae_kmh:.1f} km/h, retrain recommandé")
+        return (
+            "#FF9800",
+            "🟡",
+            f"Attention — MAE {mae_kmh:.1f} km/h"
+            + (f", {drift_share * 100:.0f}% features en drift" if drift_share else ""),
+        )
+    return ("#F44336", "🔴", f"Drift détecté — MAE {mae_kmh:.1f} km/h, retrain recommandé")
 
 
 def render_drift_status_badge() -> None:

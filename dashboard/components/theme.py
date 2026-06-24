@@ -415,7 +415,6 @@ def inject_theme() -> None:
         unsafe_allow_html=True,
     )
     st.markdown(
-        '<a href="#main-content" class="sr-only sr-only-focusable">'
-        "Aller au contenu principal</a>",
+        '<a href="#main-content" class="sr-only sr-only-focusable">Aller au contenu principal</a>',
         unsafe_allow_html=True,
     )

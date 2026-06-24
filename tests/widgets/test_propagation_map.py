@@ -160,9 +160,7 @@ class TestComputePropagationCorrelations:
         result = compute_propagation_correlations(pairs, speeds, max_lag_steps=3)
         assert len(result) == 1
         row = result.iloc[0]
-        assert row["best_lag_steps"] == 1, (
-            f"attendu lag=+1 (B lead A), got {row['best_lag_steps']}"
-        )
+        assert row["best_lag_steps"] == 1, f"attendu lag=+1 (B lead A), got {row['best_lag_steps']}"
         assert row["best_lag_minutes"] == 5
         assert abs(row["correlation"]) > 0.9
         assert row["intensity"] == "strong"
@@ -183,9 +181,7 @@ class TestComputePropagationCorrelations:
         result = compute_propagation_correlations(pairs, speeds, max_lag_steps=3)
         assert len(result) == 1
         row = result.iloc[0]
-        assert row["best_lag_steps"] == 2, (
-            f"attendu lag=+2 (B lead A), got {row['best_lag_steps']}"
-        )
+        assert row["best_lag_steps"] == 2, f"attendu lag=+2 (B lead A), got {row['best_lag_steps']}"
         assert row["best_lag_minutes"] == 10
         assert abs(row["correlation"]) > 0.9
         assert row["intensity"] == "strong"
@@ -206,9 +202,7 @@ class TestComputePropagationCorrelations:
         result = compute_propagation_correlations(pairs, speeds, max_lag_steps=3)
         assert len(result) == 1
         row = result.iloc[0]
-        assert row["best_lag_steps"] == -2, (
-            f"attendu lag=-2 (A lead B), got {row['best_lag_steps']}"
-        )
+        assert row["best_lag_steps"] == -2, f"attendu lag=-2 (A lead B), got {row['best_lag_steps']}"
         assert row["best_lag_minutes"] == -10
         assert abs(row["correlation"]) > 0.9
         assert row["intensity"] == "strong"
@@ -241,9 +235,7 @@ class TestComputePropagationCorrelations:
         b_short = b_full[:10]
         pairs = _make_pairs([("A_short", "B_short")])
         speeds = _make_speeds({"A_short": a_short, "B_short": b_short})
-        result = compute_propagation_correlations(
-            pairs, speeds, max_lag_steps=3, min_obs=30
-        )
+        result = compute_propagation_correlations(pairs, speeds, max_lag_steps=3, min_obs=30)
         # 10 obs < min_obs=30 → la paire est skippée
         assert result.empty
 
@@ -294,9 +286,7 @@ class TestComputePropagationCorrelations:
         assert len(result) == 3
         # Vérifier l'ordre décroissant par |r|
         abs_corrs = result["correlation"].abs().tolist()
-        assert abs_corrs == sorted(abs_corrs, reverse=True), (
-            f"Doit être trié par |r| DESC, got {abs_corrs}"
-        )
+        assert abs_corrs == sorted(abs_corrs, reverse=True), f"Doit être trié par |r| DESC, got {abs_corrs}"
 
     def test_one_sided_node_filtered(self) -> None:
         """Paire dont UN nœud n'a pas d'obs (n'est pas dans la table) → skip."""
@@ -341,12 +331,8 @@ class TestComputePropagationCorrelations:
         # Paire 4: bruit (r < 0.3)
         a4 = np.random.normal(50, 5, n)
         b4 = np.random.normal(50, 5, n)
-        pairs = _make_pairs(
-            [("A1", "B1"), ("A2", "B2"), ("A3", "B3"), ("A4", "B4")]
-        )
-        speeds = _make_speeds(
-            {"A1": a1, "B1": b1, "A2": a2, "B2": b2, "A3": a3, "B3": b3, "A4": a4, "B4": b4}
-        )
+        pairs = _make_pairs([("A1", "B1"), ("A2", "B2"), ("A3", "B3"), ("A4", "B4")])
+        speeds = _make_speeds({"A1": a1, "B1": b1, "A2": a2, "B2": b2, "A3": a3, "B3": b3, "A4": a4, "B4": b4})
         result = compute_propagation_correlations(pairs, speeds, max_lag_steps=3)
         # Au moins 3 niveaux distincts sur 4 paires (test non strict car
         # Pearson dépend du seed)
@@ -518,8 +504,7 @@ class TestGrangerCausality:
         row = result.iloc[0]
         # Au moins une direction doit être significative
         assert bool(row["granger_significant"]), (
-            f"causalité Granger non détectée : p_a_to_b={row['granger_p_a_to_b']}, "
-            f"p_b_to_a={row['granger_p_b_to_a']}"
+            f"causalité Granger non détectée : p_a_to_b={row['granger_p_a_to_b']}, p_b_to_a={row['granger_p_b_to_a']}"
         )
         # Direction Granger doit être définie
         assert row["granger_direction"] in {"A→B", "B→A"}
@@ -566,9 +551,7 @@ class TestGrangerCausality:
         # Au moins 1 p-value doit être renseignée
         p_a = row["granger_p_a_to_b"]
         p_b = row["granger_p_b_to_a"]
-        assert (p_a is not None and not pd.isna(p_a)) or (
-            p_b is not None and not pd.isna(p_b)
-        )
+        assert (p_a is not None and not pd.isna(p_a)) or (p_b is not None and not pd.isna(p_b))
 
     def test_top_n_limits_processed_pairs(self) -> None:
         """top_n=1 ne traite que la première paire (les autres sont skippées)."""
@@ -636,9 +619,7 @@ class TestGrangerCausality:
                 "speed_kmh": list(a) + list(b),
             }
         )
-        result = compute_granger_causality(
-            pairs_df=pairs_df, speeds_df=speeds_df, maxlag=3, top_n=1
-        )
+        result = compute_granger_causality(pairs_df=pairs_df, speeds_df=speeds_df, maxlag=3, top_n=1)
         # std=0 sur A → p_a_to_b=None, p_b_to_a peut être calculé
         # mais le test global peut renvoyer None pour les 2 directions
         # On accepte que la paire soit skippée OU que la direction B→A

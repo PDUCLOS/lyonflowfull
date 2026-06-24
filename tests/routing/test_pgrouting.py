@@ -19,16 +19,26 @@ def test_itinerary_segment_geometry_field():
     from src.routing.pathfinder import ItinerarySegment
 
     seg_no_geom = ItinerarySegment(
-        channel_id="Rue X", length_m=100, speed_kmh=30,
-        duration_s=12, start_lon=4.83, start_lat=45.76,
-        end_lon=4.84, end_lat=45.77,
+        channel_id="Rue X",
+        length_m=100,
+        speed_kmh=30,
+        duration_s=12,
+        start_lon=4.83,
+        start_lat=45.76,
+        end_lon=4.84,
+        end_lat=45.77,
     )
     assert seg_no_geom.geometry is None
 
     seg_with_geom = ItinerarySegment(
-        channel_id="Rue Y", length_m=200, speed_kmh=40,
-        duration_s=18, start_lon=4.83, start_lat=45.76,
-        end_lon=4.85, end_lat=45.78,
+        channel_id="Rue Y",
+        length_m=200,
+        speed_kmh=40,
+        duration_s=18,
+        start_lon=4.83,
+        start_lat=45.76,
+        end_lon=4.85,
+        end_lat=45.78,
         geometry=[[4.83, 45.76], [4.835, 45.765], [4.84, 45.77], [4.85, 45.78]],
     )
     assert seg_with_geom.geometry is not None
@@ -40,7 +50,8 @@ def test_itinerary_total_duration_min():
     from src.routing.pathfinder import Itinerary
 
     itin = Itinerary(
-        origin_node="1", destination_node="2",
+        origin_node="1",
+        destination_node="2",
         horizon_minutes=0,
         total_duration_s=300.0,
     )
@@ -61,27 +72,39 @@ def test_compute_route_pgrouting_parses_geojson():
     """compute_route_pgrouting parse correctement le GeoJSON retourné par SQL."""
     from src.routing.graph import compute_route_pgrouting
 
-    mock_geojson = json.dumps({
-        "type": "LineString",
-        "coordinates": [[4.83, 45.76], [4.832, 45.761], [4.834, 45.762]],
-    })
+    mock_geojson = json.dumps(
+        {
+            "type": "LineString",
+            "coordinates": [[4.83, 45.76], [4.832, 45.761], [4.834, 45.762]],
+        }
+    )
     mock_rows = [
         {
-            "seq": 1, "edge_id": 42, "node_id": 1,
-            "cost_s": 12.5, "agg_cost_s": 12.5,
-            "length_m": 150.0, "speed_kmh": 43.2,
+            "seq": 1,
+            "edge_id": 42,
+            "node_id": 1,
+            "cost_s": 12.5,
+            "agg_cost_s": 12.5,
+            "length_m": 150.0,
+            "speed_kmh": 43.2,
             "road_name": "Rue de la République",
             "geom_geojson": mock_geojson,
         },
         {
-            "seq": 2, "edge_id": 43, "node_id": 2,
-            "cost_s": 8.0, "agg_cost_s": 20.5,
-            "length_m": 100.0, "speed_kmh": 45.0,
+            "seq": 2,
+            "edge_id": 43,
+            "node_id": 2,
+            "cost_s": 8.0,
+            "agg_cost_s": 20.5,
+            "length_m": 100.0,
+            "speed_kmh": 45.0,
             "road_name": "Place Bellecour",
-            "geom_geojson": json.dumps({
-                "type": "LineString",
-                "coordinates": [[4.834, 45.762], [4.835, 45.763]],
-            }),
+            "geom_geojson": json.dumps(
+                {
+                    "type": "LineString",
+                    "coordinates": [[4.834, 45.762], [4.835, 45.763]],
+                }
+            ),
         },
     ]
 
@@ -101,9 +124,13 @@ def test_compute_route_pgrouting_handles_null_geojson():
 
     mock_rows = [
         {
-            "seq": 1, "edge_id": 99, "node_id": 1,
-            "cost_s": 5.0, "agg_cost_s": 5.0,
-            "length_m": 50.0, "speed_kmh": 30.0,
+            "seq": 1,
+            "edge_id": 99,
+            "node_id": 1,
+            "cost_s": 5.0,
+            "agg_cost_s": 5.0,
+            "length_m": 50.0,
+            "speed_kmh": 30.0,
             "road_name": None,
             "geom_geojson": None,
         },
@@ -134,16 +161,22 @@ def test_compute_itinerary_builds_segments_from_pgrouting():
 
     mock_edges = [
         {
-            "seq": 1, "edge_id": 10,
-            "cost_s": 15.0, "agg_cost_s": 15.0,
-            "length_m": 200.0, "speed_kmh": 48.0,
+            "seq": 1,
+            "edge_id": 10,
+            "cost_s": 15.0,
+            "agg_cost_s": 15.0,
+            "length_m": 200.0,
+            "speed_kmh": 48.0,
             "road_name": "Avenue Foch",
             "geom_coordinates": [[4.83, 45.76], [4.832, 45.761], [4.834, 45.762]],
         },
         {
-            "seq": 2, "edge_id": 11,
-            "cost_s": 10.0, "agg_cost_s": 25.0,
-            "length_m": 150.0, "speed_kmh": 54.0,
+            "seq": 2,
+            "edge_id": 11,
+            "cost_s": 10.0,
+            "agg_cost_s": 25.0,
+            "length_m": 150.0,
+            "speed_kmh": 54.0,
             "road_name": "Rue Garibaldi",
             "geom_coordinates": [[4.834, 45.762], [4.836, 45.764]],
         },
@@ -187,9 +220,13 @@ def test_compute_route_pgrouting_handles_invalid_geojson():
 
     mock_rows = [
         {
-            "seq": 1, "edge_id": 77, "node_id": 1,
-            "cost_s": 5.0, "agg_cost_s": 5.0,
-            "length_m": 50.0, "speed_kmh": 30.0,
+            "seq": 1,
+            "edge_id": 77,
+            "node_id": 1,
+            "cost_s": 5.0,
+            "agg_cost_s": 5.0,
+            "length_m": 50.0,
+            "speed_kmh": 30.0,
             "road_name": "Broken",
             "geom_geojson": "NOT JSON {{{",
         },
@@ -212,23 +249,27 @@ def _make_ksp_rows(n_routes: int = 3, edges_per_route: int = 2) -> list[dict]:
         total_len = edges_per_route * 100.0 * route_id
         total_cost = edges_per_route * 10.0 * route_id
         for seq in range(1, edges_per_route + 1):
-            rows.append({
-                "route_id": route_id,
-                "seq": seq,
-                "edge_id": route_id * 100 + seq,
-                "node_id": seq,
-                "cost_s": 10.0 * route_id,
-                "agg_cost_s": 10.0 * route_id * seq,
-                "length_m": 100.0 * route_id,
-                "speed_kmh": 30.0 + route_id * 5,
-                "road_name": f"Rue {route_id}-{seq}" if seq == 1 else "",
-                "geom_geojson": json.dumps({
-                    "type": "LineString",
-                    "coordinates": [[4.83 + seq * 0.001, 45.76], [4.83 + seq * 0.002, 45.761]],
-                }),
-                "total_length_m": total_len,
-                "total_cost_s": total_cost,
-            })
+            rows.append(
+                {
+                    "route_id": route_id,
+                    "seq": seq,
+                    "edge_id": route_id * 100 + seq,
+                    "node_id": seq,
+                    "cost_s": 10.0 * route_id,
+                    "agg_cost_s": 10.0 * route_id * seq,
+                    "length_m": 100.0 * route_id,
+                    "speed_kmh": 30.0 + route_id * 5,
+                    "road_name": f"Rue {route_id}-{seq}" if seq == 1 else "",
+                    "geom_geojson": json.dumps(
+                        {
+                            "type": "LineString",
+                            "coordinates": [[4.83 + seq * 0.001, 45.76], [4.83 + seq * 0.002, 45.761]],
+                        }
+                    ),
+                    "total_length_m": total_len,
+                    "total_cost_s": total_cost,
+                }
+            )
     return rows
 
 
@@ -279,16 +320,34 @@ def test_compute_itinerary_alternatives_returns_k_itineraries():
 
     mock_routes = [
         [
-            {"edge_id": 10, "cost_s": 15.0, "length_m": 200.0, "speed_kmh": 48.0,
-             "road_name": "Avenue Foch", "geom_coordinates": [[4.83, 45.76], [4.834, 45.762]]},
+            {
+                "edge_id": 10,
+                "cost_s": 15.0,
+                "length_m": 200.0,
+                "speed_kmh": 48.0,
+                "road_name": "Avenue Foch",
+                "geom_coordinates": [[4.83, 45.76], [4.834, 45.762]],
+            },
         ],
         [
-            {"edge_id": 20, "cost_s": 20.0, "length_m": 300.0, "speed_kmh": 40.0,
-             "road_name": "Rue Garibaldi", "geom_coordinates": [[4.83, 45.76], [4.836, 45.764]]},
+            {
+                "edge_id": 20,
+                "cost_s": 20.0,
+                "length_m": 300.0,
+                "speed_kmh": 40.0,
+                "road_name": "Rue Garibaldi",
+                "geom_coordinates": [[4.83, 45.76], [4.836, 45.764]],
+            },
         ],
         [
-            {"edge_id": 30, "cost_s": 25.0, "length_m": 350.0, "speed_kmh": 35.0,
-             "road_name": "", "geom_coordinates": [[4.83, 45.76], [4.838, 45.766]]},
+            {
+                "edge_id": 30,
+                "cost_s": 25.0,
+                "length_m": 350.0,
+                "speed_kmh": 35.0,
+                "road_name": "",
+                "geom_coordinates": [[4.83, 45.76], [4.838, 45.766]],
+            },
         ],
     ]
 
@@ -322,10 +381,22 @@ def test_build_itinerary_unnamed_road_gets_empty_string():
     from src.routing.pathfinder import _build_itinerary_from_edges
 
     edges = [
-        {"edge_id": 999, "cost_s": 5.0, "length_m": 50.0, "speed_kmh": 30.0,
-         "road_name": None, "geom_coordinates": [[4.83, 45.76], [4.831, 45.761]]},
-        {"edge_id": 1000, "cost_s": 5.0, "length_m": 50.0, "speed_kmh": 30.0,
-         "road_name": "", "geom_coordinates": [[4.831, 45.761], [4.832, 45.762]]},
+        {
+            "edge_id": 999,
+            "cost_s": 5.0,
+            "length_m": 50.0,
+            "speed_kmh": 30.0,
+            "road_name": None,
+            "geom_coordinates": [[4.83, 45.76], [4.831, 45.761]],
+        },
+        {
+            "edge_id": 1000,
+            "cost_s": 5.0,
+            "length_m": 50.0,
+            "speed_kmh": 30.0,
+            "road_name": "",
+            "geom_coordinates": [[4.831, 45.761], [4.832, 45.762]],
+        },
     ]
 
     with patch("src.routing.pathfinder._compute_pgrouting_confidence", return_value=0.75):
@@ -342,15 +413,42 @@ def test_fmt_route_label_named_roads():
     from src.routing.pathfinder import Itinerary, ItinerarySegment
 
     itin = Itinerary(
-        origin_node="1", destination_node="2", horizon_minutes=0,
-        total_length_m=5000.0, total_duration_s=600.0,
+        origin_node="1",
+        destination_node="2",
+        horizon_minutes=0,
+        total_length_m=5000.0,
+        total_duration_s=600.0,
         segments=[
-            ItinerarySegment(channel_id="Rue A", length_m=2000, speed_kmh=30,
-                             duration_s=240, start_lon=0, start_lat=0, end_lon=0, end_lat=0),
-            ItinerarySegment(channel_id="", length_m=1000, speed_kmh=25,
-                             duration_s=144, start_lon=0, start_lat=0, end_lon=0, end_lat=0),
-            ItinerarySegment(channel_id="Rue B", length_m=2000, speed_kmh=30,
-                             duration_s=240, start_lon=0, start_lat=0, end_lon=0, end_lat=0),
+            ItinerarySegment(
+                channel_id="Rue A",
+                length_m=2000,
+                speed_kmh=30,
+                duration_s=240,
+                start_lon=0,
+                start_lat=0,
+                end_lon=0,
+                end_lat=0,
+            ),
+            ItinerarySegment(
+                channel_id="",
+                length_m=1000,
+                speed_kmh=25,
+                duration_s=144,
+                start_lon=0,
+                start_lat=0,
+                end_lon=0,
+                end_lat=0,
+            ),
+            ItinerarySegment(
+                channel_id="Rue B",
+                length_m=2000,
+                speed_kmh=30,
+                duration_s=240,
+                start_lon=0,
+                start_lat=0,
+                end_lon=0,
+                end_lat=0,
+            ),
         ],
     )
 
@@ -368,13 +466,32 @@ def test_fmt_route_label_all_unnamed():
     from src.routing.pathfinder import Itinerary, ItinerarySegment
 
     itin = Itinerary(
-        origin_node="1", destination_node="2", horizon_minutes=0,
-        total_length_m=3000.0, total_duration_s=360.0,
+        origin_node="1",
+        destination_node="2",
+        horizon_minutes=0,
+        total_length_m=3000.0,
+        total_duration_s=360.0,
         segments=[
-            ItinerarySegment(channel_id="", length_m=1500, speed_kmh=30,
-                             duration_s=180, start_lon=0, start_lat=0, end_lon=0, end_lat=0),
-            ItinerarySegment(channel_id="", length_m=1500, speed_kmh=30,
-                             duration_s=180, start_lon=0, start_lat=0, end_lon=0, end_lat=0),
+            ItinerarySegment(
+                channel_id="",
+                length_m=1500,
+                speed_kmh=30,
+                duration_s=180,
+                start_lon=0,
+                start_lat=0,
+                end_lon=0,
+                end_lat=0,
+            ),
+            ItinerarySegment(
+                channel_id="",
+                length_m=1500,
+                speed_kmh=30,
+                duration_s=180,
+                start_lon=0,
+                start_lat=0,
+                end_lon=0,
+                end_lat=0,
+            ),
         ],
     )
 

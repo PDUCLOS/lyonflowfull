@@ -158,11 +158,36 @@ def _make_meteo_df() -> pd.DataFrame:
     return pd.DataFrame(
         [
             # band, traffic_delta, tcl_delta, velov_delta
-            {"meteo_band": "fair", "traffic_delta_kmh_vs_fair": 0.0, "tcl_delay_delta_sec_vs_fair": 0.0, "velov_delta_bikes_vs_fair": 0.0},
-            {"meteo_band": "light_rain", "traffic_delta_kmh_vs_fair": -2.0, "tcl_delay_delta_sec_vs_fair": 15.0, "velov_delta_bikes_vs_fair": -1.5},
-            {"meteo_band": "heavy_rain", "traffic_delta_kmh_vs_fair": -8.0, "tcl_delay_delta_sec_vs_fair": 60.0, "velov_delta_bikes_vs_fair": -6.0},
-            {"meteo_band": "frost", "traffic_delta_kmh_vs_fair": -3.0, "tcl_delay_delta_sec_vs_fair": 25.0, "velov_delta_bikes_vs_fair": -2.0},
-            {"meteo_band": "heatwave", "traffic_delta_kmh_vs_fair": 1.0, "tcl_delay_delta_sec_vs_fair": 5.0, "velov_delta_bikes_vs_fair": -0.5},
+            {
+                "meteo_band": "fair",
+                "traffic_delta_kmh_vs_fair": 0.0,
+                "tcl_delay_delta_sec_vs_fair": 0.0,
+                "velov_delta_bikes_vs_fair": 0.0,
+            },
+            {
+                "meteo_band": "light_rain",
+                "traffic_delta_kmh_vs_fair": -2.0,
+                "tcl_delay_delta_sec_vs_fair": 15.0,
+                "velov_delta_bikes_vs_fair": -1.5,
+            },
+            {
+                "meteo_band": "heavy_rain",
+                "traffic_delta_kmh_vs_fair": -8.0,
+                "tcl_delay_delta_sec_vs_fair": 60.0,
+                "velov_delta_bikes_vs_fair": -6.0,
+            },
+            {
+                "meteo_band": "frost",
+                "traffic_delta_kmh_vs_fair": -3.0,
+                "tcl_delay_delta_sec_vs_fair": 25.0,
+                "velov_delta_bikes_vs_fair": -2.0,
+            },
+            {
+                "meteo_band": "heatwave",
+                "traffic_delta_kmh_vs_fair": 1.0,
+                "tcl_delay_delta_sec_vs_fair": 5.0,
+                "velov_delta_bikes_vs_fair": -0.5,
+            },
         ]
     )
 

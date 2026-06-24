@@ -31,9 +31,7 @@ def test_data_quality_badge_exported_from_elu():
 def test_data_quality_badge_classify_all_healthy():
     from dashboard.components.widgets.elu import data_quality_badge
 
-    color, icon, msg = data_quality_badge._classify(
-        n_healthy=8, n_dead=0, n_stale=0, score=94.0
-    )
+    color, icon, msg = data_quality_badge._classify(n_healthy=8, n_dead=0, n_stale=0, score=94.0)
     assert color == "#4CAF50"
     assert icon == "🟢"
     assert "OK" in msg
@@ -42,9 +40,7 @@ def test_data_quality_badge_classify_all_healthy():
 def test_data_quality_badge_classify_dead():
     from dashboard.components.widgets.elu import data_quality_badge
 
-    color, icon, msg = data_quality_badge._classify(
-        n_healthy=6, n_dead=1, n_stale=0, score=61.0
-    )
+    color, icon, msg = data_quality_badge._classify(n_healthy=6, n_dead=1, n_stale=0, score=61.0)
     assert color == "#F44336"
     assert icon == "🔴"
     assert "panne" in msg.lower()
@@ -53,9 +49,7 @@ def test_data_quality_badge_classify_dead():
 def test_data_quality_badge_classify_stale():
     from dashboard.components.widgets.elu import data_quality_badge
 
-    color, icon, msg = data_quality_badge._classify(
-        n_healthy=7, n_dead=0, n_stale=1, score=82.0
-    )
+    color, icon, msg = data_quality_badge._classify(n_healthy=7, n_dead=0, n_stale=1, score=82.0)
     assert color == "#FF9800"
     assert icon == "🟡"
     assert "stale" in msg.lower()
@@ -65,10 +59,12 @@ def test_data_quality_badge_global_score_weights():
     """Vérifie que _global_score pondère trafic plus que air_quality."""
     from dashboard.components.widgets.elu import data_quality_badge
 
-    df = pd.DataFrame({
-        "source": ["bronze.trafic_boucles", "bronze.air_quality"],
-        "health_score": [100, 0],
-    })
+    df = pd.DataFrame(
+        {
+            "source": ["bronze.trafic_boucles", "bronze.air_quality"],
+            "health_score": [100, 0],
+        }
+    )
     score = data_quality_badge._global_score(df)
     # trafic (poids 3) + air (poids 1) → weighted = 100*3 + 0*1 = 300
     # total_weight = 4 → score = 75

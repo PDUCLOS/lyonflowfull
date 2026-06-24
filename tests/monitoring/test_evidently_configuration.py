@@ -78,16 +78,20 @@ class TestComputeDatasetDrift:
         np.random.seed(42)
         n = 300
         cols = ["speed", "error", "confidence"]
-        ref = pd.DataFrame({
-            "speed": np.random.normal(35, 10, n),
-            "error": np.abs(np.random.normal(5, 3, n)),
-            "confidence": np.random.uniform(0.6, 1.0, n),
-        })
-        cur = pd.DataFrame({
-            "speed": np.random.normal(35, 10, n),
-            "error": np.abs(np.random.normal(5, 3, n)),
-            "confidence": np.random.uniform(0.6, 1.0, n),
-        })
+        ref = pd.DataFrame(
+            {
+                "speed": np.random.normal(35, 10, n),
+                "error": np.abs(np.random.normal(5, 3, n)),
+                "confidence": np.random.uniform(0.6, 1.0, n),
+            }
+        )
+        cur = pd.DataFrame(
+            {
+                "speed": np.random.normal(35, 10, n),
+                "error": np.abs(np.random.normal(5, 3, n)),
+                "confidence": np.random.uniform(0.6, 1.0, n),
+            }
+        )
         result = compute_dataset_drift(ref, cur, cols)
         assert result["_summary"]["dataset_drift"] is False
         assert result["_summary"]["n_columns_drifted"] == 0
@@ -95,16 +99,20 @@ class TestComputeDatasetDrift:
     def test_drift_detected_when_majority_columns_shift(self):
         np.random.seed(42)
         n = 300
-        ref = pd.DataFrame({
-            "speed": np.random.normal(35, 10, n),
-            "error": np.abs(np.random.normal(5, 3, n)),
-            "confidence": np.random.uniform(0.6, 1.0, n),
-        })
-        cur = pd.DataFrame({
-            "speed": np.random.normal(60, 15, n),
-            "error": np.abs(np.random.normal(20, 8, n)),
-            "confidence": np.random.uniform(0.6, 1.0, n),
-        })
+        ref = pd.DataFrame(
+            {
+                "speed": np.random.normal(35, 10, n),
+                "error": np.abs(np.random.normal(5, 3, n)),
+                "confidence": np.random.uniform(0.6, 1.0, n),
+            }
+        )
+        cur = pd.DataFrame(
+            {
+                "speed": np.random.normal(60, 15, n),
+                "error": np.abs(np.random.normal(20, 8, n)),
+                "confidence": np.random.uniform(0.6, 1.0, n),
+            }
+        )
         result = compute_dataset_drift(ref, cur, ["speed", "error", "confidence"])
         assert result["_summary"]["dataset_drift"] is True
         assert result["_summary"]["n_columns_drifted"] >= 2

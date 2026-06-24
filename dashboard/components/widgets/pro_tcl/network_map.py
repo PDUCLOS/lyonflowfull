@@ -48,6 +48,7 @@ def render_network_map(buses: list | None = None, height: int = 400) -> None:
             show_error("db_down", str(e))
             return
         if not df.empty:
+
             def _safe_delay_min(seconds):
                 try:
                     return int(float(seconds) / 60)
@@ -70,9 +71,13 @@ def render_network_map(buses: list | None = None, height: int = 400) -> None:
                 latest = pd.to_datetime(df["recorded_at"]).max()
                 if pd.notna(latest):
                     from datetime import datetime, timezone
-                    age_min = (datetime.now(timezone.utc) - latest.to_pydatetime().replace(
-                        tzinfo=timezone.utc if latest.tzinfo is None else latest.tzinfo
-                    )).total_seconds() / 60
+
+                    age_min = (
+                        datetime.now(timezone.utc)
+                        - latest.to_pydatetime().replace(
+                            tzinfo=timezone.utc if latest.tzinfo is None else latest.tzinfo
+                        )
+                    ).total_seconds() / 60
                     if age_min > 5:
                         st.caption(f"⏱️ Données SIRI datant de {age_min:.0f} min")
         else:

@@ -25,9 +25,9 @@ from dashboard.components.loading_state import loading_wrapper
 from src.data.exceptions import DashboardDataError
 
 _STATUS_COLOR = {
-    "ok": "#4CAF50",       # vert
-    "stale": "#FFC107",    # jaune (warning)
-    "stuck": "#F44336",    # rouge (critical)
+    "ok": "#4CAF50",  # vert
+    "stale": "#FFC107",  # jaune (warning)
+    "stuck": "#F44336",  # rouge (critical)
     "no_data": "#9E9E9E",  # gris
 }
 

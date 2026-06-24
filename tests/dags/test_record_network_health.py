@@ -3,6 +3,7 @@
 Valide les fonctions _record_health et _purge_old SANS dépendance DB.
 Les queries SQL sont mockées via unittest.mock.
 """
+
 from __future__ import annotations
 
 import sys

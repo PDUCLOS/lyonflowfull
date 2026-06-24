@@ -41,10 +41,10 @@ SIZE_TO_CLASS: dict[str, str] = {
 # (2) le style AVANT le font-size, (3) le font-size avec sa valeur, (4) le
 # style APRÈS le font-size, (5) la fermeture du style.
 FONT_SIZE_IN_STYLE_RE = re.compile(
-    r'(<[a-zA-Z][a-zA-Z0-9-]*\b[^>]*?)'  # <tag ... (SANS style=)
+    r"(<[a-zA-Z][a-zA-Z0-9-]*\b[^>]*?)"  # <tag ... (SANS style=)
     r'(\sstyle=")'  # style=" (séparé du tag)
     r'([^"]*?)'  # contenu du style avant font-size
-    r'(font-size:([\d.]+)rem;?)'  # le font-size
+    r"(font-size:([\d.]+)rem;?)"  # le font-size
     r'([^"]*?)'  # contenu du style après font-size
     r'(")',  # fermeture du style
     re.DOTALL,
@@ -63,7 +63,7 @@ def add_class_to_tag(tag_str: str, lyf_class: str) -> str:
         return tag_str[: class_match.start()] + f'class="{new_class}"' + tag_str[class_match.end() :]
     # Pas de class= : on l'ajoute juste après le tag name
     return re.sub(
-        r'(<[a-zA-Z][a-zA-Z0-9-]*\b)',
+        r"(<[a-zA-Z][a-zA-Z0-9-]*\b)",
         rf'\1 class="{lyf_class}"',
         tag_str,
         count=1,
@@ -118,12 +118,7 @@ def main() -> int:
     blacklist = {
         "dashboard/components/persona_switcher.py",
     }
-    targets = sorted(
-        p
-        for p in dashboard.rglob("*.py")
-        if "__pycache__" not in str(p)
-        and str(p) not in blacklist
-    )
+    targets = sorted(p for p in dashboard.rglob("*.py") if "__pycache__" not in str(p) and str(p) not in blacklist)
 
     total_found = 0
     total_replaced = 0

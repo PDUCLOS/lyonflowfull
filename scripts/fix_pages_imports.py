@@ -1,12 +1,20 @@
 """Fix le pattern cassé dans les pages (Sprint 20 Axe F)."""
+
 import re
 from pathlib import Path
 
 files = [
-    "Elu_3_Avant_Apres.py", "Elu_4_Simulateur.py", "Elu_5_Rapport.py",
-    "Pro_1_PCC_Live.py", "Pro_2_Heatmap_OTP.py", "Pro_3_Correlation.py",
-    "Pro_4_Simulateur.py", "Pro_6_Pipeline_Mgmt.py", "Pro_7_Model_Monitoring.py",
-    "Usager_1_Mon_Trajet.py", "Usager_2_Alertes.py",
+    "Elu_3_Avant_Apres.py",
+    "Elu_4_Simulateur.py",
+    "Elu_5_Rapport.py",
+    "Pro_1_PCC_Live.py",
+    "Pro_2_Heatmap_OTP.py",
+    "Pro_3_Correlation.py",
+    "Pro_4_Simulateur.py",
+    "Pro_6_Pipeline_Mgmt.py",
+    "Pro_7_Model_Monitoring.py",
+    "Usager_1_Mon_Trajet.py",
+    "Usager_2_Alertes.py",
 ]
 
 target = "import (\nfrom dashboard.components.freshness_badge import render_freshness_badge"

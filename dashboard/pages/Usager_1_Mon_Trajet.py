@@ -135,7 +135,7 @@ if st.session_state.get("results_loaded"):
         # documentées (cf. SPEC_COMPARATEUR_MODES_USAGER.md).
         speed_kmh = {
             "velov": 12.0,  # moyenne Lyon (ADEME + obs terrain)
-            "tc": 18.0,     # moyen bus/tram/métro SYTRAL
+            "tc": 18.0,  # moyen bus/tram/métro SYTRAL
             "voiture": real_avg_speed if real_avg_speed > 0 else 25.0,
         }
         is_congested_voiture = is_congested_from_speed(real_avg_speed)
@@ -163,7 +163,7 @@ if st.session_state.get("results_loaded"):
             trip_real = st.session_state.get(f"trip_{key}")
             # Sprint 22+ : is_congested n'est True QUE pour voiture ET QUE si
             # la vitesse moyenne Lyon le justifie (réel, pas un proxy bidon).
-            is_congested = (key == "voiture" and is_congested_voiture)
+            is_congested = key == "voiture" and is_congested_voiture
             if trip_real:
                 dur_min = float(trip_real["duration_min"])
                 impact = calculate_impact(
@@ -348,5 +348,3 @@ if st.session_state.get("results_loaded"):
     st.markdown("---")
 
 st.caption(f"LyonFlowFull v{get_settings().app_version} · 100% pipeline (PostgreSQL, Airflow, MLflow)")
-
-

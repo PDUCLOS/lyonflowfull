@@ -214,10 +214,7 @@ def _check_range(
         details = f"{col}: {n_total} valeurs dans [{min_v}, {max_v}]"
     elif ratio <= 0.05:
         status = STATUS_WARNING
-        details = (
-            f"{col}: {n_violations}/{n_total} hors plage "
-            f"[{min_v}, {max_v}] ({ratio * 100:.1f}%)"
-        )
+        details = f"{col}: {n_violations}/{n_total} hors plage [{min_v}, {max_v}] ({ratio * 100:.1f}%)"
     else:
         status = STATUS_CRITICAL
         details = (
@@ -261,10 +258,7 @@ def _check_null_ratio(
         details = f"{col}: {n_null}/{n_total} nulls ({ratio * 100:.1f}%)"
     else:
         status = STATUS_CRITICAL
-        details = (
-            f"{col}: {n_null}/{n_total} nulls ({ratio * 100:.1f}%) "
-            f"— au-delà du seuil {max_null_ratio * 100:.0f}%"
-        )
+        details = f"{col}: {n_null}/{n_total} nulls ({ratio * 100:.1f}%) — au-delà du seuil {max_null_ratio * 100:.0f}%"
     return CheckDetail(
         check=f"null_ratio_{col}",
         status=status,
@@ -308,9 +302,7 @@ def _check_duplicate_ratio(
     ratio = n_dup / n_total
     if ratio <= max_duplicate_ratio:
         status = STATUS_OK
-        details = (
-            f"Doublons sur {subset}: {n_dup}/{n_total} ({ratio * 100:.2f}%)"
-        )
+        details = f"Doublons sur {subset}: {n_dup}/{n_total} ({ratio * 100:.2f}%)"
     else:
         status = STATUS_CRITICAL
         details = (
@@ -342,14 +334,10 @@ def _check_min_rows(
         details = f"Volume OK : {n} rows (seuil {min_rows})"
     elif n >= min_rows * 0.5:
         status = STATUS_WARNING
-        details = (
-            f"Volume bas : {n} rows (seuil {min_rows}, 50% du seuil = warning)"
-        )
+        details = f"Volume bas : {n} rows (seuil {min_rows}, 50% du seuil = warning)"
     else:
         status = STATUS_CRITICAL
-        details = (
-            f"Volume critique : {n} rows (seuil {min_rows}, < 50% du seuil)"
-        )
+        details = f"Volume critique : {n} rows (seuil {min_rows}, < 50% du seuil)"
     return CheckDetail(
         check="min_rows",
         status=status,
@@ -415,9 +403,7 @@ def validate_traffic_features(
     details: list[CheckDetail] = [
         _check_range(df, "speed_kmh", config.speed_min_kmh, config.speed_max_kmh),
         _check_null_ratio(df, "speed_kmh", config.max_null_ratio),
-        _check_duplicate_ratio(
-            df, ["channel_id", "computed_at"], config.max_duplicate_ratio
-        ),
+        _check_duplicate_ratio(df, ["channel_id", "computed_at"], config.max_duplicate_ratio),
         _check_min_rows(df, config.min_rows),
     ]
     # Météo (colonnes optionnelles — pas critique si absentes)
@@ -431,11 +417,7 @@ def validate_traffic_features(
             )
         )
     if "precipitation" in df.columns:
-        details.append(
-            _check_range(
-                df, "precipitation", 0.0, config.precipitation_max_mm
-            )
-        )
+        details.append(_check_range(df, "precipitation", 0.0, config.precipitation_max_mm))
 
     overall, passed, failed = _aggregate_status(details)
     return QualityReport(
@@ -477,9 +459,7 @@ def validate_tcl_realtime(
     details: list[CheckDetail] = [
         _check_range(df, "delay_seconds", 0.0, float(config.delay_max_seconds)),
         _check_null_ratio(df, "delay_seconds", config.max_null_ratio),
-        _check_duplicate_ratio(
-            df, ["vehicle_ref", "recorded_at"], config.max_duplicate_ratio
-        ),
+        _check_duplicate_ratio(df, ["vehicle_ref", "recorded_at"], config.max_duplicate_ratio),
         _check_min_rows(df, config.min_rows),
     ]
     overall, passed, failed = _aggregate_status(details)
@@ -524,9 +504,7 @@ def validate_velov_clean(
         _check_range(df, "num_bikes_available", float(config.bikes_min), float(config.bikes_max)),
         _check_range(df, "num_docks_available", float(config.docks_min), float(config.docks_max)),
         _check_null_ratio(df, "num_bikes_available", config.max_null_ratio),
-        _check_duplicate_ratio(
-            df, ["station_id", "measurement_time"], config.max_duplicate_ratio
-        ),
+        _check_duplicate_ratio(df, ["station_id", "measurement_time"], config.max_duplicate_ratio),
         _check_min_rows(df, config.min_rows),
     ]
     overall, passed, failed = _aggregate_status(details)

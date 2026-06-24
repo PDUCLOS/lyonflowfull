@@ -116,7 +116,6 @@ def render_lieux_velov_map(
                     icon=folium.Icon(color="green", icon="bicycle", prefix="fa"),
                 ).add_to(m)
 
-
     st_folium_with_alt(m, width=None, height=height, returned_objects=[])
 
 

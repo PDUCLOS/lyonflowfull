@@ -342,10 +342,10 @@ services:
         limits:
           cpus: "0.5"
           # Sprint 11+ (2026-06-17) — 768M → 3G (OOM-kill prevention).
-          # Le scheduler lance les tasks via LocalExecutor (subprocess).
-          # Mémoire pic observée : ~2G pendant les transforms Bronze→Silver
-          # parallèles + xgboost training. 3G laisse du headroom.
-          memory: 3G
+          # Sprint 22+ (2026-06-24) — 3G → 8G (temporaire pour archive DAG
+          # silver_archive_to_minio qui charge 1.55M rows dans pandas).
+          # À redescendre à 4G après l'archive (cf. SPRINT_22_OPS.md).
+          memory: 8G
 
   # ---------------------------------------------------------------------------
   # Airflow worker — SUPPRIMÉ Sprint 15+ (2026-06-19)

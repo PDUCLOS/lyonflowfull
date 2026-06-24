@@ -38,11 +38,14 @@ class TestRefreshIntervals:
 class TestSecondsUntilNextRefresh:
     """Calcul du temps restant avant la prochaine MAJ."""
 
-    @pytest.mark.parametrize("persona,expected_max", [
-        ("usager", 60),
-        ("pro_tcl", 30),
-        ("elu", 300),
-    ])
+    @pytest.mark.parametrize(
+        "persona,expected_max",
+        [
+            ("usager", 60),
+            ("pro_tcl", 30),
+            ("elu", 300),
+        ],
+    )
     def test_entre_0_et_interval(self, persona: str, expected_max: int) -> None:
         """Le temps restant est toujours entre 0 et l'intervalle (inclus)."""
         s = seconds_until_next_refresh(persona)
@@ -57,6 +60,7 @@ class TestSecondsUntilNextRefresh:
     def test_changement_entre_appels(self) -> None:
         """Le temps restant peut varier entre 2 appels (time.time() avance)."""
         import time
+
         s1 = seconds_until_next_refresh("usager")
         time.sleep(0.01)
         s2 = seconds_until_next_refresh("usager")

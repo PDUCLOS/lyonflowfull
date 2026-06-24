@@ -35,12 +35,8 @@ def test_get_traffic_bottlenecks_query_has_lat_lon():
 
     src = inspect.getsource(db_query.get_traffic_bottlenecks)
     # Le SELECT final doit inclure lat, lon (via LATERAL JOIN)
-    assert "f.lat" in src or "f.lon" in src, (
-        "get_traffic_bottlenecks doit ramener lat/lon via LATERAL JOIN"
-    )
-    assert "LATERAL" in src, (
-        "get_traffic_bottlenecks doit utiliser un LATERAL JOIN pour la dernière mesure"
-    )
+    assert "f.lat" in src or "f.lon" in src, "get_traffic_bottlenecks doit ramener lat/lon via LATERAL JOIN"
+    assert "LATERAL" in src, "get_traffic_bottlenecks doit utiliser un LATERAL JOIN pour la dernière mesure"
 
 
 def test_load_traffic_uses_real_lat_lon_for_jams():
@@ -54,12 +50,8 @@ def test_load_traffic_uses_real_lat_lon_for_jams():
         "load_traffic ne doit plus appeler _approx_lonlat_from_channel_id"
     )
     # Doit lire row["lat"] et row["lon"]
-    assert 'row["lat"]' in src or "row['lat']" in src, (
-        "load_traffic doit lire lat depuis la row de bottlenecks"
-    )
-    assert 'row["lon"]' in src or "row['lon']" in src, (
-        "load_traffic doit lire lon depuis la row de bottlenecks"
-    )
+    assert 'row["lat"]' in src or "row['lat']" in src, "load_traffic doit lire lat depuis la row de bottlenecks"
+    assert 'row["lon"]' in src or "row['lon']" in src, "load_traffic doit lire lon depuis la row de bottlenecks"
 
 
 # =============================================================================
@@ -89,9 +81,7 @@ def test_recommend_mode_returns_velov_with_durations():
         critere="temps",
         durations={"voiture": 8, "tc": 12, "velov": 15},
     )
-    assert rec["winner"] == "voiture", (
-        f"Voiture (8 min) doit gagner, pas Vélov. Got: {rec['winner']}"
-    )
+    assert rec["winner"] == "voiture", f"Voiture (8 min) doit gagner, pas Vélov. Got: {rec['winner']}"
 
 
 # =============================================================================
@@ -116,13 +106,14 @@ def test_is_congested_from_speed_threshold():
 
 def test_usager_uses_real_traffic_for_voiture_speed():
     """Usager_1 doit utiliser cached_traffic() pour la vitesse voiture, pas hardcodé 25."""
-    with open("/Users/patriceduclos/Documents/Lyonfull/dashboard/pages/Usager_1_Mon_Trajet.py") as f:
+    from pathlib import Path
+
+    usager_page = Path(__file__).resolve().parents[2] / "dashboard" / "pages" / "Usager_1_Mon_Trajet.py"
+    with open(usager_page) as f:
         src = f.read()
 
     # Doit importer cached_traffic
-    assert "cached_traffic" in src, (
-        "Usager_1 doit importer cached_traffic pour la vitesse voiture live"
-    )
+    assert "cached_traffic" in src, "Usager_1 doit importer cached_traffic pour la vitesse voiture live"
     # Doit utiliser is_congested_from_speed (helper public Sprint 22+)
     assert "is_congested_from_speed" in src, (
         "Usager_1 doit utiliser is_congested_from_speed (helper public) pour la vraie détection"
@@ -132,6 +123,4 @@ def test_usager_uses_real_traffic_for_voiture_speed():
         "Le proxy is_congested=key==voiture doit être viré (toujours True = faux positif)"
     )
     # Le fallback 25.0 doit toujours être présent (au cas où DB indispo)
-    assert "25.0" in src, (
-        "Le fallback 25.0 km/h doit rester pour le cas DB indispo"
-    )
+    assert "25.0" in src, "Le fallback 25.0 km/h doit rester pour le cas DB indispo"

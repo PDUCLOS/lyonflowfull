@@ -71,11 +71,7 @@ def _gauge_plotly(score: float) -> plotly.graph_objects.Figure:
     """Jauge Plotly 0-100 avec seuils colorés."""
     import plotly.graph_objects as go
 
-    color = (
-        "#4CAF50" if score >= 70
-        else "#FF9800" if score >= 40
-        else "#F44336"
-    )
+    color = "#4CAF50" if score >= 70 else "#FF9800" if score >= 40 else "#F44336"
     fig = go.Figure(
         go.Indicator(
             mode="gauge+number",
@@ -148,15 +144,17 @@ def render_source_health_monitor() -> None:
         # ── 2. Grille source × statut ──────────────────────────────────────────
         st.markdown("##### 📊 Santé par source (triée par score asc)")
         # Renommage pour affichage
-        display = health_df.rename(columns={
-            "source": "Source",
-            "last_update": "Dernière MAJ",
-            "age_minutes": "Âge (min)",
-            "records_1h": "Records/1h",
-            "expected_interval_min": "Intervalle attendu (min)",
-            "health_score": "Score",
-            "status": "Statut",
-        }).copy()
+        display = health_df.rename(
+            columns={
+                "source": "Source",
+                "last_update": "Dernière MAJ",
+                "age_minutes": "Âge (min)",
+                "records_1h": "Records/1h",
+                "expected_interval_min": "Intervalle attendu (min)",
+                "health_score": "Score",
+                "status": "Statut",
+            }
+        ).copy()
         # Pastille de couleur via emoji (Streamlit ne supporte pas la couleur HTML dans dataframe)
         status_emoji = {
             "healthy": "🟢",

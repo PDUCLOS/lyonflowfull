@@ -27,14 +27,11 @@ def _classify(n_healthy: int, n_dead: int, n_stale: int, score: float) -> tuple[
         Tuple (color, icon, message).
     """
     if n_dead > 0:
-        return ("#F44336", "🔴",
-                f"Source en panne — {n_dead} morte(s), score {score:.0f}/100")
+        return ("#F44336", "🔴", f"Source en panne — {n_dead} morte(s), score {score:.0f}/100")
     if n_stale > 0:
-        return ("#FF9800", "🟡",
-                f"{n_stale} source(s) stale — score {score:.0f}/100")
+        return ("#FF9800", "🟡", f"{n_stale} source(s) stale — score {score:.0f}/100")
     if score >= 70:
-        return ("#4CAF50", "🟢",
-                f"Données OK — {n_healthy} sources actives, score {score:.0f}/100")
+        return ("#4CAF50", "🟢", f"Données OK — {n_healthy} sources actives, score {score:.0f}/100")
     return ("#9E9E9E", "⚪", f"Score {score:.0f}/100")
 
 

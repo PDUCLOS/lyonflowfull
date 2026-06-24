@@ -138,7 +138,7 @@ def migrate_file(path: Path) -> tuple[int, int]:
     func_name = func_name_line.split("(")[0].replace("def ", "").replace("render_", "").replace("_", " ").capitalize()
 
     # 8. Insérer le with loading_wrapper après le docstring
-    loading_line = f"{base_indent}with loading_wrapper(\"Chargement {func_name}…\", \"⏳\"):\n"
+    loading_line = f'{base_indent}with loading_wrapper("Chargement {func_name}…", "⏳"):\n'
 
     # 9. Reconstruire
     new_lines = [

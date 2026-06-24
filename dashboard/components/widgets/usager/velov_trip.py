@@ -75,7 +75,10 @@ def render_velov_trip(
                 return
 
         if not origin_coords or not dest_coords:
-            show_error("geocoding_fail", f"❌ Adresses non résolues. Origin={origin!r} → {origin_coords}, Dest={destination!r} → {dest_coords}")
+            show_error(
+                "geocoding_fail",
+                f"❌ Adresses non résolues. Origin={origin!r} → {origin_coords}, Dest={destination!r} → {dest_coords}",
+            )
             return
 
         origin_lon, origin_lat = origin_coords

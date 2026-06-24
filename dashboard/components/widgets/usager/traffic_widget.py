@@ -43,9 +43,7 @@ def render_traffic_widget(traffic: dict | None = None) -> None:
     elif data_age >= 0 and freshness == "stale":
         st.caption(f"🟡 Stale · dernière mesure il y a {data_age // 60} min")
     elif data_age >= 0 and freshness == "stuck":
-        st.caption(
-            f"🔴 Figé · dernière mesure il y a {data_age // 3600:.1f}h — vérifier DAG"
-        )
+        st.caption(f"🔴 Figé · dernière mesure il y a {data_age // 3600:.1f}h — vérifier DAG")
     else:
         st.caption("⚪ Fraîcheur inconnue — DB n'a pas remonté d'âge")
 

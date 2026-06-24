@@ -68,7 +68,8 @@ def _refresh_mv(**context) -> dict:
     n_pairs = int(rows[0]["n"]) if rows else 0
     logger.info(
         "MV gold.mv_xgb_vs_tomtom refreshed in %.2fs, %d paires",
-        duration, n_pairs,
+        duration,
+        n_pairs,
     )
     return {"mv_name": "gold.mv_xgb_vs_tomtom", "n_pairs": n_pairs, "duration_s": round(duration, 2)}
 
@@ -76,9 +77,7 @@ def _refresh_mv(**context) -> dict:
 with DAG(
     dag_id=DAG_ID,
     default_args=DEFAULT_ARGS,
-    description=(
-        "Sprint 16 Axe A — Refresh MV gold.mv_xgb_vs_tomtom (backtest XGBoost vs TomTom)"
-    ),
+    description=("Sprint 16 Axe A — Refresh MV gold.mv_xgb_vs_tomtom (backtest XGBoost vs TomTom)"),
     schedule_interval="*/30 * * * *",
     start_date=datetime(2026, 6, 20),
     catchup=False,

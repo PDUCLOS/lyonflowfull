@@ -10,6 +10,7 @@ Caractéristiques :
 - Couleur adaptative (vert si hausse, rouge si baisse)
 - Hauteur fixe 80px pour intégration compacte
 """
+
 from __future__ import annotations
 
 import plotly.graph_objects as go
@@ -39,8 +40,11 @@ def render_sparkline(
         fig = go.Figure()
         fig.add_annotation(
             text="Historique bientôt disponible",
-            xref="paper", yref="paper",
-            x=0.5, y=0.5, showarrow=False,
+            xref="paper",
+            yref="paper",
+            x=0.5,
+            y=0.5,
+            showarrow=False,
             font={"size": 12, "color": "#94A3B8"},
         )
         fig.update_layout(height=height, showlegend=False)
@@ -67,16 +71,18 @@ def render_sparkline(
     fig = go.Figure()
 
     # Aire sous la courbe (effet "sparkline")
-    fig.add_trace(go.Scatter(
-        x=timestamps or list(range(len(values))),
-        y=values,
-        mode="lines",
-        line={"color": line_color, "width": 2, "shape": "spline", "smoothing": 0.5},
-        fill="tozeroy",
-        fillcolor=fill_color,
-        showlegend=False,
-        hovertemplate="%{y:.1f}<extra></extra>",
-    ))
+    fig.add_trace(
+        go.Scatter(
+            x=timestamps or list(range(len(values))),
+            y=values,
+            mode="lines",
+            line={"color": line_color, "width": 2, "shape": "spline", "smoothing": 0.5},
+            fill="tozeroy",
+            fillcolor=fill_color,
+            showlegend=False,
+            hovertemplate="%{y:.1f}<extra></extra>",
+        )
+    )
 
     # Configuration sparkline : pas d'axes, pas de grille
     fig.update_layout(

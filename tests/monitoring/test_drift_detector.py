@@ -116,10 +116,7 @@ class TestRunDriftReport:
         # XGB drift + error drift → dataset_drift probable
         # (peut être False si seul 1/5 colonnes drift, ce qui est <0.5)
         # On vérifie juste qu'au moins 1 feature est driftée
-        assert any(
-            d.get("status") in ("moderate", "significant")
-            for d in result["details"].values()
-        )
+        assert any(d.get("status") in ("moderate", "significant") for d in result["details"].values())
 
     def test_details_structure(self) -> None:
         """details = {col: {psi, status, n_ref, n_curr, ...}, ...}."""

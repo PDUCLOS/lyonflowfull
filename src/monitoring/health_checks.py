@@ -194,8 +194,7 @@ def check_drift_evidently() -> CheckResult:
         return CheckResult(
             name="drift_evidently",
             status="warning",
-            details="Aucun rapport drift dans gold.model_drift_reports "
-                    "(DAG daily_drift_report pas encore exécuté ?)",
+            details="Aucun rapport drift dans gold.model_drift_reports (DAG daily_drift_report pas encore exécuté ?)",
             metric_value=0.0,
             threshold=0.0,
             timestamp=_now_iso(),
@@ -293,24 +292,28 @@ def check_all_sources() -> list:
     try:
         df = get_source_health()
     except Exception as e:
-        return [CheckResult(
-            name="source_health_global",
-            status="critical",
-            details=f"gold.v_source_health indisponible : {e}",
-            metric_value=0.0,
-            threshold=70.0,
-            timestamp=_now_iso(),
-        )]
+        return [
+            CheckResult(
+                name="source_health_global",
+                status="critical",
+                details=f"gold.v_source_health indisponible : {e}",
+                metric_value=0.0,
+                threshold=70.0,
+                timestamp=_now_iso(),
+            )
+        ]
 
     if df.empty:
-        return [CheckResult(
-            name="source_health_global",
-            status="warning",
-            details="gold.v_source_health vide (vue non populée ?)",
-            metric_value=0.0,
-            threshold=70.0,
-            timestamp=_now_iso(),
-        )]
+        return [
+            CheckResult(
+                name="source_health_global",
+                status="warning",
+                details="gold.v_source_health vide (vue non populée ?)",
+                metric_value=0.0,
+                threshold=70.0,
+                timestamp=_now_iso(),
+            )
+        ]
 
     status_map = {
         "healthy": "ok",
@@ -321,18 +324,20 @@ def check_all_sources() -> list:
     results = []
     for _, row in df.iterrows():
         status = status_map.get(row["status"], "critical")
-        results.append(CheckResult(
-            name=f"source_{row['source'].replace('.', '_').replace('-', '_')}",
-            status=status,
-            details=(
-                f"{row['source']}: {row['status']} "
-                f"(âge {float(row['age_minutes']):.0f} min, "
-                f"score {int(row['health_score'])})"
-            ),
-            metric_value=float(row["health_score"]),
-            threshold=70.0,
-            timestamp=_now_iso(),
-        ))
+        results.append(
+            CheckResult(
+                name=f"source_{row['source'].replace('.', '_').replace('-', '_')}",
+                status=status,
+                details=(
+                    f"{row['source']}: {row['status']} "
+                    f"(âge {float(row['age_minutes']):.0f} min, "
+                    f"score {int(row['health_score'])})"
+                ),
+                metric_value=float(row["health_score"]),
+                threshold=70.0,
+                timestamp=_now_iso(),
+            )
+        )
     return results
 
 

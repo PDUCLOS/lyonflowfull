@@ -67,9 +67,7 @@ def _run_and_persist(**context) -> dict:
 with DAG(
     dag_id=DAG_ID,
     default_args=DEFAULT_ARGS,
-    description=(
-        "Sprint 16 Axe A — Daily Evidently drift report sur XGBoost vs TomTom"
-    ),
+    description=("Sprint 16 Axe A — Daily Evidently drift report sur XGBoost vs TomTom"),
     schedule_interval="30 5 * * *",
     start_date=datetime(2026, 6, 20),
     catchup=False,

@@ -2,6 +2,7 @@
 
 Lit l'historique des scores de santé réseau pour la sparkline 24h.
 """
+
 from __future__ import annotations
 
 import logging

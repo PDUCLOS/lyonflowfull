@@ -122,7 +122,6 @@ def render_mode_comparison(
 
         return selected_mode
 
-
     # =============================================================================
     # Helpers privés
     # =============================================================================
@@ -179,7 +178,9 @@ def _render_mode_card(
         if is_winner
         else ""
     )
-    score_html = f'<span class="lyf-sublabel" style="opacity:0.6;">score: {score:.1f}</span>' if score is not None else ""
+    score_html = (
+        f'<span class="lyf-sublabel" style="opacity:0.6;">score: {score:.1f}</span>' if score is not None else ""
+    )
 
     # Sprint 16 Axe C — Badge "estimé/calculé" selon result.source.
     # computed = durée réellement calculée par le widget trajet
@@ -187,8 +188,7 @@ def _render_mode_card(
     source = result.get("source", "estimated")
     if source == "computed":
         source_badge = (
-            '<div class="lyf-sublabel" style="color:#4CAF50;font-weight:600;'
-            'margin-top:0.3rem;">✅ Durée calculée</div>'
+            '<div class="lyf-sublabel" style="color:#4CAF50;font-weight:600;margin-top:0.3rem;">✅ Durée calculée</div>'
         )
     else:
         source_badge = (

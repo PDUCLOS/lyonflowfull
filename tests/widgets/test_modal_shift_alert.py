@@ -113,9 +113,7 @@ class TestCountAnomalies:
         assert _count_anomalies(df) == 0
 
     def test_compte_les_true(self) -> None:
-        df = pd.DataFrame(
-            {"anomaly_detected": [True, False, True, True, False, False]}
-        )
+        df = pd.DataFrame({"anomaly_detected": [True, False, True, True, False, False]})
         assert _count_anomalies(df) == 3
 
     def test_que_des_false(self) -> None:
@@ -157,9 +155,9 @@ class TestCountCriticalLines:
                 "alert_level": [
                     "critical",  # 1 critical
                     "critical",  # 2 critical
-                    "warning",   # 1 warning
-                    "ok",        # ignoré
-                    "ok",        # ignoré
+                    "warning",  # 1 warning
+                    "ok",  # ignoré
+                    "ok",  # ignoré
                 ]
             }
         )
@@ -181,13 +179,7 @@ class TestCountCriticalLines:
 
     def test_mix_complet(self) -> None:
         """Mix réaliste : 1 critical, 2 warning, 3 ok, 1 unknown (ignoré)."""
-        df = pd.DataFrame(
-            {
-                "alert_level": [
-                    "critical", "warning", "warning", "ok", "ok", "ok", "unknown"
-                ]
-            }
-        )
+        df = pd.DataFrame({"alert_level": ["critical", "warning", "warning", "ok", "ok", "ok", "unknown"]})
         n_critical, n_warning = _count_critical_lines(df)
         assert n_critical == 1
         assert n_warning == 2

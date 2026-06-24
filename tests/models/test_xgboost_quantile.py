@@ -3,6 +3,7 @@
 Valide le contrat de l'API sans entraîner de vrai modèle (lent + DB requise).
 On mock le xgb.XGBRegressor pour qu'il retourne des prédictions déterministes.
 """
+
 from __future__ import annotations
 
 import sys
@@ -76,9 +77,9 @@ def test_predict_returns_three_quantiles(
     assert "confidence_low" in result
     assert "confidence_high" in result
     assert result["predicted_speed_kmh"] == 30.0  # P50
-    assert result["confidence_low"] == 22.0      # P10
-    assert result["confidence_high"] == 38.0     # P90
-    assert result["model_version"] == "1.1.0"    # bumped
+    assert result["confidence_low"] == 22.0  # P10
+    assert result["confidence_high"] == 38.0  # P90
+    assert result["model_version"] == "1.1.0"  # bumped
 
 
 def test_predict_retro_compat_single_model(
@@ -98,7 +99,7 @@ def test_predict_retro_compat_single_model(
 
     # Rétro-compat : predicted_speed = modèle, confidence_low/high = ±5 km/h
     assert result["predicted_speed_kmh"] == 30.0
-    assert result["confidence_low"] == 25.0   # 30 - 5
+    assert result["confidence_low"] == 25.0  # 30 - 5
     assert result["confidence_high"] == 35.0  # 30 + 5
 
 
@@ -117,7 +118,7 @@ def test_predict_clipping(
 
     result = model.predict(channel_id="LYO00007", horizon_minutes=60, features=sample_features)
 
-    assert result["confidence_low"] == 1.0    # clip bas
+    assert result["confidence_low"] == 1.0  # clip bas
     assert result["predicted_speed_kmh"] == 130.0  # clip haut
     assert result["confidence_high"] == 130.0  # clip haut
 
@@ -129,20 +130,22 @@ def test_train_one_saves_dict_format(tmp_path: Path) -> None:
 
     np.random.seed(42)
     n_samples = 200
-    df = pd.DataFrame({
-        "speed_kmh": np.random.uniform(10, 50, n_samples),
-        "lag_1": np.random.uniform(10, 50, n_samples),
-        "lag_2": np.random.uniform(10, 50, n_samples),
-        "lag_3": np.random.uniform(10, 50, n_samples),
-        "rolling_mean_3": np.random.uniform(10, 50, n_samples),
-        "sin_hour": np.random.uniform(-1, 1, n_samples),
-        "cos_hour": np.random.uniform(-1, 1, n_samples),
-        "temperature_2m": np.random.uniform(5, 30, n_samples),
-        "precipitation": np.random.uniform(0, 5, n_samples),
-        "is_vacances": np.zeros(n_samples),
-        "is_ferie": np.zeros(n_samples),
-        "target_speed": np.random.uniform(10, 50, n_samples),
-    })
+    df = pd.DataFrame(
+        {
+            "speed_kmh": np.random.uniform(10, 50, n_samples),
+            "lag_1": np.random.uniform(10, 50, n_samples),
+            "lag_2": np.random.uniform(10, 50, n_samples),
+            "lag_3": np.random.uniform(10, 50, n_samples),
+            "rolling_mean_3": np.random.uniform(10, 50, n_samples),
+            "sin_hour": np.random.uniform(-1, 1, n_samples),
+            "cos_hour": np.random.uniform(-1, 1, n_samples),
+            "temperature_2m": np.random.uniform(5, 30, n_samples),
+            "precipitation": np.random.uniform(0, 5, n_samples),
+            "is_vacances": np.zeros(n_samples),
+            "is_ferie": np.zeros(n_samples),
+            "target_speed": np.random.uniform(10, 50, n_samples),
+        }
+    )
 
     # Pas de DB requise : on passe df directement
     model = XGBoostSpeedModel(model_dir=tmp_path)

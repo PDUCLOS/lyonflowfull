@@ -514,7 +514,7 @@ def render_drift_panel() -> None:
     body_html = "".join(inner_parts)
     st.markdown(
         f'<div style="background:var(--bg-card);border:1px solid var(--border-card);'
-        f"border-left:4px solid {color};border-radius:6px;padding:0.7rem;margin:0.4rem 0;\">"
+        f'border-left:4px solid {color};border-radius:6px;padding:0.7rem;margin:0.4rem 0;">'
         f'<div style="display:flex;align-items:center;gap:0.6rem;">'
         f'<div class="lyf-value">{icon}</div>'
         f'<div style="flex:1;">{body_html}</div>'
@@ -556,11 +556,7 @@ def render_velov_model_analysis() -> None:
         return
 
     cols = st.columns(3)
-    last_h1 = (
-        pred_h1["prediction_timestamp"].max()
-        if "prediction_timestamp" in pred_h1.columns
-        else None
-    )
+    last_h1 = pred_h1["prediction_timestamp"].max() if "prediction_timestamp" in pred_h1.columns else None
     coverage_h1 = pred_h1["station_id"].nunique() if "station_id" in pred_h1.columns else 0
     coverage_pct = f"{coverage_h1}/{n_stations_total}" if n_stations_total else f"{coverage_h1}"
 
