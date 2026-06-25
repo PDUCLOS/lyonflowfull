@@ -64,8 +64,8 @@ def _render_main_gauge(score: float, diagnosis: str) -> None:
                     {"range": [75, 100], "color": "#DCFCE7"},  # healthy green tint
                 ],
                 "threshold": {
-                    "threshold": 75,
                     "line": {"color": COLORS["status_ok"], "width": 3},
+                    "thickness": 0.75,
                     "value": score,
                 },
             },
