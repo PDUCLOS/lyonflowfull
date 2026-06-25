@@ -1,6 +1,11 @@
 """Widget — Calculateur ROI (valeur du temps × voyageurs × gain).
 
 Sprint 8 — Bottlenecks via data_loader.cached_bottlenecks_top().
+
+Sprint 22+ (2026-06-25) — Fix Bug 7 du SPEC_FIX_ELU2_BOTTLENECKS.md :
+* Affichage du **diagnostic** du bottleneck sélectionné (info contextuelle).
+* Cohérence avec le ROI du tableau ranking : les 2 utilisent désormais la
+  même formule (voyageurs × gain × valeur_temps × 2 × jours_an / coût).
 """
 
 from __future__ import annotations
@@ -9,6 +14,18 @@ import streamlit as st
 
 from dashboard.components.data_cache import cached_bottlenecks_top
 from dashboard.components.loading_state import loading_wrapper
+
+# Diagnostic → emoji + label FR (cohérent avec bottleneck_ranking.py)
+_DIAGNOSIS_ROI = {
+    "infra": ("🔴", "Infrastructure — travaux d'aménagement"),
+    "operations": ("🟠", "Opérationnel — ajustement de service"),
+    "bus_lane_ok": ("🟢", "Voie bus fonctionnelle — surveillance"),
+    "ok": ("⚪", "Sous surveillance"),
+}
+
+
+def _format_diagnostic_for_roi(diagnosis: str) -> tuple[str, str]:
+    return _DIAGNOSIS_ROI.get(diagnosis, _DIAGNOSIS_ROI["ok"])
 
 
 def render_roi_calculator(line_id: str | None = None) -> None:
@@ -25,12 +42,14 @@ def render_roi_calculator(line_id: str | None = None) -> None:
         st.info("Aucun bottleneck disponible.")
         return
 
-    # Sélection d'un bottleneck
+    # Sélection d'un bottleneck (avec diagnostic dans le label pour aider l'élu)
     options = []
     for b in bottlenecks:
         rank = b.get("rank", "—")
         zone = b.get("zone") or "—"
-        options.append(f"#{rank} {zone}")
+        diagnosis = b.get("diagnosis", "ok")
+        diag_emoji, _ = _format_diagnostic_for_roi(diagnosis)
+        options.append(f"{diag_emoji} #{rank} {zone}")
     selected = st.selectbox(
         "Sélectionner un aménagement",
         options,
@@ -40,12 +59,20 @@ def render_roi_calculator(line_id: str | None = None) -> None:
     if not selected:
         return
 
-    # Defensive : si la liste change entre 2 renders (mock vs DB), .index() peut
-    # lever ValueError. On filtre par label au lieu d'utiliser l'index.
-    matching = [b for b in bottlenecks if f"#{b.get('rank', '—')} {b.get('zone') or '—'}" == selected]
+    # Defensive : matching par préfixe emoji+rank+zone (le format a évolué).
+    matching = [
+        b
+        for b in bottlenecks
+        if any(opt.endswith(f"#{b.get('rank', '—')} {b.get('zone') or '—'}") for opt in [selected])
+    ]
     if not matching:
         return
     b = matching[0]
+
+    # Bug 7 fix : afficher le diagnostic du bottleneck sélectionné
+    diagnosis = b.get("diagnosis", "ok")
+    diag_emoji, diag_label = _format_diagnostic_for_roi(diagnosis)
+    st.info(f"{diag_emoji} **Diagnostic :** {diag_label}")
 
     # Inputs ajustables
     col1, col2 = st.columns(2)
@@ -68,7 +95,7 @@ def render_roi_calculator(line_id: str | None = None) -> None:
             key="roi_jours_an",
         )
 
-    # Calculs
+    # Calculs (formule identique à load_bottlenecks_top, Bug 7 fix)
     voyageurs = b.get("voyageurs_jour", 0)
     gain_min = b.get("gain_min", 0)
     cout = b.get("cout_M_euros", 0) * 1_000_000

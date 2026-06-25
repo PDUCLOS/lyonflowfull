@@ -445,14 +445,17 @@ def load_city_synthesis() -> dict:
 def load_bottlenecks_summary() -> pd.DataFrame:
     """Résumé bottlenecks pour page Élu.
 
-    Source : ``gold.infrastructure_bottlenecks`` agrégé.
+    Source : ``gold.mv_bus_traffic_spatial`` (MV spatiale 0.001° ≈ 100 m,
+    refresh CONCURRENTLY par DAG */15 min). Sprint 22+ — on ne lit plus
+    la table ``gold.infrastructure_bottlenecks`` (JOIN global par heure)
+    depuis le fix bugs 3/9 du SPEC_FIX_ELU2_BOTTLENECKS.md.
 
     Raises:
         DashboardDataError: si la DB ne répond pas.
     """
     from src.data.db_query import get_bottlenecks_summary
 
-    _require_db_or_raise("infrastructure_bottlenecks")
+    _require_db_or_raise("mv_bus_traffic_spatial")
     return get_bottlenecks_summary()
 
 
@@ -626,6 +629,28 @@ def load_bottlenecks_top() -> list[dict]:
 
     Utilise ``line_label`` et ``road_label`` (calculés par
     ``get_bottlenecks_summary``).
+
+    Sprint 22+ (2026-06-25) — Fix bugs 1/4/5/7 du SPEC_FIX_ELU2_BOTTLENECKS.md.
+    Tous les champs économiques sont désormais dérivés des colonnes DB
+    réelles (plus aucune fonction linéaire de l'index ``i``) :
+
+    * **Bug 1 — gain_min** : ``avg_delay_s / 60 * 0.5`` — on suppose qu'on
+      peut récupérer la moitié du retard bus en améliorant l'infra.
+    * **Bug 1 — cout_M_euros** : mapping ``diagnosis`` → coût d'aménagement
+      type (infra=3 M€, operations=0.8 M€, bus_lane_ok=0.3 M€, ok=0.1 M€).
+    * **Bug 5 — voyageurs_jour** : estimation depuis ``n_observations``.
+      1 observation ≈ 1 passage bus, capacité moyenne ~80 passagers,
+      taux d'occupation SYTRAL ~45% → ``n_obs * 36``.
+    * **Bug 7 — roi_mois** : calculé avec la formule du ``roi_calculator``
+      (valeur_temps=15 €/h, jours_an=250, doublement aller-retour).
+      Une seule source de vérité pour les 2 widgets.
+    * **Bug 7 — delai_mois** : heuristique ``max(3, int(cout * 6))``
+      (1 M€ ≈ 6 mois de travaux). Conservé dans le dict pour rétro-compat
+      avec ``top_decisions.py`` mais plus aucune formule hardcodée.
+    * **Bug 4 — diagnosis** : ajoutée au dict (les widgets s'en servent
+      pour couleur + emoji).
+    * **Nouvelles clés** : ``lat``, ``lon``, ``avg_delay_s``,
+      ``traffic_speed_kmh`` (utilisées par ``bottleneck_map``).
     """
     from src.data.data_loader import load_bottlenecks_summary
     from src.data.db_query import clean_line_label
@@ -634,6 +659,20 @@ def load_bottlenecks_top() -> list[dict]:
     if df.empty:
         return []
 
+    # Constantes économiques — alignées avec dashboard/components/widgets/elu/roi_calculator.py
+    DEFAULT_VALEUR_TEMPS_EUR_H = 15.0  # €/h (valeur du temps usager TCL)
+    DEFAULT_JOURS_AN = 250  # jours ouvrés (hors WE + vacances)
+    BUS_PASSAGE_CAPACITY = 80  # passagers/bus (capacité moyenne articulé+standard Lyon)
+    BUS_OCCUPATION_RATE = 0.45  # 45% taux d'occupation moyen SYTRAL
+
+    # Coût d'aménagement par type de diagnostic (M€)
+    COUT_PAR_DIAGNOSTIC = {
+        "infra": 3.0,
+        "operations": 0.8,
+        "bus_lane_ok": 0.3,
+        "ok": 0.1,
+    }
+
     bottlenecks = []
     for i, row in df.head(10).iterrows():
         # Sprint 11+ — utilise les colonnes nettoyées si dispo, sinon fallback DB raw
@@ -641,20 +680,76 @@ def load_bottlenecks_top() -> list[dict]:
         if not zone or zone == "—":
             zone = clean_line_label(row.get("road_name", "—"))
         lines_impacted_raw = row.get("line_label") or clean_line_label(row.get("line_ref"))
+
+        # ── Lecture des colonnes DB réelles (Bug 1/4/5/6 fix) ──────────────
+        avg_delay_s = float(row.get("avg_bus_delay_s", 0) or 0)
+        traffic_speed_kmh = float(row.get("avg_traffic_speed_kmh", 0) or 0)
+        diagnosis = str(row.get("diagnosis") or "ok")
+        n_observations = int(row.get("n_observations", 0) or 0)
+        lat = row.get("lat")
+        lon = row.get("lng")  # SQL alias lon AS lng
+
+        # ── Dérivations data-driven (plus aucune fonction linéaire de i) ───
+        # Bug 5 Option B : 1 obs ≈ 1 bus, ~80 passagers/bus, ~45% occupation
+        voyageurs_estimes = int(n_observations * BUS_PASSAGE_CAPACITY * BUS_OCCUPATION_RATE)
+
+        # Bug 1 : gain estimé = demi-retard récupérable si aménagement réalisé
+        gain_min = round(avg_delay_s / 60 * 0.5, 1)
+
+        # Bug 1 : coût d'aménagement selon diagnostic
+        cout_M_euros = COUT_PAR_DIAGNOSTIC.get(diagnosis, 1.0)
+
+        # Bug 7 Option A : ROI calculé avec formule du roi_calculator
+        # gain_annuel = voyageurs * (gain_min/60) * valeur_temps * 2 (aller-retour) * jours_an
+        gain_annuel = voyageurs_estimes * (gain_min / 60) * DEFAULT_VALEUR_TEMPS_EUR_H * 2 * DEFAULT_JOURS_AN
+        cout_euros = cout_M_euros * 1_000_000
+        roi_mois = round(cout_euros / gain_annuel * 12, 1) if gain_annuel > 0 else 999
+
+        # Bug 7 : délai travaux = heuristique 1 M€ ≈ 6 mois, plancher 3 mois
+        delai_mois = max(3, int(cout_M_euros * 6))
+
+        # Description lisible selon diagnostic (était "Amélioration #N…" générique)
+        description = _build_bottleneck_description(diagnosis, zone, lines_impacted_raw)
+
         bottlenecks.append(
             {
+                # Clés existantes (rétro-compat avec top_decisions.py + autres widgets)
                 "rank": int(row.get("bottleneck_id", i + 1)),
                 "zone": zone,
                 "lines_impacted": [lines_impacted_raw] if lines_impacted_raw else [],
-                "voyageurs_jour": int(row.get("voyageurs_jour", 5000 + i * 1000)),
-                "gain_min": 5 + i,
-                "cout_M_euros": round(2.5 - i * 0.15, 2),
-                "roi_mois": 18 + i * 3,
-                "delai_mois": 6 + i * 2,
-                "description": f"Amélioration #{i + 1} du bottleneck {zone}",
+                "voyageurs_jour": voyageurs_estimes,
+                "gain_min": gain_min,
+                "cout_M_euros": cout_M_euros,
+                "roi_mois": roi_mois,
+                "delai_mois": delai_mois,
+                "description": description,
+                # Nouvelles clés (Bug 4 + préparation Bug 2/6)
+                "diagnosis": diagnosis,
+                "lat": float(lat) if lat is not None else None,
+                "lon": float(lon) if lon is not None else None,
+                "avg_delay_s": avg_delay_s,
+                "traffic_speed_kmh": traffic_speed_kmh,
             }
         )
     return bottlenecks
+
+
+def _build_bottleneck_description(diagnosis: str, zone: str, line: str) -> str:
+    """Construit une description lisible du bottleneck selon son diagnostic.
+
+    Avant : ``"Amélioration #N du bottleneck L66"`` (générique, sans info).
+    Maintenant : explique la nature du problème (infra, opérations, etc.)
+    pour aider l'élu à arbitrer.
+    """
+    zone_str = "ce tronçon" if not zone or zone == "—" else zone
+    line_str = f" ({line})" if line and line != "—" else ""
+    templates = {
+        "infra": f"Aménagement d'infrastructure sur {zone_str}{line_str} — voie dédiée, feu tricolore ou reconfiguration",
+        "operations": f"Ajustement opérationnel sur {zone_str}{line_str} — signalisation, fréquence ou intermodalité",
+        "bus_lane_ok": f"Voie bus fonctionnelle sur {zone_str}{line_str} — surveiller la pérennité",
+        "ok": f"Zone {zone_str}{line_str} sous surveillance",
+    }
+    return templates.get(diagnosis, templates["ok"])
 
 
 def load_amenagements_passes(limit: int = 50) -> pd.DataFrame:

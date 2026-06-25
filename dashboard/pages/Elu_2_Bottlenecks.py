@@ -1,4 +1,11 @@
-"""Page Élu — Bottlenecks prioritaires."""
+"""Page Élu — Bottlenecks prioritaires.
+
+Sprint 22+ (2026-06-25) — Fix 9 bugs du SPEC_FIX_ELU2_BOTTLENECKS.md :
+* Carte alimentée par les vraies coordonnées GPS (gold.mv_bus_traffic_spatial)
+* Économie dérivée de la DB (gain = demi-retard bus, coût par diagnostic)
+* ROI unifié entre ranking et calculateur
+* Voyageurs estimés depuis n_observations (1 obs ≈ 36 voyageurs)
+"""
 
 from __future__ import annotations
 
@@ -32,7 +39,9 @@ st.title("🎯 Bottlenecks prioritaires — Investissements")
 render_data_status_banner()
 
 st.caption(
-    "Classement par impact voyageurs × gain estimé × ROI. Critères SYTRAL : accessibilité, ponctualité, report modal."
+    "Classement par impact voyageurs × gain estimé × ROI. "
+    "Données : gold.mv_bus_traffic_spatial (MV spatiale 0.001° ≈ 100 m, "
+    "JOIN bus×trafic par zone, refresh */15 min)."
 )
 
 st.markdown("---")
@@ -44,7 +53,7 @@ render_bottleneck_map(height=400)
 st.markdown("---")
 
 # Tableau ranké
-st.markdown("##### 📊 Classement par ROI")
+st.markdown("##### 📊 Classement par diagnostic + ROI")
 render_bottleneck_ranking()
 
 st.markdown("---")
@@ -52,4 +61,8 @@ st.markdown("---")
 # Calculateur ROI
 render_roi_calculator()
 
-st.caption("LyonFlowFull · ROI calculé : voyageurs × gain × valeur temps × 250 jours / coût")
+st.caption(
+    "LyonFlowFull · ROI = voyageurs × gain × valeur temps × 2 (aller-retour) × "
+    "250 jours ouvrés / coût. Voyageurs estimés depuis SIRI Lite "
+    "(n_obs × 36 : 1 obs ≈ 1 bus × ~80 passagers × ~45% occupation SYTRAL)."
+)

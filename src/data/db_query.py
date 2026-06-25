@@ -545,56 +545,75 @@ def get_infrastructure_bottlenecks(top: int = 30) -> pd.DataFrame:
 def get_bottlenecks_summary(top: int = 50) -> pd.DataFrame:
     """Résumé des bottlenecks infrastructure pour les pages Élu (rank + zone + voyageurs).
 
-    Sprint 9+ (2026-06-17) — Fonction manquante qui crashait
-    ``load_bottlenecks_summary`` / ``load_bottlenecks_top``. Lit la table réelle
-    ``gold.infrastructure_bottlenecks`` (v0.3.1) et expose un alias
-    rétro-compatible pour ``load_bottlenecks_top`` (qui consomme
-    ``bottleneck_id``, ``road_name``, ``voyageurs_jour``).
+    Sprint 22+ (2026-06-25) — Fix bugs 3/6/8/9 du SPEC_FIX_ELU2_BOTTLENECKS.md :
+    on lit désormais ``gold.mv_bus_traffic_spatial`` (MV spatiale 0.001°
+    ≈ 100 m, refresh CONCURRENTLY par DAG */15 min) au lieu de la table
+    ``gold.infrastructure_bottlenecks`` (DELETE+INSERT global par heure).
 
-    Mapping schéma v0.3.1 → contrat widget Élu ::
-        * ``id``               → ``bottleneck_id``
-        * ``segment_id``       → ``road_name`` (identifiant segment routier)
-        * ``line_ref``         → ``line_ref`` (ligne TCL impactée)
-        * ``bus_delay_seconds``→ ``avg_bus_delay_s`` (s)
-        * ``traffic_speed_kmh``→ ``avg_traffic_speed_kmh`` (km/h)
-        * ``n_observations``   → ``voyageurs_jour`` proxy (n_obs agrégées,
-                                 utilisé comme dénominateur d'impact par Élu)
-        * ``lat``, ``lon``     → géoloc
-        * ``diagnosis``        → étiquette diagnostic
+    Bénéfices :
+    * **Bug 3** : JOIN spatial par zone de 100 m (au lieu d'un JOIN global
+      par heure qui moyennait tout Lyon). Le retard du bus L66 à 8h est
+      maintenant corrélé au trafic de la zone traversée par la L66.
+    * **Bug 6** : coordonnées GPS réelles (lat/lon arrondis 0.001° depuis
+      ``gold.tcl_vehicle_realtime``), plus de HASHTEXT déterministe.
+    * **Bug 8** : plus de DELETE+INSERT complet toutes les 10 min, la MV
+      utilise REFRESH MATERIALIZED VIEW CONCURRENTLY.
+    * **Bug 9** : la MV spatiale existe depuis Sprint 15+ (≥ 6 jours de
+      production), on l'utilise enfin.
+
+    Schéma source : ``gold.mv_bus_traffic_spatial`` (migration 018).
+    Colonnes mappées vers le contrat widget Élu :
+        * ``ROW_NUMBER()``  → ``bottleneck_id``
+        * ``line_ref||_h||hour`` → ``road_name`` (segment_id reconstitué,
+          bucket horaire interne conservé pour traçabilité DB)
+        * ``line_ref``      → ``line_ref`` (ligne TCL impactée)
+        * ``bus_delay_sec`` → ``avg_bus_delay_s`` (s)
+        * ``traffic_speed_kmh`` → ``avg_traffic_speed_kmh`` (km/h)
+        * ``bus_observations``→ ``n_observations`` (passages bus observés)
+        * ``lat``, ``lon``  → géoloc (réelles, arrondies 0.001°)
+        * ``diagnosis``     → étiquette diagnostic ('infra' / 'operations')
+
+    Note Bug 5 : ``n_observations`` n'est PAS le nb de voyageurs. La
+    conversion ``voyageurs_estimes = n_obs * 36`` est faite côté Python
+    dans ``load_bottlenecks_top`` (Bug 5 Option B : 1 obs ≈ 1 bus,
+    capacité moyenne ~80 passagers, taux occupation SYTRAL ~45%).
 
     Args:
         top: nombre max de lignes retournées (défaut 50).
 
     Returns:
         DataFrame: bottleneck_id, road_name, line_ref, diagnosis,
-        avg_bus_delay_s, avg_traffic_speed_kmh, n_observations,
-        voyageurs_jour, lat, lng, computed_at.
+        avg_bus_delay_s, avg_traffic_speed_kmh, traffic_congestion,
+        n_observations, lat, lng, computed_at.
         Vide si DB indisponible (la couche data_loader remonte alors
         ``DashboardDataError`` via ``_require_db_or_raise``).
     """
     query = """
-        SELECT id            AS bottleneck_id,
-               segment_id    AS road_name,
+        SELECT ROW_NUMBER() OVER (ORDER BY bus_delay_sec DESC) AS bottleneck_id,
+               line_ref || '_h' || hour AS road_name,
                line_ref,
                diagnosis,
-               bus_delay_seconds AS avg_bus_delay_s,
-               traffic_speed_kmh AS avg_traffic_speed_kmh,
+               bus_delay_sec          AS avg_bus_delay_s,
+               traffic_speed_kmh      AS avg_traffic_speed_kmh,
                traffic_congestion,
-               n_observations,
-               n_observations AS voyageurs_jour,
+               bus_observations       AS n_observations,
                lat, lon AS lng,
                computed_at
-        FROM gold.infrastructure_bottlenecks
-        ORDER BY bus_delay_seconds DESC NULLS LAST
+        FROM gold.mv_bus_traffic_spatial
+        WHERE diagnosis IN ('infra', 'operations')
+        ORDER BY bus_delay_sec DESC NULLS LAST
         LIMIT %s
     """
     df = _df_from_query(query, (top,))
     if not df.empty and "line_ref" in df.columns:
         # Sprint 11+ — colonne line_label pour affichage lisible
-        # ("L66 ; 20h" au lieu de "ActIV:Line::66:SYTRAL_h20").
+        # ("L66" au lieu de "ActIV:Line::66:SYTRAL"). Le bucket horaire
+        # interne (_hNN) est supprimé pour l'affichage utilisateur.
         df["line_label"] = df["line_ref"].apply(clean_line_label)
-        # Le road_name (segment_id brut) peut aussi être nettoyé quand c'est
-        # un identifiant ActIV:Line:: (cas des bottlenecks routiers).
+        # Le road_name (reconstitué line_ref || '_h' || hour) passe aussi
+        # par clean_line_label — résultat identique à line_label ici, mais
+        # on garde les deux colonnes pour rétro-compat avec
+        # ``load_bottlenecks_top`` qui lit road_label en priorité.
         if "road_name" in df.columns:
             df["road_label"] = df["road_name"].apply(clean_line_label)
     return df
