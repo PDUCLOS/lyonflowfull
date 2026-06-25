@@ -259,7 +259,7 @@ def render_network_health_gauge() -> None:
     # Si la table est vide (< 24h de données après déploiement du DAG), la
     # sparkline affiche "Historique bientôt disponible".
     from dashboard.components.sparkline import render_sparkline
-    from src.data.db_query import get_network_health_history
+    from src.data.network_health_history import get_network_health_history
 
     history = get_network_health_history(hours=24)
     if history:
