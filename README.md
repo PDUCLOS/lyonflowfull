@@ -6,13 +6,13 @@
 #
 # Auteur: Patrice DUCLOS — Senior Data Analyst, Jedha RNCP 38777
 # Repo: PDUCLOS/lyonflowfull
-# Version: 0.6.3 (Sprints VPS 1-8 livrés — voir archive/sprints/SPRINT_VPS-8_REPORT.md)
+# Version: 0.12.1 (Sprint 22++ — Elu_2 fix + menu MLOps Usager — branche `vps` active)
 #
 # Branches :
 #   - main         : Phase 1 production-ready local + fixes pipeline
-#   - vps          : ACTIVE — Phase 2 déploiement VPS production (Sprints VPS 1-5)
-#   - kubernetes   : DORMANTE — Phase 2 alternative K8s, futur AWS/GCP, NON mergée
-#   - cloud-demo   : DORMANTE — Phase 3 Scaleway Kapsule, démo Jedha, NON mergée
+#   - vps          : ACTIVE — Phase 2 déploiement VPS production (Sprints 1-22++)
+#   - kubernetes   : DORMANTE — Phase 3 K8s, futur AWS/GCP, NON mergée
+#   - cloud-demo   : DORMANTE — Phase 4 Scaleway Kapsule, démo Jedha, NON mergée
 #
 # Voir docs/GIT_STRUCTURE.md pour le workflow branches/merges.
 # Voir docs/REPO_STRUCTURE.md pour l'arbre annoté du repo.
@@ -50,8 +50,8 @@ en une solution unifiée :
 
 | Persona    | Cible            | Pages | Auth |
 |------------|------------------|-------|------|
-| 🌱 Usager  | Lyonnais (grand public) | 4 pages (Mon Trajet, Alertes, Favoris, Files) | Non |
-| 🎛 Pro TCL | Opérateurs réseau (Keolis) | 5 pages (PCC Live, Heatmap OTP, Corrélation, Simulateur, Export) | Oui (env) |
+| 🌱 Usager  | Lyonnais (grand public) | 5 pages (Mon Trajet, Alertes, Notre Modèle, Sources Données, Statut Service) | Non |
+| 🎛 Pro TCL | Opérateurs réseau (Keolis) | 6 pages (PCC Live, Heatmap OTP, Corrélation, Simulateur, Pipeline Mgmt, Model Monitoring) | Oui (env) |
 | 🏛 Élu     | Décideurs Grand Lyon | 5 pages (Synthèse, Bottlenecks, Avant/Après, Simulateur, Rapport PDF) | Oui (env) |
 
 ### Les 4 piliers ML
@@ -289,8 +289,8 @@ lyonflowfull/
 ├── training/               # GNN training (Sprint 5+)
 ├── dashboard/              # Streamlit multi-pages
 │   ├── components/
-│   │   └── widgets/        # 45 widgets par persona
-│   └── pages/              # 15 pages
+│   │   └── widgets/        # 59 widgets (14 Usager + 25 Pro TCL + 20 Élu)
+│   └── pages/              # 18 pages (5 Usager + 6 Pro TCL + 5 Élu + Accueil + RGPD + A_Propos)
 ├── tests/                  # pytest
 ├── docs/                   # Documentation
 ├── deploy/                 # init-db.sql
@@ -365,7 +365,7 @@ pytest tests/ --cov=src --cov=dags --cov-report=html
 open htmlcov/index.html
 ```
 
-Tests actuels : 28 (persona UI) + 16 (intégration) + 3 (smoke) = **47 tests**.
+Tests actuels : **658 verts** / 9 skipped (DB/ML indispo local) / 23 deselected (integration). Détail : 28 persona UI + 16+ intégration + 3 smoke + ~610 unit (data, ml, monitoring, widgets).
 
 ---
 
@@ -462,15 +462,18 @@ Points clés :
 - CI/CD GitHub Actions
 - 47 tests
 
-### Sprint 6+ (à venir)
-- Real data binding complet (remplacer mock par requêtes DB)
-- Component React deck.gl pour simulateur d'aménagement
-- Entraînement GNN réel (training/stgcn/)
-- HPO Optuna intégré
-- Tests E2E Playwright
-- Métriques Prometheus + Grafana
-- Alertes PagerDuty
-- Kubernetes manifests (répertoire dédié)
+### Sprint 6+ (livrés ✅ jusqu'à Sprint 22++)
+- Real data binding complet — Sprint 8 : zéro mock, `DashboardDataError` partout
+- Component deck.gl pour simulateur d'aménagement (Sprint 4)
+- Entraînement GNN réel — Sprint 9+ : `training/stgcn/` lit `gold.fact_traffic_series`
+- HPO Optuna intégré (Sprint 5)
+- Tests E2E Playwright (Sprint 13)
+- Métriques Prometheus + Grafana (Sprint 8+)
+- pgRouting routing voiture OSM (Sprint 18)
+- pgRouting `mv_bus_traffic_spatial` JOIN spatial 0.001° (Sprint 15+)
+- Menu MLOps Usager (Sprint 22+, v0.12.0)
+- Elu_2_Bottlenecks sur vraies données DB (Sprint 22++, v0.12.1)
+- Manifests K8s — Phase 3 DORMANTE (futur AWS/GCP)
 
 ---
 
@@ -501,4 +504,4 @@ MIT — voir [LICENSE](LICENSE).
 
 Patrice DUCLOS — patrice.duclos@example.fr
 
-*LyonFlowFull v0.1.0 · 2026-06-06*
+*LyonFlowFull v0.12.1 · 2026-06-25 — branche `vps` (production VPS)*

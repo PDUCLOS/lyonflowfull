@@ -5,6 +5,113 @@ Toutes les modifications notables de ce projet sont documentées ici.
 Le format suit [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/),
 et ce projet adhère au [Semantic Versioning](https://semver.org/lang/fr/).
 
+## [0.12.1] - 2026-06-25 — Sprint 22++ : Fix 9 bugs Elu_2_Bottlenecks — branche sur vraies données DB (branche `vps`)
+
+**Commit** : `80bbb9b` — **658 tests verts (+8 nouveaux)** — ruff clean.
+
+Spec complète : `docs/SPEC_FIX_ELU2_BOTTLENECKS.md` (491 lignes).
+
+**Problème racine** : la page `Elu_2_Bottlenecks` affichait des données 100%
+synthétiques (formules linéaires de l'index `i` de boucle), une carte vide
+(dict coords hardcodé jamais matché), et jetait le seul signal réel (diagnosis).
+
+### Bugs critiques (🔴)
+
+- **Bug 1** — `gain_min`, `cout_M_euros`, `roi_mois`, `delai_mois` hardcodés
+  (`5 + i`, `2.5 - i * 0.15`, `18 + i * 3`, `6 + i * 2`). Fix : dérivés de
+  `avg_bus_delay_s` + diagnosis + formule ROI cohérente. ROI unifié entre
+  `bottleneck_ranking.py` et `roi_calculator.py`.
+- **Bug 2** — Carte Folium ZÉRO marqueur. Dict coords de 10 rues hardcodé,
+  mais `zone = clean_line_label(segment_id)` = `"L66 ; 20h"`, jamais matché.
+  Fix : suppression du dict, lecture `b.get("lat"/"lon")` réelles depuis la MV.
+
+### Bugs majeurs (🟠)
+
+- **Bug 3/9** — JOIN global par heure (moyenne tout Lyon) au lieu de JOIN
+  spatial 0.001° par zone. Fix : `get_bottlenecks_summary` lit désormais
+  `gold.mv_bus_traffic_spatial` (MV spatiale, refresh CONCURRENTLY */15 min).
+- **Bug 4** — Diagnostic (seul signal réel, 4 valeurs `infra/operations/
+  bus_lane_ok/ok`) jeté avant affichage. Fix : colonne Diagnostic ajoutée au
+  ranking + couleur marqueurs carte + info-bulle calculateur ROI.
+- **Bug 5** — `n_observations AS voyageurs_jour` (alias trompeur). Fix :
+  estimation `voyageurs_jour = n_obs × 36` (1 obs ≈ 1 bus × ~80 passagers
+  × ~45% occupation SYTRAL) — affichage "(estimé)" dans les widgets.
+
+### Bugs moyens (🟡)
+
+- **Bug 6** — `lat/lon` calculés par `HASHTEXT(line_ref)` (coords déterministes
+  mais fausses). Auto-résolu par Bug 3 (MV spatiale fournit vraies coords).
+- **Bug 7** — ROI contradictoires (table `18 + i * 3` vs calculateur formule
+  `voyageurs × gain × valeur_temps × 2 × jours_an / coût`). Fix : formule
+  unique partagée.
+- **Bug 8** — `DELETE FROM gold.infrastructure_bottlenecks` + `INSERT` complet
+  toutes les 10 min (fenêtre "table vide"). Auto-résolu par Bug 3
+  (REFRESH MATERIALIZED VIEW CONCURRENTLY).
+
+### Fichiers modifiés (8)
+
+| Fichier | Changements |
+|---|---|
+| `src/data/db_query.py` | `get_bottlenecks_summary` lit `mv_bus_traffic_spatial` (Bug 3/9) |
+| `src/data/data_loader.py` | `load_bottlenecks_top` data-driven : gain/cout/ROI/voyageurs + `_build_bottleneck_description` (Bug 1/4/5/7) |
+| `dashboard/components/widgets/elu/bottleneck_map.py` | Vraies coords lat/lon + couleur diagnostic (Bug 2/4) |
+| `dashboard/components/widgets/elu/bottleneck_ranking.py` | Colonne Diagnostic + couleur (Bug 4) |
+| `dashboard/components/widgets/elu/roi_calculator.py` | Affiche diagnostic sélectionné (Bug 7) |
+| `dashboard/pages/Elu_2_Bottlenecks.py` | Wording + footer ROI cohérent |
+| `tests/data/test_db_query_and_data_loader.py` | +3 tests : SQL source + dict format + empty case |
+| `tests/persona/test_elu_widgets.py` | +5 tests : widget behavior (markers, diagnostic, lat/lon, no hardcodes) |
+
+### Vérifications
+
+- ✅ `pytest tests/ -q` : **658 verts**, 9 skipped (DB/ML indispo local), 0 régression
+- ✅ `ruff check .` : clean
+- ✅ `ruff format --check .` : clean
+
+---
+
+## [0.12.0] - 2026-06-25 — Sprint 22+ : Menu MLOps pour le persona Usager (3 pages citoyen) (branche `vps`)
+
+**Commit** : `691eaaf` — **650 tests verts** — ruff clean.
+
+Le persona Usager n'avait que 2 pages (Mon trajet + Alertes) alors que Pro
+TCL a déjà un groupe MLOps (Pipeline Mgmt + Model Monitoring). Alignement
+en **langage grand public** (cf. `theme.show_technical: false`) :
+
+### Pages ajoutées (3)
+
+| Icône | Page | Contenu |
+|---|---|---|
+| 🤖 | `Usager_3_Notre_Modele.py` | Comment on prédit (langage citoyen) + précision 7j : donut accuracy_band, courbe MAE, qualité globale 🟢/🟡/🟠 |
+| 🌐 | `Usager_4_Sources_Donnees.py` | 8 sources Bronze + Silver + Gold expliquées (qui fournit, à quoi ça sert, fréquence), score santé 0-100, fraîcheur |
+| 🩺 | `Usager_5_Statut_Service.py` | 4 voyants synthétiques (Données / Modèle / Service / Alertes) + 5 derniers incidents + encart pédagogique |
+
+### Choix design
+
+- Aucune mention DAGs / MLflow / PostGIS dans le menu Usager (volontaire —
+  le détail technique reste sur Pro_6 / Pro_7).
+- Réutilisation des helpers existants : `cached_xgb_accuracy_summary`,
+  `cached_predictions_vs_actuals`, `cached_source_health`, `cached_recent_alerts`.
+- Style cohérent avec les autres pages (cards `lyonflow-card`, couleurs
+  `COLORS["status_ok/warning/critical"]`, Plotly via `apply_lyf_theme`).
+
+### Fichiers modifiés (4)
+
+| Fichier | Changements |
+|---|---|
+| `dashboard/pages/Usager_3_Notre_Modele.py` | **NOUVEAU** (303 lignes) |
+| `dashboard/pages/Usager_4_Sources_Donnees.py` | **NOUVEAU** (350 lignes) |
+| `dashboard/pages/Usager_5_Statut_Service.py` | **NOUVEAU** (315 lignes) |
+| `config/personas.yaml` | +3 entrées sous groupe `MLOps` (⚙️) |
+
+### Vérifications
+
+- ✅ `pytest tests/` : 650 verts (0 régression vs 615 Sprint 21)
+- ✅ `ruff check` + `ruff format` : clean
+- ✅ Navigation YAML parsable : `get_navigation("usager")` retourne 5 entrées
+  (2 Mobilité + 3 MLOps)
+
+---
+
 ## [0.11.0] - 2026-06-22 — Sprint 20-21 : UX unifiée + Quantile regression + Documentation cleanup (branche `vps`)
 
 Refonte UX transversale (4 axes), quantile regression XGBoost, sparkline santé réseau,

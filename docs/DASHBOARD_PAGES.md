@@ -1,5 +1,9 @@
 # Logique et Architecture des Pages du Dashboard
 
+> **Dernière mise à jour** : 2026-06-25 — Sprint 22++ (v0.12.1)
+> **Pages totales** : 18 (5 Usager + 6 Pro TCL + 5 Élu + Accueil + RGPD + A_Propos)
+> **Widgets** : 59 fichiers Python dans `dashboard/components/widgets/`
+
 Ce document centralise la documentation de toutes les pages de l'application Streamlit `LyonFlowFull`. Le projet repose sur une approche **Multi-Persona** : une même application sert 3 types d'utilisateurs avec des interfaces et des logiques complètement différentes.
 
 La navigation est gérée dynamiquement par `dashboard/components/navigation.py` qui lit le fichier `config/personas.yaml` pour restreindre l'accès et l'affichage.
@@ -48,13 +52,25 @@ Interface orientée "B2C", gratuite et sans mot de passe, axée sur le confort d
 - Connecté à `silver.chantiers_actifs` pour lister les travaux en cours sur la voirie.
 - Affiche une timeline des alertes et permet à l'usager de régler ses préférences d'alerte.
 
-### `Usager_3_Favoris.py`
-**Logique :** Gestion des trajets récurrents.
-- Permet à l'utilisateur de sauvegarder ses adresses domicile/travail.
-- Affiche les prévisions pour les trajets favoris en un clin d'œil.
+### `Usager_3_Notre_Modele.py`  *(Sprint 22+)*
+**Logique :** Transparence sur la prédiction en langage citoyen.
+- Bloc pédagogique "Comment on prédit le trafic à 1h ?" (XGBoost H+1h, features utilisées, scope du modèle).
+- Précision 7 derniers jours : donut accuracy_band (accurate ±5 km/h / acceptable 5-10 / poor >10), courbe MAE horaire, qualité globale 🟢/🟡/🟠 dérivée de `gold.v_xgb_accuracy_summary`.
+- Encart "Ce qu'il faut garder en tête" : horizon 1h, météo extrême, événements imprévus.
+- Aucune mention DAGs/MLflow (cf. `theme.show_technical: false` du persona).
 
-### `Usager_4_Files.py`
-**Logique :** (Optionnelle) Interface permettant l'upload ou le download de pièces justificatives ou de configurations (File Manager basique).
+### `Usager_4_Sources_Donnees.py`  *(Sprint 22+)*
+**Logique :** Transparence sur les 8 sources Bronze + tables Silver/Gold.
+- Mapping citoyen des sources (qui fournit, à quoi ça sert, fréquence de MAJ).
+- Fraîcheur en minutes + score santé 0-100 par source (vue `gold.v_source_health`).
+- Encart pédagogique "Comment on mesure la santé d'une source ?".
+- Reprise du widget Pro `source_health_monitor` filtré en lecture seule pour le grand public.
+
+### `Usager_5_Statut_Service.py`  *(Sprint 22+)*
+**Logique :** Tableau de bord citoyen "tout roule ou pas ?" en 30s.
+- 4 voyants synthétiques : 🟢 Données / 🟢 Modèle / 🟢 Service / 🟢 Alertes (réévalués à chaque refresh).
+- Top 5 derniers incidents détectés (`cached_recent_alerts` 24h).
+- Encart "Qu'est-ce qui peut affecter la fiabilité ?" (météo extrême, travaux non programmés, pics exceptionnels, panne source).
 
 ---
 
@@ -74,16 +90,13 @@ Interface "B2B" protégée par mot de passe, axée sur la gestion du réseau, la
 ### `Pro_3_Correlation.py`
 **Logique :** L'Argumentaire Technique (USP) du projet.
 - Croise les données de ralentissement routier (modèles XGBoost/GNN) avec les retards de bus.
+- 4 onglets : matrice globale + bus×trafic spatialisé + cohérence TomTom×GL + multimodal heatmap + propagation Granger.
 - Affiche une matrice de corrélation pour prouver que le trafic routier est la cause des retards TCL sur certains segments.
 
 ### `Pro_4_Simulateur.py`
 **Logique :** Outil de planification à court terme.
 - Permet à l'exploitant de simuler des modifications de fréquence de bus.
 - Calcule l'impact théorique sur le taux de charge et l'attente voyageur (A/B testing Avant/Après).
-
-### `Pro_5_Export.py`
-**Logique :** Génération de rapports métiers (SAEIV).
-- Exporte les données de performance du réseau aux formats PDF/CSV pour les revues de direction.
 
 ### `Pro_6_Pipeline_Mgmt.py`
 **Logique :** Interface Data Engineering.
@@ -93,6 +106,8 @@ Interface "B2B" protégée par mot de passe, axée sur la gestion du réseau, la
 **Logique :** Interface MLOps.
 - Surcouche au-dessus de MLflow. Permet de suivre les performances des modèles de prédiction (XGBoost / STGCN).
 - Affiche les graphes de Model Drift et permet l'activation/désactivation de la carte GNN.
+
+> **Note** : `Pro_5_Export.py` n'existe plus — sprint backlog reporté (export SAEIV PDF/CSV abandonné depuis Sprint 13+). L'export se fait via `Elu_5_Rapport.py` (côté Élu).
 
 ---
 
@@ -105,7 +120,8 @@ Interface stratégique, protégée par mot de passe, axée sur l'aide à la déc
 
 ### `Elu_2_Bottlenecks.py`
 **Logique :** Identification des points noirs.
-- Affiche un classement des pires goulets d'étranglement de la Métropole (là où les bus perdent le plus de temps et coûtent de l'argent à la collectivité).
+- Affiche un classement des pires goulets d'étranglement de la Métropole (là où les bus perdent le plus de temps et coûtent le plus à la collectivité).
+- **Sprint 22++** (2026-06-25) : branche sur les vraies données DB (`gold.mv_bus_traffic_spatial`, MV spatiale 0.001° ≈ 100m). Le diagnostic (`infra` / `operations` / `bus_lane_ok` / `ok`) remplace le ROI synthétique dans le ranking et la carte. ROI unifié entre ranking et calculateur.
 
 ### `Elu_3_Avant_Apres.py`
 **Logique :** Évaluation des travaux passés.

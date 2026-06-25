@@ -1,6 +1,8 @@
 # TODO — LyonFlowFull
 
-> **Date** : 2026-06-22 · **Branche** : `vps` · **615 tests verts, ruff clean** · **v0.11.0**
+> **Date** : 2026-06-25 · **Branche** : `vps` · **658 tests verts, ruff clean** · **v0.12.1**
+>
+> **Dernières MAJ** : Sprint 22+ (menu MLOps Usager, v0.12.0) · Sprint 22++ (Elu_2 fix, v0.12.1)
 
 ---
 

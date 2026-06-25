@@ -120,27 +120,35 @@ dashboard/
 │   ├── navigation.py
 │   ├── theme.py
 │   └── widgets/
-│       ├── usager/             # 12 widgets
-│       ├── pro_tcl/            # 18 widgets
-│       └── elu/                # 15 widgets
+│       ├── usager/             # 14 widgets
+│       ├── pro_tcl/            # 25 widgets
+│       └── elu/                # 20 widgets
 └── pages/
+    ├── Accueil.py
     ├── Usager_1_Mon_Trajet.py
     ├── Usager_2_Alertes.py
-    ├── Usager_3_Favoris.py
-    ├── Usager_4_Files.py
+    ├── Usager_3_Notre_Modele.py         # Sprint 22+ — MLOps citoyen 🤖
+    ├── Usager_4_Sources_Donnees.py      # Sprint 22+ — MLOps citoyen 🌐
+    ├── Usager_5_Statut_Service.py       # Sprint 22+ — MLOps citoyen 🩺
     ├── Pro_1_PCC_Live.py
     ├── Pro_2_Heatmap_OTP.py
     ├── Pro_3_Correlation.py
     ├── Pro_4_Simulateur.py
-    ├── Pro_5_Export.py
+    ├── Pro_6_Pipeline_Mgmt.py
+    ├── Pro_7_Model_Monitoring.py
     ├── Elu_1_Synthese.py
-    ├── Elu_2_Bottlenecks.py
+    ├── Elu_2_Bottlenecks.py             # Sprint 22++ — branche sur vraies données DB
     ├── Elu_3_Avant_Apres.py
     ├── Elu_4_Simulateur.py
     ├── Elu_5_Rapport.py
     ├── 9_RGPD_Conformite.py
     └── A_Propos.py
 ```
+
+> **Note historique** : `Usager_3_Favoris.py` et `Usager_4_Files.py` ont été
+> remplacés par les 3 pages MLOps citoyen en Sprint 22+ (v0.12.0).
+> `Pro_5_Export.py` (export SAEIV) abandonné depuis Sprint 13+ — export
+> désormais via `Elu_5_Rapport.py`.
 
 ### Orchestration (Airflow 2.9)
 

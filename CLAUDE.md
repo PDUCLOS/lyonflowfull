@@ -1,6 +1,6 @@
 # CLAUDE.md — LyonFlowFull
 
-> Mémoire projet — **dernière mise à jour : 2026-06-22, Sprint 22 (ops cleanup VPS)** (disk 88% → 47%, systemd timer backup-offsite créé, tests verts).
+> Mémoire projet — **dernière mise à jour : 2026-06-25, Sprint 22++ (Elu_2 fix + menu MLOps Usager)** (658 tests verts, dashboard 18 pages / 59 widgets, zéro mock, ruff clean).
 
 ## Projet
 
@@ -10,8 +10,29 @@ LyonFlowFull est une plateforme MLOps end-to-end de prédiction et d'analyse du 
 **Repo** : PDUCLOS/lyonflowfull
 **Cible production** : **VPS unique** `51.83.159.224` (Ubuntu, 6 CPU, 12 Go RAM, **2× 100 Go SSD** : sda = OS + code, sdb = PostgreSQL + MinIO + **Docker data-root** depuis Sprint 9+).
 
-**Version actuelle** : **v0.11.0** (Sprints 1-7 + VPS 1-8 + 9+ + 11+ + 12+ + 13 + 13+ + 15+ + 17 + 17+ + 18 + 20 + 21) — branche `vps` ACTIVE
+**Version actuelle** : **v0.12.1** (Sprints 1-7 + VPS 1-8 + 9+ + 11+ + 12+ + 13 + 13+ + 15+ + 17 + 17+ + 18 + 20 + 21 + 22 + 22+ + 22++) — branche `vps` ACTIVE
 **Statut** : production VPS stable. Voir CHANGELOG.md pour le détail de chaque sprint.
+
+### État au 2026-06-25 (Sprint 22+ + 22++ — v0.12.1 — Menu MLOps Usager + Elu_2 DB-driven)
+
+- **18 pages × 3 personas** (5 Usager + 6 Pro TCL + 5 Élu + Accueil + RGPD + A_Propos) · **59 widgets** · **8 collecteurs Bronze** · **15 DAGs Airflow**
+- ~280 fichiers Python · ~25 000 lignes
+- **658 tests verts** · ruff clean
+- **Sprint 22+ (2026-06-25, commit `691eaaf`, v0.12.0) — Menu MLOps Usager** :
+  - **3 pages citoyen** sans jargon ML/DAG/PostGIS (cf. `theme.show_technical: false`) :
+    - 🤖 **Notre modèle** (`Usager_3_Notre_Modele.py`) : précision 7j en clair, donut accuracy_band, courbe MAE.
+    - 🌐 **Sources de données** (`Usager_4_Sources_Donnees.py`) : 8 sources + fraîcheur + score santé.
+    - 🩺 **Statut du service** (`Usager_5_Statut_Service.py`) : 4 voyants synthétiques + top 5 incidents.
+  - **Helpers réutilisés** : `cached_xgb_accuracy_summary`, `cached_predictions_vs_actuals`, `cached_source_health`, `cached_recent_alerts`.
+- **Sprint 22++ (2026-06-25, commit `80bbb9b`, v0.12.1) — Elu_2 sur vraies données DB** :
+  - Spec complète `docs/SPEC_FIX_ELU2_BOTTLENECKS.md` (491 lignes, 9 bugs).
+  - **Bug 3/9** : `get_bottlenecks_summary` lit `gold.mv_bus_traffic_spatial` (MV spatiale 0.001°) au lieu de `gold.infrastructure_bottlenecks` (JOIN global par heure).
+  - **Bug 1/4/5/7** : `load_bottlenecks_top` data-driven — gain = `avg_delay_s/60*0.5`, cout = `f(diagnosis)`, ROI = formule unifiée, voyageurs = `n_obs × 36`.
+  - **Bug 2** : `bottleneck_map` lit vraies coords lat/lon, couleur par diagnostic (plus de dict coords hardcodé).
+  - **Bug 4** : `bottleneck_ranking` colonne Diagnostic (🔴 infra / 🟠 ops / 🟢 voie bus / ⚪ ok).
+  - **Bug 7** : `roi_calculator` affiche diagnostic, ROI cohérent avec ranking.
+- **Tests** : +8 verts (3 dans `test_db_query_and_data_loader.py`, 5 dans `test_elu_widgets.py`).
+- **Docs** : `DASHBOARD_PAGES.md`, `CLAUDE.md`, `CHANGELOG.md` mis à jour pour refléter 18 pages / 59 widgets / 658 tests.
 
 ### État au 2026-06-22 (Ops cleanup VPS — sda1 88% → 47%)
 
@@ -227,7 +248,7 @@ Voir [AGENTS.md](AGENTS.md) pour les conventions et la mémoire projet.
 | ML Vélov | XGBoost (label encoding, 2 horizons H+30min + H+1h) — toutes les heures :50 |
 | ML Bus | XGBoost delay (phase analyse — collecte SIRI Lite en prod) |
 | API | FastAPI |
-| Dashboard | Streamlit multi-pages (15 pages × 3 personas) |
+| Dashboard | Streamlit multi-pages (18 pages × 3 personas — 5 Usager + 6 Pro TCL + 5 Élu + Accueil + RGPD + A_Propos) |
 | Monitoring | Prometheus + Alertmanager + Grafana (stack monitoring Sprint 8+) |
 | Transformation | psycopg2 pur (pas de Polars dans Airflow) |
 | CI/CD | GitHub Actions |
@@ -409,7 +430,7 @@ Chaque table Bronze : `fetched_at TIMESTAMPTZ` + `raw_data JSONB` + colonnes ext
 
 ## Dashboard — Architecture 3 personas
 
-**15 pages × 3 personas** (Usager, Pro TCL, Élu) + Accueil. **~60 widgets**.
+**18 pages × 3 personas** (Usager, Pro TCL, Élu) + Accueil + RGPD + A_Propos. **59 widgets**.
 
 ### Composants UX transversaux (Sprint 20+)
 
@@ -476,6 +497,10 @@ Le widget `dashboard/components/widgets/pro_tcl/line_kpis.py` expose :
 | **13 docs stale** | **ARCHIVÉS Sprint 21**. 5 root-level + 8 docs/ → `archive/{sprints,audits,misc}/`. Convention : déplacer, jamais supprimer (RNCP). |
 | **tests/ml/test_drift_detector.py** | **MERGÉ Sprint 21**. Doublon de `tests/monitoring/test_drift_detector.py` (même module, couverture inférieure). |
 | **PROJECT_STATUS_AND_GOALS.md** | **ARCHIVÉ Sprint 21**. Figé Sprint 8, supplanté par CLAUDE.md. |
+| **Elu_2 économie hardcodée** (`5 + i`, `2.5 - i * 0.15`, `18 + i * 3`, `6 + i * 2`) | **VIRÉ Sprint 22++** (v0.12.1). Données désormais dérivées de `gold.mv_bus_traffic_spatial` (gain = `avg_delay_s/60*0.5`, cout = `f(diagnosis)`, ROI = formule unifiée, voyageurs = `n_obs × 36`). |
+| **`gold.infrastructure_bottlenecks` (JOIN global par heure)** | **VIRÉ Sprint 22++** (v0.12.1). Remplacé par `gold.mv_bus_traffic_spatial` (MV spatiale 0.001° ≈ 100 m, refresh CONCURRENTLY */15 min). |
+| **Dict coords hardcodé `bottleneck_map.py`** | **VIRÉ Sprint 22++** (v0.12.1). 10 noms de rues jamais matchés (`zone` = `"L66 ; 20h"`). Remplacé par lecture `b.get("lat"/"lon")` réelles depuis la MV spatiale. |
+| **`docs/DASHBOARD_PAGES.md` (pages obsolètes Favoris/Files/Pro_5_Export)** | **CORRIGÉ Sprint 22++** (v0.12.1). Pages remplacées par Usager_3/4/5 (MLOps citoyen). Pro_5_Export abandonné depuis Sprint 13+ — export via Elu_5_Rapport. |
 
 ---
 
@@ -572,7 +597,7 @@ lyonflowfull/
 │   ├── sql/                # 20+ migrations (referentiel, vues matérialisées, audit)
 │   ├── maintenance/        # backfill scripts
 │   └── healthcheck-vps.sh  # NOUVEAU Sprint 8
-├── dashboard/              # 15 pages × 3 personas
+├── dashboard/              # 18 pages × 3 personas (5 Usager + 6 Pro TCL + 5 Élu + Accueil + RGPD + A_Propos)
 ├── tests/
 │   ├── conftest.py             # NOUVEAU Sprint 8 : MockDB + 3 fixtures
 │   ├── data/                   # tests unitaires data_loader/db_query
