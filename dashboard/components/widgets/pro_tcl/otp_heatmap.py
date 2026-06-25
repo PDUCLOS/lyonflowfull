@@ -3,6 +3,9 @@
 Sprint 8 — Charge via data_loader.cached_otp_heatmap_data() (vue Gold
 mv_otp_heatmap, 4416 triplets). Pas de mock — la DB est la source
 unique de vérité (fail loud si DB down).
+
+Sprint 23 — Ajout sélecteur de ligne (multiselect). Toutes les lignes
+de gold.mv_otp_heatmap sont accessibles. Mode "Toutes" = top_n pires.
 """
 
 from __future__ import annotations
@@ -46,14 +49,13 @@ def _compute_matrix(
     line_labels: dict[str, str],
     days: int = 1,
     top_n: int | None = None,
+    selected_line_ids: list[str] | None = None,
 ) -> tuple[list[str], list[list[float | None]]]:
     """Construit la matrice OTP (lignes × 24h), triée par pire OTP moyen.
 
     Args:
-        top_n: si défini, ne garde que les N pires lignes.
-
-    Returns:
-        (lines_display, z_data) — noms affichés et matrice de valeurs.
+        top_n: si défini et pas de sélection, ne garde que les N pires lignes.
+        selected_line_ids: si défini, filtre sur ces lignes (ignore top_n).
     """
     if not otp_data:
         return [], []
@@ -62,9 +64,13 @@ def _compute_matrix(
     dates = sorted(otp_data[first_key].keys())
     selected_dates = dates[:days] if days < len(dates) else dates
 
+    line_ids_to_process = list(otp_data.keys())
+    if selected_line_ids:
+        line_ids_to_process = [lid for lid in line_ids_to_process if lid in selected_line_ids]
+
     line_avgs: dict[str, float] = {}
     line_rows: dict[str, list[float | None]] = {}
-    for line_id in otp_data:
+    for line_id in line_ids_to_process:
         row: list[float | None] = []
         hourly_values: list[float] = []
         for h in range(24):
@@ -83,7 +89,7 @@ def _compute_matrix(
         line_avgs[line_id] = sum(hourly_values) / len(hourly_values) if hourly_values else 100.0
 
     sorted_ids = sorted(line_avgs, key=lambda k: line_avgs[k])
-    if top_n:
+    if top_n and not selected_line_ids:
         sorted_ids = sorted_ids[:top_n]
 
     sorted_ids.reverse()
@@ -93,86 +99,121 @@ def _compute_matrix(
     return lines_display, z_data
 
 
+def _line_type_icon(label: str) -> str:
+    if label.startswith("T"):
+        return "🚊"
+    if label.startswith("M"):
+        return "🚇"
+    return "🚌"
+
+
 def render_otp_heatmap(
     otp_data: dict | None = None,
     days: int = 1,
     height: int = 500,
     top_n: int | None = None,
     compact: bool = False,
+    show_line_selector: bool = False,
+    key_suffix: str = "",
 ) -> None:
     with loading_wrapper("Chargement Otp heatmap…", "⏳"):
-        """Affiche la heatmap OTP Plotly (lignes × heures).
+        if otp_data is None:
+            otp_data, line_labels = _load_otp_data()
+            if not otp_data:
+                st.info("Aucune donnée OTP — gold.mv_otp_heatmap est vide.")
+                return
+        else:
+            line_labels = {}
 
-    Args:
-        otp_data: dict {line_id: {date: [otp_h0..h23]}}. Si None, charge via DB.
-        days: nombre de jours à moyenner (1 = aujourd'hui, 7 = moyenne 7j).
-        height: hauteur du graphique.
-        top_n: si défini, ne garde que les N pires lignes (pour le mode mini).
-        compact: mode compact — pas de text overlay, font réduit.
-    """
-    if otp_data is None:
-        otp_data, line_labels = _load_otp_data()
-        if not otp_data:
-            st.info("Aucune donnée OTP — gold.mv_otp_heatmap est vide.")
+        selected_line_ids: list[str] | None = None
+
+        if show_line_selector and line_labels:
+            all_ids = sorted(line_labels.keys(), key=lambda k: line_labels.get(k, k))
+            display_options = [
+                f"{_line_type_icon(line_labels[lid])} {line_labels[lid]}"
+                for lid in all_ids
+            ]
+            id_by_display = dict(zip(display_options, all_ids))
+
+            st.caption(f"{len(all_ids)} lignes disponibles dans gold.mv_otp_heatmap")
+            chosen = st.multiselect(
+                "Filtrer par ligne",
+                options=display_options,
+                default=[],
+                placeholder="Toutes (top pires)",
+                key=f"otp_line_selector_{key_suffix}",
+            )
+            if chosen:
+                selected_line_ids = [id_by_display[c] for c in chosen]
+
+        lines, z_data = _compute_matrix(
+            otp_data, line_labels, days=days, top_n=top_n,
+            selected_line_ids=selected_line_ids,
+        )
+        if not lines:
+            st.info("Aucune ligne OTP à afficher.")
             return
-    else:
-        line_labels = {}
 
-    lines, z_data = _compute_matrix(otp_data, line_labels, days=days, top_n=top_n)
-    if not lines:
-        st.info("Aucune ligne OTP à afficher.")
-        return
+        try:
+            import plotly.graph_objects as go
 
-    try:
-        import plotly.graph_objects as go
+            heatmap_args: dict = {
+                "z": z_data,
+                "x": [f"{h}h" for h in range(24)],
+                "y": lines,
+                "colorscale": [
+                    [0.0, COLORS["status_critical"]],
+                    [0.395, COLORS["status_warning"]],
+                    [0.789, COLORS["chart_yellow"]],
+                    [1.0, COLORS["status_ok"]],
+                ],
+                "zmin": 60,
+                "zmax": 98,
+                "colorbar": {"title": "OTP %", "thickness": 15, "len": 0.8},
+                "hovertemplate": "<b>%{y}</b> à %{x}<br/>OTP: %{z:.0f}%<extra></extra>",
+                "xgap": 1,
+                "ygap": 1,
+            }
 
-        heatmap_args: dict = {
-            "z": z_data,
-            "x": [f"{h}h" for h in range(24)],
-            "y": lines,
-            "colorscale": [
-                [0.0, COLORS["status_critical"]],
-                [0.395, COLORS["status_warning"]],
-                [0.789, COLORS["chart_yellow"]],
-                [1.0, COLORS["status_ok"]],
-            ],
-            "zmin": 60,
-            "zmax": 98,
-            "colorbar": {"title": "OTP %", "thickness": 15, "len": 0.8},
-            "hovertemplate": "<b>%{y}</b> à %{x}<br/>OTP: %{z:.0f}%<extra></extra>",
-            "xgap": 1,
-            "ygap": 1,
-        }
+            if not compact or selected_line_ids:
+                heatmap_args["texttemplate"] = "%{z:.0f}"
+                heatmap_args["textfont"] = {"size": 9}
 
-        if not compact:
-            heatmap_args["texttemplate"] = "%{z:.0f}"
-            heatmap_args["textfont"] = {"size": 9}
+            fig = go.Figure(data=go.Heatmap(**heatmap_args))
 
-        fig = go.Figure(data=go.Heatmap(**heatmap_args))
+            title_suffix = "aujourd'hui" if days == 1 else f"moyenne {days}j"
+            if selected_line_ids:
+                title_top = f"{len(selected_line_ids)} ligne(s)"
+            elif top_n:
+                title_top = f"Top {top_n} pires"
+            else:
+                title_top = "Toutes"
 
-        title_suffix = "aujourd'hui" if days == 1 else f"moyenne {days}j"
-        title_top = f"Top {top_n} pires" if top_n else "Toutes"
-        fig.update_layout(
-            title={
-                "text": f"OTP — {title_top} lignes × heure ({title_suffix})",
-                "font": {"size": 14},
-            },
-            xaxis_title="Heure" if not compact else None,
-            yaxis_title=None,
-            height=height,
-            template=LYF_TEMPLATE,
-            margin={"l": 60, "r": 30, "t": 40, "b": 30} if compact else {"l": 70, "r": 40, "t": 50, "b": 50},
-            yaxis={"tickfont": {"size": 11 if not compact else 10}},
-            xaxis={"tickfont": {"size": 10}},
-        )
-        plotly_with_alt(fig, use_container_width=True)
+            fig_height = height
+            if selected_line_ids and len(selected_line_ids) <= 5:
+                fig_height = max(200, 80 * len(selected_line_ids) + 80)
 
-    except ImportError:
-        df_display = pd.DataFrame(z_data, index=lines, columns=[f"{h}h" for h in range(24)])
-        st.dataframe(
-            df_display.style.background_gradient(cmap="RdYlGn", vmin=60, vmax=98),
-            height=height,
-        )
+            fig.update_layout(
+                title={
+                    "text": f"OTP — {title_top} lignes × heure ({title_suffix})",
+                    "font": {"size": 14},
+                },
+                xaxis_title="Heure" if not compact else None,
+                yaxis_title=None,
+                height=fig_height,
+                template=LYF_TEMPLATE,
+                margin={"l": 60, "r": 30, "t": 40, "b": 30} if compact else {"l": 70, "r": 40, "t": 50, "b": 50},
+                yaxis={"tickfont": {"size": 11 if not compact else 10}},
+                xaxis={"tickfont": {"size": 10}},
+            )
+            plotly_with_alt(fig, use_container_width=True)
+
+        except ImportError:
+            df_display = pd.DataFrame(z_data, index=lines, columns=[f"{h}h" for h in range(24)])
+            st.dataframe(
+                df_display.style.background_gradient(cmap="RdYlGn", vmin=60, vmax=98),
+                height=height,
+            )
 
 
 def render_otp_heatmap_mini(otp_data: dict | None = None, height: int = 280) -> None:

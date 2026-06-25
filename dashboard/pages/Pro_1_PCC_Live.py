@@ -14,7 +14,7 @@ from dashboard.components.widgets.pro_tcl import (
     render_alert_ticker,
     render_line_kpis,
     render_network_map,
-    render_otp_heatmap_mini,
+    render_otp_heatmap,
     render_traffic_map,
 )
 from src.data.db_query import clean_line_label
@@ -46,12 +46,9 @@ st.markdown("---")
 q1, q2 = st.columns(2)
 with q1:
     st.markdown("##### 🗺️ NW — Carte live")
-    # Sprint 15+ audit (P0-2) : st.tabs ne diffère PAS le calcul — les 2 maps
-    # pydeck s'exécutaient en séquentiel à chaque auto-refresh 30s. Switch
-    # vers st.radio → 1 seul rendu par cycle, gain ~50% sur ce quadrant.
     map_choice = st.radio(
         "Carte",
-        ["🚌 Bus GPS", "🚗 Charge trafic"],
+        ["🚗 Trafic live vs H+1h", "🚌 Bus GPS"],
         horizontal=True,
         key="pro1_map_choice",
         label_visibility="collapsed",
@@ -61,10 +58,7 @@ with q1:
     else:
         render_traffic_map(
             height=320,
-            horizon_default=60,  # Sprint 8+ : focus H+1h
-            show_horizon_selector=True,
             show_legend=True,
-            show_caption=False,
             key_suffix="pro1",
         )
 with q2:
@@ -100,7 +94,7 @@ with q2:
 q3, q4 = st.columns(2)
 with q3:
     st.markdown("##### 📊 SW — Heatmap OTP")
-    render_otp_heatmap_mini(height=280)
+    render_otp_heatmap(days=1, height=320, top_n=15, compact=True, show_line_selector=True, key_suffix="pro1")
 with q4:
     st.markdown("##### 🎯 SE — Top bottlenecks")
     from dashboard.components.data_cache import cached_bottlenecks_top

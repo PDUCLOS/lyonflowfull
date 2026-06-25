@@ -134,10 +134,10 @@ def test_usager_mon_trajet_selectbox_h1h():
 
 
 def test_pro_pcc_live_selectbox_h1h():
-    """Page Pro PCC Live : render_traffic_map horizon_default=60."""
+    """Page Pro PCC Live : render_traffic_map (live vs H+1h, plus de sélecteur horizon)."""
     with open("/Users/patriceduclos/Documents/Lyonfull/dashboard/pages/Pro_1_PCC_Live.py") as f:
         src = f.read()
-    assert "horizon_default=60" in src, "Pro PCC Live doit utiliser horizon_default=60"
+    assert "render_traffic_map(" in src, "Pro PCC Live doit appeler render_traffic_map"
     assert "horizon_default=30" not in src, "Pro PCC Live utilise encore horizon_default=30"
 
 
