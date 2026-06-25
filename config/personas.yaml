@@ -182,6 +182,28 @@ navigation:
       icon: "🔔"
       file: "Usager_2_Alertes.py"
       description: "Notifications proactives sur tes trajets habituels"
+    # Sprint 22+ — Menu MLOps Usager (langage citoyen, sans jargon).
+    # 3 pages pour expliquer la prédiction + données + service en direct.
+    # Cachent volontairement DAGs/MLflow/PostGIS — ces détails techniques
+    # restent sur Pro_6_Pipeline_Mgmt et Pro_7_Model_Monitoring (Pro TCL).
+    - group: "MLOps"
+      group_icon: "⚙️"
+      label: "Notre modèle"
+      icon: "🤖"
+      file: "Usager_3_Notre_Modele.py"
+      description: "Comment on prédit + précision sur 7 jours"
+    - group: "MLOps"
+      group_icon: "⚙️"
+      label: "Sources de données"
+      icon: "🌐"
+      file: "Usager_4_Sources_Donnees.py"
+      description: "D'où viennent les données + fraîcheur"
+    - group: "MLOps"
+      group_icon: "⚙️"
+      label: "Statut du service"
+      icon: "🩺"
+      file: "Usager_5_Statut_Service.py"
+      description: "Santé globale + incidents en direct"
 
   pro_tcl:
     - group: "Opérations live"
