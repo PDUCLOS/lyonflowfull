@@ -1058,6 +1058,14 @@ def load_traffic_predictions_for_map(horizon_minutes: int = 60, limit: int = 500
     return get_traffic_predictions(horizon_minutes=horizon_minutes, limit=limit)
 
 
+def load_traffic_live_vs_predicted(limit: int = 2000) -> pd.DataFrame:
+    """Live capteurs + prédictions H+1h par segment (ratio + delta)."""
+    _require_db_or_raise("gold.traffic_features_live")
+    from src.data.db_query import get_traffic_live_vs_predicted
+
+    return get_traffic_live_vs_predicted(limit=limit)
+
+
 def load_traffic_combined_for_map() -> pd.DataFrame:
     """Vue unifiée trafic temps réel pour la carte dashboard.
 

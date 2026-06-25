@@ -1294,6 +1294,58 @@ def get_transit_options(origin_lieu_id: int, dest_lieu_id: int) -> list[dict]:
 # =============================================================================
 
 
+def get_traffic_live_vs_predicted(limit: int = 2000) -> pd.DataFrame:
+    """Live capteurs + prédictions H+1h par segment, avec vitesse limite.
+
+    JOIN live × predictions sur channel_id = axis_key. Chaque ligne a :
+    - speed_now : vitesse capteur live (< 10 min)
+    - speed_pred_1h : vitesse prédite H+1h
+    - vitesse_limite_kmh : vitesse max du segment
+    - ratio_now : speed_now / vitesse_limite (0→1+, saturation relative)
+    - ratio_pred : speed_pred_1h / vitesse_limite
+    - delta_kmh : speed_pred_1h - speed_now (>0 = amélioration prévue)
+    """
+    query = """
+        WITH live AS (
+            SELECT DISTINCT ON (channel_id)
+                channel_id, speed_kmh, vitesse_limite_kmh,
+                lat, lon, computed_at
+            FROM gold.traffic_features_live
+            WHERE computed_at >= NOW() - INTERVAL '10 minutes'
+            ORDER BY channel_id, computed_at DESC
+        ),
+        pred AS (
+            SELECT DISTINCT ON (axis_key)
+                axis_key, speed_pred, calculated_at
+            FROM gold.trafic_predictions
+            WHERE horizon_h = 1
+            ORDER BY axis_key, calculated_at DESC
+        )
+        SELECT
+            l.channel_id,
+            l.lat,
+            l.lon,
+            l.speed_kmh          AS speed_now,
+            p.speed_pred         AS speed_pred_1h,
+            l.vitesse_limite_kmh,
+            l.computed_at        AS live_at,
+            p.calculated_at      AS pred_at,
+            CASE WHEN l.vitesse_limite_kmh > 0
+                 THEN ROUND((l.speed_kmh / l.vitesse_limite_kmh)::numeric, 2)
+                 ELSE NULL END   AS ratio_now,
+            CASE WHEN l.vitesse_limite_kmh > 0
+                 THEN ROUND((p.speed_pred / l.vitesse_limite_kmh)::numeric, 2)
+                 ELSE NULL END   AS ratio_pred,
+            ROUND((COALESCE(p.speed_pred, l.speed_kmh) - l.speed_kmh)::numeric, 1)
+                                 AS delta_kmh
+        FROM live l
+        LEFT JOIN pred p ON p.axis_key = l.channel_id
+        ORDER BY l.computed_at DESC
+        LIMIT %s
+    """
+    return _df_from_query(query, (limit,))
+
+
 def get_traffic_combined(limit: int = 5000) -> pd.DataFrame:
     """Vue unifiée trafic temps réel (Gold live + Gold pred + TomTom).
 

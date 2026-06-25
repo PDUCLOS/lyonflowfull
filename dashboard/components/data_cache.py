@@ -226,6 +226,16 @@ def cached_traffic_predictions_for_map(horizon_minutes: int = 60, limit: int = 5
     return dl.load_traffic_predictions_for_map(horizon_minutes=horizon_minutes, limit=limit)
 
 
+@st.cache_data(ttl=TTL_REALTIME, show_spinner=False)
+def cached_traffic_combined(limit: int = 2000) -> pd.DataFrame:
+    return dl.load_traffic_combined_for_map()
+
+
+@st.cache_data(ttl=TTL_REALTIME, show_spinner=False)
+def cached_traffic_live_vs_predicted(limit: int = 2000) -> pd.DataFrame:
+    return dl.load_traffic_live_vs_predicted(limit=limit)
+
+
 @st.cache_data(ttl=TTL_SLOW, show_spinner=False)
 def cached_mlflow_models() -> list[dict]:
     return dl.load_mlflow_models()

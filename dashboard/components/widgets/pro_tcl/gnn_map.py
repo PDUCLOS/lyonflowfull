@@ -1,87 +1,93 @@
-"""Widget — Carte trafic (prédictions GNN/XGBoost sur la grille H3).
+"""Widget — Carte trafic temps réel vs prédictions H+1h.
 
-Sprint 10 — réintégration multi-personas.
+Sprint 23 — refonte complète :
+* Couleur **relative** : ratio vitesse / vitesse_limite (pas de seuils fixes).
+  Un segment à 50% de sa limite est orange, qu'il soit limité à 30 ou 90 km/h.
+* **Comparaison live ↔ H+1h** : tooltip affiche vitesse actuelle, prédite,
+  et delta (flèche tendance). Couleur = ratio actuel.
+* Source : ``get_traffic_live_vs_predicted()`` — JOIN live × predictions.
+* Pro_7 Model Monitoring garde la source prédictions seules.
 
 Trois entrées publiques :
-* ``render_traffic_map(...)``       — carte plein-format (Pro_1, Pro_7).
+* ``render_traffic_map(...)``        — carte plein-format (Pro_1).
 * ``render_traffic_map_compact(...)`` — version réduite (Usager_1, Elu_1).
-* ``render_gnn_map_section()``      — section dédiée Pro_7 avec bandeau status.
-
-Toutes utilisent le même backend : jointure
-``gold.dim_spatial_grid_mapping`` × ``gold.trafic_predictions`` rendue via
-pydeck (fallback dataframe si pydeck absent).
+* ``render_gnn_map_section()``       — section dédiée Pro_7 (prédictions seules).
 """
 
 from __future__ import annotations
 
 import logging
+from datetime import datetime, timezone
 
 import pandas as pd
 import streamlit as st
 
 from dashboard.components.colors import COLORS
-from dashboard.components.data_cache import cached_spatial_mapping
 from dashboard.components.loading_state import loading_wrapper
-from src.data.data_loader import load_traffic_predictions_for_map as load_traffic_predictions
 from src.ml.mlflow_integration import is_mlflow_available
 from src.ml.model_registry import is_gnn_map_visible, is_stgcn_enabled
 from src.models.stgcn_wrapper import STGCNWrapper
 
 logger = logging.getLogger(__name__)
 
-# Sprint 8+ (2026-06-12) — focus H+1h strict. Le widget n'expose
-# que H+1h (60 min) dans l'interface. Les autres horizons restent
-# entraînés en arrière-plan mais l'utilisateur ne les voit plus.
-_DEFAULT_HORIZONS = (60,)
 
+# ---------------------------------------------------------------------------
+# Color helpers — ratio-based (relative to speed limit)
+# ---------------------------------------------------------------------------
+def _ratio_to_rgb(ratio: float | None) -> list[int]:
+    """Ratio vitesse/limite → couleur RGB.
 
-# -----------------------------------------------------------------------------
-# Helpers
-# -----------------------------------------------------------------------------
-def _speed_to_color(speed: float) -> list:
-    if speed is None:
-        return [128, 128, 128, 180]
-    if speed < 10:
-        return [231, 76, 60, 220]
-    if speed < 20:
-        return [255, 152, 0, 220]
-    if speed < 35:
-        return [255, 193, 7, 220]
-    return [76, 175, 80, 220]
-
-
-def _check_gnn_model(horizon: int) -> dict:
-    """Vérifie disponibilité modèle GNN pour horizon donné."""
-    try:
-        wrapper = STGCNWrapper.get(horizon)
-        if wrapper.load():
-            return {"loaded": True, "reason": "OK", "fallback": "SpatioTemporalGCN"}
-        return {
-            "loaded": False,
-            "reason": f"Modèle .pt absent pour H+{horizon}min (LYONFLOW_MODELS_DIR).",
-            "fallback": "XGBoost (fallback — métriques uniquement)",
-        }
-    except Exception as e:  # pragma: no cover
-        return {
-            "loaded": False,
-            "reason": f"Erreur chargement: {e}",
-            "fallback": "XGBoost (fallback)",
-        }
-
-
-def _load_merged(horizon: int, limit: int = 500) -> pd.DataFrame | None:
-    """Charge prédictions trafic avec coordonnées pour le rendu carte.
-
-    Les prédictions (``gold.trafic_predictions``) contiennent déjà ``lat``
-    et ``lon`` — pas besoin de jointure avec ``dim_spatial_grid_mapping``.
+    ratio ≈ 0.0 → rouge (bloqué)
+    ratio ≈ 0.4 → orange (dense)
+    ratio ≈ 0.65 → jaune (modéré)
+    ratio ≈ 0.85+ → vert (fluide)
     """
-    preds_df = load_traffic_predictions(horizon_minutes=horizon, limit=limit)
+    if ratio is None:
+        return [128, 128, 128]
+    if ratio < 0.3:
+        return [231, 76, 60]
+    if ratio < 0.5:
+        return [255, 152, 0]
+    if ratio < 0.75:
+        return [255, 193, 7]
+    return [76, 175, 80]
+
+
+def _delta_arrow(delta: float | None) -> str:
+    if delta is None:
+        return "—"
+    if delta > 3:
+        return f"↗ +{delta:.0f}"
+    if delta < -3:
+        return f"↘ {delta:.0f}"
+    return f"→ {delta:+.0f}"
+
+
+# ---------------------------------------------------------------------------
+# Data loaders
+# ---------------------------------------------------------------------------
+def _load_live_vs_predicted(limit: int = 2000) -> pd.DataFrame | None:
+    from dashboard.components.data_cache import cached_traffic_live_vs_predicted
+
+    df = cached_traffic_live_vs_predicted(limit=limit)
+    if df.empty:
+        return None
+    valid = df.dropna(subset=["lat", "lon"])
+    return valid if not valid.empty else None
+
+
+def _load_predictions(horizon: int, limit: int = 1500) -> pd.DataFrame | None:
+    from src.data.data_loader import load_traffic_predictions_for_map
+
+    preds_df = load_traffic_predictions_for_map(horizon_minutes=horizon, limit=limit)
     if preds_df.empty:
         return None
 
     if "lat" in preds_df.columns and "lon" in preds_df.columns:
         valid = preds_df.dropna(subset=["lat", "lon"])
         return valid if not valid.empty else None
+
+    from dashboard.components.data_cache import cached_spatial_mapping
 
     mapping_df = cached_spatial_mapping()
     if mapping_df.empty:
@@ -92,12 +98,7 @@ def _load_merged(horizon: int, limit: int = 500) -> pd.DataFrame | None:
         mapping_df["channel_id"] = mapping_df["channel_id"].astype(str)
         preds_df = preds_df.copy()
         preds_df["axis_key"] = preds_df["axis_key"].astype(str)
-        merged = mapping_df.merge(
-            preds_df,
-            left_on="channel_id",
-            right_on="axis_key",
-            how="inner",
-        )
+        merged = mapping_df.merge(preds_df, left_on="channel_id", right_on="axis_key", how="inner")
     elif "node_idx" in preds_df.columns:
         merged = mapping_df.merge(preds_df, on="node_idx", how="inner")
     else:
@@ -106,45 +107,145 @@ def _load_merged(horizon: int, limit: int = 500) -> pd.DataFrame | None:
     return merged if not merged.empty else None
 
 
-def _render_pydeck(merged: pd.DataFrame, height: int, zoom: float = 11.0) -> str:
-    """Rendu pydeck. Retourne nom du modèle dominant pour affichage caller."""
+def _check_gnn_model(horizon: int) -> dict:
+    try:
+        wrapper = STGCNWrapper.get(horizon)
+        if wrapper.load():
+            return {"loaded": True, "reason": "OK", "fallback": "SpatioTemporalGCN"}
+        return {
+            "loaded": False,
+            "reason": f"Modèle .pt absent pour H+{horizon}min.",
+            "fallback": "XGBoost (fallback)",
+        }
+    except Exception as e:  # pragma: no cover
+        return {"loaded": False, "reason": str(e), "fallback": "XGBoost (fallback)"}
+
+
+# ---------------------------------------------------------------------------
+# Freshness
+# ---------------------------------------------------------------------------
+def _freshness_line(df: pd.DataFrame, ts_col: str = "live_at") -> None:
+    if ts_col not in df.columns:
+        for fallback in ("computed_at", "calculated_at"):
+            if fallback in df.columns:
+                ts_col = fallback
+                break
+        else:
+            return
+    latest = pd.to_datetime(df[ts_col]).max()
+    if pd.isna(latest):
+        return
+    now = datetime.now(tz=timezone.utc)
+    if latest.tzinfo is None:
+        from zoneinfo import ZoneInfo
+        latest = latest.replace(tzinfo=ZoneInfo("UTC"))
+    age_s = (now - latest).total_seconds()
+    if age_s < 300:
+        st.caption(f"🟢 Live — dernière mesure il y a {int(age_s // 60)} min")
+    elif age_s < 1800:
+        st.caption(f"🟡 Récent — dernière mesure il y a {int(age_s // 60)} min")
+    else:
+        st.caption(f"🔴 Ancien — dernière mesure il y a {age_s / 3600:.1f}h — vérifier DAGs")
+
+
+# ---------------------------------------------------------------------------
+# Pydeck renderers
+# ---------------------------------------------------------------------------
+def _render_pydeck_live_vs_pred(df: pd.DataFrame, height: int, zoom: float = 11.0) -> None:
+    """Carte avec couleur ratio + tooltip live vs prédit."""
     try:
         import pydeck as pdk
     except ImportError:
-        st.warning("Pydeck non installé — fallback liste tabulaire.")
-        fallback_cols = [c for c in ["axis_key", "lat", "lon", "speed_pred", "model_version"] if c in merged.columns]
-        st.dataframe(merged[fallback_cols].head(50), use_container_width=True, hide_index=True)
-        return "?"
+        st.warning("Pydeck non installé — fallback tableau.")
+        cols = [c for c in ["channel_id", "speed_now", "speed_pred_1h", "ratio_now", "delta_kmh"] if c in df.columns]
+        st.dataframe(df[cols].head(50), use_container_width=True, hide_index=True)
+        return
 
-    merged = merged.copy()
-    speed_col = "speed_pred" if "speed_pred" in merged.columns else "predicted_speed"
-    merged["color"] = merged[speed_col].apply(_speed_to_color)
+    df = df.copy()
+    df["color"] = df["ratio_now"].apply(lambda r: [*_ratio_to_rgb(r), 210])
 
-    model_col = "model_version" if "model_version" in merged.columns else "model_name"
-    dominant_model = (
-        merged[model_col].mode().iloc[0] if model_col in merged.columns and not merged[model_col].mode().empty else "?"
+    if "vitesse_limite_kmh" in df.columns:
+        df["_radius"] = df["vitesse_limite_kmh"].fillna(50).clip(30, 130).astype(int)
+    else:
+        df["_radius"] = 90
+
+    df["speed_now_fmt"] = df["speed_now"].round(0).astype(int, errors="ignore")
+    df["speed_pred_fmt"] = df["speed_pred_1h"].round(0).astype(int, errors="ignore")
+    df["ratio_pct"] = (df["ratio_now"].fillna(0) * 100).round(0).astype(int, errors="ignore")
+    df["delta_arrow"] = df["delta_kmh"].apply(_delta_arrow)
+
+    tooltip_html = (
+        "<b>{channel_id}</b><br/>"
+        "Maintenant : <b>{speed_now_fmt} km/h</b> ({ratio_pct}% de limite)<br/>"
+        "Prédit H+1h : <b>{speed_pred_fmt} km/h</b><br/>"
+        "Tendance : <b>{delta_arrow} km/h</b>"
     )
 
     layer = pdk.Layer(
         "ScatterplotLayer",
-        data=merged,
+        data=df,
         get_position=["lon", "lat"],
         get_color="color",
-        get_radius=100,
+        get_radius="_radius",
         pickable=True,
     )
-    view_state = pdk.ViewState(
-        latitude=45.76,
-        longitude=4.84,
-        zoom=zoom,
-        pitch=0,
-    )
+    view_state = pdk.ViewState(latitude=45.76, longitude=4.84, zoom=zoom, pitch=0)
     deck = pdk.Deck(
         layers=[layer],
         initial_view_state=view_state,
         map_style="https://basemaps.cartocdn.com/gl/positron-gl-style/style.json",
         tooltip={
-            "html": ("<b>{axis_key}</b><br/>Speed: <b>{speed_pred} km/h</b><br/>État: {etat_pred}"),
+            "html": tooltip_html,
+            "style": {
+                "backgroundColor": COLORS["bg_card"],
+                "color": "white",
+                "padding": "8px",
+                "borderRadius": "4px",
+            },
+        },
+    )
+    st.pydeck_chart(deck, use_container_width=True, height=height)
+
+
+def _render_pydeck_predictions(df: pd.DataFrame, height: int, zoom: float = 11.0) -> str:
+    """Rendu pydeck pour prédictions seules (Pro_7 Model Monitoring)."""
+    try:
+        import pydeck as pdk
+    except ImportError:
+        st.warning("Pydeck non installé — fallback tableau.")
+        cols = [c for c in ["axis_key", "lat", "lon", "speed_pred", "model_version"] if c in df.columns]
+        st.dataframe(df[cols].head(50), use_container_width=True, hide_index=True)
+        return "?"
+
+    df = df.copy()
+    speed_col = "speed_pred" if "speed_pred" in df.columns else "predicted_speed"
+
+    if "vitesse_limite_kmh" in df.columns:
+        df["_ratio"] = (df[speed_col] / df["vitesse_limite_kmh"].replace(0, pd.NA)).fillna(0.5)
+    else:
+        df["_ratio"] = 0.5
+    df["color"] = df["_ratio"].apply(lambda r: [*_ratio_to_rgb(r), 220])
+
+    model_col = "model_version" if "model_version" in df.columns else "model_name"
+    dominant_model = (
+        df[model_col].mode().iloc[0] if model_col in df.columns and not df[model_col].mode().empty else "?"
+    )
+
+    layer = pdk.Layer(
+        "ScatterplotLayer",
+        data=df,
+        get_position=["lon", "lat"],
+        get_color="color",
+        get_radius=100,
+        pickable=True,
+    )
+    view_state = pdk.ViewState(latitude=45.76, longitude=4.84, zoom=zoom, pitch=0)
+    deck = pdk.Deck(
+        layers=[layer],
+        initial_view_state=view_state,
+        map_style="https://basemaps.cartocdn.com/gl/positron-gl-style/style.json",
+        tooltip={
+            "html": "<b>{axis_key}</b><br/>Prédit : <b>{speed_pred} km/h</b><br/>État: {etat_pred}",
             "style": {
                 "backgroundColor": COLORS["bg_card"],
                 "color": "white",
@@ -157,13 +258,34 @@ def _render_pydeck(merged: pd.DataFrame, height: int, zoom: float = 11.0) -> str
     return dominant_model
 
 
-def _legend_inline() -> None:
-    st.markdown("**Légende** : 🟢 Fluide (>35 km/h) · 🟡 Modéré (20-35) · 🟠 Dense (10-20) · 🔴 Bloqué (<10)")
+def _legend_ratio() -> None:
+    st.markdown(
+        "**Légende** (% de la vitesse limite) : "
+        "🟢 >75% · 🟡 50-75% · 🟠 30-50% · 🔴 <30%"
+    )
 
 
-# -----------------------------------------------------------------------------
-# API publique : carte plein-format avec sélecteur horizon
-# -----------------------------------------------------------------------------
+def _stats_bar(df: pd.DataFrame) -> None:
+    """KPI bar : ratio moyen, segments en dégradation, segments améliorés."""
+    if "ratio_now" not in df.columns or "delta_kmh" not in df.columns:
+        return
+    valid = df.dropna(subset=["ratio_now"])
+    if valid.empty:
+        return
+    ratio_mean = valid["ratio_now"].mean()
+    n_degrade = (valid["delta_kmh"] < -5).sum()
+    n_improve = (valid["delta_kmh"] > 5).sum()
+    n_total = len(valid)
+    c1, c2, c3, c4 = st.columns(4)
+    c1.metric("Fluidité réseau", f"{ratio_mean:.0%}")
+    c2.metric("Segments", n_total)
+    c3.metric("↘ Dégradation H+1h", int(n_degrade))
+    c4.metric("↗ Amélioration H+1h", int(n_improve))
+
+
+# ---------------------------------------------------------------------------
+# API publique : carte plein-format — live vs prédit
+# ---------------------------------------------------------------------------
 def render_traffic_map(
     *,
     height: int = 450,
@@ -173,131 +295,97 @@ def render_traffic_map(
     show_caption: bool = True,
     key_suffix: str = "",
 ) -> None:
-    with loading_wrapper("Chargement Traffic map…", "⏳"):
-        """Carte trafic plein format. Pré-requis : flag activé + données disponibles.
+    with loading_wrapper("Chargement carte trafic…", "⏳"):
+        if not is_gnn_map_visible():
+            st.info("Carte trafic désactivée. Set `LYONFLOW_DASHBOARD_GNN_MAP=true` dans .env.")
+            return
 
-    Args:
-        height: hauteur de la carte en pixels.
-        horizon_default: horizon initial sélectionné (min).
-        show_horizon_selector: affiche le selectbox horizon.
-        show_legend: affiche la légende sous la carte.
-        show_caption: affiche la caption modèle/source.
-        key_suffix: suffixe pour les keys Streamlit (évite collisions multi-instances).
-    """
-    if not is_gnn_map_visible():
-        st.info("Carte trafic désactivée. Set `LYONFLOW_DASHBOARD_GNN_MAP=true` dans .env pour l'afficher.")
-        return
+        df = _load_live_vs_predicted(limit=2000)
+        if df is None:
+            st.info(
+                "Pas de données trafic. Vérifie que les capteurs live alimentent "
+                "`gold.traffic_features_live` (DAG collecte */5 min)."
+            )
+            return
 
-    horizon = horizon_default
-    if show_horizon_selector:
-        # Sprint 8+ (2026-06-12) — focus H+1h. Le selectbox propose
-        # uniquement H+1h (60 min) — cf. _DEFAULT_HORIZONS.
-        try:
-            default_idx = _DEFAULT_HORIZONS.index(horizon_default)
-        except ValueError:
-            default_idx = 0
-        horizon = st.selectbox(
-            "Horizon de prédiction (focus H+1h)",
-            _DEFAULT_HORIZONS,
-            index=default_idx,
-            key=f"traffic_map_horizon_{key_suffix}",
-            format_func=lambda x: f"H+{x}min",
-            help="Sprint 8+ : focus H+1h. Les autres horizons ne sont plus "
-            "entraînés (1 modèle au lieu de 4 = -75% compute).",
-        )
-
-    merged = _load_merged(horizon, limit=500)
-    if merged is None:
-        st.info(
-            f"Pas de prédictions disponibles pour H+{horizon}min. "
-            "Vérifie que `gold.trafic_predictions` est peuplée "
-            "(DAG retrain XGBoost :25 / GNN 03h)."
-        )
-        return
-
-    # Bandeau modèle (best effort)
-    if is_stgcn_enabled() and is_mlflow_available():
-        status = _check_gnn_model(horizon)
-        if not status["loaded"]:
-            st.caption(f"⚠️ GNN indisponible ({status['reason']}) — fallback XGBoost.")
-
-    dominant = _render_pydeck(merged, height=height)
-    if show_legend:
-        _legend_inline()
-    if show_caption:
-        st.caption(
-            f"Source : `gold.trafic_predictions` × `gold.dim_spatial_grid_mapping` · "
-            f"Modèle : {dominant} · {len(merged)} nœuds · H+{horizon}min"
-        )
+        _freshness_line(df)
+        _stats_bar(df)
+        _render_pydeck_live_vs_pred(df, height=height)
+        if show_legend:
+            _legend_ratio()
 
 
-# -----------------------------------------------------------------------------
+# ---------------------------------------------------------------------------
 # API publique : carte compacte (Usager / Elu)
-# -----------------------------------------------------------------------------
+# ---------------------------------------------------------------------------
 def render_traffic_map_compact(
     *,
     height: int = 280,
     horizon_minutes: int = 60,
     key_suffix: str = "",
 ) -> None:
-    with loading_wrapper("Chargement Traffic map compact…", "⏳"):
-        """Carte trafic compacte sans sélecteur (Usager / Elu).
+    with loading_wrapper("Chargement carte trafic…", "⏳"):
+        if not is_gnn_map_visible():
+            return
 
-    Args:
-        height: hauteur réduite.
-        horizon_minutes: horizon fixe (pas de sélecteur). Sprint 8+ : 60 (H+1h).
-        key_suffix: suffixe key Streamlit.
-    """
-    if not is_gnn_map_visible():
-        return  # silence côté Usager/Elu, pas d'info bandeau intrusif
+        df = _load_live_vs_predicted(limit=1500)
+        if df is None:
+            st.caption("🟡 Carte trafic indisponible (aucune donnée capteur)")
+            return
 
-    merged = _load_merged(horizon_minutes, limit=400)
-    if merged is None:
-        st.caption(f"🟡 Carte trafic indisponible (pas de prédictions H+{horizon_minutes}min)")
-        return
-
-    _render_pydeck(merged, height=height, zoom=10.7)
-    _legend_inline()
+        _freshness_line(df)
+        _render_pydeck_live_vs_pred(df, height=height, zoom=10.7)
+        _legend_ratio()
 
 
-# -----------------------------------------------------------------------------
-# API publique : section Pro_7 (bandeau status + carte)
-# -----------------------------------------------------------------------------
+# ---------------------------------------------------------------------------
+# API publique : Pro_7 Model Monitoring — prédictions seules (ratio-based)
+# ---------------------------------------------------------------------------
 def render_gnn_map_section() -> None:
-    with loading_wrapper("Chargement Gnn map section…", "⏳"):
-        """Section dédiée Pro_7 Model Monitoring — bandeau status + carte.
+    with loading_wrapper("Chargement carte modèle…", "⏳"):
+        st.markdown("##### 🗺️ Carte trafic — prédictions spatiales (modèle)")
 
-    Wrapper rétro-compatible utilisé par Pro_7. Affiche un bandeau si le flag
-    est désactivé. Sinon délègue à ``render_traffic_map()``.
-    """
-    st.markdown("##### 🗺️ Carte trafic — prédictions spatiales")
-
-    if not is_gnn_map_visible():
-        st.markdown(
-            """
-            <div style="background:linear-gradient(135deg, var(--border-card) 0%, var(--persona-elu) 100%);
-                        border:1px dashed var(--persona-elu-accent);border-radius:8px;padding:1rem;margin:0.5rem 0;">
-                <div style="font-size:0.8rem;opacity:0.8;text-transform:uppercase;
-                            letter-spacing:1px;">🟡 Carte désactivée</div>
-                <div class="lyf-label" style="margin:0.5rem 0;">
-                    Set <code>LYONFLOW_DASHBOARD_GNN_MAP=true</code> dans .env pour activer.
+        if not is_gnn_map_visible():
+            st.markdown(
+                """
+                <div style="background:linear-gradient(135deg, var(--border-card) 0%, var(--persona-elu) 100%);
+                            border:1px dashed var(--persona-elu-accent);border-radius:8px;padding:1rem;margin:0.5rem 0;">
+                    <div style="font-size:0.8rem;opacity:0.8;text-transform:uppercase;
+                                letter-spacing:1px;">🟡 Carte désactivée</div>
+                    <div class="lyf-label" style="margin:0.5rem 0;">
+                        Set <code>LYONFLOW_DASHBOARD_GNN_MAP=true</code> dans .env pour activer.
+                    </div>
                 </div>
-            </div>
-            """,
-            unsafe_allow_html=True,
+                """,
+                unsafe_allow_html=True,
+            )
+            return
+
+        if not is_stgcn_enabled():
+            st.warning("STGCN désactivé dans LYONFLOW_MODELS_ACTIVE — carte non disponible.")
+            return
+        if not is_mlflow_available():
+            st.warning("MLflow non disponible — prédictions non récupérables.")
+            return
+
+        horizon = 60
+        if is_stgcn_enabled() and is_mlflow_available():
+            status = _check_gnn_model(horizon)
+            if not status["loaded"]:
+                st.caption(f"⚠️ GNN indisponible ({status['reason']}) — fallback XGBoost.")
+
+        merged = _load_predictions(horizon, limit=1500)
+        if merged is None:
+            st.info(
+                "Pas de prédictions H+1h. Vérifie `gold.trafic_predictions` "
+                "(DAG retrain XGBoost :25 / GNN 03h)."
+            )
+            return
+
+        _freshness_line(merged, ts_col="calculated_at")
+        dominant = _render_pydeck_predictions(merged, height=450)
+        _legend_ratio()
+        st.caption(
+            f"Source : `gold.trafic_predictions` · "
+            f"Modèle : {dominant} · {len(merged)} nœuds · H+1h"
         )
-        return
-
-    if not is_stgcn_enabled():
-        st.warning("STGCN désactivé dans LYONFLOW_MODELS_ACTIVE — carte non disponible.")
-        return
-    if not is_mlflow_available():
-        st.warning("MLflow non disponible — prédictions non récupérables.")
-        return
-
-    render_traffic_map(
-        height=450,
-        horizon_default=60,
-        show_horizon_selector=True,
-        key_suffix="pro7",
-    )
