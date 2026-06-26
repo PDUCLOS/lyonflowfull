@@ -101,7 +101,15 @@ $$;
 
 
 def _ensure_helpers(cur) -> None:
-    """Crée/refresh fonctions `_is_ferie` et `_is_vacances` (idempotent)."""
+    """Crée/refresh fonctions `_is_ferie` et `_is_vacances` (idempotent).
+
+    Sprint 23 (2026-06-26) - protection contre 'tuple concurrently updated'.
+    Le CREATE OR REPLACE FUNCTION concurrent de plusieurs tasks Airflow
+    (LocalExecutor) générait une InternalError_ pg_catalog. pg_advisory_xact_lock
+    sérialise les créations : un seul task à la fois crée les helpers, les
+    autres attendent. Lock relâché en fin de transaction (ROLLBACK/COMMIT).
+    """
+    cur.execute("SELECT pg_advisory_xact_lock(7890001)")
     cur.execute(_HELPER_FN_SQL)
 
 
