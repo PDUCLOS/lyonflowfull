@@ -878,10 +878,7 @@ def get_line_kpis(line_ids: list[str] | None = None) -> dict:
             freq_pph_val = float(freq_pph) if freq_pph is not None else 0.0
         except (TypeError, ValueError):
             freq_pph_val = 0.0
-        if freq_pph_val > 0:
-            frequency_min = round(60.0 / freq_pph_val, 1)
-        else:
-            frequency_min = 0.0
+        frequency_min = round(60.0 / freq_pph_val, 1) if freq_pph_val > 0 else 0.0
 
         out[line_id] = {
             "otp_pct": float(row.get("otp_pct") or 0),

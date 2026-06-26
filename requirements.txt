@@ -1,0 +1,3 @@
+# Sprint P2-ter : requirements.txt remplacé par requirements-base-light.txt
+# Ce fichier existe pour la compatibilité CI/CD — inclut les deps communes.
+-r requirements-base-light.txt

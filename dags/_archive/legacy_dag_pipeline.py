@@ -250,7 +250,7 @@ def transform_traffic_data(**context):
                 trafic[col] = None
         trafic = trafic[selected_columns]
         if "properties_est_a_jour" in trafic.columns:
-            trafic = trafic[trafic.properties_est_a_jour != False]
+            trafic = trafic[trafic.properties_est_a_jour]
 
         trafic["geometry_coordinates_obj"] = trafic["geometry_coordinates"].apply(LineString)
         gdf = GeoDataFrame(data=trafic, geometry="geometry_coordinates_obj")
@@ -274,7 +274,7 @@ def transform_traffic_data(**context):
         gdf = gdf.merge(mean_speed_df, on="properties_libelle", how="left")
         gdf["properties_vitesse"] = [
             elem if not pd.isna(elem) else mean_speed if not pd.isna(mean_speed) else np.nan
-            for elem, mean_speed in zip(gdf.properties_vitesse, gdf.mean_speed)
+            for elem, mean_speed in zip(gdf.properties_vitesse, gdf.mean_speed, strict=False)
         ]
         gdf = gdf.drop(columns=["mean_speed"], errors="ignore")
 
@@ -487,8 +487,8 @@ def materialize_gold_layer(**context):
         df_h3_projected["i"] = coords_i
         df_h3_projected["j"] = coords_j
 
-        min_i, max_i = df_h3_projected["i"].min(), df_h3_projected["i"].max()
-        min_j, max_j = df_h3_projected["j"].min(), df_h3_projected["j"].max()
+        min_i, _max_i = df_h3_projected["i"].min(), df_h3_projected["i"].max()
+        min_j, _max_j = df_h3_projected["j"].min(), df_h3_projected["j"].max()
         df_h3_projected["matrix_i"] = (df_h3_projected["i"] - min_i).astype(int)
         df_h3_projected["matrix_j"] = (df_h3_projected["j"] - min_j).astype(int)
 
@@ -561,9 +561,9 @@ def materialize_gold_layer(**context):
             GROUP BY properties_twgid;
         """
         df_history_avg = pd.read_sql(query_history_avg, con=engine)
-        history_avg_dict = dict(zip(df_history_avg["properties_twgid"], df_history_avg["avg_vitesse"]))
+        history_avg_dict = dict(zip(df_history_avg["properties_twgid"], df_history_avg["avg_vitesse"], strict=False))
 
-        snapshot_dict = dict(zip(df_snapshot["properties_twgid"], df_snapshot["properties_vitesse"]))
+        snapshot_dict = dict(zip(df_snapshot["properties_twgid"], df_snapshot["properties_vitesse"], strict=False))
 
         gold_facts = []
         for twigid in unique_active_twgids:

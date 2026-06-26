@@ -31,7 +31,7 @@ logger = logging.getLogger(__name__)
 
 
 # Seuil au-delà duquel on déclenche un cleanup opportuniste des IPs inactives.
-# 10k IPs × 3 buckets = 30k entrées = ~5 MB en RAM (acceptable).
+# 10k IPs x 3 buckets = 30k entrées = ~5 MB en RAM (acceptable).
 # En dessous, on ne fait pas de scan (perf).
 _BUCKETS_CLEANUP_THRESHOLD = 10_000
 
@@ -87,7 +87,7 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
 
         # Récupérer ou créer l'entrée
         if key in self._buckets:
-            last_seen, ip_buckets = self._buckets[key]
+            _last_seen, ip_buckets = self._buckets[key]
         else:
             ip_buckets = defaultdict(list)
             self._buckets[key] = (now, ip_buckets)

@@ -12,7 +12,7 @@ jamais créées ni dans ``deploy/init-db.sql`` ni en runtime :
 * ``gold.mv_kpis_12_months`` : KPIs ville 12 mois (vue matérialisée).
   Sprint 11 l'a déjà créée sur le VPS (cf. lyonflow-project memory —
   60 lignes de saisonnalité Lyon) mais pas commitée dans alembic.
-* ``gold.mv_otp_heatmap`` : heatmap OTP ligne × heure (vue matérialisée).
+* ``gold.mv_otp_heatmap`` : heatmap OTP ligne x heure (vue matérialisée).
 * ``gold.fact_correlation_matrix`` : corrélations entre features Gold.
 * ``gold.amenagements_history`` : historique aménagements passés (Élu).
 
@@ -20,7 +20,7 @@ Cette migration crée les 4 objets avec le schéma attendu par les
 callers de ``db_query.py`` (Pydantic columns matchées).
 
 Le seed initial de ``mv_kpis_12_months`` utilise une saisonnalité Lyon
-plausible (5 KPIs × 12 mois). Les 3 autres sont créées vides — à
+plausible (5 KPIs x 12 mois). Les 3 autres sont créées vides — à
 peupler par les DAGs/airflow maintenance (DAG quotidien Sprint 10+).
 """
 
