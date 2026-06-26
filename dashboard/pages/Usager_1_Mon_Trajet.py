@@ -268,9 +268,12 @@ if st.session_state.get("results_loaded"):
             render_traffic_map_compact(height=320, horizon_minutes=60, key_suffix="usager")
 
     # ── Trajet Vélov (si Vélov sélectionné) ──────────────────────────────
+    # Sprint 23 (2026-06-26) — expander ouvert par défaut : sans ça, l'usager
+    # clique "Trouver mon trajet" et ne voit rien (le trip est calculé mais
+    # caché dans un panneau replié). Aligne l'UX sur la voiture (l.325).
     if has_velov:
         st.markdown("---")
-        with st.expander("🚲 Trajet Vélov + marche", expanded=False):
+        with st.expander("🚲 Trajet Vélov + marche", expanded=True):
             if origin_coords and dest_coords:
                 try:
                     # Sprint 16 Axe C — Stocke la durée réelle dans session_state.
