@@ -90,14 +90,14 @@ def _render_status_table(df: pd.DataFrame, top_n: int = 20) -> None:
             "sat_now_pct": st.column_config.ProgressColumn(
                 "Saturation %v85",
                 help="Vitesse actuelle / v85 sur 7j. < 50% fluide, > 100% congestion",
-                min=0,
-                max=200,
+                min_value=0,
+                max_value=200,
             ),
             "amp_pct": st.column_config.ProgressColumn(
                 "Amplitude 24h %",
                 help="(max_24h - min_24h) / v85. < 2% = stuck suspect",
-                min=0,
-                max=100,
+                min_value=0,
+                max_value=100,
             ),
         },
     )

@@ -36,10 +36,15 @@ with DAG(
     max_active_runs=1,
     tags=["transform", "silver"],
 ) as dag:
+    # Sprint 23 (2026-06-26) - timeout par source. tcl_vehicles et velov
+    # traitent des tables silver >1M rows + ON CONFLICT, donc INSERTs lents
+    # sous contention disque (autovacuum silver.meteo_hourly a 96% dead
+    # tuples, cf. run logs 13:19-13:24). Bump 5 vers 12 min pour ces 2 sources.
     for source in ["trafic_boucles", "velov", "tcl_vehicles", "meteo", "chantiers"]:
+        timeout_min = 12 if source in ("tcl_vehicles", "velov") else 5
         PythonOperator(
             task_id=f"transform_{source}",
             python_callable=_transform,
             op_kwargs={"source": source},
-            execution_timeout=timedelta(minutes=5),
+            execution_timeout=timedelta(minutes=timeout_min),
         )
