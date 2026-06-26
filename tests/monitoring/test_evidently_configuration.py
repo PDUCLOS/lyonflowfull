@@ -1,6 +1,6 @@
-"""Tests Sprint 16 refacto — Configuration Evidently (PSI primary + Evidently optional).
+"""Tests refacto — Configuration Evidently (PSI primary + Evidently optional).
 
-Cf docs/SPEC_EVIDENTLY_CONFIGURATION.md. Sprint 16 Axe A refacto :
+Cf docs/SPEC_EVIDENTLY_CONFIGURATION.md. Axe A refacto :
 - PSI devient le moteur principal (zero deps, src/monitoring/psi.py)
 - Evidently v0.7 devient optionnel (rapports HTML on-demand)
 

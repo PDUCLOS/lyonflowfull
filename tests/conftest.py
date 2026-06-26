@@ -1,9 +1,9 @@
-"""Conftest minimal — Sprint 15+ (2026-06-19).
+"""Conftest minimal — (2026-06-19).
 
 Setup unique : ajoute la racine du projet à ``sys.path`` pour permettre
 les imports ``from src.xxx import yyy`` depuis les tests.
 
-Sprint 15+ — la classe ``MockDB`` et la fixture ``mock_db`` ont été
+ la classe ``MockDB`` et la fixture ``mock_db`` ont été
 virées (audit Patrice 2026-06-19, politique "zéro mock" durcie). Pour
 tester du code qui touche la DB, marquer ``@pytest.mark.integration``
 (skippé par défaut via ``pyproject.toml`` ``addopts``).

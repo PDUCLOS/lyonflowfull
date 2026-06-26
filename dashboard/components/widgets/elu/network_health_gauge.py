@@ -1,4 +1,4 @@
-"""Widget Élu — Jauge "santé réseau" 0-100 (Axe 5, Sprint 15+).
+"""Widget Élu — Jauge "santé réseau" 0-100 (Axe 5, ).
 
 Affiche un KPI de synthèse exécutive basé sur ``gold.fn_network_health_score()``
 (migration 019). Le score combine trafic routier + TCL temps réel + Vélov +
@@ -8,9 +8,9 @@ Composants :
     * Jauge principale Plotly (mode='gauge+number+delta') — score 0-100 coloré
     * 4 sous-jauges (trafic, TCL, vélov, météo) — montrent les composantes
     * Bannière diagnostic (healthy / stressed / degraded / critical)
-    * Sparkline 24h : TODO Sprint suivant (nécessite table d'historique)
+  * Sparkline 24h : TODO (nécessite table d'historique)
 
-V1 (Sprint 15+) : pas de sparkline. La fonction SQL est stateless, donc
+V1 ) : pas de sparkline. La fonction SQL est stateless, donc
 l'historique serait à snapshoter via un DAG périodique (15 min) dans une
 table ``gold.network_health_history``. Estimation : 0.5 jour additionnel.
 """
@@ -183,7 +183,7 @@ def _render_subgauges(
 
 def render_network_health_gauge() -> None:
     with loading_wrapper("Chargement Network health gauge…", "⏳"):
-        """Bandeau KPI santé réseau — page Élu Synthèse (Axe 5, Sprint 15+).
+        """Bandeau KPI santé réseau — page Élu Synthèse (Axe 5, +).
 
     Fail loud via DashboardDataError si DB indispo OU fonction SQL
     migration 019 non appliquée. Le widget affiche alors ``st.error``.
@@ -197,7 +197,7 @@ def render_network_health_gauge() -> None:
         return
 
     if df.empty:
-        # Sprint 21 P1.2 (fin) : migré en show_error persona-aware.
+    # P1.2 (fin) : migré en show_error persona-aware.
         # "config_missing" = action de configuration requise côté ops.
         show_error(
             "config_missing",
@@ -254,7 +254,7 @@ def render_network_health_gauge() -> None:
             f"— leurs poids ont été redistribués sur les autres composantes."
         )
 
-    # Sprint 21 P4.3 : sparkline 24h via gold.network_health_history.
+  # P4.3 : sparkline 24h via gold.network_health_history.
     # Lit les 96 derniers snapshots (24h × 4/h) et affiche une mini-tendance.
     # Si la table est vide (< 24h de données après déploiement du DAG), la
     # sparkline affiche "Historique bientôt disponible".

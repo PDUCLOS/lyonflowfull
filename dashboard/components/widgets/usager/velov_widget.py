@@ -1,11 +1,11 @@
 """Widget — Disponibilité Vélov des stations proches.
 
-Sprint 8 — binding DB Silver via data_loader (zéro mock) :
+ binding DB Silver via data_loader (zéro mock) :
 * ``stations=None`` → ``data_loader.cached_velov_stations()`` (DB Silver uniquement,
   fail loud via DashboardDataError si DB down)
 * Le widget reste rétro-compatible (accepte toujours une liste en arg).
 
-Sprint 10 — affichage des prédictions H+30min next to current state
+ affichage des prédictions H+30min next to current state
 (``gold.velov_predictions`` via cached_velov_predictions).
 """
 
@@ -52,7 +52,7 @@ def render_velov_widget(stations: list | None = None, max_stations: int = 3) -> 
         st.info("Aucune station Vélov disponible — vérifiez le pipeline.")
         return
 
-    # Sprint 8+ (2026-06-12) — focus H+1h. Avant (Sprint 10) : H+30min.
+  # (2026-06-12) — focus H+1h. Avant ) : H+30min.
     pred_60 = _build_predictions_lookup(60)
 
     cols = st.columns(len(stations))
@@ -73,7 +73,7 @@ def render_velov_widget(stations: list | None = None, max_stations: int = 3) -> 
             color = COLORS["status_ok"]
             status = "✅ OK"
 
-        # Prédiction H+1h — delta et icône (Sprint 8+ : focus H+1h)
+    # Prédiction H+1h — delta et icône focus H+1h)
         if pred is not None:
             delta = pred - bikes
             if delta > 0:
@@ -87,7 +87,7 @@ def render_velov_widget(stations: list | None = None, max_stations: int = 3) -> 
             pred_line = ""
 
         with col:
-            # Sprint 10 : on utilise st.html() au lieu de st.markdown(unsafe_allow_html=True)
+      # on utilise st.html() au lieu de st.markdown(unsafe_allow_html=True)
             # car le markdown parser wrappait la partie préd_line (avec un <span>
             # imbriqué) dans un <pre><code>, affichant le HTML brut.
             st.html(

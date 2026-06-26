@@ -57,7 +57,7 @@ with st.expander("🔧 Options avancées", expanded=False):
 
 st.markdown("---")
 
-# Génération — sources live via data_loader (Sprint 8 — fail loud si DB indispo)
+# Génération — sources live via data_loader fail loud si DB indispo)
 kpis_dict = cached_elu_kpis_dict()
 bottlenecks_top = cached_bottlenecks_top()
 st.markdown("##### 📥 Génération")

@@ -68,7 +68,7 @@ def test_widgets_have_no_mock_imports() -> None:
 
 
 def test_no_mockdb_in_conftest() -> None:
-    """Sprint 15+ — MockDB et la fixture mock_db virés du conftest centralisé.
+    """— MockDB et la fixture mock_db virés du conftest centralisé.
 
     Politique zéro mock durcie : pas de monkeypatch DB dans les tests.
     Pour tester du code qui touche la DB, marquer

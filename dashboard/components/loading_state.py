@@ -1,6 +1,6 @@
 """Loading states & skeletons réutilisables pour le dashboard.
 
-Sprint 10+ UX (2026-06-12) — Avant : les widgets faisaient des
+ UX (2026-06-12) — Avant : les widgets faisaient des
 ``st.error`` brutal sur DashboardDataError, et rien pendant les
 chargements DB longs. Maintenant : loading state explicite + empty
 state explicite + skeleton visuel.
@@ -16,7 +16,7 @@ state explicite + skeleton visuel.
 3. ``skeleton_placeholder(n_lines=4)`` — barre placeholder grise
    pour simuler du contenu en train de charger.
 
-Tous compatibles avec le thème dark Sprint 8+ (bg-card, primary).
+Tous compatibles avec le thème dark (bg-card, primary).
 """
 
 from __future__ import annotations

@@ -1,11 +1,11 @@
 """Page Usager — Notre modèle (transparence sur la prédiction).
 
-Sprint 22+ — Ajout du menu MLOps pour le persona Usager (citizen-friendly).
+ Ajout du menu MLOps pour le persona Usager (citizen-friendly).
 3 pages au total : Notre modèle / Sources de données / Statut du service.
 
 Cette page explique en langage simple comment LyonFlowFull prédit le
 trafic et expose la précision réelle des 7 derniers jours (calculée
-par le backtest engine Sprint 16 vs données live). Aucun jargon ML.
+par le backtest engine vs données live). Aucun jargon ML.
 """
 
 from __future__ import annotations

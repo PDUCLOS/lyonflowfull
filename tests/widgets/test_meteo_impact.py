@@ -1,4 +1,4 @@
-"""Tests unitaires — widget meteo_impact (Axe 7, Sprint 17 v0.9.0).
+"""Tests unitaires — widget meteo_impact (Axe 7, v0.9.0).
 
 Couvre :
 * Constantes METEO_BAND_LABELS / METEO_BAND_COLORS (5 bandes météo).

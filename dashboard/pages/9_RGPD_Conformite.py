@@ -1,6 +1,6 @@
 """Page commune — RGPD & Conformité.
 
-Sprint 11+ (2026-06-17) — nettoyage :
+ (2026-06-17) — nettoyage :
 * Bloc "Contact DPO" viré (email placeholder dpo@lyonflowfull.fr, pas de
   DPO nommé en prod — sera réintroduit quand un vrai DPO sera nommé).
 * Section "Activité RGPD" (registre Article 30) virée : affiche "Aucun

@@ -1,4 +1,4 @@
-"""Tests unitaires — widget source_health_monitor (Sprint 16 Axe B).
+"""Tests unitaires — widget source_health_monitor Axe B).
 
 Couvre :
 * Constante SOURCE_WEIGHTS : 8 sources (trafic_boucles=3, gold.trafic_predictions=2,

@@ -11,7 +11,7 @@ WORKSPACE = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(WORKSPACE))
 
 
-# Sprint 15 prep (2026-06-19) — 5 tests mock-constants supprimés (test_mock_data_pro_tcl_imports,
+# prep (2026-06-19) — 5 tests mock-constants supprimés (test_mock_data_pro_tcl_imports,
 # test_tcl_lines_pro_count, test_segments_have_classification, test_otp_grid_lyon_lines,
 # test_line_kpis_have_all_fields). Backup: ~/.mavis/backups/sprint15-prep/persona/test_pro_tcl_widgets.py
 
@@ -27,7 +27,7 @@ def test_widget_modules_pro_tcl_importable():
     assert hasattr(pro_tcl, "render_cause_analysis")
     assert hasattr(pro_tcl, "render_frequency_slider")
     assert hasattr(pro_tcl, "render_otp_projection")
-    # Sprint 15+ (audit Pro TCL B-22) : ``render_saeiv_export`` supprimé
+    # (audit Pro TCL B-22) : ``render_saeiv_export`` supprimé
     # avec la page Pro_5_Export. Plus de SAEIV tant que les connecteurs
     # réels ne sont pas branchés.
     assert not hasattr(pro_tcl, "render_saeiv_export")
@@ -49,11 +49,11 @@ def test_pro_tcl_pages_exist():
         content = path.read_text(encoding="utf-8")
         assert "apply_persona_guard" in content
         assert 'expected_persona="pro_tcl"' in content
-    # Sprint 15+ (audit Pro TCL B-22) : Pro_5_Export supprimé du dashboard
+    # (audit Pro TCL B-22) : Pro_5_Export supprimé du dashboard
     # (page stub, JSON placeholder, WeasyPrint non branché). Décision
     # utilisateur 2026-06-19.
     assert not (pages_dir / "Pro_5_Export.py").exists(), (
-        "Pro_5_Export.py doit avoir été supprimé (Sprint 15+ audit B-22)"
+        "Pro_5_Export.py doit avoir été supprimé (audit B-22)"
     )
 
 
@@ -65,7 +65,7 @@ def test_correlation_page_uses_correlation_matrix():
 
 
 # =============================================================================
-# Sprint 13+ (2026-06-18) — Widget cohérence TomTom × Grand Lyon
+# (2026-06-18) — Widget cohérence TomTom × Grand Lyon
 # =============================================================================
 
 
@@ -106,14 +106,14 @@ def test_coherence_scatter_status_labels_complete():
 
 
 def test_correlation_page_includes_coherence_widget():
-    """Sprint 13+ — Pro_3_Correlation doit aussi rendre la cohérence TomTom."""
+    """— Pro_3_Correlation doit aussi rendre la cohérence TomTom."""
     content = (WORKSPACE / "dashboard" / "pages" / "Pro_3_Correlation.py").read_text(encoding="utf-8")
     assert "render_coherence_scatter" in content
     assert "coherence_scatter" in content
 
 
 def test_data_cache_has_coherence_helpers():
-    """Sprint 13+ — cached_tomtom_coherence et cached_tomtom_gl_drift existent."""
+    """— cached_tomtom_coherence et cached_tomtom_gl_drift existent."""
     from dashboard.components.data_cache import (
         cached_tomtom_coherence,
         cached_tomtom_gl_drift,

@@ -12,7 +12,7 @@ WORKSPACE = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(WORKSPACE))
 
 
-# Sprint 15 prep (2026-06-19) — 4 tests mock-constants supprimés (test_mock_data_usager_imports,
+# prep (2026-06-19) — 4 tests mock-constants supprimés (test_mock_data_usager_imports,
 # test_tcl_lines_have_required_fields, test_velov_stations_have_lyon_coordinates,
 # test_mock_alerts_have_required_fields). Backup: ~/.mavis/backups/sprint15-prep/persona/test_usager_widgets.py
 

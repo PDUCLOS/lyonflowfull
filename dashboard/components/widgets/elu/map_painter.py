@@ -1,10 +1,10 @@
-"""Widget — Map painter (placeholder pour component React custom Sprint 5).
+"""Widget — Map painter (placeholder pour component React custom ).
 
-En Sprint 4 : sélection manuelle d'une zone sur la carte.
-En Sprint 5 : component React custom (deck.gl + MapboxDraw) pour dessiner
+En sélection manuelle d'une zone sur la carte.
+En component React custom (deck.gl + MapboxDraw) pour dessiner
 librement le tracé d'un aménagement.
 
-Sprint 8 — Bottlenecks via data_loader.cached_bottlenecks_top() (fallback).
+ Bottlenecks via data_loader.cached_bottlenecks_top() (fallback).
 """
 
 from __future__ import annotations
@@ -19,7 +19,7 @@ from dashboard.components.loading_state import loading_wrapper
 
 def render_map_painter(height: int = 400) -> dict:
     with loading_wrapper("Chargement Map painter…", "⏳"):
-        """Affiche un map painter (sélection manuelle pour Sprint 4).
+        """Affiche un map painter (sélection manuelle pour ).
 
     Args:
         height: hauteur de la carte.
@@ -30,7 +30,7 @@ def render_map_painter(height: int = 400) -> dict:
     st.markdown("##### ✏️ Simulateur d'aménagement")
 
     st.caption(
-        "🚧 Sprint 4 : sélection manuelle. Sprint 5 : component React custom "
+    "🚧 sélection manuelle. component React custom "
         "deck.gl + MapboxDraw pour dessiner librement."
     )
 

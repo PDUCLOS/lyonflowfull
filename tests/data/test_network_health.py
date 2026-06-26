@@ -1,8 +1,8 @@
-"""Tests Sprint 15+ (2026-06-19) — Score santé réseau (Axe 5, migration 019).
+"""Tests (2026-06-19) — Score santé réseau (Axe 5, migration 019).
 
 Vérifie que :
 * ``get_network_health_score`` (bas-niveau, db_query) retourne un DataFrame
-  vide si DB indispo (politique zéro mock Sprint 8).
+ vide si DB indispo (politique zéro mock ).
 * ``load_network_health_score`` (data_loader) lève ``DashboardDataError``
   si DB indispo OU si la fonction SQL ne retourne aucune ligne.
 * Le widget gère les 4 diagnoses (healthy/stressed/degraded/critical)

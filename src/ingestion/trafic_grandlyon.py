@@ -1,8 +1,11 @@
-"""Collecteur — Grand Lyon boucles de trafic (pvotrafic).  # noqa: RUF002
+"""Collecteur — Boucles magnétiques de trafic Grand Lyon (pvotrafic).
 
-API : https://download.data.grandlyon.com/wfs/grandlyon
-Fréquence : 5 min
-Volume : ~1100 capteurs × 288 cycles/jour
+Ce module est le cœur de l'ingestion temps réel du trafic automobile. 
+Il interroge les capteurs (boucles) intégrés à la voirie lyonnaise.
+
+API utilisée : https://data.grandlyon.com/geoserver/metropole-de-lyon/ows
+Fréquence d'ingestion recommandée : 5 minutes (selon cycle des feux)
+Volume estimé : ~1100 capteurs (x 288 cycles par jour)
 """
 
 from __future__ import annotations
@@ -14,15 +17,21 @@ from src.ingestion.base import CollectorError, DataCollector, FetchResult
 
 
 class TraficGrandLyon(DataCollector):
-    """Collecteur pour les boucles de trafic Grand Lyon (pvotrafic)."""
+    """Collecteur principal des données trafic routier (boucles magnétiques)."""
 
     def __init__(self):
+        """Initialise le collecteur de trafic.
+        
+        Définit l'accès WFS au GeoServer de la Métropole, ainsi que les
+        identifiants de connexion (Basic Auth).
+        """
         super().__init__(
             source="pvotrafic_grandlyon",
             bronze_table="trafic_boucles",
             timeout=60,
         )
-        # Geoserver Métropole (auth Basic) — endpoint validé HTTP 200 + 3000+ records
+
+        # Endpoint validé (HTTP 200) retournant des milliers d'enregistrements.
         self.wfs_url = os.getenv(
             "GRANDLYON_WFS_URL",
             "https://data.grandlyon.com/geoserver/metropole-de-lyon/ows",
@@ -31,12 +40,24 @@ class TraficGrandLyon(DataCollector):
             "GRANDLYON_TRAFFIC_TYPENAME",
             "metropole-de-lyon:pvo_patrimoine_voirie.pvotrafic",
         )
-        # HTTP Basic Auth Grand Lyon Portal (data.grandlyon.com)
+
+        # Authentification Basic pour le portail Grand Lyon
         _user = os.getenv("GRANDLYON_USERNAME") or os.getenv("API_LOGIN", "")
         _pwd = os.getenv("GRANDLYON_PASSWORD") or os.getenv("API_PASSWORD", "")
         self._auth = (_user, _pwd) if _user and _pwd else None
 
     def fetch_raw(self) -> FetchResult:
+        """Exécute la requête WFS GetFeature pour récupérer l'état des boucles.
+        
+        Retourne les métriques d'occupation et de débit pour chaque capteur 
+        configuré dans le référentiel de la voirie.
+        
+        Returns:
+            FetchResult: Un objet contenant les données GeoJSON (FeatureCollection).
+            
+        Raises:
+            CollectorError: En cas d'échec de la requête HTTP ou JSON.
+        """
         params = {
             "service": "WFS",
             "version": "2.0.0",
@@ -44,15 +65,18 @@ class TraficGrandLyon(DataCollector):
             "typename": self.typename,
             "outputFormat": "application/json",
             "srsName": "EPSG:4326",
+            # Limite généreuse pour capturer l'ensemble des capteurs
             "maxFeatures": 5000,
         }
+
         try:
             r = self._http_get(self.wfs_url, params=params, auth=self._auth)
             data = r.json()
         except Exception as e:
-            raise CollectorError(f"Erreur fetch Grand Lyon trafic: {e}") from e
+            raise CollectorError(f"Erreur lors de la récupération du trafic Grand Lyon: {e}") from e
 
         n_records = self._count_records(data)
+
         return FetchResult(
             source=self.source,
             fetched_at=datetime.now(UTC),

@@ -1,4 +1,4 @@
-"""Tests Sprint 16 Axe A — Drift status badge widget (smoke + states).
+"""Tests Axe A — Drift status badge widget (smoke + states).
 
 Vérifie que le widget drift_status_badge s'importe et que sa logique de
 classification (couleur / icône / message) fonctionne pour les 4 états

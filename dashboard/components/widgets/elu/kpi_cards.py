@@ -1,6 +1,6 @@
 """Widget — 5 KPI cards ronds (part modale, ponctualité, CO2, bottlenecks, satisfaction).
 
-Sprint 8 — KPIs chargés via data_loader.cached_elu_kpis_dict().
+ KPIs chargés via data_loader.cached_elu_kpis_dict().
 """
 
 from __future__ import annotations

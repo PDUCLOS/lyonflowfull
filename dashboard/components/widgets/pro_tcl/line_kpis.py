@@ -1,11 +1,11 @@
 """Widget — KPI cards denses par ligne (OTP, retard, fréquence, charge).
 
-Sprint 8 — binding DB (zéro mock) :
+ binding DB (zéro mock) :
 * ``line_ids=None`` → ``data_loader.cached_line_kpis()`` (DB Gold vue matérialisée
   ``gold.mv_line_kpis_live``, fail loud via DashboardDataError si DB indispo).
 * Le widget reste rétro-compatible (accepte un dict en arg).
 
-Sprint VPS-5 — Mode explorable :
+ Mode explorable :
 * Tri par n'importe quelle colonne (OTP, retard, charge, fréquence, line_id)
 * Slider "top N" pour ne pas tout afficher d'un coup
 * Bouton "Voir toutes les lignes" pour explorer
@@ -83,7 +83,7 @@ def render_line_kpis(
         st.info("Aucun KPI ligne disponible.")
         return
 
-    # ---- Contrôles de tri + exploration (Sprint VPS-5) ----
+  # ---- Contrôles de tri + exploration ) ----
     ctrl_col1, ctrl_col2, ctrl_col3 = st.columns([2, 2, 1])
     with ctrl_col1:
         sort_label = st.selectbox(
@@ -115,7 +115,7 @@ def render_line_kpis(
     df_view = df_sorted.head(top_n)
 
     # ---- Tableau Streamlit avec sort natif en plus ----
-    # Sprint 11+ — afficher le libellé lisible (``L66``) plutôt que le
+  # afficher le libellé lisible (``L66``) plutôt que le
     # ``line_ref`` brut (``ActIV:Line::66:SYTRAL``).
     display_cols = ["line_label", "otp_pct", "avg_delay_min", "frequency_min", "load_pct", "trend"]
     df_display = df_view[display_cols].rename(
@@ -171,6 +171,6 @@ def render_line_kpis(
                 trend_icon = {"up": "📈", "down": "📉", "stable": "➡️"}.get(row["trend"], "➡️")
                 st.write(f"Tendance : {trend_icon} {row['trend_delta']:+.1f} pts")
 
-    # Sprint 15+ (audit Pro TCL C1) — Suppression du bloc "Vue cartes (legacy)".
+  # (audit Pro TCL C1) — Suppression du bloc "Vue cartes (legacy)".
     # Le mode compact (param ``compact``, conservé pour rétro-compat) n'est plus
     # utilisé ; tout passe par le tableau Streamlit + mode détails dépliables.

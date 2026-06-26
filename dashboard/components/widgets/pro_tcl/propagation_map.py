@@ -1,4 +1,4 @@
-"""Widget — Carte de propagation de congestion (Axe 2, Sprint 17, 2026-06-20).
+"""Widget — Carte de propagation de congestion (Axe 2, , 2026-06-20).
 
 Analyse comment la congestion se propage entre capteurs routiers adjacents
 de Lyon (K=2 grid via ``gold.dim_gnn_adjacency``).
@@ -141,7 +141,7 @@ def compute_propagation_correlations(
 ) -> pd.DataFrame:
     """Calcule la corrélation croisée laggée pour chaque paire de capteurs.
 
-    Sprint 17 Axe 2 — voir docstring du module. Fonction **pure** (pas
+  Axe 2 — voir docstring du module. Fonction **pure** (pas
     d'I/O) : prend deux DataFrames en entrée, retourne les CORR. Testable
     en unitaire avec des données synthétiques (cf. tests/widgets/pro_tcl/).
 
@@ -340,7 +340,7 @@ def compute_propagation_correlations(
 
 
 # -----------------------------------------------------------------------------
-# Enrichissement Axe 2 niveau 2 (Sprint 17+, spec §3.3) — Granger causality
+# Enrichissement Axe 2 niveau 2 , spec §3.3) — Granger causality
 # -----------------------------------------------------------------------------
 # `grangercausalitytests` est plus RIGOUREUX que la simple CORR cross-laggée
 # parce qu'il teste si INCLURE les valeurs passées de X AMÉLIORE la
@@ -368,7 +368,7 @@ def compute_granger_causality(
 ) -> pd.DataFrame:
     """Test de causalité Granger pour les top N paires par |CORR|.
 
-    Sprint 17+ Axe 2 niveau 2 (spec §3.3). Pour chaque paire du top N
+  Axe 2 niveau 2 (spec §3.3). Pour chaque paire du top N
     (tri par |correlation| DESC), on teste :
     * "A Granger-cause B ?" → p-value (lag 1..maxlag, on garde le min)
     * "B Granger-cause A ?" → p-value (lag 1..maxlag, on garde le min)
@@ -572,7 +572,7 @@ def _popup_html(row: pd.Series) -> str:
         * lag > 0 : B "lead" A (B est la source, A la destination).
         * lag < 0 : A "lead" B (A est la source, B la destination).
         * Granger p-value (si calculé) : significance statistique de la
-          causalité (Sprint 17+ niveau 2).
+     causalité niveau 2).
     """
     corr = float(row.get("correlation", 0) or 0)
     lag = int(row.get("best_lag_steps", 0) or 0)
@@ -735,7 +735,7 @@ def _build_folium_map(corr_df: pd.DataFrame) -> folium.Map:
 def _render_kpi_banner(corr_df: pd.DataFrame, granger_df: pd.DataFrame) -> None:
     """Bandeau 4 KPI cards : Paires analysées / Corrélées / Directionnelle / Granger significatif.
 
-    Sprint 17+ (Axe 2 niveau 2) — 4ème card = "Granger significatif" (p < 0.05).
+  (Axe 2 niveau 2) — 4ème card = "Granger significatif" (p < 0.05).
     """
     if corr_df.empty:
         st.info("Aucune paire analysable (pas assez d'observations communes).")
@@ -871,9 +871,9 @@ def render_propagation_map(
             "significative (vs simple corrélation)."
         )
     with loading_wrapper("Chargement Propagation map…", "⏳"):
-        """Affiche la carte de propagation de congestion (Axe 2, Sprint 17).
+        """Affiche la carte de propagation de congestion (Axe 2, ).
 
-    Sprint 17 (2026-06-20). Enrichissement Sprint 17+ Axe 2 niveau 2 :
+  (2026-06-20). Enrichissement Axe 2 niveau 2 :
     test de causalité Granger (statsmodels) sur les top N paires par |r|
     pour ajouter une couche de rigueur statistique à la direction de
     propagation détectée par simple CORR cross-laggée.
@@ -927,7 +927,7 @@ def render_propagation_map(
         )
         return
 
-    # Calcul Granger (Sprint 17+ niveau 2) sur le top N
+  # Calcul Granger niveau 2) sur le top N
     granger_df = pd.DataFrame()
     try:
         with st.spinner(
@@ -985,7 +985,7 @@ def render_propagation_map(
         f"JOIN `gold.traffic_features_live` × `gold.mv_twgid_to_lyo` sur "
         f"fenêtre {hours_window}h glissantes. CORR = Pearson r scan laggé "
         f"(±{max_lag_steps} pas = ±{max_lag_steps * 5} min). Direction = "
-        f"le capteur dont la série lead. **Granger** (Sprint 17+ niveau 2) = "
+    f"le capteur dont la série lead. **Granger** niveau 2) = "
         f"test de causalité statsmodels sur les top {granger_top_n} paires par "
         f"|r|, seuil p < {GRANGER_SIGNIFICANCE:.2f}. Refresh DAG toutes les 30 min. "
         f"Seuil min obs : {MIN_OBS_PER_SENSOR} points par paire."

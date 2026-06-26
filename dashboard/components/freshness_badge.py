@@ -1,8 +1,7 @@
-"""Badge de fraîcheur des données — Sprint 20 Axe F.
+"""Badge de fraîcheur des données — Axe F.
 
 Affiche en haut de chaque page un badge discret indiquant l'âge des
-données et le temps restant avant la prochaine mise à jour. Sprint 13+
-a ajouté l'auto-refresh par persona (Pro TCL 30s, Usager 60s, Élu 300s),
+données et le temps restant avant la prochaine mise à jour. a ajouté l'auto-refresh par persona (Pro TCL 30s, Usager 60s, Élu 300s),
 mais l'usager ne sait pas quand la prochaine MAJ arrive. Ce badge rend
 l'auto-refresh visible.
 
@@ -18,7 +17,7 @@ import streamlit as st
 from src.persona.manager import get_current_persona
 
 # Intervalle d'auto-refresh par persona (secondes).
-# Source : CLAUDE.md Sprint 13+ — auto-refresh par persona.
+# Source : CLAUDE.md auto-refresh par persona.
 REFRESH_INTERVALS_SEC: dict[str, int] = {
     "pro_tcl": 30,
     "usager": 60,

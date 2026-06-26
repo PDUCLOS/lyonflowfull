@@ -1,4 +1,4 @@
-"""Widget — Corrélation bus × trafic spatialisée (Axe 3, Sprint 15+).
+"""Widget — Corrélation bus × trafic spatialisée (Axe 3, ).
 
 Corrige la lacune du bottleneck actuel (gold.infrastructure_bottlenecks)
 qui fait un JOIN bus × trafic par HEURE GLOBALE. Cette version fait un
@@ -201,7 +201,7 @@ def render_bus_traffic_spatial(
     with loading_wrapper("Chargement Bus traffic spatial…", "⏳"):
         """Affiche la corrélation bus × trafic spatialisée (Axe 3).
 
-    Sprint 15+ (2026-06-19). Widget parallèle (Option B) — non-breaking.
+  (2026-06-19). Widget parallèle (Option B) — non-breaking.
     """
     try:
         df = cached_bus_traffic_spatial(line_ref=line_id)

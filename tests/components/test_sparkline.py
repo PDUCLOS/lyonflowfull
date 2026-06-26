@@ -1,4 +1,4 @@
-"""Tests pour la sparkline 24h (Sprint 21 P4.3)."""
+"""Tests pour la sparkline 24h P4.3)."""
 
 from __future__ import annotations
 

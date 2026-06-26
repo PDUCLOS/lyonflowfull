@@ -1,4 +1,4 @@
-"""Tests Sprint VPS-6 hotfix — Connecteur TomTom (trafic temps réel).
+"""Tests hotfix — Connecteur TomTom (trafic temps réel).
 
 Vérifie :
 1. Sans TOMTOM_API_KEY → get_flow() retourne None sans crash

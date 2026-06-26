@@ -1,4 +1,4 @@
-"""Tests pour la quantile regression XGBoost (Sprint 21 P4.2).
+"""Tests pour la quantile regression XGBoost P4.2).
 
 Valide le contrat de l'API sans entraîner de vrai modèle (lent + DB requise).
 On mock le xgb.XGBRegressor pour qu'il retourne des prédictions déterministes.

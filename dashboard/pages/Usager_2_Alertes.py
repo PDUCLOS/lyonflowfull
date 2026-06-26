@@ -1,4 +1,4 @@
-"""Page Usager — Alertes (Sprint 2 complet)."""
+"""Page Usager — Alertes complet)."""
 
 from __future__ import annotations
 

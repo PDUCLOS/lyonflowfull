@@ -8,12 +8,11 @@ Workflow :
 5. Log métriques dans MLflow (MAE, RMSE, MAPE, params, model artifact).
 6. Sauvegarder le modèle final + early stopping.
 
-Conventions Sprint 7 :
-* Quality gate : MAE ≤ prev_mae × 1.15 (réutilise le pattern XGBoost).
+Conventions * Quality gate : MAE ≤ prev_mae × 1.15 (réutilise le pattern XGBoost).
 * MLflow run name : ``stgcn_{horizon}_{YYYYMMDD}``.
 * Le run parent s'appelle ``stgcn_traffic`` et les enfants sont les horizons.
 
-Sprint 9 — Refactor : utilise ``src.ml.mlflow_integration.MLflowTracker``
+ Refactor : utilise ``src.ml.mlflow_integration.MLflowTracker``
 au lieu du stub inline. Tracking unifié XGBoost + GNN.
 """
 
@@ -267,7 +266,7 @@ class STGCNTrainer:
         scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, patience=3, factor=0.5)
         loss_fn = nn.MSELoss()
 
-        # MLflow tracking via tracker centralisé (Sprint 9)
+    # MLflow tracking via tracker centralisé )
         tracker = _make_tracker()
         run_name = f"stgcn_h{horizon_min}_{time.strftime('%Y%m%d_%H%M%S')}"
         try:

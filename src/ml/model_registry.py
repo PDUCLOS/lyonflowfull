@@ -1,28 +1,32 @@
-"""Model Registry — coexistence XGBoost + GNN avec feature flags.
+"""Registre des modèles (Model Registry) — Coexistence XGBoost et GNN.
 
-Sprint 8 — Permet de faire tourner les 2 solutions en parallèle et de
-basculer de l'une à l'autre via une simple variable d'environnement.
+Ce module orchestre l'activation et la comparaison des modèles prédictifs. 
+Il permet de faire fonctionner les deux solutions (XGBoost et Spatial-Temporal 
+Graph Convolutional Networks - STGCN) en parallèle, et de basculer de l'une 
+à l'autre via un simple mécanisme de Feature Flags.
 
-## Usage
+## Utilisation
 
 ```python
 from src.ml.model_registry import ModelRegistry, ModelKind
 
-# Récupérer le modèle actif (selon LYONFLOW_MODELS_ACTIVE)
+# Récupérer l'instance du modèle actif (selon la configuration LYONFLOW_MODELS_ACTIVE)
 model = ModelRegistry.get_active_model(horizon_min=60)
 prediction = model.predict(features)
 
-# Comparer les 2 modèles
+# Comparer les prédictions des deux modèles en mode Shadow Testing
 comparison = ModelRegistry.compare_predictions(
     features, edge_index, horizon_min=60
 )
-# → {"xgboost": [...], "stgcn": [...], "delta": [...]}
+# Résultat attendu : {"xgboost": [...], "stgcn": [...], "delta": [...]}
 ```
 
-## Variables d'environnement
+## Variables d'environnement supportées
 
-* ``LYONFLOW_MODELS_ACTIVE`` : ``"xgboost"`` | ``"stgcn"`` | ``"both"`` (défaut)
-* ``LYONFLOW_STGCN_TRAINING`` : ``True`` (défaut) | ``False`` (skip retrain)
+* ``LYONFLOW_MODELS_ACTIVE`` : Contrôle le modèle de production. 
+  Valeurs acceptées : ``"xgboost"`` | ``"stgcn"`` | ``"both"`` (par défaut).
+* ``LYONFLOW_STGCN_TRAINING`` : Contrôle l'exécution de l'entraînement GNN dans Airflow. 
+  Valeurs acceptées : ``True`` (défaut) | ``False`` (pour ignorer le ré-entraînement).
 * ``LYONFLOW_XGBOOST_TRAINING`` : ``True`` (défaut) | ``False`` (skip retrain)
 
 ## Workflow validation
@@ -108,14 +112,14 @@ def is_stgcn_training_enabled() -> bool:
     Lit directement l'env var (pas le cache pydantic-settings) pour
     permettre le toggle runtime sans redémarrer.
 
-    Note Sprint 9 : par défaut False (le DAG est créé en pause pour
+  Note par défaut False (le DAG est créé en pause pour
     préparation). Pour activer : set ``LYONFLOW_STGCN_TRAINING=true``.
     """
     return os.getenv("LYONFLOW_STGCN_TRAINING", "false").lower() not in ("false", "0", "no", "")
 
 
 # -----------------------------------------------------------------------------
-# Sprint 9 — Feature flags dashboard (cartes préparées mais masquées)
+# Feature flags dashboard (cartes préparées mais masquées)
 # -----------------------------------------------------------------------------
 
 
@@ -132,7 +136,7 @@ def is_gnn_map_visible() -> bool:
 def is_model_monitoring_visible() -> bool:
     """True si le dashboard Model Monitoring MLflow est visible.
 
-    Lit l'env var directement. Par défaut True (intégré Sprint 10).
+  Lit l'env var directement. Par défaut True (intégré ).
     Set ``LYONFLOW_DASHBOARD_MODEL_MONITORING=false`` pour masquer.
     """
     return os.getenv("LYONFLOW_DASHBOARD_MODEL_MONITORING", "true").lower() not in (

@@ -17,10 +17,10 @@ def render_impact_projection(zone: str | None = None) -> None:
         st.info("Sélectionnez une zone sur la carte pour voir la projection.")
         return
 
-    # Modèle simplifié (Sprint 5 : GNN + XGBoost)
+  # Modèle simplifié GNN + XGBoost)
     st.warning(
         "⚠️ **Estimation générique** — ces valeurs (-12% VP, +18% bus, +45% vélo, -23% CO₂) "
-        "ne sont PAS calculées pour la zone sélectionnée. Sprint suivant : modèle ML (GNN + XGBoost) "
+    "ne sont PAS calculées pour la zone sélectionnée. modèle ML (GNN + XGBoost) "
         "affiné par zone."
     )
     col1, col2, col3, col4 = st.columns(4)
@@ -34,7 +34,7 @@ def render_impact_projection(zone: str | None = None) -> None:
         st.metric("CO₂", "-23%", delta_color="inverse", help="Réduction des émissions CO₂ sur la zone")
 
     st.markdown("---")
-    st.markdown("**Hypothèses du modèle (Sprint 4) :**")
+    st.markdown("**Hypothèses du modèle () :**")
     st.caption(
         "- Réduction VP : élastique au report modal TC/vélo\n"
         "- Gain bus : attractivité + fréquence perçue\n"

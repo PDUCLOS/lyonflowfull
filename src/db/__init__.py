@@ -1,11 +1,16 @@
-"""DB module — connection pool, helpers, ORM.
+"""Couche Base de données (DB) — Gestion du pool de connexions, ORM et requêtes.
 
-Exposed API:
-- get_engine / get_session_factory : SQLAlchemy singleton
-- session_scope : context manager transaction
-- raw_connection : context manager psycopg2 brut
-- execute_query / execute_scalar : helpers requêtes paramétrées
-- test_connection : health check
+Ce module expose les utilitaires essentiels pour interagir avec la base PostgreSQL.
+Il fournit à la fois des sessions ORM SQLAlchemy pour les interactions complexes
+et des connexions brutes `psycopg2` pour les requêtes de haute performance.
+
+Interface publique exposée :
+- `get_engine` / `get_session_factory` : Modèle Singleton pour SQLAlchemy.
+- `session_scope` : Gestionnaire de contexte (context manager) pour les transactions ORM.
+- `raw_connection` : Gestionnaire de contexte pour les connexions brutes `psycopg2`.
+- `execute_query` / `execute_scalar` : Fonctions utilitaires pour l'exécution sécurisée 
+  de requêtes SQL paramétrées.
+- `test_connection` : Fonction de vérification de l'état de la base de données (Health check).
 """
 
 from src.db.connection import (

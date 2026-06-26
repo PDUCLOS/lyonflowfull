@@ -3,11 +3,11 @@
 Affiche 4-5 KPI cards (durée, coût, CO2, distance, +calories pour Vélov)
 au-dessus du widget détaillé d'un mode (TC / voiture / Vélov).
 
-Sprint 15+ (2026-06-19) — Première version. S'inspire du HTML inline utilisé
+ (2026-06-19) — Première version. S'inspire du HTML inline utilisé
 dans ``transit_trip.py`` et ``velov_trip.py`` (cards avec ``border-left``
 colorée + ``st.metric``).
 
-Politique projet (Sprint 8+) — ZÉRO MOCK : tout vient du pipeline.
+Politique projet ) — ZÉRO MOCK : tout vient du pipeline.
 Les impacts sont calculés par ``src.routing.eco_calculator`` (constantes
 ADEME/SYTRAL) + ``gold.tarifs_modes`` (Phase 2).
 

@@ -6,9 +6,9 @@ Affiche :
 - Fraîcheur des données (Bronze ingestion times par source)
 - Boutons trigger manuel
 
-Sprint 9+ (2026-06-17) — fail loud strict :
+ (2026-06-17) — fail loud strict :
 * Airflow indispo → ``DashboardDataError`` propagé.
-* Alertes feed branché sur ``gold.alerts`` (vue matérialisée Sprint 9+).
+* Alertes feed branché sur ``gold.alerts`` (vue matérialisée ).
 """
 
 from __future__ import annotations
@@ -30,7 +30,7 @@ from src.data.airflow_client import (
 from src.data.exceptions import DashboardDataError
 from src.monitoring.health_checks import run_all_checks
 
-# Sprint 8 (2026-06-12) — viré le bloc MOCK_DAGS / MOCK_FRESHNESS
+# (2026-06-12) — viré le bloc MOCK_DAGS / MOCK_FRESHNESS
 # (lignes 64-200 dans la version précédente). Le widget lit désormais
 # la DB et l'API Airflow uniquement. Si l'un des deux est indispo,
 # DashboardDataError.
@@ -77,7 +77,7 @@ def _cached_freshness() -> list[dict]:
     return rows
 
 
-# Sprint 8 (2026-06-12) — MOCK_DAGS, MOCK_FRESHNESS, helpers _ago,
+# (2026-06-12) — MOCK_DAGS, MOCK_FRESHNESS, helpers _ago,
 # _in_minutes, _in_months, _NOW, _FMT : tous virés. Le widget ne
 # mock plus. Si Airflow indispo → DashboardDataError. Si la DB
 # indispo → DashboardDataError. La source de vérité c'est le pipeline.
@@ -265,7 +265,7 @@ def render_health_panel() -> None:
             }.get(status, COLORS["text_muted"])
             icon = {"ok": "✅", "warning": "⚠️", "critical": "🔴"}.get(status, "❓")
             name = r.get("name", "—")
-            # Sprint 15+ (audit Pro TCL B-09 + B-11) : ``details`` peut
+      # (audit Pro TCL B-09 + B-11) : ``details`` peut
             # contenir des messages d'erreur PostgreSQL bruts (ex: "to add
             # explicit type casts") avec des ``<``, ``>``, ``&`` qui
             # cassent le parsing HTML de Streamlit. On escape + on tronque
@@ -343,7 +343,7 @@ def render_alerts_feed() -> None:
     with loading_wrapper("Chargement Alerts feed…", "⏳"):
         """Affiche le feed des alertes récentes.
 
-    Sprint 9+ (2026-06-17) — branché sur ``get_recent_alerts()``
+  (2026-06-17) — branché sur ``get_recent_alerts()``
     (rgpd.audit_log + chantiers). Plus de mock hardcodé.
     """
     st.markdown("##### 🚨 Alertes récentes (24h)")

@@ -31,15 +31,15 @@ render_data_status_banner()
 
 st.caption(
     "Vue opérateur : statut DAGs Airflow · 6 health checks · fraîcheur des 8 sources Bronze. "
-    "Source : Airflow REST API + PostgreSQL Gold · Sprint 8+"
+  "Source : Airflow REST API + PostgreSQL Gold · "
 )
 
-# Sprint 16 Axe B — Monitoring multi-source (remplace les health checks séquentiels)
+# Axe B — Monitoring multi-source (remplace les health checks séquentiels)
 render_source_health_monitor()
 
 st.markdown("---")
 
-# Sprint 22+ — Saturation + amplitude par capteur (gold.mv_sensor_saturation,
+# Saturation + amplitude par capteur (gold.mv_sensor_saturation,
 # migration 034 (matérialisée)). Dépendance : la migration 034 (matérialisée) doit être appliquée sur
 # le VPS (`psql -f scripts/sql/migration_033_sensor_saturation.sql`).
 render_sensor_saturation()

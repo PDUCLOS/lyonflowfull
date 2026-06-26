@@ -2,7 +2,7 @@
 
 Tasks actives :
 - build_traffic_features : silver.trafic_boucles_clean → gold.traffic_features_live
-  (alimenté en 2026-06-10 — Sprint VPS-5 a renommé les colonnes, ce code a suivi)
+ (alimenté en 2026-06-10 — a renommé les colonnes, ce code a suivi)
 - build_velov_features : silver.velov_clean → gold.velov_features
 - build_tcl_realtime : silver.tcl_vehicles_clean → gold.tcl_vehicle_realtime
   (alimente le Pro_4_Simulateur)
@@ -101,7 +101,7 @@ with DAG(
         execution_timeout=timedelta(minutes=3),
     )
 
-    # Sprint 15+ (2026-06-19) — Refresh de gold.mv_multimodal_grid (migration 17).
+  # (2026-06-19) — Refresh de gold.mv_multimodal_grid (migration 17).
     # Dépend de toutes les sources upstream (traffic + TCL + Vélov alimentent
     # la grille via les CTE_FULL OUTER JOIN de la MV).
     multimodal_grid = PythonOperator(
@@ -110,7 +110,7 @@ with DAG(
         execution_timeout=timedelta(minutes=2),
     )
 
-    # Sprint 15+ (2026-06-19) — Axe 3 : correlation bus x trafic spatialisee.
+  # (2026-06-19) — Axe 3 : correlation bus x trafic spatialisee.
     # JOIN spatial 0.001° (~100 m) : retard bus corrélé au trafic de la MÊME
     # zone. Coexiste avec bottleneck (Option B, non-breaking).
     bus_traffic_spatial = PythonOperator(

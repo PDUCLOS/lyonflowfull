@@ -1,4 +1,4 @@
-"""Widget — Comparateur 3 modes + recommandation (Phase 2 Sprint 15+).
+"""Widget — Comparateur 3 modes + recommandation (Phase 2 ).
 
 Affiche côte à côte les 3 modes (TC / voiture / Vélov) avec :
 - Une **winner card** mise en avant (bordure colorée + badge 🏆 RECOMMANDÉ)
@@ -9,11 +9,11 @@ L'usager clique ensuite sur le mode de son choix → la page Usager_1
 appelle alors le widget détaillé correspondant (transit_trip, velov_trip,
 itinerary).
 
-Politique projet (Sprint 8+) — ZÉRO MOCK : si un mode est indisponible
+Politique projet ) — ZÉRO MOCK : si un mode est indisponible
 (source="unavailable" ou DB error), la card est grisée avec message
 explicite. Pas de fallback silencieux.
 
-Sprint 15+ (2026-06-19) — Première version. S'inspire de la page
+ (2026-06-19) — Première version. S'inspire de la page
 ``Lyontraffic/dashboard/pages/9_Recommandation_Trajet.py`` (winner card
 HTML lignes 1042-1057) en l'adaptant aux CSS variables du thème
 LyonFlowFull (``--bg-card``, ``--primary-color``, etc.).
@@ -182,7 +182,7 @@ def _render_mode_card(
         f'<span class="lyf-sublabel" style="opacity:0.6;">score: {score:.1f}</span>' if score is not None else ""
     )
 
-    # Sprint 16 Axe C — Badge "estimé/calculé" selon result.source.
+  # Axe C — Badge "estimé/calculé" selon result.source.
     # computed = durée réellement calculée par le widget trajet
     # estimated = fallback vitesse moyenne (avant que l'usager clique "Voir détail")
     source = result.get("source", "estimated")

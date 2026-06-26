@@ -1,14 +1,20 @@
-"""Transforms Bronze → Silver.
+"""Transformations des données : Passage de la couche Bronze à Silver.
 
-Pour chaque source Bronze, crée/met à jour la table Silver correspondante.
-- Dédup DISTINCT ON (channel_id, measurement_time)
-- Parsing JSON → colonnes typées
-- Géométrie WGS84 + Lamb93 (si applicable)
-- Validation métier
+Pour chaque source de la couche Bronze, ce module crée ou met à jour 
+la table correspondante dans la couche Silver. 
 
-Usage :
+Opérations effectuées :
+- Déduplication via `DISTINCT ON (channel_id, measurement_time)`.
+- Analyse et conversion (Parsing) des champs JSON vers des colonnes typées.
+- Création et reprojection des géométries spatiales (WGS84 et Lambert 93).
+- Validation et nettoyage selon les règles métier.
+
+Exemple d'utilisation :
+
+    ```python
     from src.transformation.bronze_to_silver import transform_to_silver
     transform_to_silver(source="trafic_boucles")
+    ```
 """
 
 from __future__ import annotations
@@ -56,7 +62,7 @@ def _parse_grandlyon_vitesse(raw: object) -> float | None:
       - "56.5 km/h"      → 56.5
       - "Vitesse réglementaire"  → None (capteur en vitesse libre, vitesse_kmh inconnue)
       - "" / None        → None
-      - "0 km/h"         → None (Sprint 22+ audit saturation : un capteur à 0
+   - "0 km/h"     → None audit saturation : un capteur à 0
         est suspect, on l'écarte pour ne pas fausser la moyenne)
 
     Returns:
@@ -69,7 +75,7 @@ def _parse_grandlyon_vitesse(raw: object) -> float | None:
             value = float(raw)  # type: ignore[arg-type]  # mypy: raw est Any
         except (TypeError, ValueError):
             return None
-        # Sprint 22+ : filter les 0 (capteurs bloqués au sens "no data")
+    # filter les 0 (capteurs bloqués au sens "no data")
         return value if value > 0 else None
     s = raw.strip()
     if not s:
@@ -77,7 +83,7 @@ def _parse_grandlyon_vitesse(raw: object) -> float | None:
     m = re.match(r"^\s*(\d+(?:[.,]\d+)?)\s*km/h", s)
     if m:
         value = float(m.group(1).replace(",", "."))
-        # Sprint 22+ : filter les 0 (cf. ci-dessus)
+    # filter les 0 (cf. ci-dessus)
         return value if value > 0 else None
     return None
 
@@ -147,7 +153,7 @@ def _transform_trafic_boucles() -> int:
                         # un LineString directement. Workaround : on prend le
                         # point médian du segment. Cela donne une position
                         # approximative du capteur (centre du tronçon routier).
-                        # TODO Sprint 10 : modifier le schéma pour passer en
+            # TODO modifier le schéma pour passer en
                         # geometry(LineString, 4326) (ou geometry générique) et
                         # stocker le segment complet.
                         mid = coords[len(coords) // 2]
@@ -209,7 +215,7 @@ def _transform_trafic_boucles() -> int:
 def _transform_velov() -> int:
     """Bronze.velov → silver.velov_clean.
 
-    Sprint 10 — payload GBFS unifié ``{status: [...], information: [...]}``.
+  payload GBFS unifié ``{status: [...], information: [...]}``.
     Join par ``station_id`` pour récupérer ``name/lat/lon/address`` depuis
     l'endpoint ``station_information`` (l'endpoint ``status`` ne contient
     plus que les compteurs temps réel depuis l'API Grand Lyon de juin 2026).
@@ -232,8 +238,8 @@ def _transform_velov() -> int:
             if not isinstance(raw_data, dict):
                 continue
 
-            # Format nouveau (Sprint 10) : {status: [...], information: [...]}
-            # Format legacy (avant Sprint 10) : {data: {stations: [...]}} ou liste plate
+      # Format nouveau ) : {status: [...], information: [...]}
+      # Format legacy (avant ) : {data: {stations: [...]}} ou liste plate
             if "status" in raw_data and "information" in raw_data:
                 stations_status = raw_data.get("status", []) or []
                 stations_info_list = raw_data.get("information", []) or []
@@ -350,7 +356,7 @@ def _transform_tcl_vehicles() -> int:
                 SELECT id, fetched_at, raw_data
                 FROM bronze.tcl_vehicles
                 ORDER BY fetched_at DESC
-                -- Sprint 11+ (2026-06-17) — réduit de 5000 → 200 (~16h de
+        -- (2026-06-17) — réduit de 5000 → 200 (~16h de
                 -- fetches @5min). La lecture de 5000 SIRI JSON (~2.5 Go en
                 -- mémoire Python) OOM-kill le worker Airflow (6 Go de
                 -- memory limit) avant la fin de la tâche. 200 couvre

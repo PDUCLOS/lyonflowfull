@@ -1,4 +1,4 @@
-"""Tests Sprint 16 Axe A — Backtest dashboard widget (smoke + structure).
+"""Tests Axe A — Backtest dashboard widget (smoke + structure).
 
 Vérifie que le widget backtest_dashboard s'importe correctement et expose
 les bonnes fonctions helpers.

@@ -1,22 +1,21 @@
-"""Drift detector — Compare distribution XGBoost vs TomTom via PSI + Evidently.
-
-Sprint 16 Axe A refacto (2026-06-20) — Voir docs/SPEC_EVIDENTLY_CONFIGURATION.md.
+"""Détecteur de Dérive (Drift Detector) — Comparaison XGBoost vs TomTom (PSI + Evidently).
 
 Architecture :
-- **Moteur principal** : PSI (``src.monitoring.psi``). Zéro dépendance,
-  déterministe, déjà testé. Couvre 100% du besoin opérationnel.
-- **Moteur optionnel** : Evidently v0.7 (rapports HTML on-demand, usage
-  dashboard Pro_7 ou notebook local). Import paresseux, jamais appelé
-  dans un DAG (trop lourd : 13+ deps transitives, +250 Mo Docker).
+- **Moteur principal** : PSI (Population Stability Index, via ``src.monitoring.psi``). 
+  Zéro dépendance, déterministe et léger. Couvre 100% des besoins opérationnels quotidiens.
+- **Moteur optionnel** : Evidently (génération de rapports HTML à la demande, 
+  utile pour le dashboard professionnel ou l'analyse locale). Chargement paresseux (lazy load) 
+  afin d'éviter de saturer les DAGs réguliers avec des dépendances lourdes (+250 Mo Docker).
 
-Appelé par le DAG ``daily_drift_report`` à 05h30 (après le refresh de
-``gold.mv_xgb_vs_tomtom``). Résultat stocké dans ``gold.model_drift_reports``.
+Ce module est exécuté quotidiennement (ex: via le DAG ``daily_drift_report``)
+juste après l'actualisation de la vue ``gold.mv_xgb_vs_tomtom``. Les résultats 
+sont persistés dans la table ``gold.model_drift_reports``.
 
-Diagnostic différentiel (cf spec §5) :
-- XGB drift + TomTom stable + errors ↑ → **Modèle dégradé** (retrain)
-- XGB drift + TomTom drift → **Changement trafic réel** (vacances, chantier)
-- TomTom confidence drop seul → **Oracle dégradé** (vérifier quota API)
-- Stable partout → RAS
+Diagnostic différentiel :
+- XGBoost Drift + TomTom stable + Augmentation des erreurs → **Modèle dégradé** (nécessite un ré-entraînement).
+- XGBoost Drift + TomTom Drift → **Changement structurel du trafic réel** (ex: vacances, chantier majeur).
+- Baisse de confiance TomTom seule → **Oracle dégradé** (vérifier l'état de l'API externe / quotas).
+- Stable partout → RAS.
 """
 
 from __future__ import annotations

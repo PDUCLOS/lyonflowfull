@@ -1,6 +1,6 @@
 """Page Usager — Sources de données (transparence sur les données utilisées).
 
-Sprint 22+ — Ajout du menu MLOps Usager. Cette page montre en langage
+ Ajout du menu MLOps Usager. Cette page montre en langage
 simple d'où viennent les données qui alimentent le modèle : fréquence de
 mise à jour, fraîcheur en minutes, score de santé 0-100. Aucun terme
 technique (DAG, Bronze, Silver, Gold) — uniquement la signification

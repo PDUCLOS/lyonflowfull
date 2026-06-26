@@ -1,4 +1,4 @@
-"""Tests unitaires — widget modal_shift_alert (Axe 4, Sprint 17 v0.9.0).
+"""Tests unitaires — widget modal_shift_alert (Axe 4, v0.9.0).
 
 Couvre :
 * Constantes ANOMALY_Z_THRESHOLD, ALERT_LEVEL_LABELS, ALERT_LEVEL_COLORS.

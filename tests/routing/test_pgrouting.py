@@ -1,6 +1,6 @@
 """Tests unitaires pgRouting — dataclasses + parsing (sans DB).
 
-Sprint 26+ : le routing voiture utilise pgRouting (réseau routier OSM).
+ le routing voiture utilise pgRouting (réseau routier OSM).
 Ces tests vérifient les dataclasses et le parsing côté Python sans
 toucher la DB (les tests @pytest.mark.integration sont dans
 tests/persona/test_routing.py).
@@ -239,7 +239,7 @@ def test_compute_route_pgrouting_handles_invalid_geojson():
     assert result[0]["geom_coordinates"] == []
 
 
-# ─── KSP (K-shortest paths) — Sprint 22 ────────────────────────────────────
+# ─── KSP (K-shortest paths) — ────────────────────────────────────
 
 
 def _make_ksp_rows(n_routes: int = 3, edges_per_route: int = 2) -> list[dict]:

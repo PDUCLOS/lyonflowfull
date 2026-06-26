@@ -1,12 +1,12 @@
-"""Métriques Prometheus custom pour l'API LyonFlowFull (Sprint VPS-4).
+"""Métriques Prometheus personnalisées pour l'API LyonFlowFull.
 
-Expose :
-- lyonflow_predictions_total : compteur par modèle + horizon
-- lyonflow_prediction_latency_seconds : histogramme latence inference
-- lyonflow_persona_requests_total : compteur par persona (usager / pro_tcl / elu)
-- lyonflow_dag_runs_total : compteur DAGs Airflow (success/failed)
-- lyonflow_mlflow_active_runs : gauge runs MLflow actifs
-- lyonflow_db_query_duration_seconds : histogramme requêtes DB
+Expose les métriques suivantes :
+- `lyonflow_predictions_total` : Compteur des prédictions par modèle et par horizon temporel.
+- `lyonflow_prediction_latency_seconds` : Histogramme de la latence d'inférence.
+- `lyonflow_persona_requests_total` : Compteur des requêtes par persona (Usager, Pro TCL, Élu).
+- `lyonflow_dag_runs_total` : Compteur des exécutions de DAGs Airflow (succès/échecs).
+- `lyonflow_mlflow_active_runs` : Jauge (Gauge) des runs MLflow actuellement actifs.
+- `lyonflow_db_query_duration_seconds` : Histogramme de la durée d'exécution des requêtes vers la base de données.
 """
 
 from __future__ import annotations

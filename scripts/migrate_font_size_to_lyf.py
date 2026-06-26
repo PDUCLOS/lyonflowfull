@@ -1,6 +1,6 @@
 """Migration auto : font-size inline → classes CSS lyf-*.
 
-Sprint 15+ audit (AUDIT_DASHBOARD_SPRINT15.md §5.1, option C) :
+ audit (AUDIT_DASHBOARD_SPRINT15.md §5.1, option C) :
 remplace les `style="font-size:0.7Xrem;..."` par `class="lyf-..."`
 en gardant le reste des styles inline.
 

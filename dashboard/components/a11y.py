@@ -1,4 +1,4 @@
-"""Helpers accessibilité (RGAA / WCAG 2.1 AA) — Sprint 20 Axe E.
+"""Helpers accessibilité (RGAA / WCAG 2.1 AA) — Axe E.
 
 Streamlit a des limites structurelles en accessibilité (pas de contrôle fin
 du HTML). Ces helpers ajoutent :

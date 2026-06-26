@@ -1,4 +1,4 @@
-"""Widget — Alerte report modal Vélov ↔ TC (Axe 4, Sprint 17, 2026-06-20).
+"""Widget — Alerte report modal Vélov ↔ TC (Axe 4, , 2026-06-20).
 
 Vue matérialisée ``gold.mv_velov_transit_coupling`` (migration 023) qui
 calcule, pour chaque station Vélov située à < 300m d'une zone où circule
@@ -196,9 +196,9 @@ def render_modal_shift_alert() -> None:
             "(probable **report modal** vers le Vélov suite à un incident TC)."
         )
     with loading_wrapper("Chargement Modal shift alert…", "⏳"):
-        """Affiche l'alerte report modal Vélov ↔ TC (Axe 4, Sprint 17).
+        """Affiche l'alerte report modal Vélov ↔ TC (Axe 4, ).
 
-    Sprint 17 (2026-06-20). Si DB indispo → fail loud via DashboardDataError.
+  (2026-06-20). Si DB indispo → fail loud via DashboardDataError.
     Si vue matérialisée pas encore alimentée → message d'attente explicite.
     """
     try:

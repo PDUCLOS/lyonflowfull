@@ -1,4 +1,4 @@
-"""Tests unitaires — src/transformation/data_quality.py (Sprint 17 Axe 6, 2026-06-21).
+"""Tests unitaires — src/transformation/data_quality.py Axe 6, 2026-06-21).
 
 Couvre :
 * QualityConfig : defaults conformes à la spec §7.1

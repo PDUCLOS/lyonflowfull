@@ -1,4 +1,4 @@
-"""Bulk migration Sprint 20 Axe F : ajoute render_freshness_badge() aux 15 pages.
+"""Bulk migration Axe F : ajoute render_freshness_badge() aux 15 pages.
 
 Pour chaque page qui a déjà setup_auto_refresh() :
 1. Ajoute l'import ``from dashboard.components.freshness_badge import render_freshness_badge``

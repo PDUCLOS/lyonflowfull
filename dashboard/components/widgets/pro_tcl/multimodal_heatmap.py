@@ -1,4 +1,4 @@
-"""Widget — Carte chaleur multimodale (Axe 1, Sprint 15+, 2026-06-19).
+"""Widget — Carte chaleur multimodale (Axe 1, , 2026-06-19).
 
 Fusionne sur une seule carte Folium les 3 modes de transport temps réel
 Lyon + la météo, agrégés sur une grille spatiale 0.01° (~1 km) :
@@ -283,7 +283,7 @@ def render_multimodal_heatmap(height: int = 500) -> None:
     with loading_wrapper("Chargement Multimodal heatmap…", "⏳"):
         """Affiche la carte chaleur multimodale (Axe 1).
 
-    Sprint 15+ (2026-06-19). Si DB indispo → fail loud via DashboardDataError.
+  (2026-06-19). Si DB indispo → fail loud via DashboardDataError.
     Si vue matérialisée pas encore alimentée → message d'attente explicite.
     """
     # Charge données et diagnostics en parallèle (séquentiel ici, ~ rapide)

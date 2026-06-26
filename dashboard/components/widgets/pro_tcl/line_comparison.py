@@ -1,7 +1,7 @@
 """Widget — Comparaison multi-lignes.
 
-Sprint 8 — KPIs chargés via data_loader.cached_line_kpis().
-Sprint 15+ (audit Pro TCL B-17/B-18) — arrondi 1 décimale + masquage index.
+ KPIs chargés via data_loader.cached_line_kpis().
+ (audit Pro TCL B-17/B-18) — arrondi 1 décimale + masquage index.
 """
 
 from __future__ import annotations
@@ -33,7 +33,7 @@ def render_line_comparison(line_ids: list | None = None) -> None:
         k = kpis_dict.get(lid, {})
         data.append(
             {
-                # Sprint 15+ : affichage du label lisible (L66) plutôt que
+        # affichage du label lisible (L66) plutôt que
                 # l'identifiant SYTRAL brut (ActIV:Line::66:SYTRAL_h20).
                 "Ligne": k.get("line_label") or lid,
                 "OTP %": round(float(k.get("otp_pct", 0) or 0), 1),
@@ -50,7 +50,7 @@ def render_line_comparison(line_ids: list | None = None) -> None:
             subset=["Charge %"], cmap="RdYlGn_r", vmin=30, vmax=100
         ),
         use_container_width=True,
-        # Sprint 15+ (audit Pro TCL B-17/B-18) : arrondi déjà appliqué
+    # (audit Pro TCL B-17/B-18) : arrondi déjà appliqué
         # ligne par ligne (round(..., 1)) + on masque l'index numérique
         # (0, 1, 2...) qui n'apporte rien à l'analyste.
         hide_index=True,

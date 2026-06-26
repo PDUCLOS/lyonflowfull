@@ -91,7 +91,7 @@ def cached_predictions_vs_actuals(limit: int = 200) -> pd.DataFrame:
     return dl.load_predictions_vs_actuals(limit=limit)
 
 
-# Sprint 16 Axe A — Backtest Engine
+# Axe A — Backtest Engine
 @st.cache_data(ttl=TTL_FAST, show_spinner=False)
 def cached_xgb_vs_tomtom(hours: int = 24, limit: int = 500) -> pd.DataFrame:
     """Paires (XGBoost H+1h, TomTom Flow) pour le scatter backtest_dashboard."""
@@ -161,7 +161,7 @@ def cached_kpis_12_months() -> pd.DataFrame:
 
 
 # =============================================================================
-# Sprint 22+ : saturation + amplitude par capteur
+# saturation + amplitude par capteur
 # =============================================================================
 # Vue gold.mv_sensor_saturation (migration 034 (matérialisée)). Refresh implicite (vue),
 # mais on cache 5 min (TTL_FAST) pour éviter de re-query la base à
@@ -243,14 +243,14 @@ def cached_mlflow_models() -> list[dict]:
 
 @st.cache_data(ttl=TTL_SLOW, show_spinner=False)
 def cached_mlflow_experiment_summary(experiment: str = "xgboost_speed") -> dict:
-    # Sprint 22+ — default aligné sur l'experiment canonique XGBoost Speed
+    # — default aligné sur l'experiment canonique XGBoost Speed
     # (cf. src/ml/mlflow_integration.py). Pour afficher aussi Vélov, le
     # widget Model Monitoring devra agréger les 2 expériences (TODO).
     return dl.load_mlflow_experiment_summary(experiment=experiment)
 
 
 # =============================================================================
-# TomTom coherence (Sprint 13+, 2026-06-18)
+# TomTom coherence (2026-06-18)
 # =============================================================================
 
 
@@ -267,7 +267,7 @@ def cached_tomtom_gl_drift(limit: int = 200) -> pd.DataFrame:
 
 
 # =============================================================================
-# Grille multimodale (Sprint 15+, 2026-06-19) — Axe 1
+# Grille multimodale (2026-06-19) — Axe 1
 # =============================================================================
 # Vue matérialisée refresh toutes les 10 min côté DAG, cache Streamlit TTL 60s
 # (= 1 cycle de refresh) pour éviter les rafales côté dashboard.
@@ -276,7 +276,7 @@ def cached_tomtom_gl_drift(limit: int = 200) -> pd.DataFrame:
 
 @st.cache_data(ttl=TTL_FAST, show_spinner=False)
 def cached_multimodal_grid(limit: int = 5000) -> pd.DataFrame:
-    """Grille multimodale temps réel (Sprint 15+, 2026-06-19).
+    """Grille multimodale temps réel (2026-06-19).
 
     Vue matérialisée ``gold.mv_multimodal_grid`` : trafic + TCL + Vélov +
     météo fusionnés sur grille 0.01°. TTL 60s = 1 cycle de refresh DAG.
@@ -286,7 +286,7 @@ def cached_multimodal_grid(limit: int = 5000) -> pd.DataFrame:
 
 @st.cache_data(ttl=TTL_FAST, show_spinner=False)
 def cached_multimodal_grid_diagnosis_counts() -> pd.DataFrame:
-    """Distribution des diagnostics dominants (Sprint 15+, 2026-06-19).
+    """Distribution des diagnostics dominants (2026-06-19).
 
     Pour le bandeau KPI du widget ``multimodal_heatmap`` : compte les
     cellules par diagnostic dominant.
@@ -295,13 +295,13 @@ def cached_multimodal_grid_diagnosis_counts() -> pd.DataFrame:
 
 
 # =============================================================================
-# Bus × trafic spatialisé (Sprint 15+, Axe 3 — migration 18)
+# Bus × trafic spatialisé (Axe 3 — migration 18)
 # =============================================================================
 
 
 @st.cache_data(ttl=TTL_FAST, show_spinner=False)
 def cached_bus_traffic_spatial(line_ref: str | None = None, limit: int = 5000) -> pd.DataFrame:
-    """Corrélation bus × trafic spatialisée (Sprint 15+, Axe 3).
+    """Corrélation bus × trafic spatialisée (Axe 3).
 
     MV ``gold.mv_bus_traffic_spatial`` : JOIN spatial 0.001° (~100 m).
     TTL 60s = 1 cycle de refresh DAG (*/15 min).
@@ -313,18 +313,18 @@ def cached_bus_traffic_spatial(line_ref: str | None = None, limit: int = 5000) -
 def cached_bus_traffic_spatial_diagnosis_counts(
     line_ref: str | None = None,
 ) -> pd.DataFrame:
-    """Distribution diagnostics spatialisés (Sprint 15+, Axe 3)."""
+    """Distribution diagnostics spatialisés (Axe 3)."""
     return dl.load_bus_traffic_spatial_diagnosis_counts(line_ref=line_ref)
 
 
 # =============================================================================
-# Score santé réseau (Sprint 15+, Axe 5 — migration 019)
+# Score santé réseau (Axe 5 — migration 019)
 # =============================================================================
 
 
 @st.cache_data(ttl=TTL_REALTIME, show_spinner=False)
 def cached_network_health_score() -> pd.DataFrame:
-    """Score de santé réseau 0-100 temps réel (Sprint 15+, Axe 5).
+    """Score de santé réseau 0-100 temps réel (Axe 5).
 
     Fonction SQL ``gold.fn_network_health_score()`` — pas de MV, calcul
     live. TTL 30s car c'est le KPI de synthèse exécutive.
@@ -333,7 +333,7 @@ def cached_network_health_score() -> pd.DataFrame:
 
 
 # =============================================================================
-# Transport en commun (Sprint 14, 2026-06-19)
+# Transport en commun (2026-06-19)
 # =============================================================================
 
 
@@ -352,7 +352,7 @@ def cached_transit_itinerary(origin: str, destination: str) -> dict | None:
 
 
 # =============================================================================
-# Sprint 15+ (2026-06-19) — Comparateur de modes Usager (Phase 1 + Phase 2)
+# (2026-06-19) — Comparateur de modes Usager (Phase 1 + Phase 2)
 # =============================================================================
 
 
@@ -372,7 +372,7 @@ def cached_car_itinerary(
     Streamlit correct (``@st.cache_data`` ne hash pas correctement les
     tuples nommés via *args/**kwargs).
 
-    Sprint 15+ (2026-06-19) : ajouté pour le comparateur de modes Usager
+    (2026-06-19) : ajouté pour le comparateur de modes Usager
     (Phase 1 + Phase 2). Voir ``docs/SPEC_COMPARATEUR_MODES_USAGER.md``.
     """
     return dl.load_car_itinerary(
@@ -398,7 +398,7 @@ def cached_velov_itinerary(
     """Itinéraire Vélov + marche — wrapper cache Streamlit.
 
     Args typés explicitement pour le hashage Streamlit correct.
-    Sprint 15+ (2026-06-19) : ajouté pour le comparateur de modes Usager.
+    (2026-06-19) : ajouté pour le comparateur de modes Usager.
     """
     return dl.load_velov_itinerary(
         origin_lat=origin_lat,
@@ -418,7 +418,7 @@ def cached_mode_impact(mode: str, distance_km: float, is_congested: bool = False
     homogénéïté avec les autres wrappers et permettre au cache de se vider
     via ``clear_all_caches()`` lors d'un refresh manuel.
 
-    Sprint 15+ (2026-06-19) : ajouté pour ``render_mode_summary()`` et
+    (2026-06-19) : ajouté pour ``render_mode_summary()`` et
     ``render_mode_comparison()``. L'impact ne dépend que de (mode, distance,
     is_congested) — hashable, cache efficace.
     """
@@ -438,7 +438,7 @@ def clear_all_caches() -> None:
     st.cache_data.clear()
 
 
-# Sprint 16 Axe B — Data Quality
+# Axe B — Data Quality
 @st.cache_data(ttl=TTL_FAST, show_spinner=False)
 def cached_source_health() -> pd.DataFrame:
     """Santé par source (8 Bronze + 1 Gold) avec score 0-100 et statut."""
@@ -451,7 +451,7 @@ def cached_data_completeness() -> pd.DataFrame:
     return dbq.get_data_completeness()
 
 
-# Sprint 17 Axe 7 — Météo impact (migration 022)
+# Axe 7 — Météo impact (migration 022)
 # Refresh quotidien 04h30 par dags/maintenance/refresh_meteo_impact.py.
 # TTL_SLOW (300s) largement suffisant : la MV ne change qu'une fois/jour.
 @st.cache_data(ttl=TTL_SLOW, show_spinner=False)
@@ -464,7 +464,7 @@ def cached_meteo_impact() -> pd.DataFrame:
     return dbq.get_meteo_impact()
 
 
-# Sprint 17 Axe 4 — Vélov ↔ TC report modal (migration 023)
+# Axe 4 — Vélov ↔ TC report modal (migration 023)
 # Refresh */15 min par dags/maintenance/refresh_velov_transit_coupling.py.
 # TTL_FAST (60s) pour réactivité — détection d'incident TC en temps quasi-réel.
 @st.cache_data(ttl=TTL_FAST, show_spinner=False)
@@ -488,7 +488,7 @@ def cached_velov_transit_coupling_summary() -> pd.DataFrame:
     return dbq.get_velov_transit_coupling_summary()
 
 
-# Sprint 17 Axe 2 — Propagation de congestion (migration 024 v3)
+# Axe 2 — Propagation de congestion (migration 024 v3)
 # Refresh */30 min par dags/maintenance/refresh_congestion_propagation.py.
 # La MV stocke juste les paires (50k rows) — la MV elle-même change peu
 # (mapping spatial stable). TTL_SLOW (300s) largement suffisant.
@@ -507,7 +507,7 @@ def cached_congestion_propagation_pairs() -> pd.DataFrame:
 
 @st.cache_data(ttl=TTL_REALTIME, show_spinner=False)
 def cached_traffic_speeds_for_propagation(hours: int = 6) -> pd.DataFrame:
-    """Séries vitesse par channel_id sur fenêtre glissante (Sprint 17 Axe 2).
+    """Séries vitesse par channel_id sur fenêtre glissante (Axe 2).
 
     Vue : ``gold.traffic_features_live`` JOIN ``gold.mv_twgid_to_lyo``
     pour ramener le ``properties_twgid`` (clé de la MV paires) sur
@@ -516,12 +516,12 @@ def cached_traffic_speeds_for_propagation(hours: int = 6) -> pd.DataFrame:
     return dl.load_traffic_speeds_for_propagation(hours=hours)
 
 
-# Sprint 17 Axe 6 — Data Quality (migration 025, table gold.data_quality_log)
+# Axe 6 — Data Quality (migration 025, table gold.data_quality_log)
 # Alimentée par le DAG data_quality_daily (1×/jour, 04h15). Append-only
 # (1 ligne par CheckDetail). TTL_SLOW largement suffisant.
 @st.cache_data(ttl=TTL_SLOW, show_spinner=False)
 def cached_quality_report(limit: int = 30) -> pd.DataFrame:
-    """Derniers checks qualité data bounds (Sprint 17 Axe 6).
+    """Derniers checks qualité data bounds (Axe 6).
 
     Vue append-only ``gold.data_quality_log`` : 1 ligne par sous-check
     (CheckDetail) à un timestamp donné. Sert au widget

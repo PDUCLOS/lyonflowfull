@@ -1,4 +1,4 @@
-"""Tests Sprint 8+ pour scrub_secrets.py.
+"""Tests pour scrub_secrets.py.
 
 Vérifie que le scrubber détecte correctement les secrets
 (DB_PASSWORD, API keys, etc.) et ne flag pas les faux positifs

@@ -5,10 +5,10 @@ Affiche 2 champs (départ + destination) avec auto-complétion **cliquable** :
 - Bouton par adresse : au clic, remplit départ OU destination selon le toggle actif
 - Plus de tape à la main, l'utilisateur clique
 
-Sprint 8 — Adresses chargées via
+ Adresses chargées via
 data_loader.cached_lyon_addresses_with_coords() (zéro mock).
 
-Sprint 15+ (2026-06-19) — Ajout du radio "Optimiser pour" (temps / coût).
+ (2026-06-19) — Ajout du radio "Optimiser pour" (temps / coût).
 Ce critère sert :
 - Phase 1 : affichage enrichi dans ``render_mode_summary`` (KPI cards).
 - Phase 2 : critère de tri du comparateur multi-modes (winner card).
@@ -66,7 +66,7 @@ def render_search_bar() -> dict[str, typing.Any]:
             border: 1px solid rgba(255,255,255,0.1);
             margin-bottom: 1rem;
         }
-        /* Sprint 15+ — Segmented control modes de transport : plus visible */
+    /* Segmented control modes de transport : plus visible */
         div[data-testid="stSegmentedControl"] {
             margin-top: 0.25rem;
         }
@@ -85,7 +85,7 @@ def render_search_bar() -> dict[str, typing.Any]:
             margin-top: 0.4rem;
             font-style: italic;
         }
-        /* Sprint 15+ — radio critère d'optimisation : compact, sous le mode hint */
+    /* radio critère d'optimisation : compact, sous le mode hint */
         div[data-testid="stRadio"][aria-label="Optimiser pour"] {
             margin-top: 0.5rem;
         }
@@ -137,7 +137,7 @@ def render_search_bar() -> dict[str, typing.Any]:
                     departure_time = st.time_input("Heure prévue", key="search_dep_time")
 
             with col_modes:
-                # Sprint 15+ (2026-06-19) — Refonte UX modes de transport v3 :
+        # (2026-06-19) — Refonte UX modes de transport v3 :
                 # - Single-select (``selection_mode="single"``) + ``required=True`` :
                 #   l'usager choisit 1 mode à la fois, et ne peut pas le
                 #   désélectionner (clic sur l'option active = no-op, cf. doc
@@ -145,7 +145,7 @@ def render_search_bar() -> dict[str, typing.Any]:
                 # - Default = ``"🚌 Transport en commun"`` (mode principal usager).
                 # - Retour wrappé en liste d'1 élément pour rétro-compat avec
                 #   ``has_velov/has_voiture/has_tc`` dans Usager_1_Mon_Trajet.py:74-79.
-                # - Sprint 14 (2026-06-19) : fusion TC + suppression Marche.
+        # - (2026-06-19) : fusion TC + suppression Marche.
                 selected_mode = st.segmented_control(
                     "Modes de transport autorisés",
                     options=["🚌 Transport en commun", "🚲 Vélov", "🚗 Voiture"],
@@ -168,7 +168,7 @@ def render_search_bar() -> dict[str, typing.Any]:
                 )
                 modes = [selected_mode]
 
-                # Sprint 15+ — Critère d'optimisation (radio horizontal compact).
+        # Critère d'optimisation (radio horizontal compact).
                 # Position : sous le hint contextuel dans la même col_modes.
                 # Sert au scoring composite du comparateur Phase 2 (cf. eco_calculator).
                 critere_label = st.radio(

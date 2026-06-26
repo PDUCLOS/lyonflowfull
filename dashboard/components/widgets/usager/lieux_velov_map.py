@@ -1,4 +1,4 @@
-"""Widget — Carte lieux × Vélov proches (Sprint VPS-6, 2026-06-11).
+"""Widget — Carte lieux × Vélov proches , 2026-06-11).
 
 Affiche sur une carte Folium :
 * 21 lieux emblématiques (markers bleus avec icône par type)
@@ -81,7 +81,7 @@ def render_lieux_velov_map(
     m = folium.Map(location=[center_lat, center_lon], zoom_start=12, tiles="CartoDB positron")
 
     # Markers lieux + polylines vers la borne Vélov la plus proche + markers bornes.
-    # Sprint 9+ (2026-06-17) — fix carte jamais rendue : la boucle précédente
+  # (2026-06-17) — fix carte jamais rendue : la boucle précédente
     # ne faisait que du st.markdown et n'ajoutait rien à `m`. Maintenant on
     # peuple la carte et on appelle st_folium_with_alt() à la fin.
     for lieu in lieux_with_velov:

@@ -1,4 +1,4 @@
-"""Tests Sprint 22+ audit saturation (Patrice) — couverture gold.mv_sensor_saturation.
+"""Tests audit saturation (Patrice) — couverture gold.mv_sensor_saturation.
 
 Couvre les 4 quick wins du sprint :
 - F4 : _parse_grandlyon_vitesse() filter ``0`` → None
@@ -20,7 +20,7 @@ import pytest
 
 
 class TestParseGrandlyonVitesse:
-    """Sprint 22+ F4 : les valeurs 0 sont écartées (capteurs stuck suspect)."""
+    """F4 : les valeurs 0 sont écartées (capteurs stuck suspect)."""
 
     def test_zero_km_h_string_returns_none(self):
         from src.transformation.bronze_to_silver import _parse_grandlyon_vitesse

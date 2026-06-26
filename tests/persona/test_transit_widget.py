@@ -1,4 +1,4 @@
-"""Tests Sprint 14/15+ — Widget transit_trip + segmented_control search_bar.
+"""Tests /15+ — Widget transit_trip + segmented_control search_bar.
 
 Couvre (sans mock — assertions sur le code source et la structure) :
 - Widget `transit_trip.render_transit_trip` : import + présence fonctions
@@ -71,7 +71,7 @@ def test_transit_widget_disclaimer_mentions_gtfs_phase1():
 def test_search_bar_segmented_control_has_3_modes_no_marche():
     """Le segmented control affiche 3 options (TC, Vélov, Voiture), pas de Marche.
 
-    Sprint 15+ : passage de ``st.multiselect`` à ``st.segmented_control``
+    : passage de ``st.multiselect`` à ``st.segmented_control``
     (boutons segmentés, 1 choix à la fois). On extrait l'appel du source pour
     ne pas matcher les éventuelles mentions "Marche" dans les commentaires.
     """
@@ -119,7 +119,7 @@ def test_search_bar_returns_modes_in_dict():
 
 
 def test_search_bar_segmented_control_is_single_select():
-    """Sprint 15+ — single-select (1 mode à la fois).
+    """— single-select (1 mode à la fois).
 
     Patrice : « je veux un single select » — clé précise de l'interface.
     """
@@ -137,7 +137,7 @@ def test_search_bar_segmented_control_is_single_select():
 
 
 def test_search_bar_segmented_control_required():
-    """Sprint 15+ — ``required=True`` : empêche la désélection du mode actif.
+    """— ``required=True`` : empêche la désélection du mode actif.
 
     Garantit que ``selected_mode`` est toujours set → pas d'écran vide après
     « Trouver mon trajet » (cf. doc Streamlit : clic sur option active = no-op).
@@ -156,7 +156,7 @@ def test_search_bar_segmented_control_required():
 
 
 def test_search_bar_label_modes_au_pluriel():
-    """Sprint 15+ — label « Modes de transport autorisés » (pluriel).
+    """— label « Modes de transport autorisés » (pluriel).
 
     Patrice : formulation exacte demandée.
     """
@@ -173,7 +173,7 @@ def test_search_bar_label_modes_au_pluriel():
 
 
 def test_search_bar_no_defensive_fallback():
-    """Sprint 15+ — pas de branche défensive : simplification des 3 cas.
+    """— pas de branche défensive : simplification des 3 cas.
 
     Avec ``required=True`` + default non vide, ``selected_mode`` est toujours
     set. Donc ``modes = [selected_mode]`` suffit, pas de ``if/else`` autour.

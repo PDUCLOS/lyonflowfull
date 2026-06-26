@@ -84,4 +84,4 @@ if st.button("📤 Exporter scénario vers Hastus", key="hastus_export_btn"):
         f"{simulation.get('period_start', 17)}h-{simulation.get('period_end', 19)}h"
     )
 
-st.caption("Simulateur fréquences · Modèle simplifié · Sprint 8+")
+st.caption("Simulateur fréquences · Modèle simplifié · ")

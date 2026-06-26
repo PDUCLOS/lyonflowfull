@@ -1,7 +1,7 @@
-"""Tests unitaires — dashboard/components/freshness_badge.py (Sprint 20 Axe F).
+"""Tests unitaires — dashboard/components/freshness_badge.py Axe F).
 
 Couvre :
-* REFRESH_INTERVALS_SEC : 3 personas avec les bons intervalles (Sprint 13+).
+* REFRESH_INTERVALS_SEC : 3 personas avec les bons intervalles ).
 * seconds_until_next_refresh : calcul correct du temps restant, fallback
   sur 0 pour persona inconnu/None.
 """
@@ -17,7 +17,7 @@ from dashboard.components.freshness_badge import (
 
 
 class TestRefreshIntervals:
-    """Intervalles d'auto-refresh par persona (Sprint 13+)."""
+    """Intervalles d'auto-refresh par persona (+)."""
 
     def test_trois_personas(self) -> None:
         assert set(REFRESH_INTERVALS_SEC.keys()) == {"usager", "pro_tcl", "elu"}

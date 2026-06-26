@@ -1,4 +1,4 @@
-"""Tests unitaires pour le DAG `maintenance_record_network_health` (Sprint 21 P4.3).
+"""Tests unitaires pour le DAG `maintenance_record_network_health` P4.3).
 
 Valide les fonctions _record_health et _purge_old SANS dépendance DB.
 Les queries SQL sont mockées via unittest.mock.

@@ -1,4 +1,4 @@
-"""Bulk migration Sprint 20 Axe A : wrap les render_X() dans loading_wrapper.
+"""Bulk migration Axe A : wrap les render_X() dans loading_wrapper.
 
 Pour chaque widget dans WIDGETS qui a un ``def render_X():`` non encore
 migré :

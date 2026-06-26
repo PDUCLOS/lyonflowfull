@@ -1,10 +1,10 @@
 """Widget — Heatmap OTP Plotly (lignes × heures).
 
-Sprint 8 — Charge via data_loader.cached_otp_heatmap_data() (vue Gold
+ Charge via data_loader.cached_otp_heatmap_data() (vue Gold
 mv_otp_heatmap, 4416 triplets). Pas de mock — la DB est la source
 unique de vérité (fail loud si DB down).
 
-Sprint 23 — Ajout sélecteur de ligne (multiselect). Toutes les lignes
+ Ajout sélecteur de ligne (multiselect). Toutes les lignes
 de gold.mv_otp_heatmap sont accessibles. Mode "Toutes" = top_n pires.
 """
 

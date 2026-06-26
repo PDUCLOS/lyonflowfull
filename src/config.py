@@ -105,7 +105,7 @@ class MLflowSettings(BaseSettings):
     * ``xgboost_velov`` — XGBoost Vélov H+30min + H+1h (cf. ``src/models/xgboost_velov.py``)
 
     Un setting ``experiment_name`` global avait été introduit par erreur
-    (jamais câblé runtime). Supprimé Sprint 22+ pour éviter la confusion.
+  (jamais câblé runtime). Supprimé pour éviter la confusion.
     """
 
     tracking_uri: str = Field(default="http://localhost:5000", alias="MLFLOW_TRACKING_URI")
@@ -138,20 +138,20 @@ class MLSettings(BaseSettings):
     weight_jam: float = Field(default=15.0, alias="WEIGHT_JAM")
     weight_slow: float = Field(default=5.0, alias="WEIGHT_SLOW")
     default_speed_kmh: float = Field(default=30.0, alias="LYON_DEFAULT_SPEED")
-    # ---- Sprint 8 — Model Registry (coexistence XGBoost + GNN) ----
+  # ---- Model Registry (coexistence XGBoost + GNN) ----
     # Modèles actifs en production. Valeurs acceptées :
     #   - "xgboost" : seul XGBoost sert les prédictions prod
     #   - "stgcn"   : seul GNN sert les prédictions prod
     #   - "both"    : les 2 tournent en // (GNN = challenger, XGBoost = champion)
     # Quand Patrice valide une solution, on bascule sur le winner seul.
     models_active: str = Field(default="both", alias="LYONFLOW_MODELS_ACTIVE")
-    # ---- Sprint 9 — GNN training désactivé par défaut (préparation) ----
+  # ---- GNN training désactivé par défaut (préparation) ----
     # Quand Patrice a setup l'instance EC2 GPU et validé la solution,
     # on bascule ce toggle à True pour activer le retrain nightly.
     stgcn_training_enabled: bool = Field(default=False, alias="LYONFLOW_STGCN_TRAINING")
     # Activer l'entraînement nightly XGBoost (toujours actif sur VPS).
     xgboost_training_enabled: bool = Field(default=True, alias="LYONFLOW_XGBOOST_TRAINING")
-    # ---- Sprint 9 — Dashboards préparés mais désactivés par défaut ----
+  # ---- Dashboards préparés mais désactivés par défaut ----
     # Carte GNN géographique (visualisation des prédictions spatiales).
     # Préparée dans Pro_7_Model_Monitoring, masquée par défaut.
     gnn_map_visible: bool = Field(default=False, alias="LYONFLOW_DASHBOARD_GNN_MAP")

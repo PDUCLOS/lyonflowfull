@@ -1,6 +1,6 @@
 """Tests pour le module routing.
 
-Sprint 26+ : pgRouting remplace NetworkX H3 pour le routing voiture.
+ pgRouting remplace NetworkX H3 pour le routing voiture.
 - `compute_itinerary` appelle `osm.route_car()` côté DB → tests marqués @pytest.mark.integration
 - `shortest_path` et `get_nearest_node` retirés (pgRouting fait tout côté SQL)
 - `build_routing_graph` et `get_node_speed` conservés pour le GNN

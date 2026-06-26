@@ -1,6 +1,6 @@
 """Widget — Selecteur de ligne(s) TCL.
 
-Sprint 8 — Lignes chargées via data_loader.cached_tcl_lines().
+ Lignes chargées via data_loader.cached_tcl_lines().
 """
 
 from __future__ import annotations

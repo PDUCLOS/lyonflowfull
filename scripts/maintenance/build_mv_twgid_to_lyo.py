@@ -1,19 +1,19 @@
 """Backfill gold.mv_twgid_to_lyo via Polars + h3-py (H3 res 10 + k_ring(1)).
 
-Sprint 10+ (2026-06-12) — Crée la table de mapping LYO0xxxx <-> properties_twgid
+ (2026-06-12) — Crée la table de mapping LYO0xxxx <-> properties_twgid
 via hash join H3. Approche privilégiée : Polars (vectorisé, parallèle multi-core,
 empreinte mémoire dérisoire même sur 1.7M rows).
 
 **Stratégie** :
 - H3 res 10 (rayon ~50m, arête ~24m) + k_ring(1) pour gérer les nœuds
-  en bordure de cellule (sinon ~5% de misses, cf. note utilisateur Sprint 10+).
+ en bordure de cellule (sinon ~5% de misses, cf. note utilisateur ).
 - 1 ligne par properties_twgid, channel_id = LYO le plus proche
-  (premier match par défaut, possibilité d'affiner en Sprint 11+ avec
+ (premier match par défaut, possibilité d'affiner en avec
   score de distance).
 - INSERT batch en Postgres via psycopg2 + execute_values.
 
 **Idempotent** : TRUNCATE + INSERT à chaque run. Schedulé quotidien via
-DAG ``maintenance_refresh_mappings`` (Sprint 10+).
+DAG ``maintenance_refresh_mappings`` ).
 """
 
 from __future__ import annotations
@@ -103,7 +103,7 @@ def _load_twgid() -> pl.DataFrame:
 def _add_h3_index(df: pl.DataFrame) -> pl.DataFrame:
     """Ajoute colonne h3_cell — utilise l'API vectorisée de h3-py v4.5+.
 
-    Sprint 10+ fix : avant on itérait row-par-row (1 appel Python par
+  fix : avant on itérait row-par-row (1 appel Python par
     cellule, ~10x plus lent). Maintenant ``h3.latlng_to_cell`` accepte
     directement des arrays numpy et retourne un array, le tout en C.
     """
@@ -116,7 +116,7 @@ def _add_h3_index(df: pl.DataFrame) -> pl.DataFrame:
 def _expand_k_ring(df: pl.DataFrame) -> pl.DataFrame:
     """Explose les h3_cell en k_ring(K_RING) — chaque nœud → 7 cellules.
 
-    Sprint 10+ fix : ``h3.grid_disk`` est aussi vectorisé en v4.5+.
+  fix : ``h3.grid_disk`` est aussi vectorisé en v4.5+.
     """
     cells = df["h3_cell"].to_numpy()
     # grid_disk vectorisé : retourne un array d'array

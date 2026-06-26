@@ -1,4 +1,4 @@
-"""Tests Sprint 16 Axe B — Data Quality widgets (smoke + classification)."""
+"""Tests Axe B — Data Quality widgets (smoke + classification)."""
 
 from __future__ import annotations
 

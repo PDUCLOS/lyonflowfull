@@ -1,9 +1,8 @@
-"""Tests Sprint 15+ (2026-06-19) — Helpers bus × trafic spatialisé (Axe 3).
+"""Tests (2026-06-19) — Helpers bus × trafic spatialisé (Axe 3).
 
 Vérifie que les helpers ``get_bus_traffic_spatial``,
 ``get_bus_traffic_spatial_diagnosis_counts`` et leurs wrappers ``load_*``
-respectent la politique zéro mock de Sprint 8 :
-
+respectent la politique zéro mock de 
 * Helpers bas-niveau (db_query) → DataFrame vide si DB indispo.
 * Wrappers data_loader → lèvent ``DashboardDataError`` si DB indispo ou
   si la MV est vide.

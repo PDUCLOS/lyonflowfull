@@ -1,4 +1,4 @@
-"""Smoke test post-deploy Sprint VPS-6 sur le VPS.
+"""Smoke test post-deploy sur le VPS.
 
 Vérifie que :
 1. Le référentiel lieux est chargé (21 lieux en DB)

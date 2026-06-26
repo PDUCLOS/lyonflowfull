@@ -1,4 +1,4 @@
-"""Tests unitaires — src/monitoring/psi.py (Sprint 9+ / Sprint 16 Axe A).
+"""Tests unitaires — src/monitoring/psi.py / Axe A).
 
 Couvre :
 * _safe_psi_term : cas limites (pct=0 des deux côtés, pct=0 d'un seul côté,

@@ -1,4 +1,4 @@
-"""Tests unitaires — dashboard/components/a11y.py (Sprint 20 Axe E).
+"""Tests unitaires — dashboard/components/a11y.py Axe E).
 
 Couvre :
 * plotly_with_alt : signature + alt_text défaut (placeholder).

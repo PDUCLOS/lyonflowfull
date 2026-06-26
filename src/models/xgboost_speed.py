@@ -1,27 +1,30 @@
-"""XGBoost Speed Model — prédiction vitesse trafic.
+"""Modèle XGBoost Speed — Prédiction de la vitesse du trafic routier.
 
-Sprint 9 — Focus H+1h (fiabilité VPS), aligné sur le schéma RÉEL
-v0.3.1 de `gold.traffic_features_live` (cf. audit 2026-06-12).
+Modèle focalisé sur l'horizon H+1h pour garantir la fiabilité du pipeline VPS.
+Il est strictement aligné sur le schéma réel `gold.traffic_features_live`
+afin d'assurer une ingestion directe sans transformation intermédiaire.
 
-Schéma réel :
+Schéma cible utilisé (version v0.3.1) :
     speed_kmh, channel_id, computed_at,
     lag_1, lag_2, lag_3, delta_current, delta_1, rolling_mean_3,
     sin_hour, cos_hour, sin_dow, cos_dow,
     temperature_2m, precipitation, rain, is_raining,
     is_vacances, is_ferie, lat, lon, ...
 
-FEATURES (11 colonnes, strictes H+1h) :
-    speed_kmh (valeur courante)
-    lag_1, lag_2, lag_3 (lags 5/10/15 min)
-    rolling_mean_3 (moyenne 15 min de contexte)
-    sin_hour, cos_hour (saisonnalité intra-journalière)
-    temperature_2m, precipitation (météo)
-    is_vacances, is_ferie (calendrier)
+FEATURES EXPLOITÉES (11 colonnes strictes, spécialisées H+1h) :
+    - speed_kmh (valeur courante instantanée)
+    - lag_1, lag_2, lag_3 (valeurs historiques à 5, 10 et 15 minutes)
+    - rolling_mean_3 (moyenne glissante sur 15 minutes de contexte)
+    - sin_hour, cos_hour (encodage cyclique de la saisonnalité journalière)
+    - temperature_2m, precipitation (données météorologiques)
+    - is_vacances, is_ferie (données calendaires)
 
-Target = LEAD(speed_kmh, 12) — la valeur 12 pas (60 min) plus tard,
-pour H+1h. Échantillonnage : 1 pas = 5 min (cf. computed_at).
+Cible (Target) = LEAD(speed_kmh, 12).
+Représente la valeur 12 pas de temps (soit 60 minutes) dans le futur.
+L'échantillonnage temporel est défini à 1 pas = 5 minutes (via `computed_at`).
 
-MLflow tracking opt-in via MLFLOW_TRACKING_URI non-vide.
+Le suivi des expérimentations (tracking) est activé automatiquement via MLflow
+si la variable d'environnement `MLFLOW_TRACKING_URI` est configurée.
 """
 
 from __future__ import annotations
@@ -42,7 +45,7 @@ from src.ml.mlflow_integration import MLflowTracker
 logger = logging.getLogger(__name__)
 
 
-# Features (Sprint 9 — alignées sur le schéma RÉEL gold.traffic_features_live)
+# Features alignées sur le schéma RÉEL gold.traffic_features_live)
 # Convention de nommage : les colonnes de la DB sont déjà préfixées
 # (lag_1 = valeur 5 min avant, lag_2 = 10 min avant, etc.). Pour
 # H+1h, lag_1, lag_2, lag_3 couvrent 5/10/15 min de contexte court,
@@ -91,11 +94,11 @@ class XGBoostSpeedModel:
 
         from src.ml.mlflow_integration import is_mlflow_available
 
-        # Sprint 8+2 (2026-06-12) — Focus H+1h uniquement (fiabilité VPS).
+    # (2026-06-12) — Focus H+1h uniquement (fiabilité VPS).
         # Avant : [5, 60, 180, 360] — 4 modèles entraînés, 4x le coût
         #          compute et la mémoire.
         # Après : [60] — 1 seul modèle, horizon = 1h, conforme au focus
-        #          Sprint VPS-6 (gold.trafic_predictions.horizon_h=1).
+    #     (gold.trafic_predictions.horizon_h=1).
         horizons = horizons or [60]
         for h in horizons:
             model_name = f"xgb_speed_h{h}"
@@ -165,7 +168,7 @@ class XGBoostSpeedModel:
 
         # Entraînement — 3 modèles quantile (P10, P50, P90) pour intervalles
         # de confiance réels. XGBoost 2.0+ supporte nativement quantile error.
-        # Sprint 21 P4.2 : remplace l'heuristique ±5 km/h.
+    # P4.2 : remplace l'heuristique ±5 km/h.
         quantiles = {"p10": 0.1, "p50": 0.5, "p90": 0.9}
         models = {}
         metrics = {}
@@ -205,7 +208,7 @@ class XGBoostSpeedModel:
         models_path.parent.mkdir(parents=True, exist_ok=True)
         joblib.dump(models, models_path)
 
-        # MLflow tracking (Sprint 9 — opt-out via MLFLOW_TRACKING_URI=""
+    # MLflow tracking opt-out via MLFLOW_TRACKING_URI=""
         # Le tracker gère le no-op gracieux si le serveur est down.)
         if os.getenv("MLFLOW_TRACKING_URI", "") != "":
             try:
@@ -234,7 +237,7 @@ class XGBoostSpeedModel:
             except Exception as e:  # pragma: no cover
                 logger.warning("MLflow tracking failed (non-bloquant): %s", e)
 
-        # Sprint 10+ MLOps — Génère et sauvegarde un Model Card (Markdown)
+    # MLOps — Génère et sauvegarde un Model Card (Markdown)
         try:
             from src.data.db_query import get_latest_drift_report
             from src.ml.model_card import generate_xgboost_card, save_card
@@ -284,7 +287,7 @@ class XGBoostSpeedModel:
 
         Args:
             channel_id: identifiant canal trafic (ex. "LYO00007")
-            horizon_minutes: doit être 60 (Sprint 8+2 — focus H+1h).
+      horizon_minutes: doit être 60 focus H+1h).
                             Si autre valeur, fallback (30.0 km/h) et warning.
             features: dict de features. Si None, lookup gold.
 
@@ -296,9 +299,9 @@ class XGBoostSpeedModel:
         et sur des facteurs exogènes (heure de la journée encodée en sinus/cosinus, météo).
         Si l'horizon demandé n'est pas 60 minutes, la fonction renvoie volontairement
         un "fallback" (30 km/h) afin de limiter les coûts de calculs inutiles,
-        car le Sprint 8 a recentré le besoin métier exclusivement sur le H+1h.
+    car le a recentré le besoin métier exclusivement sur le H+1h.
         """
-        # Sprint 8+2 (2026-06-12) — Focus H+1h uniquement. Si un caller
+    # (2026-06-12) — Focus H+1h uniquement. Si un caller
         # demande un autre horizon, fallback direct (pas de coût compute).
         if horizon_minutes != 60:
             logger.warning(
@@ -337,7 +340,7 @@ class XGBoostSpeedModel:
             }
 
         X = pd.DataFrame([features])[FEATURE_COLS]
-        # Sprint 21 P4.2 : 3 modèles quantile (P10, P50, P90) par horizon.
+    # P4.2 : 3 modèles quantile (P10, P50, P90) par horizon.
         # Retourne vrais intervalles de confiance au lieu de l'heuristique ±5 km/h.
         models = self.models[horizon_minutes]
         if isinstance(models, dict):
@@ -363,7 +366,7 @@ class XGBoostSpeedModel:
     def _load_training_data(self, horizon_minutes: int) -> pd.DataFrame:
         """Charge les données d'entraînement depuis ``gold.xgb_training_set``.
 
-        Sprint 9+ (2026-06-12) — La table ``gold.xgb_training_set`` est
+    (2026-06-12) — La table ``gold.xgb_training_set`` est
         materialisée quotidiennement par le DAG ``build_xgb_training_set``
         (02h30) avec un self-join H+1h indexé. Le target_speed est
         pré-calculé en base, donc plus de ``LEAD() OVER (...)`` sur 2.4M
@@ -371,7 +374,7 @@ class XGBoostSpeedModel:
 
         Note : ``horizon_minutes`` est conservé pour la signature
         d'API, mais l'implémentation est H+1h uniquement (focus fiabilité
-        VPS, Sprint VPS-6). La table contient déjà le target à 60 min.
+    VPS, ). La table contient déjà le target à 60 min.
 
         Returns:
             DataFrame avec les colonnes de FEATURE_COLS + ``target_speed``.
@@ -402,9 +405,9 @@ class XGBoostSpeedModel:
     def _lookup_features(self, channel_id: str) -> dict:
         """Récupère les dernières features pour un canal (string LYO000xx).
 
-        Sprint 9 : `channel_id` est un string (LYO000xx) au lieu d'un int
+    `channel_id` est un string (LYO000xx) au lieu d'un int
         `node_idx`. Voir gold.dim_spatial_grid_mapping.
-        Sprint 9+ : aligné sur le schéma RÉEL (lag_1, lag_2, lag_3, etc.).
+    aligné sur le schéma RÉEL (lag_1, lag_2, lag_3, etc.).
         """
         query = """
             SELECT

@@ -24,7 +24,7 @@ def render_cause_analysis(segment: dict | None = None) -> None:
     delay = segment.get("delay_min", 0)
 
     # Diagnostic + recommandation
-    # Sprint 15+ (audit Pro TCL B-10) : la recommandation est injectée
+  # (audit Pro TCL B-10) : la recommandation est injectée
     # dans un template HTML (``unsafe_allow_html=True``). Le markdown
     # ``**...**`` et ``- `` ne sont PAS interprétés dans un bloc HTML.
     # On convertit ici en HTML (``<b>``, ``<br/>• ``) pour que le rendu

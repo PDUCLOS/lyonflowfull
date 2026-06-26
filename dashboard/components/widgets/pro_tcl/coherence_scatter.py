@@ -1,6 +1,6 @@
 """Widget — Cohérence TomTom ↔ Grand Lyon (cross-validation sources).
 
-Sprint 13+ (2026-06-18) — Nouveau widget. Compare les 2 sources
+ (2026-06-18) — Nouveau widget. Compare les 2 sources
 indépendantes de vitesse routière :
 * **TomTom** (GPS flottes, agrégat tuiles 0.02°, ~2 km) —
   ``bronze.tomtom_traffic`` → ``gold.v_tomtom_traffic_live``
@@ -278,7 +278,7 @@ def render_coherence_scatter() -> None:
     with loading_wrapper("Chargement Coherence scatter…", "⏳"):
         """Affiche le widget Cohérence TomTom ↔ Grand Lyon.
 
-    Sprint 13+ (2026-06-18). Si DB indispo → fail loud via DashboardDataError.
+  (2026-06-18). Si DB indispo → fail loud via DashboardDataError.
     Si TomTom pas encore collecté (table vide) → bandeau info "TomTom vide".
     """
     try:

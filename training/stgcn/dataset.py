@@ -92,7 +92,7 @@ def _normalize_speed(speed: pd.Series) -> pd.Series:
 def _load_gold_traffic_features(num_nodes_max: int = 2000) -> pd.DataFrame:
     """Charge ``gold.fact_traffic_series`` depuis la DB.
 
-    Sprint 10+ (2026-06-12) — Aligné sur le repo source
+  (2026-06-12) — Aligné sur le repo source
     ``caroheymes/Architect-IA-final-project/training/stgcn/dataset.py``.
     Avant : on lisait ``gold.traffic_features_live`` qui n'a pas les
     colonnes ``node_idx`` ni ``measurement_time`` (schéma v0.3.1 :

@@ -1,17 +1,20 @@
-"""DataCollector — classe abstraite pour tous les collecteurs LyonFlowFull.
+"""DataCollector — Classe abstraite pour tous les collecteurs LyonFlowFull.
 
-Pattern Template Method :
-- fetch_raw() : récupère les données brutes depuis l'API (à override)
-- validate() : valide la structure (par défaut, schémas souples)
-- save_raw() : persiste en Bronze (DB + MinIO)
+Ce module définit la fondation (Template Method Pattern) de l'ensemble
+des processus d'ingestion de données du projet.
 
-Tous les collecteurs concrets (Trafics, Vélov, Météo, etc.) héritent
-de cette classe et implémentent uniquement fetch_raw().
+Fonctionnement (Template Method) :
+1. `fetch_raw()` : Récupère les données brutes depuis l'API (à implémenter par les enfants).
+2. `validate()`  : Vérifie la cohérence minimale des données.
+3. `save_raw()`  : Sauvegarde les données dans la couche Bronze (Base de données et Cloud).
 
-Robustesse :
-- Tenacity retry 3x exponential
-- Logging structuré (timestamp, source, status, n_records)
-- Métriques Prometheus (n_requests, n_failures, last_success_at)
+Tous les collecteurs concrets (Trafic, Vélov, Météo, etc.) héritent de 
+cette classe et implémentent uniquement la méthode `fetch_raw()`.
+
+Mécanismes de robustesse intégrés :
+- Relances automatiques (Retries Tenacity) avec délai exponentiel (Exponential Backoff).
+- Journalisation (Logging) structurée et exhaustive.
+- Traçabilité et idempotence lors de l'insertion en base de données.
 """
 
 from __future__ import annotations
@@ -41,20 +44,31 @@ logger = logging.getLogger(__name__)
 
 
 class HTTPMethod(StrEnum):
+    """Énumération des méthodes HTTP supportées."""
     GET = "GET"
     POST = "POST"
 
 
 class CollectorError(Exception):
-    """Erreur remontée par un collecteur."""
-
+    """Exception personnalisée levée lorsqu'un collecteur rencontre un échec critique."""
     pass
 
 
 @dataclass
 class FetchResult:
-    """Résultat d'un fetch brut."""
-
+    """Structure de données représentant le résultat d'une opération de collecte (fetch).
+    
+    Attributes:
+        source (str): Identifiant de la source de données.
+        fetched_at (datetime): Timestamp de la fin du téléchargement.
+        raw_data (Any): Le payload de données brutes (JSON, listes, dicts).
+        n_records (int): Nombre d'enregistrements (lignes/objets) comptés.
+        bytes_fetched (int): Taille de la réponse HTTP en octets.
+        status_code (int): Code statut HTTP retourné.
+        duration_ms (int): Temps d'exécution total de la requête en millisecondes.
+        error (str | None): Détails de l'erreur en cas d'échec.
+        metadata (dict): Informations contextuelles additionnelles.
+    """
     source: str
     fetched_at: datetime
     raw_data: Any
@@ -67,19 +81,21 @@ class FetchResult:
 
 
 class DataCollector(abc.ABC):
-    """Classe abstraite pour tous les collecteurs.
+    """Classe abstraite fondatrice pour tous les collecteurs de données.
 
-    Usage :
+    Exemple d'implémentation pour un collecteur concret :
+        ```python
         class TraficGrandLyon(DataCollector):
             def __init__(self):
                 super().__init__(source="pvotrafic", bronze_table="trafic_boucles")
 
             def fetch_raw(self) -> FetchResult:
-                # implémenter ici l'appel API
+                # Effectue l'appel API et retourne un FetchResult
                 ...
-
+        
         collector = TraficGrandLyon()
         result = collector.run()
+        ```
     """
 
     def __init__(
@@ -89,41 +105,71 @@ class DataCollector(abc.ABC):
         timeout: int = 30,
         max_retries: int = 3,
     ):
+        """Initialise la base du collecteur.
+        
+        Args:
+            source (str): Nom unique identifiant la source (ex: "meteo_openmeteo").
+            bronze_table (str): Nom de la table PostgreSQL cible dans le schéma "bronze".
+            timeout (int): Temps d'attente maximum pour les requêtes HTTP (en secondes).
+            max_retries (int): Nombre maximal de tentatives en cas d'erreur réseau.
+        """
         self.source = source
         self.bronze_table = bronze_table
         self.timeout = timeout
         self.max_retries = max_retries
         self.s = get_settings()
-        # Compteurs métriques
+
+        # Compteurs de métriques pour la supervision
         self.n_requests = 0
         self.n_failures = 0
         self.last_success_at: datetime | None = None
         self.last_error: str | None = None
 
     # -------------------------------------------------------------------------
-    # À override
+    # Méthodes abstraites et d'extension (À surcharger)
     # -------------------------------------------------------------------------
+
     @abc.abstractmethod
     def fetch_raw(self) -> FetchResult:
-        """Méthode principale : récupérer les données brutes depuis l'API."""
+        """Méthode principale à implémenter : récupère les données brutes depuis l'API.
+        
+        Returns:
+            FetchResult: Conteneur avec les données et les statistiques de la requête.
+            
+        Raises:
+            CollectorError: En cas d'erreur bloquante.
+        """
         raise NotImplementedError
 
     def validate(self, result: FetchResult) -> bool:
-        """Valide la structure des données. Retourne True si OK.
-
-        Par défaut : validation souple (n_records >= 0).
-        Override pour validation stricte.
+        """Valide la cohérence des données collectées.
+        
+        Par défaut, applique une validation très souple (il ne doit pas y avoir 
+        de compte négatif). Les classes enfants peuvent la surcharger pour 
+        appliquer des règles plus strictes.
+        
+        Args:
+            result (FetchResult): Résultat de l'appel `fetch_raw`.
+            
+        Returns:
+            bool: True si les données sont valides, False sinon.
         """
         return result.n_records >= 0
 
     # -------------------------------------------------------------------------
-    # Template method
+    # Orchestrateur (Template Method)
     # -------------------------------------------------------------------------
+
     def run(self) -> FetchResult:
-        """Point d'entrée : fetch + validate + save_raw.
+        """Point d'entrée de l'exécution complète du collecteur.
+        
+        Séquence : Téléchargement (`fetch_raw`) -> Validation (`validate`) -> 
+        Persistance (`_save_raw`).
+        
+        Gère également les erreurs globales et met à jour les métriques internes.
 
         Returns:
-            FetchResult enrichi (avec error si KO).
+            FetchResult: Le résultat enrichi de l'exécution (inclut `error` si échec).
         """
         start = time.time()
         try:
@@ -131,21 +177,27 @@ class DataCollector(abc.ABC):
             result.duration_ms = int((time.time() - start) * 1000)
 
             if not self.validate(result):
-                raise CollectorError(f"Validation failed for {self.source}")
+                raise CollectorError(f"Échec de la validation des données pour {self.source}")
 
             self._save_raw(result)
+
             self.last_success_at = result.fetched_at
             self.n_requests += 1
+
             logger.info(
-                f"Collector {self.source} OK: {result.n_records} records, "
-                f"{result.bytes_fetched} bytes, {result.duration_ms}ms"
+                "Collecteur %s SUCCÈS : %d enregistrements, %d octets, %d ms",
+                self.source,
+                result.n_records,
+                result.bytes_fetched,
+                result.duration_ms,
             )
             return result
 
         except Exception as e:
             self.n_failures += 1
             self.last_error = str(e)
-            logger.exception(f"Collector {self.source} FAILED: {e}")
+            logger.exception("Collecteur %s ÉCHEC : %s", self.source, e)
+
             return FetchResult(
                 source=self.source,
                 fetched_at=datetime.now(UTC),
@@ -155,59 +207,65 @@ class DataCollector(abc.ABC):
             )
 
     # -------------------------------------------------------------------------
-    # Persistence
+    # Logique de persistance (Base de données et Cloud)
     # -------------------------------------------------------------------------
+
     def _save_raw(self, result: FetchResult) -> None:
-        """Persiste en Bronze DB + Google Drive (optionnel).
-
-        - DB : bronze.<table> avec fetched_at + raw_data JSONB
-        - Google Drive : backup objet dans dossier partagé
-
-        Sprint 8 (2026-06-12) — si n_records=0 (API down ou réponse
-        vide), on n'insère PAS. Sinon la UNIQUE constraint de
-        certaines tables (ex. bronze.air_quality avec colonnes NULLS
-        NOT DISTINCT) plante en duplicate key. Le `_save_raw` devient
-        idempotent : pas de données = pas d'insert.
+        """Persiste les données brutes dans la couche Bronze.
+        
+        1. Base de données PostgreSQL (table `bronze.<table>`). Format natif JSONB.
+        2. Google Drive (en guise d'archive froide/backup).
+        
+    Note ) : Assure l'idempotence de l'insertion. Si aucun enregistrement 
+        n'a été trouvé, la persistance base de données est ignorée pour éviter 
+        les erreurs de contraintes d'unicité, mais le backup GDrive est conservé.
         """
-        # DB Bronze : skip si pas de données
+        # Si aucun enregistrement, on évite l'insertion DB (Idempotence)
         if result.n_records == 0 or not result.raw_data:
-            logger.warning(f"Collector {self.source} : 0 records, skip INSERT Bronze (Sprint 8 idempotence fix).")
-            # GDrive backup : on garde quand même pour archive
+            logger.warning(
+                "Collecteur %s : 0 enregistrements détectés. "
+                "L'insertion dans la base de données Bronze est ignorée (Règle d'idempotence).",
+                self.source
+            )
+            # Tentative de sauvegarde Drive pour conserver l'historique des requêtes "vides"
             try:
                 raw_json = json.dumps(result.raw_data or {}, ensure_ascii=False, default=str)
                 self._save_to_gdrive(result, raw_json)
             except Exception as e:
-                logger.warning(f"GDrive backup failed for {self.source}: {e}")
+                logger.warning("Échec de la sauvegarde Google Drive de secours pour %s : %s", self.source, e)
             return
 
+        # Requête paramétrée (anti-injection SQL via psycopg2)
         query = f"""
             INSERT INTO bronze.{self.bronze_table} (fetched_at, raw_data)
             VALUES (%s, %s)
         """  # nosec B608
+
         raw_json = json.dumps(result.raw_data, ensure_ascii=False, default=str)
         execute_query(query, (result.fetched_at, raw_json))
 
-        # Google Drive backup (optionnel — ne pas faire échouer si KO)
+        # Backup asynchrone sur Google Drive
         try:
             self._save_to_gdrive(result, raw_json)
         except Exception as e:
-            logger.warning(f"GDrive backup failed for {self.source}: {e}")
+            logger.warning("Échec de la sauvegarde Google Drive pour %s : %s", self.source, e)
 
-        # MinIO backup (DEPRECATED, conservé si explicitement activé)
+        # Rétrocompatibilité : Backup MinIO (Déprécié)
         if self.s.minio.enabled:
             try:
                 self._save_to_minio(result, raw_json)
             except Exception as e:
-                logger.warning(f"MinIO backup failed for {self.source}: {e}")
+                logger.warning("Échec de la sauvegarde MinIO pour %s : %s", self.source, e)
 
     def _save_to_minio(self, result: FetchResult, raw_json: str) -> None:
-        """Sauvegarde dans MinIO bucket bronze (clé temporelle).
-
-        DEPRECATED : on utilise Google Drive désormais (cf. _save_to_gdrive).
-        Conservé pour compat si MinIO_ENABLED=True.
+        """Effectue une sauvegarde brute sur un serveur compatible S3 (MinIO).
+        
+        Note : Cette méthode est marquée comme DÉPRÉCIÉE au profit de Google Drive.
+        Elle reste fonctionnelle si le paramètre MINIO_ENABLED=True.
         """
         if not self.s.minio.enabled:
             return
+
         try:
             import boto3
             from botocore.client import Config
@@ -221,6 +279,7 @@ class DataCollector(abc.ABC):
                 config=Config(signature_version="s3v4"),
             )
             key = f"{self.source}/{result.fetched_at.strftime('%Y/%m/%d/%H%M%S')}_{self.source}.json"
+
             s3.put_object(
                 Bucket=s.minio.bucket_bronze,
                 Key=key,
@@ -233,24 +292,21 @@ class DataCollector(abc.ABC):
                 },
             )
         except ImportError:
-            logger.debug("boto3 not installed — MinIO backup skipped")
+            logger.debug("Librairie 'boto3' absente — Sauvegarde MinIO ignorée.")
 
     def _save_to_gdrive(self, result: FetchResult, raw_json: str) -> None:
-        """Sauvegarde l'artifact dans Google Drive (dossier partagé).
-
-        Structure : GDRIVE_FOLDER_ID_BRONZE/<source>/<date>/<filename>.json
-
-        Setup :
-        1. Créer un projet GCP + activer Drive API
-        2. OAuth 2.0 credentials → gdrive_credentials.json
-        3. Premier lancement : flow OAuth → gdrive_token.json
-        4. Créer un dossier Drive et noter son ID
+        """Sauvegarde les données au format JSON dans Google Drive.
+        
+        Prérequis : Un projet GCP avec l'API Google Drive activée, et 
+        le processus d'authentification OAuth 2.0 complété.
         """
         if not self.s.gdrive.enabled:
             return
+
         if not self.s.gdrive.folder_id_bronze_backup:
-            logger.debug("GDRIVE_FOLDER_ID_BRONZE non configuré, skip")
+            logger.debug("Identifiant de dossier GDrive manquant (GDRIVE_FOLDER_ID_BRONZE). Skip.")
             return
+
         try:
             import os
 
@@ -259,27 +315,31 @@ class DataCollector(abc.ABC):
             from googleapiclient.discovery import build
             from googleapiclient.http import MediaInMemoryUpload
 
-            # Charge ou refresh le token
+            # Charge ou actualise le jeton (token) d'authentification
             creds = None
             token_path = self.s.gdrive.token_path
+
             if os.path.exists(token_path):
                 creds = Credentials.from_authorized_user_file(
                     token_path,
                     scopes=["https://www.googleapis.com/auth/drive.file"],
                 )
+
             if not creds or not creds.valid:
                 if creds and creds.expired and creds.refresh_token:
                     creds.refresh(Request())
                 else:
                     logger.warning(
-                        f"GDrive token absent ou expiré : {token_path}. Lancez le flow OAuth au premier démarrage."
+                        "Jeton Google Drive absent ou expiré (%s). "
+                        "Veuillez exécuter le flux d'authentification OAuth.",
+                        token_path
                     )
                     return
-                # Sauvegarde token rafraîchi
+                # Persistance du token actualisé
                 with open(token_path, "w") as f:
                     f.write(creds.to_json())
 
-            # Upload
+            # Préparation et envoi du fichier vers Google Drive
             service = build("drive", "v3", credentials=creds, cache_discovery=False)
             file_name = f"{result.fetched_at.strftime('%Y%m%d_%H%M%S')}_{self.source}.json"
             parent_id = self.s.gdrive.folder_id_bronze_backup
@@ -293,21 +353,25 @@ class DataCollector(abc.ABC):
                     f"fetched_at={result.fetched_at.isoformat()}"
                 ),
             }
+
             media = MediaInMemoryUpload(
                 raw_json.encode("utf-8"),
                 mimetype="application/json",
                 resumable=False,
             )
+
             file = service.files().create(body=file_metadata, media_body=media, fields="id,name,webViewLink").execute()
-            logger.info(f"GDrive upload OK: {file.get('name')} → {file.get('webViewLink')}")
+            logger.info("Upload GDrive réussi : %s → %s", file.get('name'), file.get('webViewLink'))
+
         except ImportError as e:
-            logger.warning(f"google-api-python-client non installé: {e}")
+            logger.warning("Librairie Google API cliente non installée: %s", e)
         except Exception as e:
-            logger.warning(f"GDrive upload failed: {e}")
+            logger.warning("Échec de la sauvegarde Google Drive: %s", e)
 
     # -------------------------------------------------------------------------
-    # HTTP helper
+    # Utilitaires HTTP (Appels API)
     # -------------------------------------------------------------------------
+
     @retry(
         stop=stop_after_attempt(3),
         wait=wait_exponential(multiplier=1, min=2, max=10),
@@ -321,7 +385,20 @@ class DataCollector(abc.ABC):
         headers: dict | None = None,
         auth: tuple[str, str] | None = None,
     ) -> httpx.Response:
-        """GET request avec retry. `auth` = tuple (user, password) pour HTTP Basic."""
+        """Exécute une requête HTTP GET robuste avec gestion native des retries.
+        
+        Args:
+            url (str): URL de l'API.
+            params (dict | None): Paramètres d'URL (query string).
+            headers (dict | None): En-têtes HTTP additionnels.
+            auth (tuple[str, str] | None): Tuple d'authentification Basic (utilisateur, mot_de_passe).
+            
+        Returns:
+            httpx.Response: Réponse de l'appel API.
+            
+        Raises:
+            httpx.HTTPError: Si l'appel échoue après 3 tentatives ou si le code statut indique une erreur.
+        """
         with httpx.Client(timeout=self.timeout, auth=auth) as client:
             r = client.get(url, params=params, headers=headers or {})
             r.raise_for_status()
@@ -334,34 +411,53 @@ class DataCollector(abc.ABC):
         before_sleep=before_sleep_log(logger, logging.WARNING),
     )
     def _http_post(self, url: str, json_data: dict | None = None, headers: dict | None = None) -> httpx.Response:
-        """POST request avec retry."""
+        """Exécute une requête HTTP POST robuste avec gestion native des retries.
+        
+        Args:
+            url (str): URL de l'API cible.
+            json_data (dict | None): Dictionnaire de données (sera converti en JSON body).
+            headers (dict | None): En-têtes HTTP additionnels.
+            
+        Returns:
+            httpx.Response: La réponse HTTP de l'API.
+        """
         with httpx.Client(timeout=self.timeout) as client:
             r = client.post(url, json=json_data, headers=headers or {})
             r.raise_for_status()
             return r
 
     def _count_records(self, data: Any) -> int:
-        """Helper : compte le nombre d'enregistrements dans une réponse API.
-
-        Formats courants : list, dict avec 'features', 'data', 'results',
-        ou dict imbriqué type Open-Meteo ``{"hourly": {"time": [...]}}``
-        où on compte la longueur de la 1re liste de la sous-dict.
+        """Utilitaire interne pour dénombrer les enregistrements dans la réponse JSON.
+        
+        Parcourt de manière heuristique les structures courantes renvoyées par
+        les API (listes directes, attributs 'features', 'data', 'results', etc.).
+        
+        Args:
+            data (Any): Données parsées de l'API (dictionnaire ou liste).
+            
+        Returns:
+            int: Le nombre estimé d'enregistrements (0 si aucun).
         """
         if isinstance(data, list):
             return len(data)
+
         if isinstance(data, dict):
+            # Clés courantes utilisées par les API REST et GeoJSON
             for key in ("features", "data", "results", "records", "items", "stations"):
                 if key in data and isinstance(data[key], list):
                     return len(data[key])
-            # Format Open-Meteo : dict avec une sous-dict contenant des listes
-            # (ex. {"hourly": {"time": [..], "pm10": [..]}}).
+
+            # Format particulier de l'API Open-Meteo
+            # Ex: {"hourly": {"time": [...], "temperature_2m": [...]}}
             for sub_val in data.values():
                 if isinstance(sub_val, dict):
                     for list_val in sub_val.values():
                         if isinstance(list_val, list) and list_val:
                             return len(list_val)
             return 1
+
         return 0
 
     def __repr__(self) -> str:
+        """Représentation sous forme de chaîne du collecteur (pour le logging)."""
         return f"<{self.__class__.__name__} source={self.source} requests={self.n_requests} failures={self.n_failures}>"

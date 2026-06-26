@@ -1,19 +1,21 @@
-"""Model Card generator — documentation auto des modèles entraînés.
+"""Générateur de Fiches Modèles (Model Cards) — Documentation MLOps automatisée.
 
-Sprint 10+ MLOps (2026-06-12) — Génère un Model Card au format
-Markdown après chaque training XGBoost. Inspiré du Model Card
-framework (Mitchell et al. 2019).
+Génère automatiquement un document de type "Model Card" au format Markdown 
+à l'issue de chaque session d'entraînement XGBoost. Cette approche s'inspire 
+du framework standard "Model Cards for Model Reporting" (Mitchell et al. 2019).
 
-**Contenu** :
-- Métadonnées (date, modèle, version, hash params)
-- Intended use + limitations
-- Training data (taille, période, schéma v0.3.1)
-- Metrics (MAE, RMSE, R², par fold)
-- Drift (si rapport PSI dispo)
-- Recommandations de re-training
+**Contenu généré** :
+- Métadonnées (date, type de modèle, version, hash des hyperparamètres)
+- Cas d'usage prévu (Intended use) et limitations inhérentes au modèle
+- Données d'entraînement (taille du dataset, période couverte, schéma de données)
+- Métriques d'évaluation de la performance (MAE, RMSE, R², par validation croisée)
+- Suivi de la dérive (Data Drift) si un rapport PSI est disponible
+- Recommandations pour le ré-entraînement futur
 
-**Output** : ``models/{model_name}_v{version}_{date}.md`` + pushé
-vers MLflow comme artifact (visible dans le Registry UI).
+**Résultat produit** : 
+Sauvegarde locale sous `models/{model_name}_v{version}_{date}.md` et 
+téléchargement automatique vers MLflow en tant qu'artefact (directement 
+consultable via l'interface UI du Model Registry).
 """
 
 from __future__ import annotations
@@ -59,7 +61,7 @@ def generate_xgboost_card(
     drift_section = ""
     if drift_report:
         drift_section = f"""
-## Drift monitoring (Sprint 10+)
+## Drift monitoring )
 
 - **Dataset drift** : `{drift_report.get("dataset_drift")}`
 - **Drift share** : `{drift_report.get("drift_share", 0.0) * 100:.1f}%`
@@ -70,7 +72,7 @@ def generate_xgboost_card(
 
     return f"""# Model Card — {model_name} v{model_version}
 
-> Généré automatiquement le {now} (Sprint 10+ MLOps).
+> Généré automatiquement le {now} MLOps).
 > Hash params : `{json.dumps(params, sort_keys=True)}`
 
 ## Métadonnées

@@ -1,8 +1,8 @@
 """Widget — Tableau ranké des 10 bottlenecks avec ROI.
 
-Sprint 8 — Bottlenecks via data_loader.cached_bottlenecks_top().
+ Bottlenecks via data_loader.cached_bottlenecks_top().
 
-Sprint 22+ (2026-06-25) — Fix Bug 4 du SPEC_FIX_ELU2_BOTTLENECKS.md :
+ (2026-06-25) — Fix Bug 4 du SPEC_FIX_ELU2_BOTTLENECKS.md :
 * Ajout d'une **colonne Diagnostic** (emoji + couleur par ``diagnosis``).
 * Bug 1/7 : les valeurs économiques sont désormais dérivées de la DB
   (cf. ``load_bottlenecks_top``), le ROI est cohérent avec le calculateur.

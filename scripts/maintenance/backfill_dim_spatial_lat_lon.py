@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Backfill lat/lon pour gold.dim_spatial_grid_mapping.
 
-Sprint 8 hotfix 5 (2026-06-12) — Le graphe H3 a 1543 nœuds avec
+ hotfix 5 (2026-06-12) — Le graphe H3 a 1543 nœuds avec
 properties_twgid au format entier (stringifié) qui n'ont jamais eu
 lat/lon backfillés. On les dérive depuis h3_id via h3-py 4.5.
 

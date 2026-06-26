@@ -122,8 +122,8 @@ render_persona_switcher(layout="cards")
 # Footer : stats globales (lisibles par tous)
 # -----------------------------------------------------------------------------
 st.markdown("---")
-# Sprint 11+ (2026-06-17) — caption refactor : virer "mode démo" (politique
-# zéro mock depuis Sprint 8, 2026-06-12). Distinguer explicitement les
+# (2026-06-17) — caption refactor : virer "mode démo" (politique
+# zéro mock depuis , 2026-06-12). Distinguer explicitement les
 # métriques LIVE (lues en DB PostgreSQL Gold, fail loud si indispo) des
 # métriques de RÉFÉRENCE (chiffres Grand Lyon Open Data / capacité ML).
 st.markdown("##### 📊 Lyon en ce moment — données live + références Grand Lyon")

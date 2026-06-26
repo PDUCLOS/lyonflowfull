@@ -1,4 +1,4 @@
-"""Tests Sprint 16 Axe B — Data Quality db_query helpers (sans DB)."""
+"""Tests Axe B — Data Quality db_query helpers (sans DB)."""
 
 from __future__ import annotations
 

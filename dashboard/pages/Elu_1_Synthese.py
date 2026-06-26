@@ -43,21 +43,21 @@ render_freshness_badge()
 st.title("📈 Synthèse exécutive — Métropole de Lyon")
 render_data_status_banner()
 
-# Bandeau santé réseau (Axe 5, Sprint 15+ — migration 019)
+# Bandeau santé réseau (Axe 5, migration 019)
 # Jauge synthétique 0-100 + 4 sous-jauges. Fail loud si DB indispo.
 render_network_health_gauge()
 
-# Sprint 16 Axe A — Drift status badge (bandeau compact 1 ligne).
+# Axe A — Drift status badge (bandeau compact 1 ligne).
 # Affiche modèle stable / attention / drift détecté selon MAE 24h + drift Evidently.
 render_drift_status_badge()
 
-# Sprint 16 Axe B — Data quality badge (bandeau compact 1 ligne).
+# Axe B — Data quality badge (bandeau compact 1 ligne).
 # Affiche nombre de sources healthy / stale / dead + score global.
 render_data_quality_badge()
 
 st.markdown("---")
 
-# Sprint 17 Axe 6 — Data quality detail (drill-down data bounds).
+# Axe 6 — Data quality detail (drill-down data bounds).
 # Affiche le détail des checks qualité (plages speed, null ratio, doublons,
 # volume) sur gold.traffic_features_live, gold.tcl_vehicle_realtime,
 # silver.velov_clean. Vue append-only gold.data_quality_log (migration 025).
@@ -77,7 +77,7 @@ render_kpi_cards()
 
 st.markdown("---")
 
-# Carte charge trafic — synthèse exécutive (Sprint 10)
+# Carte charge trafic — synthèse exécutive )
 with st.expander("🗺️ Charge du trafic — projection H+1h", expanded=False):
     render_traffic_map_compact(height=340, horizon_minutes=60, key_suffix="elu")
 
@@ -86,7 +86,7 @@ st.markdown("---")
 # 2 colonnes : tendance + décisions
 col1, col2 = st.columns([3, 2])
 with col1:
-    # Sprint 22+ — double-wrap expander+deferred_render retiré (P6) :
+  # double-wrap expander+deferred_render retiré (P6) :
     # le button-gate seul suffit (le calcul Plotly ne s'exécute qu'au
     # clic, pas à l'ouverture de l'expander).
     deferred_render(
@@ -107,7 +107,7 @@ with st.expander("📢 À annoncer (News)", expanded=False):
 
 st.markdown("---")
 
-# Bouton PDF synthèse — données live via data_loader (Sprint 8 — fail loud si DB indispo)
+# Bouton PDF synthèse — données live via data_loader fail loud si DB indispo)
 with st.expander("📄 Génération rapport PDF", expanded=False):
     kpis_dict = cached_elu_kpis_dict()
     bottlenecks_top = cached_bottlenecks_top()

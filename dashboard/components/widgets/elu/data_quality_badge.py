@@ -1,6 +1,6 @@
 """Widget — Data Quality badge (Élu — Synthèse).
 
-Sprint 16 Axe B (2026-06-20) — Bandeau compact qui résume la santé
+ Axe B (2026-06-20) — Bandeau compact qui résume la santé
 multi-source. Lit ``gold.v_source_health`` (migration 021) et affiche
 un badge 1 ligne :
 - 🟢 Données OK — 8/8 sources actives, score 94/100

@@ -1,9 +1,9 @@
 """Widget — Carte réseau Pydeck (bus GPS colorés par retard).
 
-Sprint 8 — Positions bus chargées via data_loader.cached_buses_positions()
+ Positions bus chargées via data_loader.cached_buses_positions()
 (qui lit silver.tcl_vehicles_clean).
 
-Sprint VPS-6 (2026-06-11) — fail loud en prod :
+ (2026-06-11) — fail loud en prod :
 * DB répond, données présentes : carte temps réel.
 * DB répond, table vide : ``st.info("Aucun bus en circulation")``.
 * DB indispo en prod : ``DashboardDataError`` → ``st.error``.
@@ -18,7 +18,7 @@ from dashboard.components.colors import COLORS
 from dashboard.components.data_cache import cached_buses_positions
 from dashboard.components.error_display import show_error
 from dashboard.components.loading_state import loading_wrapper
-from src.data.db_query import clean_line_label  # Sprint 15+ : libellé lisible des lignes TCL.
+from src.data.db_query import clean_line_label # libellé lisible des lignes TCL.
 from src.data.exceptions import DashboardDataError
 
 
@@ -94,7 +94,7 @@ def render_network_map(buses: list | None = None, height: int = 400) -> None:
     # Préparer DataFrame pour pydeck
     df = pd.DataFrame(buses)
     df["color"] = df["delay_min"].apply(_delay_to_color)
-    # Sprint 15+ (audit Pro TCL B4) : tooltip affiche le libellé lisible (L66)
+  # (audit Pro TCL B4) : tooltip affiche le libellé lisible (L66)
     # au lieu de l'identifiant SYTRAL brut. Affecte aussi le fallback dataframe.
     df["line_id"] = df["line_id"].apply(clean_line_label)
 

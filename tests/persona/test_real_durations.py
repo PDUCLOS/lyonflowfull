@@ -1,4 +1,4 @@
-"""Tests Sprint 16 Axe C — Durée réelle dans le comparateur (smoke).
+"""Tests Axe C — Durée réelle dans le comparateur (smoke).
 
 Vérifie que les 3 widgets trajet (velov_trip, transit_trip, itinerary)
 retournent bien un dict avec ``duration_min`` + ``distance_km`` quand

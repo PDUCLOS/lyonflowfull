@@ -1,6 +1,6 @@
 """DAG Airflow — Construit le training set materialisé pour XGBoost H+1h.
 
-Sprint 9+ (2026-06-12) — Remplace la query ``_load_training_data()`` de
+ (2026-06-12) — Remplace la query ``_load_training_data()`` de
 ``src/models/xgboost_speed.py`` qui faisait un ``LEAD() OVER (...)`` sur
 2.4M rows de ``gold.traffic_features_live`` (11.5s en postgres direct,
 timeout depuis Streamlit).
@@ -41,7 +41,7 @@ DEFAULT_ARGS = {
 # Retain 14 days of training data (sliding window)
 RETENTION_DAYS = 14
 # Lookback window for training set population (2 days — VPS-friendly)
-# Sprint 9+ Optimisation : avec 2 jours on a ~700k rows, le self-join
+# Optimisation : avec 2 jours on a ~700k rows, le self-join
 # tourne en ~3 min au lieu de timeout sur 7 jours. Le XGBoost n'a
 # pas besoin de plus : 2 jours x 1100 channels x 288 pas/5min = ~600k
 # training samples, largement suffisant pour un modèle à 11 features.
@@ -51,7 +51,7 @@ LOOKBACK_DAYS = 2
 def _build_training_set(**context) -> dict:
     """Populate gold.xgb_training_set via self-join H+1h.
 
-    Self-join approach (Sprint 9+) : for each (channel_id, computed_at)
+  Self-join approach ) : for each (channel_id, computed_at)
     in lookback window, find the row of the same channel exactly 60 min
     later (target_speed). Much faster than ``LEAD() OVER (...)`` because
     the join uses the existing index on (channel_id, computed_at).
@@ -66,7 +66,7 @@ def _build_training_set(**context) -> dict:
     )
 
     # Step 1 — Purge old data (>14 days)
-    # Sprint 10+ fix : on passe RETENTION_DAYS en paramètre psycopg2 au
+  # fix : on passe RETENTION_DAYS en paramètre psycopg2 au
     # lieu de ``%d`` Python. Le `%d` est safe (int hardcodé) mais le
     # pattern f-string / ``%`` n'est pas homogène avec le reste du
     # codebase, qui privilégie les paramètres psycopg2 (cf. AGENTS.md).
@@ -80,7 +80,7 @@ def _build_training_set(**context) -> dict:
     execute_query("TRUNCATE TABLE gold.xgb_training_set RESTART IDENTITY")
 
     # Step 3 — Self-join populate via single query index-friendly
-    # Stratégie Sprint 9+ Optimisation : CTE pré-filtrée (computed_at >
+  # Stratégie Optimisation : CTE pré-filtrée (computed_at >
     # 2 jours, features non-NULL) + INNER JOIN sur l'index
     # ``idx_gold_traffic_channel_computed (channel_id, computed_at) INCLUDE
     # (speed_kmh, lag_1, lag_2, lag_3, rolling_mean_3)``. Index Only Scan
@@ -157,7 +157,7 @@ def _build_training_set(**context) -> dict:
     stats_row = stats[0] if stats else {}
     logger.info("Training set stats: %s", stats_row)
 
-    # Step 5 — Drift detection (Sprint 10+ PSI sur target_speed + 11 features)
+  # Step 5 — Drift detection PSI sur target_speed + 11 features)
     # Compare la distribution semaine courante vs semaine précédente.
     # Persiste dans gold.model_drift_reports (table Evidently-compatible).
     _compute_and_persist_drift(stats_row)
@@ -175,8 +175,7 @@ def _build_training_set(**context) -> dict:
 def _compute_and_persist_drift(stats_row: dict) -> None:
     """Calcule le PSI sur les features clés et persiste dans gold.model_drift_reports.
 
-    Stratégie Sprint 10+ :
-    - Référence = distribution il y a 8-14 jours (semaine -2)
+  Stratégie     - Référence = distribution il y a 8-14 jours (semaine -2)
     - Courante = distribution il y a 1-7 jours (semaine -1)
     - Features analysées : target_speed, speed_kmh, temperature_2m, precipitation
     - Score > 0.2 sur 50% des features → dataset_drift = True
@@ -260,12 +259,12 @@ def _compute_and_persist_drift(stats_row: dict) -> None:
 with DAG(
     dag_id=DAG_ID,
     default_args=DEFAULT_ARGS,
-    description="Construit gold.xgb_training_set pour XGBoost H+1h (Sprint 9+)",
+  description="Construit gold.xgb_training_set pour XGBoost H+1h )",
     schedule_interval="30 2 * * *",  # quotidien 02h30
     start_date=datetime(2026, 6, 12),
     catchup=False,
     max_active_runs=1,
-    tags=["ml", "training", "xgboost", "sprint9"],
+  tags=["ml", "training", "xgboost", "sprint9"],
 ) as dag:
     build = PythonOperator(
         task_id="build_xgb_training_set",

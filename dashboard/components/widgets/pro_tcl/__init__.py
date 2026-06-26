@@ -1,10 +1,10 @@
 """Widgets Pro TCL — module init."""
 
-# Sprint 15+ (audit Pro TCL B-22) : Pro_5_Export (page stub) +
+# (audit Pro TCL B-22) : Pro_5_Export (page stub) +
 # saeiv_export + export_button ont été supprimés. La page exportait du
 # JSON placeholder (WeasyPrint stub non branché). Décision utilisateur
 # 2026-06-19 : virer du sidebar. Les exports SAEIV/Hastus sont reportés
-# à un Sprint ultérieur quand les connecteurs seront réels.
+# à un quand les connecteurs seront réels.
 
 from dashboard.components.widgets.pro_tcl.alert_ticker import render_alert_ticker
 from dashboard.components.widgets.pro_tcl.backtest_dashboard import render_backtest_dashboard

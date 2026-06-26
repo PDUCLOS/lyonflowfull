@@ -1,6 +1,6 @@
 """Widget — Ticker horizontal d'alertes (style 'Tape' en CSS).
 
-Sprint 8 — Charge les alertes via data_loader.cached_recent_alerts().
+ Charge les alertes via data_loader.cached_recent_alerts().
 """
 
 from __future__ import annotations

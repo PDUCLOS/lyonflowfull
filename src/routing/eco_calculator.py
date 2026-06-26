@@ -1,20 +1,23 @@
-"""Calculateur d'impact écologique et économique par mode de transport (Sprint 15+).
+"""Calculateur d'impact écologique et économique par mode de transport.
 
 Adapté de ``PDUCLOS/Lyontraffic`` pour le pipeline LyonFlowFull :
-- Sources données : ADEME 2024, Grille TCL SYTRAL 2026, Ville de Lyon 2025,
-  MET tables ADEME/INSERM (calories).
-- Le coût voiture **n'inclut pas le parking** (Phase 1) — voir
-  ``scripts/sql/migration_016_tarifs_modes.sql`` pour le hook futur :
-  ``_voiture_parking_cost(duration_min)`` pourra lire la table
-  ``gold.tarifs_modes`` et appliquer la grille zone 1/2/3 Lyon.
+- Sources de données : ADEME 2024, Grille tarifaire TCL SYTRAL 2026, Ville de Lyon 2025,
+  tables MET ADEME/INSERM (pour le calcul des calories).
+- Le coût estimé pour la voiture **n'inclut pas le stationnement** pour le moment.
+  Le point d'ancrage futur se trouve dans ``_voiture_parking_cost(duration_min)`` 
+  qui pourra lire la table ``gold.tarifs_modes`` et appliquer la grille tarifaire 
+  (zones 1/2/3 de Lyon).
 
-Politique projet (Sprint 8) — ZÉRO MOCK : module pur Python, pas de DB.
-Si un paramètre est invalide (mode inconnu, distance < 0), ``ValueError``.
-La connexion DB / l'indispo de la DB est gérée en amont dans
+Politique stricte du projet (ZÉRO MOCK) : Ce module est purement calculatoire (Python) 
+et n'effectue aucun appel réseau/base de données interne.
+Si un paramètre fourni est invalide (mode de transport inconnu, distance négative), 
+il lève immédiatement une ``ValueError``. La gestion de la disponibilité de la base 
+de données est déléguée en amont, notamment via 
 ``src.routing.pathfinder_multimodal._require_db_or_raise()``.
 
-Usage::
+Exemple d'utilisation :
 
+    ```python
     from src.routing.eco_calculator import (
         calculate_impact,
         get_comparison,
@@ -22,17 +25,14 @@ Usage::
     )
 
     impact = calculate_impact("voiture", distance_km=5.0, is_congested=True)
-    # {"co2_g": 1351.0, "cost_eur": 1.30, "fuel_l": 0.525, ...}
+    # Retourne : {"co2_g": 1351.0, "cost_eur": 1.30, "fuel_l": 0.525, ...}
 
     cmp = get_comparison(distance_km=3.0, durations={"voiture": 8, "tc": 15, "velov": 14})
-    # {"voiture": {...}, "tc": {...}, "velov": {...}}
+    # Retourne : {"voiture": {...}, "tc": {...}, "velov": {...}}
 
     reco = recommend_mode(cmp, critere="cout", durations=durations)
-    # {"winner": "voiture", "scores": {...}, "explanation": "..."}
-
-Sprint 15+ (2026-06-19) — Première version. Adapte le code LyonTraffic
-lignes 270-314 (`calculate_impact` + `get_comparison`) en l'enrichissant
-avec `duration_min` (pour calories) + scoring composite (cf. spec Annexe A).
+    # Retourne : {"winner": "voiture", "scores": {...}, "explanation": "..."}
+    ```
 """
 
 from __future__ import annotations
@@ -66,7 +66,7 @@ VELOV_COST_JOUR_EUR = 1.50  # € — ticket 1 jour (cas non-abonné)
 CALORIES_PER_KM = {"velov": 46.0, "marche": 50.0}
 
 # Détection congestion voiture (< 25 km/h vitesse moyenne = bouchons)
-# Sprint 22+ : importé depuis src.data._constants (single source of truth).
+# importé depuis src.data._constants (single source of truth).
 from src.data._constants import CONGESTION_SPEED_THRESHOLD_KMH as _CONGESTION_SPEED_THRESHOLD_KMH  # noqa: E402
 
 # Scoring composite (cf. spec Annexe A) — 1 min vaut ~0.30 € pour l'usager
@@ -270,7 +270,7 @@ def recommend_mode(
     if feasible:
         winner = min(feasible, key=lambda k: feasible[k])
     else:
-        # Sprint 22+ — Fail loud : si aucun mode n'a de durée, on NE TOMBE PAS
+    # Fail loud : si aucun mode n'a de durée, on NE TOMBE PAS
         # sur le mode le moins coûteux (= Vélov gratuit, trompeur). L'appelant
         # DOIT passer ``durations`` non-vide.
         raise ValueError(
@@ -337,7 +337,7 @@ def is_congested_from_speed(avg_speed_kmh: float) -> bool:
     Utilisé par ``Usager_1_Mon_Trajet`` pour passer le flag à ``calculate_impact``
     sans dupliquer la logique.
 
-    Sprint 22+ : helper public (avant : préfixe ``_``). Le seuil est importé
+  helper public (avant : préfixe ``_``). Le seuil est importé
     depuis ``src.data._constants`` (single source of truth, plus de magic
     number 25.0 dupliqué).
 
@@ -351,9 +351,9 @@ def is_congested_from_speed(avg_speed_kmh: float) -> bool:
     return avg_speed_kmh > 0 and avg_speed_kmh < _CONGESTION_SPEED_THRESHOLD_KMH
 
 
-# Backward-compat alias (Sprint 22+) — pour ne pas casser les imports
+# Backward-compat alias ) — pour ne pas casser les imports
 # privés existants (``from src.routing.eco_calculator import _is_congested_from_speed``).
-# À virer Sprint 23+ une fois tous les callers migrés vers l'API publique.
+# À virer une fois tous les callers migrés vers l'API publique.
 _is_congested_from_speed = is_congested_from_speed
 
 

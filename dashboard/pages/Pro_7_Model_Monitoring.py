@@ -47,7 +47,7 @@ if not is_model_monitoring_visible():
         <div style="background:linear-gradient(135deg, #2A2D34 0%, #3F51B5 100%);
                     border:1px dashed #5C6BC0;border-radius:8px;padding:1rem;margin:0.5rem 0;">
             <div style="font-size:0.8rem;opacity:0.8;text-transform:uppercase;
-                        letter-spacing:1px;">🟡 Sprint 9 — Dashboard préparé, non activé</div>
+            letter-spacing:1px;">🟡 Dashboard préparé, non activé</div>
             <div class="lyf-label" style="margin:0.5rem 0;">
                 Le dashboard Model Monitoring est <b>préparé</b> mais
                 <b>désactivé</b> par défaut.
@@ -65,19 +65,19 @@ if not is_model_monitoring_visible():
 
 st.caption(
     "Vue opérateur : registry MLflow · modèles XGBoost Speed/Velov + GNN staging · "
-    "métriques MAE/RMSE/R² · drift detection. **Sprint 9** : branchement MLflow Tracking API live."
+  "métriques MAE/RMSE/R² · drift detection. **Sprint 9** : branchement MLflow Tracking API live."
 )
 
 # Section 1 : Model Registry Status (toggle + status)
 render_model_monitoring_page()
 
-# Section 2 : GNN Map (Sprint 9 — préparée, désactivée par défaut)
+# Section 2 : GNN Map préparée, désactivée par défaut)
 st.markdown("---")
 render_gnn_map_section()
 
-# Section 3 : Backtest XGBoost vs TomTom (Sprint 16 Axe A)
+# Section 3 : Backtest XGBoost vs TomTom Axe A)
 # 4 KPIs + scatter + courbe MAE + distribution + top 10 pires prédictions.
-# Button-gate via deferred_render (Sprint 15+) car widget 🟠 lourd (3 Plotly + 1 MV).
+# Button-gate via deferred_render ) car widget 🟠 lourd (3 Plotly + 1 MV).
 st.markdown("---")
 deferred_render(
     "backtest_dashboard",

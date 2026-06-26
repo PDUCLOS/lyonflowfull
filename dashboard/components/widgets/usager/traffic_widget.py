@@ -1,12 +1,12 @@
 """Widget — Trafic routier résumé (vitesse moyenne, bouchons).
 
-Sprint 8 — binding DB Gold via data_loader (zéro mock) :
+ binding DB Gold via data_loader (zéro mock) :
 * Si ``traffic=None`` → ``data_loader.cached_traffic()`` tente la DB
   Gold. Si DB down, lève ``DashboardDataError`` (fail loud).
 * Le widget reste 100% compatible avec l'ancien contrat (accepte toujours
   un dict ``traffic`` en arg, utilisé en tests).
 
-Sprint 22+ — Seuils de fraîcheur importés depuis ``src.data._constants``
+ Seuils de fraîcheur importés depuis ``src.data._constants``
 (plus de magic numbers dupliqués). Le widget consomme ``data_age_seconds``
 + ``freshness_status`` calculés par ``load_traffic()`` (single source of
 truth).
@@ -65,7 +65,7 @@ def render_traffic_widget(traffic: dict | None = None) -> None:
     with col3:
         st.metric("Bouchons actifs", n_bottlenecks)
 
-    # Prédictions (Sprint 8+ : focus H+1h, les autres horizons masqués)
+  # Prédictions focus H+1h, les autres horizons masqués)
     st.markdown("##### 🔮 Prédiction H+1h")
     preds = traffic.get("predictions", {})
     p = preds.get("h_plus_1h", {})

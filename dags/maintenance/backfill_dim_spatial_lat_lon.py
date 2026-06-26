@@ -1,6 +1,6 @@
 """DAG cron : backfill lat/lon pour gold.dim_spatial_grid_mapping.
 
-Sprint 8+ (2026-06-12) — Solution palliative à la dette schéma où un
+ (2026-06-12) — Solution palliative à la dette schéma où un
 concurrent writer (probablement dags/legacy_github/dag_pipeline.py, ou
 build_spatial_mapping avec ON CONFLICT mal conçu) tronque périodiquement
 la table et ré-insère les nœuds SANS backfill des colonnes lat/lon.
@@ -9,7 +9,7 @@ Stratégie : ce DAG tourne toutes les 5 min et ne fait QUE mettre à jour
 les rows où lat IS NULL OR lon IS NULL, en dérivant depuis h3_id via
 h3-py 4.5. Idempotent : si lat/lon sont déjà OK, ne touche à rien.
 
-Solution durable Sprint 9+ : auditer tous les writers + GRANT/REVOKE
+Solution durable auditer tous les writers + GRANT/REVOKE
 pour que build_spatial_mapping soit le seul writer de cette table.
 
 Usage:
@@ -114,12 +114,12 @@ with DAG(
     max_active_runs=1,  # pas de chevauchement
     default_args={
         "owner": "patrice",
-        # Sprint 8+3 (2026-06-12) — Fiabilité VPS : pas de retry.
+    # (2026-06-12) — Fiabilité VPS : pas de retry.
         # Le DAG tourne toutes les 5 min, on attend le prochain cycle.
         "retries": 0,
         "retry_delay": timedelta(minutes=1),
     },
-    tags=["maintenance", "sprint-8-hotfix-5", "dette-schema"],
+  tags=["maintenance", "sprint-8-hotfix-5", "dette-schema"],
 ) as dag:
     PythonOperator(
         task_id="backfill_lat_lon",

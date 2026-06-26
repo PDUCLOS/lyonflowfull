@@ -1,4 +1,4 @@
-"""Sparkline Plotly minimaliste pour tendances 24h (Sprint 21 P4.3).
+"""Sparkline Plotly minimaliste pour tendances 24h P4.3).
 
 Utilisé par le widget Élu `network_health_gauge` pour afficher un mini-graphique
 de l'évolution du score de santé réseau sur les dernières 24h (96 snapshots à

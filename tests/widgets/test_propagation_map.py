@@ -1,4 +1,4 @@
-"""Tests unitaires — widget propagation_map (Sprint 17 Axe 2, 2026-06-20).
+"""Tests unitaires — widget propagation_map Axe 2, 2026-06-20).
 
 Couvre :
 * compute_propagation_correlations : fonction pure (pas d'I/O), testable
@@ -13,7 +13,7 @@ Couvre :
   - Bornage |r| ≤ 1 (Pearson bien implémenté)
 * _corr_to_color / _corr_to_label : classification intensité
 * _haversine_m : distance Haversine raisonnable (Lyon centre ~ 5 km)
-* compute_granger_causality (Sprint 17+ Axe 2 niveau 2) : test causalité
+* compute_granger_causality Axe 2 niveau 2) : test causalité
   statsmodels. Vérifie :
   - Cas vide : DF vide
   - Paire avec vraie causalité Granger (A cause B avec lag) → p<0.05
@@ -431,7 +431,7 @@ class TestHaversine:
 
 
 # -----------------------------------------------------------------------------
-# compute_granger_causality (Sprint 17+ Axe 2 niveau 2)
+# compute_granger_causality Axe 2 niveau 2)
 # -----------------------------------------------------------------------------
 
 

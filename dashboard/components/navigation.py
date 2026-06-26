@@ -132,7 +132,7 @@ def render_sidebar_navigation() -> None:
         # 4. Footer & Quitter
         st.markdown("---")
         if st.button("🚪 Quitter (retour à l'accueil)", use_container_width=True, type="secondary"):
-            # Sprint 15+ (2026-06-19) — fix bug "Changer de profil ne
+      # (2026-06-19) — fix bug "Changer de profil ne
             # ramène pas à l'accueil". Avant : ``clear_current_persona_auth``
             # ne clearait que l'auth (mot de passe), laissant le
             # ``_SESSION_KEY = "lyonflow_persona"`` en place. Résultat :

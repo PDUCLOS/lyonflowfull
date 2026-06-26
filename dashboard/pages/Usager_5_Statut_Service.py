@@ -1,6 +1,6 @@
 """Page Usager — Statut du service (santé globale en direct).
 
-Sprint 22+ — Ajout du menu MLOps Usager. Cette page est le "tableau de
+ Ajout du menu MLOps Usager. Cette page est le "tableau de
 bord" citoyen du service : 4 voyants simples (Données / Modèle / Service /
 Alertes) + incidents récents + un encart pédagogique sur ce qui peut
 affecter la fiabilité des prédictions.

@@ -87,7 +87,7 @@ def clear_current_persona_auth() -> None:
 def clear_current_persona() -> None:
     """Retire le persona actif de la session, permettant de revenir à l'accueil.
 
-    Sprint 15+ (2026-06-19) — fix bug ordre des opérations. Avant :
+  (2026-06-19) — fix bug ordre des opérations. Avant :
     on popait ``_SESSION_KEY`` D'ABORD, puis ``clear_current_persona_auth``
     appelait ``get_current_persona()`` qui retournait le default
     (``usager``) → pop de la mauvaise auth. Maintenant : on clear

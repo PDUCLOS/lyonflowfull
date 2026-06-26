@@ -1,4 +1,4 @@
-"""Tests unitaires — src/monitoring/drift_detector.py (Sprint 16 Axe A).
+"""Tests unitaires — src/monitoring/drift_detector.py Axe A).
 
 Couvre ``run_drift_report()`` :
 * DataFrames vides → dataset_drift=False, details={"info": "empty..."}

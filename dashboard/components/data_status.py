@@ -2,7 +2,7 @@
 
 Affiche un bandeau discret en haut de chaque page indiquant si les widgets
 voient la DB live (Postgres + MLflow + Airflow) ou si la DB est indisponible
-(fail loud, aucune donnee fictive affichee — politique zero mock Sprint 8).
+(fail loud, aucune donnee fictive affichee — politique zero mock ).
 
 Usage::
 

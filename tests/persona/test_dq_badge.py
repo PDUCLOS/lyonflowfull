@@ -1,4 +1,4 @@
-"""Tests unitaires — widget data_quality_badge (Sprint 16 Axe B).
+"""Tests unitaires — widget data_quality_badge Axe B).
 
 Couvre :
 * _classify : 4 états selon (n_healthy, n_dead, n_stale, score).

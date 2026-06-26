@@ -152,5 +152,5 @@ class TestTrackerLive:
 
 
 # =============================================================================
-# Tests via data_loader (intégration Sprint 9)
+# Tests via data_loader (intégration )
 # =============================================================================

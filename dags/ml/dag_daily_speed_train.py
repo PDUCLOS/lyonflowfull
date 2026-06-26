@@ -1,6 +1,6 @@
 """DAG — Entraînement quotidien XGBoost Speed (1x/jour à 03h00).
 
-Sprint 9+ Optimisation (2026-06-12) — L'entraînement était exécuté toutes
+ Optimisation (2026-06-12) — L'entraînement était exécuté toutes
 les 30 min dans ``dag_live_speed_retrain`` (47 fois/jour) pour rien car
 les données ne changent qu'une fois par jour. On sépare maintenant
 training/ inference :
@@ -92,12 +92,12 @@ def _train_xgboost_speed_h1h() -> dict:
 with DAG(
     dag_id=DAG_ID,
     default_args=DEFAULT_ARGS,
-    description="Entraînement quotidien XGBoost H+1h (Sprint 9+ Optimisation)",
+  description="Entraînement quotidien XGBoost H+1h Optimisation)",
     schedule_interval="0 3 * * *",  # 03h00 tous les jours
     start_date=datetime(2026, 6, 12),
     catchup=False,
     max_active_runs=1,
-    tags=["ml", "training", "xgboost", "daily", "sprint9"],
+  tags=["ml", "training", "xgboost", "daily", "sprint9"],
 ) as dag:
     train = PythonOperator(
         task_id="train_xgboost_speed_h1h",

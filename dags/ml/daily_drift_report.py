@@ -1,6 +1,6 @@
 """DAG Airflow — Daily drift report (Evidently sur gold.mv_xgb_vs_tomtom).
 
-Sprint 16 Axe A (2026-06-20) — Calcule le rapport de drift Evidently
+ Axe A (2026-06-20) — Calcule le rapport de drift Evidently
 quotidien sur la distribution des erreurs XGBoost vs TomTom. Persiste le
 résultat dans ``gold.model_drift_reports`` pour affichage par le widget
 ``drift_status_badge`` (Elu_1_Synthese) et ``backtest_dashboard`` (Pro_7).
@@ -67,12 +67,12 @@ def _run_and_persist(**context) -> dict:
 with DAG(
     dag_id=DAG_ID,
     default_args=DEFAULT_ARGS,
-    description=("Sprint 16 Axe A — Daily Evidently drift report sur XGBoost vs TomTom"),
+  description=("Sprint 16 Axe A — Daily Evidently drift report sur XGBoost vs TomTom"),
     schedule_interval="30 5 * * *",
     start_date=datetime(2026, 6, 20),
     catchup=False,
     max_active_runs=1,
-    tags=["ml", "monitoring", "drift", "sprint16"],
+  tags=["ml", "monitoring", "drift", "sprint16"],
 ) as dag:
     drift = PythonOperator(
         task_id="compute_and_persist_drift",

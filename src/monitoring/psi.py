@@ -1,20 +1,19 @@
-"""Population Stability Index (PSI) — drift detection léger, pur Python.
+"""Population Stability Index (PSI) — Détection de dérive (Drift) légère en pur Python.
 
-Sprint 9+ (2026-06-12) — Drift detector utilisé par le DAG
-``build_xgb_training_set`` pour comparer la distribution des
-features et du target entre la semaine de référence (J-14 → J-7)
-et la semaine courante (J-7 → J). Le résultat est persisté dans
-``gold.model_drift_reports`` (schéma existant v0.3.1).
+Ce détecteur de dérive est notamment utilisé par le DAG de préparation des données 
+d'entraînement (`build_xgb_training_set`) pour comparer les distributions 
+(features et target) entre deux fenêtres temporelles (ex: semaine de référence vs semaine courante).
+Les résultats sont persistés dans la table `gold.model_drift_reports`.
 
-**Pourquoi PSI plutôt qu'Evidently** :
-- Zéro dépendance supplémentaire (Evidently 0.4 demande litestar>=2.19
-  qui peut casser d'autres libs).
-- PSI est le standard industriel (credit scoring, marketing).
-- Déterministe, rapide (O(n_buckets) une fois les histogrammes calculés),
-  et interprétable : <0.1 stable, 0.1-0.2 modéré, >0.2 drift significatif.
+**Avantages du PSI par rapport à des outils lourds (ex: Evidently)** :
+- Zéro dépendance tierce (évite les conflits de version sur litestar/pydantic).
+- Standard reconnu de l'industrie (largement utilisé en credit scoring et marketing).
+- Rapide, déterministe (complexité temporelle minimale après calcul des histogrammes).
+- Interprétation claire : < 0.1 (Stable), entre 0.1 et 0.2 (Modéré), > 0.2 (Dérive significative).
 
-**Bucketing** : quantile-based via ``pd.qcut`` (10 buckets par défaut)
-pour gérer les distributions non-uniformes (ex. vitesse trafic).
+**Méthode de regroupement (Bucketing)** : 
+Approche basée sur les quantiles via `pd.qcut` (10 buckets par défaut) afin 
+de gérer efficacement les distributions asymétriques ou non-uniformes (ex: vitesse du trafic).
 """
 
 from __future__ import annotations

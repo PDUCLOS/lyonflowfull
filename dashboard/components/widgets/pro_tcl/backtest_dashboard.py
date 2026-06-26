@@ -1,6 +1,6 @@
 """Widget — Backtest Dashboard (XGBoost vs TomTom oracle).
 
-Sprint 16 Axe A (2026-06-20) — Validation modèle cross-source.
+ Axe A (2026-06-20) — Validation modèle cross-source.
 Compare les prédictions XGBoost H+1h (gold.trafic_predictions) avec les
 observations TomTom Traffic Flow (GPS flottes, gold.v_tomtom_traffic_live).
 
@@ -15,7 +15,7 @@ Affiche :
 5. **Table top 10 pires prédictions** : trié par error_abs_kmh DESC.
 
 Cible : Pro_7_Model_Monitoring (Pro TCL). À envelopper avec
-``deferred_render()`` (Sprint 15+) — coût élevé (3 Plotly + 1 MV refresh).
+``deferred_render()`` ) — coût élevé (3 Plotly + 1 MV refresh).
 
 Si PostgreSQL indispo → fail loud via DashboardDataError.
 Si MV vide (TomTom pas encore collecté ou pas de paires dans la fenêtre) →

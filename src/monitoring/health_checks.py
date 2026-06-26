@@ -1,12 +1,12 @@
-"""Monitoring — health checks (6 checks quotidiens).
+"""Monitoring — Vérifications de santé des données (Health Checks).
 
-Checks :
-1. Freshness Bronze (last fetched_at < 30 min)
-2. Volume Bronze (n_records attendu par source)
-3. NULLs Silver (colonnes critiques NULL > seuil)
-4. Doublons Silver (clé naturelle dupliquée)
-5. Prédictions présentes (gold.trafic_predictions non vide)
-6. Drift baseline (Evidently — comparé J-7 vs J)
+Exécute une série de vérifications quotidiennes sur l'intégrité du pipeline de données :
+1. Fraîcheur des données Bronze (dernière récupération < 30 min).
+2. Volumétrie Bronze (nombre de lignes attendues par source respecté).
+3. Qualité Silver : Valeurs NULL (taux de valeurs nulles sous le seuil sur les colonnes critiques).
+4. Qualité Silver : Doublons (unicité de la clé naturelle respectée).
+5. Disponibilité des prédictions (présence de données dans `gold.trafic_predictions`).
+6. Suivi de la dérive (Baseline vs Données actuelles via comparaison J-7 vs J).
 """
 
 from __future__ import annotations
@@ -163,9 +163,9 @@ def check_predictions_presentes() -> CheckResult:
 
 
 def check_drift_evidently() -> CheckResult:
-    """Compare distribution J-7 vs J via Evidently (Sprint 16 Axe A).
+    """Compare distribution J-7 vs J via Evidently (Axe A).
 
-    Sprint 16 (2026-06-20) — Remplace le placeholder "compte les rapports".
+    (2026-06-20) — Remplace le placeholder "compte les rapports".
     Lit le DERNIER rapport dans ``gold.model_drift_reports`` (calculé
     quotidiennement par le DAG ``daily_drift_report`` à 05h30 via
     ``src.monitoring.drift_detector.run_drift_report()``).
@@ -271,7 +271,7 @@ def run_dag_health_check() -> dict:
 
 
 # =============================================================================
-# Sprint 16 Axe B — Data Quality : Monitoring multi-source
+# Axe B — Data Quality : Monitoring multi-source
 # =============================================================================
 # Remplace les 6 checks mono-table par 1 appel à gold.v_source_health.
 # Voir docs/SPEC_SPRINT_16.md §B.6.
@@ -280,7 +280,7 @@ def run_dag_health_check() -> dict:
 def check_all_sources() -> list:
     """Vérifie la santé de toutes les sources via gold.v_source_health.
 
-    Sprint 16 Axe B (2026-06-20) — Remplace ``check_bronze_freshness()``,
+    Axe B (2026-06-20) — Remplace ``check_bronze_freshness()``,
     ``check_bronze_volume()``, ``check_silver_nulls()``, ``check_silver_doublons()``,
     ``check_predictions_presentes()`` par 1 appel à la vue agrégée.
 
@@ -341,7 +341,7 @@ def check_all_sources() -> list:
     return results
 
 
-# Catalogue des checks (Sprint 16 — les 5 checks mono-table sont commentés
+# Catalogue des checks (— les 5 checks mono-table sont commentés
 # car remplacés par check_all_sources(). Le DAG data_quality_daily appelle
 # désormais check_all_sources() + check_drift_evidently().)
 ALL_CHECKS_LEGACY = [

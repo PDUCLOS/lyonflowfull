@@ -1,10 +1,10 @@
 """DAG — Maintenance (purge, qualité, drift).
 
-Quotidien 04h15 : 6 checks qualité (Sprint 17 Axe 6 — src.transformation.data_quality).
+Quotidien 04h15 : 6 checks qualité (Axe 6 — src.transformation.data_quality).
 Quotidien 03h : purges Bronze (rétention).
 Toutes les 6h : drift monitoring Evidently.
 
-Sprint 17 Axe 6 (2026-06-21) — Remplace le stub ``_data_quality_check()``
+ Axe 6 (2026-06-21) — Remplace le stub ``_data_quality_check()``
 qui déléguait à ``health_checks.run_dag_health_check()`` par un appel
 direct à ``src.transformation.data_quality`` (QualityConfig + 3
 validators + QualityReport). Les 6 task_ids legacy sont conservés
@@ -117,7 +117,7 @@ def _purge_bronze(table: str, days: int) -> int:
 
 
 # =============================================================================
-# Sprint 17 Axe 6 — Data Quality (port LyonTraffic)
+# Axe 6 — Data Quality (port LyonTraffic)
 # =============================================================================
 # Remplace le stub ``_data_quality_check()`` legacy (qui appelait
 # ``health_checks.run_dag_health_check()``) par un appel direct aux
@@ -242,7 +242,7 @@ _DATA_QUALITY_TASKS: dict[str, tuple] = {
 
 
 def _data_quality_check(check_name: str) -> dict:
-    """Exécute un check qualité Sprint 17 Axe 6.
+    """Exécute un check qualité Axe 6.
 
     Charge le DataFrame de la table cible via la load_func mappée,
     appelle le validator, log le résultat dans gold.data_quality_log,
@@ -313,7 +313,7 @@ def _data_quality_check(check_name: str) -> dict:
 with DAG(
     dag_id="data_quality_daily",
     description=(
-        "6 checks qualité quotidien (Sprint 17 Axe 6 — src.transformation.data_quality, log dans gold.data_quality_log)"
+        "6 checks qualité quotidien (Axe 6 — src.transformation.data_quality, log dans gold.data_quality_log)"
     ),
     schedule="15 4 * * *",
     start_date=datetime(2026, 1, 1),

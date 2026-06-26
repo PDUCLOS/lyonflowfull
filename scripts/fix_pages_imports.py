@@ -1,4 +1,4 @@
-"""Fix le pattern cassé dans les pages (Sprint 20 Axe F)."""
+"""Fix le pattern cassé dans les pages Axe F)."""
 
 import re
 from pathlib import Path

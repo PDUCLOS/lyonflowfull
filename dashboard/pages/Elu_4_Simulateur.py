@@ -53,4 +53,4 @@ if zone:
     with col2:
         render_cost_estimate(zone)
 
-st.caption("LyonFlowFull · Sprint 4 — Sprint 5 ajoutera component React deck.gl + MapboxDraw")
+st.caption("LyonFlowFull · Sprint 5 ajoutera component React deck.gl + MapboxDraw")

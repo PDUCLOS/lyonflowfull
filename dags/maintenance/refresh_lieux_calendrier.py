@@ -1,4 +1,4 @@
-"""DAG — Refresh vues matérialisées Gold (Sprint 7, 2026-06-11).
+"""DAG — Refresh vues matérialisées Gold , 2026-06-11).
 
 Cycle : quotidien 5h (apres collect_bronze 02:00, transform 02:30,
 gold 03:00, drift 06:00).
@@ -61,7 +61,7 @@ def _refresh_lieux_calendrier(**context) -> None:
 
     Le calendrier (jours feries, vacances) evolue peu, mais les
     cadences (7j glissants) doivent etre recalculees pour rester
-    representatives. Sprint 7+ : remplacer par une vue materialisee
+  representatives. remplacer par une vue materialisee
     raffraichie en place.
     """
     try:
@@ -102,7 +102,7 @@ with DAG(
     start_date=datetime(2026, 6, 11),
     catchup=False,
     max_active_runs=1,
-    tags=["gold", "refresh", "sprint-7"],
+  tags=["gold", "refresh", "sprint-7"],
 ) as dag:
     PythonOperator(
         task_id="refresh_mv_line_kpis",

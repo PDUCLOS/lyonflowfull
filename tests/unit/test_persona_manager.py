@@ -18,7 +18,7 @@ def _fresh_session() -> dict:
 
 
 def test_clear_current_persona_pops_session_key():
-    """Sprint 15+ (audit Pro TCL 2026-06-19) — fix bug 'Changer de
+    """(audit Pro TCL 2026-06-19) — fix bug 'Changer de
     profil ne ramène pas à l'accueil'.
 
     ``clear_current_persona()`` doit pop le ``_SESSION_KEY`` (persona_id)
@@ -113,7 +113,7 @@ def test_clear_current_persona_auth_does_not_pop_session_key():
 
 
 def test_navigation_uses_clear_current_persona_not_auth():
-    """Sprint 15+ (audit Pro TCL 2026-06-19) — vérifie que le bouton
+    """(audit Pro TCL 2026-06-19) — vérifie que le bouton
     'Quitter' de la sidebar utilise bien ``clear_current_persona()``
     (le helper qui pop le persona_id + auth) et pas
     ``clear_current_persona_auth()`` (qui ne pop que l'auth → bug

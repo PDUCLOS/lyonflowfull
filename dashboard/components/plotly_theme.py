@@ -1,6 +1,6 @@
 """Thème Plotly unifié — cohérent avec le theme.py CSS du dashboard.
 
-Sprint 20 Axe B (2026-06-22) — Remplace ``plotly_dark`` (inadapté car le
+ Axe B (2026-06-22) — Remplace ``plotly_dark`` (inadapté car le
 dashboard n'est pas en dark mode Plotly natif) et les templates ad-hoc par
 un template unique aligné sur les couleurs COLORS du thème CSS.
 

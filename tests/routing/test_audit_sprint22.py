@@ -1,4 +1,4 @@
-"""Tests unitaires Sprint 22+ — corrections audit méthodique.
+"""Tests unitaires corrections audit méthodique.
 
 Couvre les 4 bugs identifiés par Patrice lors de l'audit du 2026-06-23 :
 
@@ -20,7 +20,7 @@ import pytest
 
 
 def test_approx_lonlat_helper_removed():
-    """Le helper de hash pseudo-aléatoire doit être viré (Sprint 22+)."""
+    """Le helper de hash pseudo-aléatoire doit être viré (+)."""
     from src.data import data_loader
 
     assert not hasattr(data_loader, "_approx_lonlat_from_channel_id"), (
@@ -114,7 +114,7 @@ def test_usager_uses_real_traffic_for_voiture_speed():
 
     # Doit importer cached_traffic
     assert "cached_traffic" in src, "Usager_1 doit importer cached_traffic pour la vitesse voiture live"
-    # Doit utiliser is_congested_from_speed (helper public Sprint 22+)
+  # Doit utiliser is_congested_from_speed (helper public )
     assert "is_congested_from_speed" in src, (
         "Usager_1 doit utiliser is_congested_from_speed (helper public) pour la vraie détection"
     )

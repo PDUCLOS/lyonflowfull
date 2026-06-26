@@ -1,10 +1,10 @@
-"""DAG — Collecte TomTom Traffic Flow (Sprint 13+, 2026-06-18 — RÉACTIVÉ).
+"""DAG — Collecte TomTom Traffic Flow , 2026-06-18 — RÉACTIVÉ).
 
-Sprint 8 (2026-06-12) avait désactivé ce DAG en no-op parce que le module
+ (2026-06-12) avait désactivé ce DAG en no-op parce que le module
 ``src.ingestion.tomtom_traffic`` n'avait pas de classe ``DataCollector``
 conforme (juste helpers cache/quota).
 
-Sprint 13+ (2026-06-18) — Réactivation :
+ (2026-06-18) — Réactivation :
 * Nouvelle classe ``TomTomTrafficFlow(DataCollector)`` dans
   ``src.ingestion/tomtom_traffic.py`` (câblée dans REALTIME_COLLECTORS).
 * Ce DAG utilise maintenant le pattern unifié : ``TomTomTrafficFlow().run()``
@@ -16,7 +16,7 @@ Sprint 13+ (2026-06-18) — Réactivation :
 Quotas :
 * Free tier TomTom = 2500 req/jour. Ce DAG = 12 tuiles x 96 cycles/jour
   = 1152 req/jour. Marge confortable.
-* retries=0 (politique Sprint VPS-5 — le cycle suivant rattrape).
+* retries=0 (politique le cycle suivant rattrape).
 """
 
 from __future__ import annotations
@@ -76,7 +76,7 @@ def _log_health(**context) -> None:
 default_args = {
     "owner": "lyonflow",
     "depends_on_past": False,
-    "retries": 0,  # Politique Sprint VPS-5 — le cycle suivant rattrape
+  "retries": 0, # Politique le cycle suivant rattrape
     "execution_timeout": timedelta(minutes=2),
 }
 
@@ -88,7 +88,7 @@ with DAG(
     start_date=datetime(2026, 6, 18),
     catchup=False,
     max_active_runs=1,
-    tags=["bronze", "traffic", "tomtom", "sprint-13+"],
+  tags=["bronze", "traffic", "tomtom", "sprint-13+"],
 ) as dag:
     collect = PythonOperator(
         task_id="collect_tomtom_flow",

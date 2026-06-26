@@ -3,7 +3,7 @@
 XGBoost Speed : hourly
 XGBoost Velov : hourly (2 horizons : H+30min, H+1h)
 
-Sprint 8 — Toggle ``LYONFLOW_XGBOOST_TRAINING`` permet de désactiver
+ Toggle ``LYONFLOW_XGBOOST_TRAINING`` permet de désactiver
 le retrain nightly (par exemple quand le GNN a pris le relais en prod).
 Quand Patrice valide le GNN :
 1. Set ``LYONFLOW_MODELS_ACTIVE=stgcn``
@@ -61,14 +61,14 @@ def _train_xgboost_velov_wrapped() -> dict:
 
 
 def _train_xgboost_speed():
-    """Entraîne H+1h XGBoost speed uniquement (Sprint 22+ — H+1h strict).
+    """Entraîne H+1h XGBoost speed uniquement (— H+1h strict).
 
     Avant : 4 horizons (5min, 1h, 3h, 6h) — en contradiction avec la
     règle projet focus H+1h strict (Sprint VPS-6). Le DAG
     ``dag_daily_speed_train`` (1x/jour 03h) le remplace fonctionnellement
     pour H+1h.
 
-    Action Sprint 22+ : on garde SEUL H+1h ici pour ne pas perdre
+    Action : on garde SEUL H+1h ici pour ne pas perdre
     silencieusement des runs historiques (dead data → models jamais
     chargés → fail loud au predict). Toggle ``LYONFLOW_XGBOOST_TRAINING``
     permet de désactiver complètement ce DAG.
@@ -87,7 +87,7 @@ def _train_xgboost_speed():
 
 
 def _train_xgboost_velov():
-    """Entraîne H+1h XGBoost Velov uniquement (Sprint 22+ — H+1h strict)."""
+    """Entraîne H+1h XGBoost Velov uniquement (— H+1h strict)."""
     from src.models.xgboost_velov import XGBoostVelovModel
 
     model = XGBoostVelovModel()

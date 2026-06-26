@@ -1,6 +1,6 @@
-"""DAG — Retrain GNN SpatioTemporalGCN (Sprint 9 — préparation, non activé).
+"""DAG — Retrain GNN SpatioTemporalGCN préparation, non activé).
 
-Sprint 9 — Le DAG est **préparé mais désactivé** par défaut. Pour l'activer :
+ Le DAG est **préparé mais désactivé** par défaut. Pour l'activer :
 
 1. Set ``LYONFLOW_STGCN_TRAINING=true`` dans .env (toggle principal)
 2. Set ``EC2_TRAINING_HOST=<ip_instance_gpu>`` (pour le mode EC2)
@@ -14,7 +14,7 @@ Le DAG est créé avec ``is_paused_upon_creation=True`` (Airflow 2.4+) et
 même si le scheduler le déclenche. Le check interne skip proprement
 avec un log clair.
 
-Sprint 8 — Toggle ``LYONFLOW_GNN_EXECUTION_MODE`` :
+ Toggle ``LYONFLOW_GNN_EXECUTION_MODE`` :
 * ``"local"`` (défaut si activé) : entraîne en local sur le VPS avec le
   STGCNTrainer Python. CPU-only, petit nombre de nœuds, lent.
 * ``"ec2"`` : délègue l'entraînement à une instance EC2 via SSH
@@ -53,7 +53,7 @@ def _send_email_notification(
 ) -> bool:
     """Envoie un email de notification (SMTP).
 
-    Préparation Sprint 9 : le template est prêt mais les paramètres
+  Préparation le template est prêt mais les paramètres
     sont vides. Pour activer les notifications :
 
     1. Set ``LYONFLOW_NOTIFICATION_EMAIL=patrice@lyonflowfull.fr``
@@ -143,7 +143,7 @@ def _is_stgcn_dag_enabled() -> bool:
 def _train_local() -> dict:
     """Mode local : entraîne directement dans l'environnement Airflow.
 
-    Sprint 9+ (2026-06-12) — Fallback ``synthetic()`` SUPPRIMÉ.
+  (2026-06-12) — Fallback ``synthetic()`` SUPPRIMÉ.
     Si la DB ne répond pas ou si le dataset est vide, le DAG
     doit fail loud (cf. politique "zéro mock"). Le training ne
     se fait PAS sur des données synthétiques — c'est de la triche.
@@ -278,7 +278,7 @@ def _train_orchestrator(**context) -> dict:
 
 
 # -----------------------------------------------------------------------------
-# DAG (Sprint 9 — préparation, non activé)
+# DAG préparation, non activé)
 # -----------------------------------------------------------------------------
 
 
@@ -307,7 +307,7 @@ with DAG(
     start_date=datetime(2026, 1, 1),
     catchup=False,
     max_active_runs=1,
-    is_paused_upon_creation=True,  # Sprint 9 — créé en pause
+  is_paused_upon_creation=True, # créé en pause
     tags=["ml", "gnn", "traffic", "heavy", "ec2-optional", "preparation"],
 ) as dag:
     PythonOperator(

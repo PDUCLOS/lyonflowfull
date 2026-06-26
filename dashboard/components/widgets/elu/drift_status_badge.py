@@ -1,10 +1,10 @@
 """Widget — Drift status badge (Élu — Synthèse).
 
-Sprint 16 Axe A (2026-06-20) — Bandeau compact qui résume l'état de drift
+ Axe A (2026-06-20) — Bandeau compact qui résume l'état de drift
 détecté sur les prédictions XGBoost H+1h (via Evidently DataDriftPreset,
 calculé par le DAG daily_drift_report à 05h30).
 
-Lit ``gold.model_drift_reports`` (Sprint 10+, table pré-existante) via le
+Lit ``gold.model_drift_reports`` , table pré-existante) via le
 helper ``get_latest_drift_report()`` (déjà dans db_query.py). Combine
 ensuite avec la MAE 24h depuis ``gold.v_xgb_accuracy_summary`` (migration
 020) pour un diagnostic plus précis.

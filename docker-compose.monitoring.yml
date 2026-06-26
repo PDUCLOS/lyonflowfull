@@ -11,21 +11,9 @@
 #   - postgres-exporter (PG connections, locks, queries)
 #   - nginx-exporter (requests, 5xx, latency)
 #
-# Sprint 15+ (2026-06-19) : Prometheus + redis-exporter SUPPRIMÉS.
-# - prometheus_data (35 MB) viré, prom/prometheus:v2.54.1 (386 MB) viré.
-# - Les exporters (node/postgres/nginx) + grafana + alertmanager restent UP
-#   mais sans source de données Prometheus → affichent "no data".
-# - Stack monitoring à remettre en place si nécessaire (cf. SPEC monitoring v2).
-#
-# Ports exposés uniquement sur 127.0.0.1 (Nginx fait le reverse proxy public).
 # =============================================================================
 
 services:
-  # ---------------------------------------------------------------------------
-  # Prometheus — SUPPRIMÉ Sprint 15+ (2026-06-19)
-  # Raison : config YAML cassée depuis v2.54 (restart-loop), valeur
-  # ajoutée faible vs coût ops (1G RAM + 386 MB image + 35 MB volume).
-  # ---------------------------------------------------------------------------
 
   # ---------------------------------------------------------------------------
   # Alertmanager

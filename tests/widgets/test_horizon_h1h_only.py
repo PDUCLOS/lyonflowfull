@@ -1,12 +1,12 @@
-"""Test e2e Sprint 8+ (2026-06-12) : vérifier que les widgets sont H+1h-only.
+"""Test e2e (2026-06-12) : vérifier que les widgets sont H+1h-only.
 
 Vérifie que tous les widgets et pages dashboard n'exposent QUE H+1h
 (60 min) pour les prédictions, conformément à la consigne de
 Patrice : "met tout à 1H".
 
-Avant (Sprint 7-) : les sélecteurs proposaient [0, 30, 60, 180, 360]
+Avant ) : les sélecteurs proposaient [0, 30, 60, 180, 360]
 ou [5, 15, 30, 60, 180, 360] — choix imposé à l'utilisateur.
-Après (Sprint 8+) : focus H+1h strict, plus de choix.
+Après ) : focus H+1h strict, plus de choix.
 
 Voir `SPRINT_VPS-8_REPORT.md` pour le contexte.
 """

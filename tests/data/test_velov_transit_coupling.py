@@ -1,17 +1,15 @@
-"""Tests Sprint 17 Axe 4 (2026-06-20) — Vélov ↔ TC coupling helpers + widget.
+"""Tests Axe 4 (2026-06-20) — Vélov ↔ TC coupling helpers + widget.
 
 Vérifie que les nouveaux helpers ``get_velov_transit_coupling``,
 ``get_velov_transit_coupling_summary`` et le widget ``modal_shift_alert``
-respectent la politique zéro mock de Sprint 8 :
-
+respectent la politique zéro mock de 
 * Helpers bas-niveau (db_query) → DataFrame vide si DB indispo.
 * Widget helpers (``_count_anomalies``, ``_count_critical_lines``,
   ``_format_z_score``) → logique pure, testable hors-ligne.
 
 Voir ``docs/SPEC_OPTIMISATION_INTERDEPENDANCES.md`` (Axe 4, 2026-06-20)
 pour le contexte fonctionnel, et ``docs/SPEC_SPRINT_17.md`` pour la
-livraison Sprint 17.
-"""
+livraison """
 
 from __future__ import annotations
 

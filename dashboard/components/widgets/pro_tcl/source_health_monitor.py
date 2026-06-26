@@ -1,6 +1,6 @@
 """Widget — Source Health Monitor (Pro TCL — Pipeline).
 
-Sprint 16 Axe B (2026-06-20) — Monitoring multi-source. Remplace les
+ Axe B (2026-06-20) — Monitoring multi-source. Remplace les
 6 health checks séquentiels de ``src.monitoring.health_checks.py`` par
 une vue agrégée (``gold.v_source_health``, migration 021) + jauge Plotly
 synthétique 0-100 + grille par source + section complétude Silver.

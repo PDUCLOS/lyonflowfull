@@ -1,4 +1,4 @@
-"""Widget — Impact météo sur les 3 modes (Axe 7, Sprint 17, 2026-06-20).
+"""Widget — Impact météo sur les 3 modes (Axe 7, , 2026-06-20).
 
 Vue matérialisée ``gold.mv_meteo_impact`` (migration 022) qui agrège 30 jours
 d'historique pour comparer l'effet de **5 conditions météo** sur les **3
@@ -241,9 +241,9 @@ def _render_delta_chart(df: pd.DataFrame) -> None:
 
 def render_meteo_impact() -> None:
     with loading_wrapper("Chargement Meteo impact…", "⏳"):
-        """Affiche l'impact météo sur les 3 modes (Axe 7, Sprint 17).
+        """Affiche l'impact météo sur les 3 modes (Axe 7, ).
 
-    Sprint 17 (2026-06-20). Si DB indispo → fail loud via DashboardDataError.
+  (2026-06-20). Si DB indispo → fail loud via DashboardDataError.
     Si vue matérialisée pas encore alimentée → message d'attente explicite.
     """
     try:
@@ -258,7 +258,7 @@ def render_meteo_impact() -> None:
             "Le DAG `refresh_meteo_impact` doit tourner (1×/jour à 04h30). "
             "Causes possibles : (1) DAG en attente de son 1er cycle, "
             "(2) `migration_022_meteo_impact.sql` non appliquée, "
-            "(3) moins de 30 jours d'historique météo (Sprint 8+ OK)."
+      "(3) moins de 30 jours d'historique météo OK)."
         )
         return
 

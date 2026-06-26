@@ -1,21 +1,22 @@
-"""Client Airflow REST API — recupere DAGs + dagRuns + trigger.
+"""Client Airflow REST API — Récupère l'état des DAGs, des exécutions et permet les déclenchements manuels.
 
-Sprint 8 (2026-06-12) — fail loud partout :
+La philosophie de ce client est d'échouer de manière explicite ("fail loud") en production :
 
-* Airflow indispo → ``DashboardDataError``. Le widget appelant catch et
-  affiche ``st.error``. Aucun fallback mock.
+* Si Airflow est indisponible, le client lève une exception ``DashboardDataError``. 
+  Le widget appelant intercepte cette exception et affiche une alerte via ``st.error``.
+* Aucun mécanisme de repli (fallback mock) n'est autorisé.
 
-Usage::
-
+Exemple d'utilisation :
+    ```python
     from src.data.airflow_client import get_dags_status
-    dags = get_dags_status()  # liste dicts compatible widgets
-    # En prod : lève DashboardDataError si Airflow indispo
+    dags = get_dags_status()  # Liste de dictionnaires compatible avec les widgets Streamlit
+    ```
 
-Variables env requises:
-- AIRFLOW_HOST (default: localhost)
-- AIRFLOW_PORT (default: 8080)
-- AIRFLOW_ADMIN_USERNAME (default: admin)
-- AIRFLOW_ADMIN_PASSWORD (default: vide -> bascule mock en démo, erreur en prod)
+Variables d'environnement requises :
+- AIRFLOW_HOST (défaut : localhost)
+- AIRFLOW_PORT (défaut : 8080)
+- AIRFLOW_ADMIN_USERNAME (défaut : admin)
+- AIRFLOW_ADMIN_PASSWORD (défaut : vide -> déclenche une erreur en production)
 """
 
 from __future__ import annotations
@@ -36,11 +37,11 @@ _HEALTH_CACHE: bool | None = None
 def _airflow_base_url() -> str:
     host = os.getenv("AIRFLOW_HOST", "localhost")
     port = os.getenv("AIRFLOW_PORT", "8080")
-    # Sprint 15+ (2026-06-19) — Airflow est exposé derrière nginx avec préfixe
-    # /airflow (cf. AIRFLOW__WEBSERVER__BASE_URL + nginx.conf). Sans ce
-    # préfixe, les endpoints /health et /api/v1/* retournent 404.
-    # En local sans nginx (dev direct), surcharger AIRFLOW_BASE_PATH=""
-    # dans .env.
+
+    # En production, Airflow est exposé derrière Nginx avec le préfixe /airflow
+    # (cf. AIRFLOW__WEBSERVER__BASE_URL + nginx.conf).
+    # Sans ce préfixe, les endpoints /health et /api/v1/* retournent une erreur 404.
+    # Pour un développement local direct, il faut surcharger AIRFLOW_BASE_PATH="" dans le .env.
     base_path = os.getenv("AIRFLOW_BASE_PATH", "/airflow")
     return f"http://{host}:{port}{base_path}"
 
@@ -54,7 +55,7 @@ def _airflow_auth() -> tuple[str, str] | None:
 
 
 def is_airflow_available() -> bool:
-    """Ping Airflow /health avec cache process."""
+    """Vérifie la disponibilité de l'API Airflow via l'endpoint /health avec mise en cache par processus."""
     global _HEALTH_CACHE
     if _HEALTH_CACHE is not None:
         return _HEALTH_CACHE
@@ -66,52 +67,50 @@ def is_airflow_available() -> bool:
         r = requests.get(f"{_airflow_base_url()}/health", timeout=2)
         _HEALTH_CACHE = r.status_code == 200
     except Exception as exc:
-        logger.debug("Airflow health check failed: %s", exc)
+        logger.debug("Échec de la vérification de santé d'Airflow : %s", exc)
         _HEALTH_CACHE = False
     return _HEALTH_CACHE
 
 
 def reset_health_cache() -> None:
-    """Reset cache (utile pour tests + bouton refresh)."""
+    """Réinitialise le cache de disponibilité (utile pour les tests ou les rafraîchissements manuels)."""
     global _HEALTH_CACHE
     _HEALTH_CACHE = None
 
 
 def get_dags_status() -> list[dict[str, Any]]:
-    """Liste des DAGs + dernier run (compatible widget pipeline_management).
+    """Récupère la liste des DAGs ainsi que l'état de leur dernière exécution.
+
+    Cette fonction est optimisée pour alimenter le composant de gestion des pipelines.
 
     Returns:
-        Liste de dicts avec les clefs:
-        dag_id, schedule, last_run, last_status, last_duration_s, next_run,
-        description, paused.
+        Une liste de dictionnaires contenant :
+        `dag_id`, `schedule`, `last_run`, `last_status`, `last_duration_s`, 
+        `next_run`, `description`, `paused`, `last_dag_run_id`.
 
     Raises:
-        DashboardDataError: en mode prod, si Airflow indispo (health=False)
-            ou si la requête REST échoue.
+        DashboardDataError: Si l'API Airflow est injoignable ou si la requête échoue.
     """
     if not is_airflow_available():
-        # Sprint 8 — viré le fallback mock. Toujours DashboardDataError.
         raise DashboardDataError(
             source="airflow",
             detail=(
-                f"Airflow REST API non joignable ({_airflow_base_url()}/health). "
-                "Vérifier que le service tourne et que AIRFLOW_HOST/AIRFLOW_ADMIN_PASSWORD "
-                "sont corrects dans .env"
+                f"L'API REST d'Airflow est injoignable ({_airflow_base_url()}/health). "
+                "Vérifiez que le service est actif et que les identifiants dans le .env sont corrects."
             ),
         )
 
     try:
         return _fetch_dags_from_airflow()
     except Exception as exc:
-        # Sprint 8 — viré le fallback mock. Toujours DashboardDataError.
         raise DashboardDataError(
             source="airflow",
-            detail=f"Airflow REST API a échoué : {exc}",
+            detail=f"La requête vers l'API REST d'Airflow a échoué : {exc}",
         ) from exc
 
 
 def _fetch_dags_from_airflow() -> list[dict[str, Any]]:
-    """Appel reel Airflow REST API."""
+    """Logique interne effectuant l'appel HTTP réel vers l'API Airflow."""
     base = _airflow_base_url()
     auth = _airflow_auth()
     timeout = float(os.getenv("AIRFLOW_API_TIMEOUT", "3"))
@@ -123,7 +122,7 @@ def _fetch_dags_from_airflow() -> list[dict[str, Any]]:
     enriched: list[dict[str, Any]] = []
     for d in dags:
         dag_id = d["dag_id"]
-        # Recupere le dernier run pour ce DAG
+        # Récupération de la dernière exécution pour chaque DAG
         try:
             rr = requests.get(
                 f"{base}/api/v1/dags/{dag_id}/dagRuns?limit=1&order_by=-execution_date",
@@ -172,7 +171,14 @@ def _fetch_dags_from_airflow() -> list[dict[str, Any]]:
 
 
 def trigger_dag(dag_id: str) -> bool:
-    """Declenche un run manuel pour le DAG (POST /api/v1/dags/{dag_id}/dagRuns)."""
+    """Déclenche manuellement une nouvelle exécution d'un DAG.
+    
+    Args:
+        dag_id: L'identifiant du DAG à lancer.
+        
+    Returns:
+        True si la requête POST a réussi (statut 200/201), False sinon.
+    """
     if not is_airflow_available():
         return False
     base = _airflow_base_url()
@@ -186,15 +192,16 @@ def trigger_dag(dag_id: str) -> bool:
         )
         return r.status_code in (200, 201)
     except Exception as exc:
-        logger.warning("trigger_dag(%s) failed: %s", dag_id, exc)
+        logger.warning("Échec du déclenchement du DAG (%s) : %s", dag_id, exc)
         return False
 
 
 def clear_stuck_dag_run(dag_id: str, dag_run_id: str) -> bool:
-    """Clear task instances d'un DAG run bloqué (POST /api/v1/dags/{dag_id}/clearTaskInstances).
+    """Nettoie les instances de tâches bloquées d'une exécution de DAG.
 
-    Marque toutes les task instances du run comme "cleared" → Airflow les
-    re-schedule automatiquement. Utile pour débloquer un run stuck "running".
+    Marque toutes les instances de tâches (Task Instances) de l'exécution comme "cleared".
+    Airflow les reprogrammera automatiquement. Particulièrement utile pour débloquer
+    une exécution coincée dans l'état "running".
     """
     if not is_airflow_available():
         return False
@@ -215,21 +222,21 @@ def clear_stuck_dag_run(dag_id: str, dag_run_id: str) -> bool:
         ok = r.status_code in (200, 201)
         if ok:
             logger.info(
-                "clear_stuck_dag_run(%s, %s): %d tasks cleared",
+                "clear_stuck_dag_run(%s, %s): %d tâches nettoyées",
                 dag_id,
                 dag_run_id,
                 len(r.json().get("task_instances", [])),
             )
         else:
-            logger.warning("clear_stuck_dag_run(%s, %s): HTTP %d — %s", dag_id, dag_run_id, r.status_code, r.text[:200])
+            logger.warning("clear_stuck_dag_run(%s, %s): Code HTTP %d — %s", dag_id, dag_run_id, r.status_code, r.text[:200])
         return ok
     except Exception as exc:
-        logger.warning("clear_stuck_dag_run(%s, %s) failed: %s", dag_id, dag_run_id, exc)
+        logger.warning("Échec du nettoyage des tâches pour le DAG (%s, %s) : %s", dag_id, dag_run_id, exc)
         return False
 
 
 def mark_dag_run_failed(dag_id: str, dag_run_id: str) -> bool:
-    """Force un DAG run bloqué en état 'failed' (PATCH /api/v1/dags/{dag_id}/dagRuns/{dag_run_id})."""
+    """Force l'état d'une exécution de DAG bloquée à "failed"."""
     if not is_airflow_available():
         return False
     base = _airflow_base_url()
@@ -243,10 +250,10 @@ def mark_dag_run_failed(dag_id: str, dag_run_id: str) -> bool:
         )
         ok = r.status_code == 200
         if ok:
-            logger.info("mark_dag_run_failed(%s, %s): success", dag_id, dag_run_id)
+            logger.info("mark_dag_run_failed(%s, %s) : Succès", dag_id, dag_run_id)
         else:
-            logger.warning("mark_dag_run_failed(%s, %s): HTTP %d", dag_id, dag_run_id, r.status_code)
+            logger.warning("mark_dag_run_failed(%s, %s) : Code HTTP %d", dag_id, dag_run_id, r.status_code)
         return ok
     except Exception as exc:
-        logger.warning("mark_dag_run_failed(%s, %s) failed: %s", dag_id, dag_run_id, exc)
+        logger.warning("Échec de la mise en échec forcée pour le DAG (%s, %s) : %s", dag_id, dag_run_id, exc)
         return False

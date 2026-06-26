@@ -1,11 +1,11 @@
 """Widget — Détail Data Quality (Élu — Synthèse).
 
-Sprint 17 Axe 6 (2026-06-21) — Drill-down sur les checks qualité
+ Axe 6 (2026-06-21) — Drill-down sur les checks qualité
 exécutés par ``src.transformation.data_quality`` (3 validators :
 traffic, tcl, velov). Affiche la dernière exécution par table + un
 tableau historique de l'évolution des statuts (ok / warning / critical).
 
-**Distinction avec ``data_quality_badge.py``** (Sprint 16 Axe B) :
+**Distinction avec ``data_quality_badge.py``** Axe B) :
 * ``data_quality_badge.py`` → liveness des sources Bronze/Silver
   (gold.v_source_health, source alive ?).
 * ``data_quality_detail.py`` → qualité des valeurs (gold.data_quality_log,
@@ -24,7 +24,7 @@ Architecture :
   3. Tableau historique 5 derniers runs (tendance)
 * Coût : 1 query (cache hit = 0 ms). Pas de button-gate.
 
-Politique fail loud (Sprint 8+) :
+Politique fail loud ) :
 * DB indispo → ``DashboardDataError`` → ``st.error``.
 * Table log vide (DAG pas encore passé) → message d'attente explicite.
 """
@@ -194,7 +194,7 @@ def render_data_quality_detail() -> None:
     with loading_wrapper("Chargement Data quality detail…", "⏳"):
         """Affiche le drill-down data quality bounds dans Elu_1_Synthese.
 
-    Sprint 17 Axe 6 (2026-06-21). Si DB indispo → fail loud via
+  Axe 6 (2026-06-21). Si DB indispo → fail loud via
     DashboardDataError. Si table log vide (DAG pas encore passé) →
     message d'attente explicite.
     """
@@ -207,7 +207,7 @@ def render_data_quality_detail() -> None:
     if df.empty:
         st.info(
             "Aucun check qualité dans `gold.data_quality_log`. Le DAG "
-            "`data_quality_daily` doit tourner (tâches Sprint 17 Axe 6, "
+      "`data_quality_daily` doit tourner (tâches Axe 6, "
             "1×/jour 04h15). Causes possibles : (1) DAG en attente de "
             "son 1er cycle, (2) `migration_025_data_quality_log.sql` "
             "non appliquée."

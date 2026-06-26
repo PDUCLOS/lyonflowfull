@@ -1,11 +1,11 @@
 """Seed du référentiel cadence x calendrier.
 
-Sprint VPS-6 (2026-06-11) — Peuple ``referentiel.lieux_calendrier`` depuis
+ (2026-06-11) — Peuple ``referentiel.lieux_calendrier`` depuis
 la vue ``referentiel.v_cadence_summary`` (qui agrege ``gold.tcl_vehicle_realtime``
 + ``bronze.calendrier_scolaire`` + ``bronze.jours_feries``).
 
 Idempotent : UPSERT sur (line_ref, day_type, time_bucket).
-Recalcul quotidien recommandé via DAG ``refresh_lieux_calendrier`` (Sprint 7+).
+Recalcul quotidien recommandé via DAG ``refresh_lieux_calendrier`` ).
 
 Usage::
 
@@ -13,7 +13,7 @@ Usage::
     python scripts/seed_lieux_calendrier.py
     # Vérif rapide
     python scripts/seed_lieux_calendrier.py --dry-run
-    # Cron quotidien (Sprint 7+)
+  # Cron quotidien )
     0 5 * * *  cd /opt/lyonflow && python scripts/seed_lieux_calendrier.py >> logs/calendrier.log 2>&1
 """
 

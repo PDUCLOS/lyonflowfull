@@ -27,7 +27,7 @@ def _build_spatial_mapping() -> int:
     3. Calcule matrix_i/j via h3 si dispo
     4. UPSERT dans gold.dim_spatial_grid_mapping (PK = properties_twgid)
 
-    Sprint VPS-5 — Schema v0.3.1 :
+  Schema v0.3.1 :
     * `silver.trafic_boucles_clean` a ``geom`` (geometry 4326) et ``geom_2154``
       (Lambert 93). Plus de ``geom_wgs84``.
     * `gold.dim_spatial_grid_mapping` PK = ``properties_twgid`` (et plus
@@ -112,7 +112,7 @@ def _build_spatial_mapping() -> int:
 def _build_adjacency() -> int:
     """Construit gold.dim_gnn_adjacency : arêtes entre nodes proches (K=2 grid).
 
-    Sprint VPS-5 : la PK de dim_gnn_adjacency est (node_u, node_v) — inchangé.
+  la PK de dim_gnn_adjacency est (node_u, node_v) — inchangé.
     """
     from src.db import execute_query
 

@@ -103,19 +103,19 @@ if st.session_state.get("results_loaded"):
     modes = search.get("modes", [])
     has_velov = any("Vélov" in m for m in modes)
     has_voiture = any("Voiture" in m for m in modes)
-    # Sprint 14 (2026-06-19) — Transport en commun : nouveau mode unifié
+  # (2026-06-19) — Transport en commun : nouveau mode unifié
     # Métro + Tram + Bus fusionnés en "🚌 Transport en commun".
     has_tc = any("Transport en commun" in m for m in modes)
 
     origin_coords = _resolve_lieu(search["origin"])
     dest_coords = _resolve_lieu(search["destination"])
 
-    # ── Comparateur multimodal (Sprint 15+ audit P0-3 + Sprint 16 Axe C) ──
+  # ── Comparateur multimodal audit P0-3 + Axe C) ──
     # Affiche un comparatif 3 modes (tc/voiture/velov) + winner card
-    # AVANT les détails par mode. Sprint 16 : si une durée réelle est déjà
+  # AVANT les détails par mode. si une durée réelle est déjà
     # calculée pour un mode (session_state["trip_<key>"]), on l'utilise.
     # Sinon, fallback estimation par vitesses moyennes Lyon.
-    # Sprint 22+ : vitesse voiture = ``cached_traffic()`` (live), pas hardcodée ;
+  # vitesse voiture = ``cached_traffic()`` (live), pas hardcodée ;
     # détection congestion via ``is_congested_from_speed()`` (vraie valeur).
     if origin_coords and dest_coords and len(modes) >= 2:
         # Récupère la vitesse moyenne Lyon live (avec gestion d'erreur
@@ -154,14 +154,14 @@ if st.session_state.get("results_loaded"):
             "Transport en commun": "tc",
         }
         # Construit results pour les modes actifs et faisables.
-        # Sprint 16 Axe C : on privilégie la durée RÉELLE depuis session_state
+    # Axe C : on privilégie la durée RÉELLE depuis session_state
         # si dispo, sinon fallback estimation.
         results: dict[str, dict] = {}
         for display_name, key in mode_to_key.items():
             if not any(display_name in m for m in modes):
                 continue
             trip_real = st.session_state.get(f"trip_{key}")
-            # Sprint 22+ : is_congested n'est True QUE pour voiture ET QUE si
+      # is_congested n'est True QUE pour voiture ET QUE si
             # la vitesse moyenne Lyon le justifie (réel, pas un proxy bidon).
             is_congested = key == "voiture" and is_congested_voiture
             if trip_real:
@@ -247,7 +247,7 @@ if st.session_state.get("results_loaded"):
     else:
         render_weather_widget()
 
-    # ── Trajet transport en commun (si TC sélectionné, Sprint 14) ─────────
+  # ── Trajet transport en commun (si TC sélectionné, ) ─────────
     if has_tc:
         st.markdown("---")
         deferred_render(
@@ -268,7 +268,7 @@ if st.session_state.get("results_loaded"):
             render_traffic_map_compact(height=320, horizon_minutes=60, key_suffix="usager")
 
     # ── Trajet Vélov (si Vélov sélectionné) ──────────────────────────────
-    # Sprint 23 (2026-06-26) — expander ouvert par défaut : sans ça, l'usager
+  # (2026-06-26) — expander ouvert par défaut : sans ça, l'usager
     # clique "Trouver mon trajet" et ne voit rien (le trip est calculé mais
     # caché dans un panneau replié). Aligne l'UX sur la voiture (l.325).
     if has_velov:
@@ -276,7 +276,7 @@ if st.session_state.get("results_loaded"):
         with st.expander("🚲 Trajet Vélov + marche", expanded=True):
             if origin_coords and dest_coords:
                 try:
-                    # Sprint 16 Axe C — Stocke la durée réelle dans session_state.
+          # Axe C — Stocke la durée réelle dans session_state.
                     velov_result = render_velov_trip(
                         origin=search["origin"],
                         destination=search["destination"],

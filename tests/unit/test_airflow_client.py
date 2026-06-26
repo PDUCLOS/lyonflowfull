@@ -29,7 +29,7 @@ def _patch_airflow_available():
 
 
 def test_clear_stuck_dag_run_success():
-    """Sprint 15+ (OPERATIONS_FINALES.md étape 0) — clear d'un DAG run
+    """(OPERATIONS_FINALES.md étape 0) — clear d'un DAG run
     bloqué doit faire un POST /clearTaskInstances et retourner True
     si HTTP 200/201.
     """
@@ -76,7 +76,7 @@ def test_clear_stuck_dag_run_airflow_down():
 
 
 def test_mark_dag_run_failed_success():
-    """Sprint 15+ — mark failed doit faire un PATCH /dagRuns/{run_id}."""
+    """— mark failed doit faire un PATCH /dagRuns/{run_id}."""
     from src.data import airflow_client
 
     resp = _mock_response(200)

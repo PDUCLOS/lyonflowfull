@@ -1,4 +1,4 @@
-"""Tests Sprint 13+ — Wrapper DataCollector TomTomTrafficFlow.
+"""Tests Wrapper DataCollector TomTomTrafficFlow.
 
 Vérifie que la nouvelle classe ``TomTomTrafficFlow`` (qui wrappe le
 module ``src.ingestion.tomtom_traffic``) suit le pattern unifié des
@@ -6,7 +6,7 @@ module ``src.ingestion.tomtom_traffic``) suit le pattern unifié des
 1. Sans TOMTOM_API_KEY → fetch_raw() retourne n_records=0 (no-op gracieux)
 2. Avec clé + collect_lyon_tiles() mocked → save_lyon_tiles_to_bronze()
    est appelé avec les bonnes données
-3. _save_raw() avec 0 records → skip INSERT Bronze (idempotence Sprint 8)
+3. _save_raw() avec 0 records → skip INSERT Bronze (idempotence )
 4. run() expose n_requests/n_failures et last_success_at
 """
 
@@ -122,7 +122,7 @@ class TestTomTomTrafficFlowWithKey:
             assert mock_save.call_args[0][0] == fake_results
 
     def test_save_raw_with_zero_records_skips(self, monkeypatch):
-        """Sprint 8 — 0 records → skip INSERT (idempotence)."""
+        """— 0 records → skip INSERT (idempotence)."""
         monkeypatch.setenv("TOMTOM_API_KEY", "fake-test-key")
         with patch("src.ingestion.tomtom_traffic.save_lyon_tiles_to_bronze") as mock_save:
             c = TomTomTrafficFlow()

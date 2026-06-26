@@ -9,7 +9,7 @@ Source données :
 * ``silver.velov_clean`` via ``get_velov_stations_geo()``
 * ``gold.velov_predictions`` via ``get_velov_predictions(30 ou 60)``
 
-Sprint 10 — comble le gap "on prédit la dispo mais on l'affiche pas".
+ comble le gap "on prédit la dispo mais on l'affiche pas".
 """
 
 from __future__ import annotations
@@ -46,7 +46,7 @@ def _docks_to_color(docks: int) -> list:
 def _load_stations_with_predictions() -> pd.DataFrame:
     """Joint stations courantes + prédictions H+1h du modèle XGBoost Vélo'v.
 
-    Sprint 22+ : focus H+1h strict. Avant : 2 horizons (H+30min, H+1h),
+  focus H+1h strict. Avant : 2 horizons (H+30min, H+1h),
     mais le DAG ``retrain_xgboost_velov`` n'insérait que H+1h (dead code).
 
     Returns:

@@ -1,11 +1,11 @@
 """Authentification par persona — version démo simplifiée.
 
-3 personas, 3 stratégies (Sprint 8+ — simplification démo) :
+3 personas, 3 stratégies simplification démo) :
 - usager : pas d'auth (accès public)
 - pro_tcl : mot de passe (env var PERSONA_PRO_TCL_PASSWORD, défaut "demo2026")
 - elu : mot de passe (env var PERSONA_ELU_PASSWORD, défaut "demo2026")
 
-**Mode démo** (Sprint 8+, 2026-06-12) : le projet est une démo Jedha,
+**Mode démo** , 2026-06-12) : le projet est une démo Jedha,
 les mots de passe sont volontairement simples et hardcodés.
 En production réelle (post-Jedha), il faudra :
 - Hasher les mots de passe (bcrypt déjà utilisé côté API)
@@ -16,7 +16,7 @@ Le mot de passe est saisi une fois, validé côté serveur (via
 ``st.session_state``), et la session est marquée authentifiée
 jusqu'au logout.
 
-Sprint 8+ sécurité :
+ sécurité :
 - ``hmac.compare_digest`` (constant-time comparison, pas d'attaque timing)
 - ``bcrypt`` côté API FastAPI
 - Aucune fuite du mot de passe dans les logs
@@ -40,7 +40,7 @@ logger = logging.getLogger(__name__)
 
 _SESSION_AUTH_KEY = "lyonflow_auth"
 
-# Mot de passe démo par défaut (Sprint 8+ — simplification démo Jedha).
+# Mot de passe démo par défaut simplification démo Jedha).
 # En production réelle, ces valeurs NE DOIVENT PAS être dans le repo :
 # les valeurs réelles sont injectées via les env vars au déploiement.
 _DEMO_PASSWORD = "demo2026"  # nosec B105
@@ -49,7 +49,7 @@ _DEMO_PASSWORD = "demo2026"  # nosec B105
 def _get_expected_password(persona_id: str) -> str | None:
     """Récupère le mot de passe attendu.
 
-    Sprint P2-quater (2026-06-16) — Force ``_DEMO_PASSWORD`` (toujours
+  (2026-06-16) — Force ``_DEMO_PASSWORD`` (toujours
     ``demo2026``). Les env vars ``PERSONA_*_PASSWORD`` du .env sont
     ignorées volontairement pour que la démo Jedha fonctionne partout
     avec le même mot de passe.
@@ -101,7 +101,7 @@ def require_password() -> None:
 
     À utiliser dans la page d'accueil pour déverrouiller un persona protégé.
 
-    Sprint 8+ : pour la démo, on affiche le mot de passe par défaut
+  pour la démo, on affiche le mot de passe par défaut
     dans l'info box (sous l'input) pour faciliter les tests Jedha.
     À retirer en production réelle.
     """
@@ -128,7 +128,7 @@ def require_password() -> None:
         return
 
     st.info(f"🔐 **{label}** est un espace protégé. Saisis le mot de passe.")
-    # Sprint 8+ démo : on affiche le mdp par défaut dans une info box
+  # démo : on affiche le mdp par défaut dans une info box
     # (à retirer en prod).
     with st.expander("Information Aide démo (mots de passe par défaut)"):
         st.markdown(f"**Mot de passe démo Jedha** : `{_DEMO_PASSWORD}`")

@@ -1,6 +1,6 @@
 """Widget — Carte trafic temps réel vs prédictions H+1h.
 
-Sprint 23 — refonte complète :
+ refonte complète :
 * Couleur **relative** : ratio vitesse / vitesse_limite (pas de seuils fixes).
   Un segment à 50% de sa limite est orange, qu'il soit limité à 30 ou 90 km/h.
 * **Comparaison live ↔ H+1h** : tooltip affiche vitesse actuelle, prédite,

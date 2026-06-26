@@ -1,13 +1,13 @@
-"""FastAPI — REST endpoints LyonFlowFull.
+"""FastAPI — Endpoints REST principaux de LyonFlowFull.
 
-Expose :
-- /health : health check public
-- /api/v1/models : liste des modèles MLflow
-- /api/v1/predict/traffic : prédiction vitesse trafic par nœud/horizon
-- /api/v1/predict/velov : prédiction dispo Vélov
-- /api/v1/recommend : recommandation trajet multimodale
-- /api/v1/bottlenecks : liste des bottlenecks infrastructure
-- /api/v1/rgpd/request : demande RGPD (accès/suppression)
+Expose les services suivants :
+- `/health` : Vérification publique de l'état de santé de l'API.
+- `/api/v1/models` : Liste des modèles MLflow disponibles.
+- `/api/v1/predict/traffic` : Inférence sur la vitesse du trafic routier par nœud/horizon.
+- `/api/v1/predict/velov` : Inférence sur la disponibilité des stations Vélo'v.
+- `/api/v1/recommend` : Moteur de recommandation d'itinéraires multimodaux.
+- `/api/v1/bottlenecks` : Identification des goulots d'étranglement de l'infrastructure.
+- `/api/v1/rgpd/request` : Gestion des requêtes RGPD (droit d'accès et de suppression).
 """
 
 from __future__ import annotations
@@ -74,7 +74,7 @@ app.add_middleware(
 # Rate limit (en mémoire — Redis en prod)
 app.add_middleware(RateLimitMiddleware)
 
-# Prometheus instrumentation (Sprint VPS-4) — expose /metrics
+# Prometheus instrumentation ) — expose /metrics
 # - http_requests_total{job="fastapi",method,handler,status}
 # - http_request_duration_seconds histogram
 # - process_* metrics (CPU, RAM, fds)
@@ -240,7 +240,7 @@ class ItinerarySegmentResponse(BaseModel):
     start_lat: float
     end_lon: float
     end_lat: float
-    geometry: list[list[float]] | None = None  # Sprint 26+ polyline OSM [[lon, lat], ...]
+    geometry: list[list[float]] | None = None  # + polyline OSM [[lon, lat], ...]
 
 
 class ItineraryResponse(BaseModel):
@@ -324,12 +324,12 @@ async def predict_traffic(req: PredictTrafficRequest, api_key: None = Depends(ve
 
     EXPLICATION MÉTIER (Analyse) :
     Cette route est appelée par le Dashboard (Persona Pro TCL) pour afficher la carte de prédiction.
-    Depuis le Sprint 8, le modèle ML s'attend à recevoir un identifiant `channel_id` de type texte
+  Depuis le , le modèle ML s'attend à recevoir un identifiant `channel_id` de type texte
     (ex: 'LYO00007'), alors que l'API et le frontend utilisent historiquement un `node_idx` (entier).
     Nous réalisons donc ici une traduction "node_idx -> channel_id" en interrogeant PostgreSQL
     (`gold.dim_spatial_grid_mapping`).
     """
-    # Sprint VPS-4 : métriques ML
+  # métriques ML
     with PREDICTION_LATENCY.labels(model="xgboost_speed").time():
         # Récupération channel_id via mapping node_idx
         from src.db import execute_query
@@ -369,7 +369,7 @@ async def predict_traffic(req: PredictTrafficRequest, api_key: None = Depends(ve
 @app.post("/api/v1/predict/velov", response_model=PredictVelovResponse, tags=["predict"])
 async def predict_velov(req: PredictVelovRequest, api_key: None = Depends(verify_api_key)):
     """Prédit la disponibilité Vélov pour une station et un horizon."""
-    # Sprint VPS-4 : métriques ML
+  # métriques ML
     with PREDICTION_LATENCY.labels(model="xgboost_velov").time():
         from src.models.xgboost_velov import XGBoostVelovModel
 
@@ -477,7 +477,7 @@ async def itinerary(req: ItineraryRequest, api_key: None = Depends(verify_api_ke
                 start_lat=s.start_lat,
                 end_lon=s.end_lon,
                 end_lat=s.end_lat,
-                geometry=s.geometry,  # Sprint 26+ polyline OSM
+        geometry=s.geometry, # polyline OSM
             )
             for s in itin.segments
         ],
@@ -577,7 +577,7 @@ async def login(req: LoginRequest, request: Request):
         )
         raise HTTPException(status_code=401, detail="Identifiants invalides")
 
-    # JWT généré (Sprint 21 — create_jwt déjà implémenté, le TODO était obsolète)
+  # JWT généré create_jwt déjà implémenté, le TODO était obsolète)
     token = create_jwt(
         user_id=str(user["user_id"]),
         username=user["username"],

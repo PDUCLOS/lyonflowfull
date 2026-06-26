@@ -1,4 +1,4 @@
-"""Bulk migration Sprint 20 Axe D : remplace st.error(f"⚠️ {e}") par show_error("db_down", str(e)).
+"""Bulk migration Axe D : remplace st.error(f"⚠️ {e}") par show_error("db_down", str(e)).
 
 Pour chaque widget dans WIDGET_FILES :
 1. Ajoute l'import ``from dashboard.components.error_display import show_error``

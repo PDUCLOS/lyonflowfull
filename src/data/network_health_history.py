@@ -1,6 +1,8 @@
-"""Helper DB pour gold.network_health_history (Sprint 21 P4.3).
+"""Assistant pour la table `gold.network_health_history`.
 
-Lit l'historique des scores de santé réseau pour la sparkline 24h.
+Ce module lit l'historique des scores de santé globale du réseau. Ces données
+sont notamment utilisées pour générer le graphique de tendance (sparkline) sur 24h
+dans l'interface principale.
 """
 
 from __future__ import annotations
@@ -14,14 +16,17 @@ logger = logging.getLogger(__name__)
 
 
 def get_network_health_history(hours: int = 24) -> list[dict]:
-    """Retourne l'historique des scores de santé réseau sur les N dernières heures.
+    """Récupère l'historique des scores de santé du réseau sur une période donnée.
 
     Args:
-        hours: fenêtre temporelle (défaut 24h, soit 96 snapshots à */15 min).
+        hours: Fenêtre temporelle en heures (par défaut 24h, ce qui équivaut 
+               à environ 96 instantanés enregistrés toutes les 15 minutes).
 
     Returns:
-        Liste de dicts {recorded_at, score, traffic_score, tcl_score, velov_score, meteo_score}.
-        Liste vide si la table n'existe pas encore ou si < 1 row.
+        Une liste de dictionnaires contenant les clés suivantes :
+        {recorded_at, score, traffic_score, tcl_score, velov_score, meteo_score}.
+        Retourne une liste vide si la table n'est pas encore provisionnée ou 
+        ne contient aucune ligne.
     """
     try:
         cutoff = datetime.now(UTC) - timedelta(hours=hours)
@@ -43,6 +48,7 @@ def get_network_health_history(hours: int = 24) -> list[dict]:
         )
         return [dict(row) for row in rows] if rows else []
     except Exception as e:
-        # Table pas encore créée (pre-deploy) ou DB indispo → fallback gracieux
-        logger.debug("gold.network_health_history non lisible (ignoré): %s", e)
+        # Si la table n'a pas encore été créée (par exemple avant le premier déploiement complet)
+        # ou que la base de données est indisponible, on met en place un fallback gracieux.
+        logger.debug("La table gold.network_health_history est illisible ou inexistante (ignoré): %s", e)
         return []

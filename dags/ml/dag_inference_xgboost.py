@@ -1,6 +1,6 @@
 """DAG — Inférence XGBoost Speed temps réel (1x/15min).
 
-Sprint 9+ Optimisation (2026-06-12) — Remplace
+ Optimisation (2026-06-12) — Remplace
 ``dag_live_speed_retrain`` qui entraînait toutes les 30 min (gaspillage
 CPU/RAM). Maintenant :
 
@@ -34,7 +34,7 @@ DEFAULT_ARGS = {
     "depends_on_past": False,
     "email_on_failure": False,
     "email_on_retry": False,
-    "retries": 0,  # le cycle suivant rattrape (Sprint 8+, pas de cascade)
+  "retries": 0, # le cycle suivant rattrape , pas de cascade)
     "execution_timeout": timedelta(minutes=10),
 }
 
@@ -46,7 +46,7 @@ DEFAULT_SPEED_LIMIT = 50.0
 def _get_model():
     """Charge le modèle XGBoost H+1h depuis le disque ou MLflow Registry.
 
-    Sprint 10+ fix : le cache process-local ``_model_cache`` a été
+  fix : le cache process-local ``_model_cache`` a été
     supprimé — avec CeleryExecutor (worker_concurrency=2), chaque DAG run
     tourne dans un process Python distinct, donc le cache n'est jamais
     réutilisé (le coût du ``model.load()`` est marginal : ~50ms, < 1 % du
@@ -92,7 +92,7 @@ def _load_axes() -> list[dict]:
     """Charge les axes (= channels avec données Gold récentes).
 
     On itère sur les channel_id distincts de traffic_features_live
-    (cf. note Sprint 8+ dans le code legacy — le mapping axis_key ↔
+  (cf. note dans le code legacy — le mapping axis_key ↔
     node_idx reste à réconcilier côté gold.dim_spatial_grid_mapping).
     """
     rows = execute_query("""
@@ -207,7 +207,7 @@ with DAG(
     start_date=datetime(2026, 6, 12),
     catchup=False,
     max_active_runs=1,
-    tags=["ml", "inference", "xgboost", "sprint9"],
+  tags=["ml", "inference", "xgboost", "sprint9"],
 ) as dag:
     predict = PythonOperator(
         task_id="predict_and_persist_gold",

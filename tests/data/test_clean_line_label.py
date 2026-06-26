@@ -1,6 +1,6 @@
 """Tests — ``clean_line_label`` (helper TCL).
 
-Sprint 16 : le suffixe horaire ``_hNN`` est désormais supprimé
+ le suffixe horaire ``_hNN`` est désormais supprimé
 (``"ActIV:Line::66:SYTRAL_h20"`` → ``"L66"`` et non plus ``"L66 ; 20h"``).
 """
 
@@ -26,7 +26,7 @@ from src.data.db_query import clean_line_label
         # Cas nominal sans bucket horaire
         ("ActIV:Line::66:SYTRAL", "L66"),
         ("ActIV:Line::4252:SYTRAL", "L4252"),
-        # Avec bucket horaire — suffixe _hNN supprimé (Sprint 16)
+    # Avec bucket horaire — suffixe _hNN supprimé )
         ("ActIV:Line::4252:SYTRAL_h16", "L4252"),
         ("ActIV:Line::66:SYTRAL_h20", "L66"),
         # Ligne métro (suffixe alphabétique)

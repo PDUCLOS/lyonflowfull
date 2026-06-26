@@ -1,8 +1,8 @@
-"""Tests Sprint 13+ — Helpers db_query TomTom coherence + fail loud.
+"""Tests Helpers db_query TomTom coherence + fail loud.
 
 Vérifie que les nouveaux helpers ``get_tomtom_coherence`` et
 ``get_tomtom_gl_drift`` (et leurs wrappers data_loader) respectent
-la politique zéro mock de Sprint 8 : lèvent ``DashboardDataError``
+la politique zéro mock de lèvent ``DashboardDataError``
 quand la DB est indisponible.
 """
 

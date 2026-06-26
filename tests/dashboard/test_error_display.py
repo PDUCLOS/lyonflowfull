@@ -1,4 +1,4 @@
-"""Tests unitaires — dashboard/components/error_display.py (Sprint 20 Axe D).
+"""Tests unitaires — dashboard/components/error_display.py Axe D).
 
 Couvre :
 * get_error_message (fonction pure) : 3 personas × 3 types d'erreur, fallback

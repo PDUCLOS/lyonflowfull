@@ -1,8 +1,8 @@
 """Widget — Calculateur ROI (valeur du temps × voyageurs × gain).
 
-Sprint 8 — Bottlenecks via data_loader.cached_bottlenecks_top().
+ Bottlenecks via data_loader.cached_bottlenecks_top().
 
-Sprint 22+ (2026-06-25) — Fix Bug 7 du SPEC_FIX_ELU2_BOTTLENECKS.md :
+ (2026-06-25) — Fix Bug 7 du SPEC_FIX_ELU2_BOTTLENECKS.md :
 * Affichage du **diagnostic** du bottleneck sélectionné (info contextuelle).
 * Cohérence avec le ROI du tableau ranking : les 2 utilisent désormais la
   même formule (voyageurs × gain × valeur_temps × 2 × jours_an / coût).

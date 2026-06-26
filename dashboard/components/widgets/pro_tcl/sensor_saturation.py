@@ -1,4 +1,4 @@
-"""Widget — Saturation + amplitude par capteur (Sprint 22+).
+"""Widget — Saturation + amplitude par capteur ).
 
 Affiche pour chaque capteur du réseau routier lyonnais :
 * Saturation actuelle (vitesse / v85 7j) en %
@@ -132,7 +132,7 @@ def render_sensor_saturation() -> None:
     Fail loud via ``DashboardDataError`` si PostgreSQL indispo ou si
     la migration 034 (matérialisée) n'est pas appliquée.
     """
-    st.markdown("##### 📡 Saturation + amplitude par capteur (Sprint 22+)")
+    st.markdown("##### 📡 Saturation + amplitude par capteur (+)")
 
     with loading_wrapper("Chargement Sensor saturation…", "📡"):
         try:

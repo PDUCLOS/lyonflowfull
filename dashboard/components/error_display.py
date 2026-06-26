@@ -1,4 +1,4 @@
-"""Affichage des erreurs adapté au persona — Sprint 20 Axe D.
+"""Affichage des erreurs adapté au persona — Axe D.
 
 Le pattern actuel ``st.error(f"⚠️ {e}")`` expose le message technique brut
 de l'exception (ex: ``[gold.trafic_predictions] Données pipeline indisponibles

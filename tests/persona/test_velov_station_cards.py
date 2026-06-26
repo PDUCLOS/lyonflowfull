@@ -1,4 +1,4 @@
-"""Tests Sprint 14 — Vélov station cards (T6).
+"""Tests Vélov station cards (T6).
 
 Couvre (sans mock — assertions sur le code source et dataclass) :
 - VelovSegment enrichi avec n_bikes_mechanical + n_bikes_electrical (2 tests)
@@ -17,7 +17,7 @@ sys.path.insert(0, str(WORKSPACE))
 
 
 # =============================================================================
-# 1. VelovSegment enrichi Sprint 14 (2 tests)
+# 1. VelovSegment enrichi (2 tests)
 # =============================================================================
 
 

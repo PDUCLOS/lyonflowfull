@@ -1,8 +1,15 @@
-"""XGBoost Velov Model — prédiction disponibilité Vélov.
+"""Modèle XGBoost Vélo'v — Prédiction de la disponibilité des vélos.
 
-Features : station_id_encoded, temporel, météo, lags, rolling
+Ce modèle estime le nombre de vélos disponibles par station à un horizon donné.
 
-Sprint 9 — Chaque train log dans MLflow via src.ml.mlflow_integration.
+Features principales exploitées :
+- Encodage catégoriel : station_id_encoded
+- Variables temporelles : heure, jour de la semaine (encodage cyclique)
+- Variables météorologiques : température, précipitations
+- Contexte historique : Lags et moyennes glissantes (rolling means)
+
+Chaque session d'entraînement est automatiquement journalisée dans MLflow 
+via le module centralisé `src.ml.mlflow_integration`.
 """
 
 from __future__ import annotations
@@ -52,9 +59,9 @@ class XGBoostVelovModel:
 
         from src.ml.mlflow_integration import is_mlflow_available
 
-        # Sprint 22+ : focus H+1h strict. Avant : [30, 60] — H+30min n'est
+    # focus H+1h strict. Avant : [30, 60] — H+30min n'est
         # plus alimenté par le DAG retrain_xgboost_velov (cf. règle
-        # projet Sprint VPS-6). Conserver [30, 60] chargerait un modèle
+    # projet ). Conserver [30, 60] chargerait un modèle
         # .pkl potentiellement absent → fail loud au runtime.
         horizons = horizons or [60]
         for h in horizons:
@@ -117,7 +124,7 @@ class XGBoostVelovModel:
         model_path.parent.mkdir(parents=True, exist_ok=True)
         joblib.dump(model, model_path)
 
-        # MLflow tracking (Sprint 9 — opt-out via MLFLOW_TRACKING_URI="")
+    # MLflow tracking opt-out via MLFLOW_TRACKING_URI="")
         if os.getenv("MLFLOW_TRACKING_URI", "") != "":
             try:
                 from src.ml.mlflow_integration import MLflowTracker

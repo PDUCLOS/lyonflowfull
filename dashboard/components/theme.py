@@ -272,7 +272,7 @@ def inject_theme() -> None:
         margin-top: 2px;
     }}
 
-    /* Sprint 15+ audit — Classes utilitaires de typographie.
+  /* audit — Classes utilitaires de typographie.
        Objectif : remplacer les `style="font-size:0.7Xrem"` inline dans
        23+ widgets. Le `!important` est nécessaire car le style inline
        a une spécificité CSS supérieure à toute règle externe.
@@ -282,7 +282,7 @@ def inject_theme() -> None:
         opacity: 0.7;
         font-weight: 400;
     }}
-    /* Sprint 20 Axe F — Badge fraîcheur données (freshness_badge.py) */
+  /* Axe F — Badge fraîcheur données (freshness_badge.py) */
     .lyf-freshness-badge {{
         font-size: 0.75rem !important;
         color: var(--text-muted);
@@ -311,7 +311,7 @@ def inject_theme() -> None:
         font-size: 0.85rem !important;
         opacity: 0.65;
     }}
-    /* Sprint 20 Axe E — Accessibilité RGAA/WCAG 2.1 AA */
+  /* Axe E — Accessibilité RGAA/WCAG 2.1 AA */
     /* sr-only : texte lu par les lecteurs d'écran, invisible visuellement */
     .sr-only {{
         position: absolute;
@@ -409,7 +409,7 @@ def inject_theme() -> None:
     """
     st.markdown(css, unsafe_allow_html=True)
 
-    # Sprint 20 Axe E — Accessibilité : lang="fr" + skip link
+  # Axe E — Accessibilité : lang="fr" + skip link
     st.markdown(
         '<script>document.documentElement.lang="fr";</script>',
         unsafe_allow_html=True,

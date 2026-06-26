@@ -1,8 +1,8 @@
-"""Tests Sprint 14 — Régression des modes existants (Vélov + Voiture).
+"""Tests Régression des modes existants (Vélov + Voiture).
 
 Couvre (sans mock — vérifications d'import et de structure) :
-- Vélov toujours fonctionnel après enrichissement Sprint 14 (2 tests)
-- Voiture toujours fonctionnel après ajout Sprint 14 (1 test)
+- Vélov toujours fonctionnel après enrichissement (2 tests)
+- Voiture toujours fonctionnel après ajout (1 test)
 """
 
 from __future__ import annotations
@@ -59,9 +59,8 @@ def test_velov_widget_render_velov_trip_still_callable():
 
 def test_plan_car_trip_still_importable_after_sprint14():
     """plan_car_trip reste importable + signature inchangée après Sprint 14.
-
-    Convention canonique Sprint 8 hotfix 7 : (lon, lat, lon, lat)
-    avec noms courts ``origin_lon/origin_lat/dest_lon/dest_lat``.
+  Convention canonique hotfix 7 : (lon, lat, lon, lat)
+    Convention canonique hotfix 7 : (lon, lat, lon, lat)
     """
     import inspect
 
@@ -69,8 +68,8 @@ def test_plan_car_trip_still_importable_after_sprint14():
 
     assert callable(plan_car_trip)
     sig = inspect.signature(plan_car_trip)
-    # Convention (lon, lat) — noms courts depuis Sprint 8 hotfix 7
-    assert "origin_lon" in sig.parameters
+    sig = inspect.signature(plan_car_trip)
+    # Convention (lon, lat) — noms courts depuis hotfix 7
     assert "origin_lat" in sig.parameters
     assert "dest_lon" in sig.parameters
     assert "dest_lat" in sig.parameters

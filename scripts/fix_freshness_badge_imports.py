@@ -1,4 +1,4 @@
-"""Fix Sprint 20 Axe F : déplace l'import mal placé dans les pages.
+"""Fix Axe F : déplace l'import mal placé dans les pages.
 
 Le script ``migrate_freshness_badge.py`` a inséré l'import au mauvais endroit
 dans ~10 fichiers : après le ``(`` d'un multi-ligne ``from X import (`` au lieu

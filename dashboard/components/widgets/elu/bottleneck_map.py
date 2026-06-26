@@ -1,8 +1,8 @@
 """Widget — Carte Folium des 10 bottlenecks.
 
-Sprint 8 — Bottlenecks chargés via data_loader.cached_bottlenecks_top().
+ Bottlenecks chargés via data_loader.cached_bottlenecks_top().
 
-Sprint 22+ (2026-06-25) — Fix Bug 2 du SPEC_FIX_ELU2_BOTTLENECKS.md :
+ (2026-06-25) — Fix Bug 2 du SPEC_FIX_ELU2_BOTTLENECKS.md :
 * Suppression du dict ``coords`` hardcodé (10 noms de rues → tout était
   skippé car ``zone`` valait ``"L66 ; 20h"``).
 * Utilisation des **coordonnées GPS réelles** (lat/lon) retournées par

@@ -1,6 +1,6 @@
 """Page Élu — Bottlenecks prioritaires.
 
-Sprint 22+ (2026-06-25) — Fix 9 bugs du SPEC_FIX_ELU2_BOTTLENECKS.md :
+ (2026-06-25) — Fix 9 bugs du SPEC_FIX_ELU2_BOTTLENECKS.md :
 * Carte alimentée par les vraies coordonnées GPS (gold.mv_bus_traffic_spatial)
 * Économie dérivée de la DB (gain = demi-retard bus, coût par diagnostic)
 * ROI unifié entre ranking et calculateur

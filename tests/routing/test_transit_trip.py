@@ -1,4 +1,4 @@
-"""Tests Sprint 14 — Routing transport en commun (TC).
+"""Tests Routing transport en commun (TC).
 
 Couvre :
 - Dataclasses TransitSegment + TransitItinerary (5 tests purs)
@@ -7,13 +7,13 @@ Couvre :
 - plan_transit_trip() contre la VRAIE DB (5 tests @pytest.mark.integration)
 - get_transit_options() helper DB (2 tests @pytest.mark.integration)
 
-Politique projet (Sprint 8+) — ZÉRO MOCK : les tests integration lisent les
+Politique projet ) — ZÉRO MOCK : les tests integration lisent les
 vraies données PostgreSQL (référentiel lieux_transports, lieux_calendrier,
 gold.bus_delay_segments, etc.). Skip par défaut via addopts "-m not integration"
 (pyproject.toml ligne 177). Lancés explicitement sur le VPS via
 ``pytest -m integration``.
 
-Cible Sprint 14 : ~23 tests pour le routing TC (12 purs + 11 integration).
+Cible ~23 tests pour le routing TC (12 purs + 11 integration).
 """
 
 from __future__ import annotations
@@ -340,7 +340,7 @@ def test_time_bucket_from_date_format():
 def test_plan_transit_trip_direct_villeurbanne_confluence():
     """Villeurbanne → Confluence : intersection M_A → trajet direct (DB live).
 
-    Le référentiel lieux_transports (Sprint VPS-6) seed :
+  Le référentiel lieux_transports ) seed :
       - Villeurbanne : M_A (rank 1, Laurent Bonnevay 400m)
       - Confluence    : M_A (rank 1, Confluence 80m)
     Intersection = {M_A} → trajet direct.

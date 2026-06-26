@@ -1,9 +1,9 @@
-"""Helper de chargement différé (button-gate) — Sprint 15+ audit.
+"""Helper de chargement différé (button-gate) — audit.
 
 Problème : `st.tabs` et `st.expander` ne diffèrent PAS le calcul. Les widgets
 lourds (Folium HTML, pydeck WebGL, multi-Plotly) se re-rendent à chaque
 auto-refresh (30s Pro, 60s Usager). Sur VPS 12 Go, Pro_3 cumule 3 widgets
-Sprint 13+/15+ (Folium + 3×Plotly + PostGIS) = 5-15s par cycle.
+ /15+ (Folium + 3×Plotly + PostGIS) = 5-15s par cycle.
 
 Solution : ``deferred_render()`` persiste le choix de l'utilisateur dans
 ``session_state`` pour qu'au prochain auto-refresh le widget reste visible.

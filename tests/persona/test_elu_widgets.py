@@ -9,7 +9,7 @@ WORKSPACE = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(WORKSPACE))
 
 
-# Sprint 15 prep (2026-06-19) — 4 tests mock-constants supprimés (test_mock_data_elu_imports,
+# prep (2026-06-19) — 4 tests mock-constants supprimés (test_mock_data_elu_imports,
 # test_kpis_have_5_entries, test_bottlenecks_count, test_amenagements_passes_have_avant_apres).
 # Backup local hors-repo: ~/.mavis/backups/sprint15-prep/persona/test_elu_widgets.py
 
@@ -61,7 +61,7 @@ def test_synthese_has_5_kpi_cards():
 
 
 # =============================================================================
-# Sprint 22+ (2026-06-25) — Tests Fix 9 bugs Elu_2_Bottlenecks
+# (2026-06-25) — Tests Fix 9 bugs Elu_2_Bottlenecks
 # =============================================================================
 # Vérifie que les widgets ont bien été migrés :
 # - Bug 2 : bottleneck_map n'a plus de dict coords hardcodé, utilise lat/lon

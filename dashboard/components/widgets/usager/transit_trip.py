@@ -1,13 +1,13 @@
 """Widget — Trajet transport en commun (TC) entre 2 lieux du référentiel.
 
-Affiche (Sprint 14, 2026-06-19) :
+Affiche , 2026-06-19) :
 - Bandeau itinéraire O → D avec pastille "Direct" ou "1 correspondance"
 - 4 KPI cards : durée totale, marche totale, correspondances, retard cumulé
 - Détail par segment (ligne + arrêts + fréquence + retard + confiance)
 - Indicateurs marche d'accès aux arrêts
 - Disclaimer permanent (fréquences estimées, pas horaires exacts GTFS)
 
-Source : 100% pipeline (Sprint 8 fail loud) :
+Source : 100% pipeline fail loud) :
 * referentiel.lieux_transports (dessertes N-N lieu ↔ ligne)
 * referentiel.lieux_calendrier (cadences observées weekday/samedi/dimanche/vacances)
 * gold.bus_delay_segments (retards SIRI 7j glissants)
@@ -47,7 +47,7 @@ def render_transit_trip(origin: str, destination: str) -> dict | None:
         destination: label du lieu destination (idem).
 
     Returns:
-        Sprint 16 Axe C — Dict ``{"duration_min", "distance_km", "feasible",
+    Axe C — Dict ``{"duration_min", "distance_km", "feasible",
         "source": "computed"}`` pour intégration au comparateur multimodal
         d'Usager_1. None si l'itinéraire n'a pas pu être calculé.
     """
@@ -85,7 +85,7 @@ def render_transit_trip(origin: str, destination: str) -> dict | None:
     st.markdown("---")
     _render_transit_disclaimer()
 
-    # Sprint 16 Axe C — Retour dict pour comparateur multimodal.
+  # Axe C — Retour dict pour comparateur multimodal.
     return {
         "duration_min": float(itin.get("total_duration_min", 0.0)),
         "distance_km": float(itin.get("total_distance_km", 0.0)),

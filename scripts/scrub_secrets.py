@@ -1,6 +1,6 @@
 """Gitleaks-style scrubber — détecte les secrets avant commit.
 
-Sprint 8+ (2026-06-12) — protection de la logique projet.
+ (2026-06-12) — protection de la logique projet.
 
 Le repo LyonFlowFull est public sur GitHub (PDUCLOS/lyonflowfull).
 Pour éviter qu'un concurrent copie-colle la logique métier (modèles

@@ -1,1 +1,1 @@
-"""Package tests.routing — tests Sprint 14 routing transport en commun."""
+"""Package tests.routing — tests routing transport en commun."""

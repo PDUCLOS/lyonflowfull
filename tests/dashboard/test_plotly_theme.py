@@ -1,4 +1,4 @@
-"""Tests unitaires — dashboard/components/plotly_theme.py (Sprint 20 Axe B).
+"""Tests unitaires — dashboard/components/plotly_theme.py Axe B).
 
 Couvre :
 * LYF_TEMPLATE : thème Plotly cohérent avec le dark mode du dashboard

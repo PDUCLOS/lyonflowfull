@@ -1,9 +1,9 @@
 """Widget — Météo compacte (impact sur Vélov, marche, vélo).
 
-Sprint 8 — Migration data_loader. Si ``weather=None``, tente la DB
+ Migration data_loader. Si ``weather=None``, tente la DB
 (Silver.meteo_hourly) via data_loader.
 
-Sprint VPS-6 (2026-06-11) — fail loud en prod :
+ (2026-06-11) — fail loud en prod :
 * DB dispo + données : météo live.
 * DB indispo en prod : ``DashboardDataError`` → ``st.error``.
 * DB répond, table vide : ``st.warning("Météo indispo — données manquantes")``.
@@ -35,7 +35,7 @@ def render_weather_widget(weather: dict | None = None) -> None:
             return
         if not df.empty:
             current = df.iloc[0].to_dict()
-            # Sprint 10 : weather_code est un int WMO (Open-Meteo). On le convertit
+      # weather_code est un int WMO (Open-Meteo). On le convertit
             # en label FR lisible + emoji via _wmo_to_label().
             raw_code = current.get("condition_label") or current.get("weather_code")
             label, icon_from_code = _wmo_to_label(raw_code)
@@ -47,14 +47,14 @@ def render_weather_widget(weather: dict | None = None) -> None:
                 "wind_kmh": current.get("wind_kmh", 0),
                 "next_3h": [],
             }
-        # Sprint 8 (2026-06-12) — viré le fallback MOCK_WEATHER.
+    # (2026-06-12) — viré le fallback MOCK_WEATHER.
         else:
             st.warning("⚠️ Météo indisponible — silver.meteo_hourly est vide.")
             return
 
     icon = str(weather.get("condition_icon", "☀️"))
     cond = str(weather.get("condition", ""))
-    # Sprint 10 : arrondi 1 décimale pour éviter les artefacts float32
+  # arrondi 1 décimale pour éviter les artefacts float32
     # ('16.700000762939453' → '16.7').
     temp = round(float(weather.get("temp_c", 0)), 1)
     rain = round(float(weather.get("rain_mm_h", 0)), 1)

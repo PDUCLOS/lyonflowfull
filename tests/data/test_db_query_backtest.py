@@ -1,4 +1,4 @@
-"""Tests Sprint 16 Axe A — Backtest Engine (XGBoost vs TomTom).
+"""Tests Axe A — Backtest Engine (XGBoost vs TomTom).
 
 Couvre ``src.data.db_query.get_xgb_vs_tomtom()`` et
 ``get_xgb_accuracy_summary()``. Pas de DB live (skip pattern cf.
@@ -33,7 +33,7 @@ def disable_db(monkeypatch):
 def test_get_xgb_vs_tomtom_empty_when_db_down():
     """get_xgb_vs_tomtom() doit retourner un DataFrame vide si DB indispo.
 
-    Politique Sprint 8 : ``_df_from_query`` retourne DataFrame vide + warning
+  Politique ``_df_from_query`` retourne DataFrame vide + warning
     (pas de DashboardDataError) — le caller gère l'absence de données.
     """
     result = db_query.get_xgb_vs_tomtom(hours=24, limit=500)
