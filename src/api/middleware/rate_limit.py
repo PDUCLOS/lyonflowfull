@@ -145,15 +145,16 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
         """
         before = len(self._buckets)
         self._buckets = {
-            k: (last_seen, b)
-            for k, (last_seen, b) in self._buckets.items()
-            if now - last_seen < _TTL_IDLE_SECONDS
+            k: (last_seen, b) for k, (last_seen, b) in self._buckets.items() if now - last_seen < _TTL_IDLE_SECONDS
         }
         after = len(self._buckets)
         if before != after:
             logger.info(
                 "RateLimit cleanup: %d → %d IPs (purgées %d inactives > %ds)",
-                before, after, before - after, _TTL_IDLE_SECONDS,
+                before,
+                after,
+                before - after,
+                _TTL_IDLE_SECONDS,
             )
 
     def _get_client_ip(self, request: Request) -> str:

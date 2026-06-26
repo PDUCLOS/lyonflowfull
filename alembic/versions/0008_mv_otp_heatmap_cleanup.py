@@ -81,14 +81,8 @@ def upgrade() -> None:
     )
 
     # 3) Index unique (PK logique pour REFRESH CONCURRENTLY si besoin plus tard)
-    op.execute(
-        "CREATE UNIQUE INDEX idx_mv_otp_heatmap_line_date_hour "
-        "ON gold.mv_otp_heatmap (line_id, date, hour)"
-    )
-    op.execute(
-        "CREATE INDEX IF NOT EXISTS idx_mv_otp_heatmap_date "
-        "ON gold.mv_otp_heatmap (date DESC)"
-    )
+    op.execute("CREATE UNIQUE INDEX idx_mv_otp_heatmap_line_date_hour ON gold.mv_otp_heatmap (line_id, date, hour)")
+    op.execute("CREATE INDEX IF NOT EXISTS idx_mv_otp_heatmap_date ON gold.mv_otp_heatmap (date DESC)")
 
     # 4) REFRESH pour peupler la vue
     op.execute("REFRESH MATERIALIZED VIEW gold.mv_otp_heatmap")

@@ -38,9 +38,7 @@ logger = logging.getLogger(__name__)
 _ALGORITHM = "AWS4-HMAC-SHA256"
 
 
-def _sign(
-    key: bytes, msg: str
-) -> bytes:
+def _sign(key: bytes, msg: str) -> bytes:
     """HMAC-SHA256."""
     return hmac.new(key, msg.encode("utf-8"), hashlib.sha256).digest()
 
@@ -111,22 +109,17 @@ def upload_file_to_minio(
     )
     signed_headers = "content-length;content-type;host;x-amz-content-sha256;x-amz-date"
     canonical_request = (
-        f"PUT\n{canonical_uri}\n{canonical_querystring}\n"
-        f"{canonical_headers}\n{signed_headers}\n{file_hash}"
+        f"PUT\n{canonical_uri}\n{canonical_querystring}\n{canonical_headers}\n{signed_headers}\n{file_hash}"
     )
 
     # String to sign
     credential_scope = f"{date_stamp}/{region}/s3/aws4_request"
     hashed_canonical = hashlib.sha256(canonical_request.encode("utf-8")).hexdigest()
-    string_to_sign = (
-        f"{_ALGORITHM}\n{amz_date}\n{credential_scope}\n{hashed_canonical}"
-    )
+    string_to_sign = f"{_ALGORITHM}\n{amz_date}\n{credential_scope}\n{hashed_canonical}"
 
     # Signature
     signing_key = _get_signature_key(secret_key, date_stamp, region, "s3")
-    signature = hmac.new(
-        signing_key, string_to_sign.encode("utf-8"), hashlib.sha256
-    ).hexdigest()
+    signature = hmac.new(signing_key, string_to_sign.encode("utf-8"), hashlib.sha256).hexdigest()
 
     # Authorization header
     authorization = (
@@ -147,14 +140,10 @@ def upload_file_to_minio(
     try:
         resp = requests.put(url, data=file_bytes, headers=headers, timeout=300)
     except requests.RequestException as e:
-        raise RuntimeError(
-            f"MinIO upload failed (network): {e}. URL: {url}"
-        ) from e
+        raise RuntimeError(f"MinIO upload failed (network): {e}. URL: {url}") from e
 
     if resp.status_code not in (200, 201):
-        raise RuntimeError(
-            f"MinIO upload failed: HTTP {resp.status_code} — {resp.text[:500]}. URL: {url}"
-        )
+        raise RuntimeError(f"MinIO upload failed: HTTP {resp.status_code} — {resp.text[:500]}. URL: {url}")
 
     s3_uri = f"s3://{bucket}/{key}"
     logger.info(

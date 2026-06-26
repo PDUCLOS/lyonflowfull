@@ -107,10 +107,7 @@ def upgrade() -> None:
         )
         """
     )
-    op.execute(
-        "CREATE INDEX IF NOT EXISTS idx_lieux_transports_lieu_id "
-        "ON referentiel.lieux_transports (lieu_id)"
-    )
+    op.execute("CREATE INDEX IF NOT EXISTS idx_lieux_transports_lieu_id ON referentiel.lieux_transports (lieu_id)")
 
     # -------------------------------------------------------------------------
     # referentiel.lieux_calendrier
@@ -131,10 +128,7 @@ def upgrade() -> None:
         )
         """
     )
-    op.execute(
-        "CREATE INDEX IF NOT EXISTS idx_lieux_calendrier_line_ref "
-        "ON referentiel.lieux_calendrier (line_ref)"
-    )
+    op.execute("CREATE INDEX IF NOT EXISTS idx_lieux_calendrier_line_ref ON referentiel.lieux_calendrier (line_ref)")
 
     # -------------------------------------------------------------------------
     # gold.mv_line_kpis_live (vue matérialisée)
@@ -165,10 +159,7 @@ def upgrade() -> None:
         GROUP BY v.line_ref
         """
     )
-    op.execute(
-        "CREATE UNIQUE INDEX IF NOT EXISTS idx_mv_line_kpis_live_line_id "
-        "ON gold.mv_line_kpis_live (line_id)"
-    )
+    op.execute("CREATE UNIQUE INDEX IF NOT EXISTS idx_mv_line_kpis_live_line_id ON gold.mv_line_kpis_live (line_id)")
 
     # -------------------------------------------------------------------------
     # gold.xgb_training_set

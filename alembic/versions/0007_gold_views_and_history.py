@@ -133,8 +133,7 @@ def upgrade() -> None:
         """
     )
     op.execute(
-        "CREATE UNIQUE INDEX IF NOT EXISTS idx_mv_kpis_12_months_kpi_month "
-        "ON gold.mv_kpis_12_months (kpi_key, month)"
+        "CREATE UNIQUE INDEX IF NOT EXISTS idx_mv_kpis_12_months_kpi_month ON gold.mv_kpis_12_months (kpi_key, month)"
     )
 
     # -------------------------------------------------------------------------
@@ -207,8 +206,7 @@ def upgrade() -> None:
         """
     )
     op.execute(
-        "CREATE INDEX IF NOT EXISTS idx_amenagements_history_date_fin "
-        "ON gold.amenagements_history (date_fin DESC)"
+        "CREATE INDEX IF NOT EXISTS idx_amenagements_history_date_fin ON gold.amenagements_history (date_fin DESC)"
     )
 
 

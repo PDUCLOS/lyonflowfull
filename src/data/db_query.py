@@ -586,6 +586,7 @@ def get_data_freshness(schema: str = "bronze", table: str = "trafic_boucles") ->
     # même après whitelist. Defense in depth (ne jamais faire confiance à
     # f-string même si input est validée).
     from psycopg2 import sql as pg_sql
+
     query = pg_sql.SQL("SELECT MAX(fetched_at) FROM {}.{}").format(
         pg_sql.Identifier(schema),
         pg_sql.Identifier(table),
@@ -619,20 +620,17 @@ def get_bronze_source_counts(hours: int = 1) -> pd.DataFrame:
 
     rows = []
     from psycopg2 import sql as pg_sql
+
     for table, label in sources:
         # Une requête par table (pas de UNION sur des tables hétérogènes)
         try:
             count = execute_scalar(
-                pg_sql.SQL("SELECT COUNT(*) FROM bronze.{} WHERE fetched_at >= NOW() - make_interval(hours => %s)").format(
-                    pg_sql.Identifier(table)
-                ),
+                pg_sql.SQL(
+                    "SELECT COUNT(*) FROM bronze.{} WHERE fetched_at >= NOW() - make_interval(hours => %s)"
+                ).format(pg_sql.Identifier(table)),
                 (hours,),
             )
-            last = execute_scalar(
-                pg_sql.SQL("SELECT MAX(fetched_at) FROM bronze.{}").format(
-                    pg_sql.Identifier(table)
-                )
-            )
+            last = execute_scalar(pg_sql.SQL("SELECT MAX(fetched_at) FROM bronze.{}").format(pg_sql.Identifier(table)))
             rows.append(
                 {
                     "source": label,
@@ -859,8 +857,7 @@ def get_line_kpis(line_ids: list[str] | None = None) -> dict:
     except Exception as e:
         # Vue absente ou query invalide — fail-soft.
         logger.warning(
-            "get_line_kpis: query gold.mv_line_kpis_live a échoué (%s) — "
-            "fallback dict vide.",
+            "get_line_kpis: query gold.mv_line_kpis_live a échoué (%s) — fallback dict vide.",
             e,
         )
         return {}
@@ -1067,8 +1064,7 @@ def get_lieux_lyon_names() -> list[str]:
         df = _df_from_query(query)
     except Exception as e:
         logger.warning(
-            "get_lieux_lyon_names: query referentiel.lieux_lyon a échoué (%s) — "
-            "fallback liste vide.",
+            "get_lieux_lyon_names: query referentiel.lieux_lyon a échoué (%s) — fallback liste vide.",
             e,
         )
         return []
@@ -1102,8 +1098,7 @@ def get_lieux_lyon_with_coords() -> list[dict]:
         df = _df_from_query(query)
     except Exception as e:
         logger.warning(
-            "get_lieux_lyon_with_coords: query referentiel.lieux_lyon a échoué (%s) — "
-            "fallback liste vide.",
+            "get_lieux_lyon_with_coords: query referentiel.lieux_lyon a échoué (%s) — fallback liste vide.",
             e,
         )
         return []

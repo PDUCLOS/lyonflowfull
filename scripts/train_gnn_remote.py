@@ -60,9 +60,7 @@ def load_data(days_dir: Path | None = None):
 
 
 def build_tensors(df: pd.DataFrame, seq_len: int, horizon_steps: int):
-    pivot = df.pivot_table(
-        index="timestamp", columns="node_idx", values="speed_norm", aggfunc="mean"
-    )
+    pivot = df.pivot_table(index="timestamp", columns="node_idx", values="speed_norm", aggfunc="mean")
     timestamps = pivot.index
     n_t, n_nodes = pivot.shape
 
@@ -143,9 +141,7 @@ def train(args):
     if device.type == "cuda":
         logger.info("GPU: %s", torch.cuda.get_device_name(0))
 
-    features, edge_index, n_nodes = load_data(
-        Path(args.data_dir) if args.data_dir else None
-    )
+    features, edge_index, n_nodes = load_data(Path(args.data_dir) if args.data_dir else None)
     edge_index = edge_index.to(device)
 
     horizon_steps = args.horizon_min // 5
@@ -209,7 +205,10 @@ def train(args):
         if epoch % 10 == 0 or epoch == args.epochs - 1:
             logger.info(
                 "Epoch %3d/%d  train=%.5f  val=%.5f  lr=%.1e",
-                epoch, args.epochs, train_loss, val_loss,
+                epoch,
+                args.epochs,
+                train_loss,
+                val_loss,
                 optimizer.param_groups[0]["lr"],
             )
 

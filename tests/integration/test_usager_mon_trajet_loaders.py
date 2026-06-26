@@ -87,6 +87,7 @@ def test_load_lyon_addresses_cached_returns_list():
     import os
 
     from src.data.data_loader import load_lyon_addresses
+
     os.environ["LYONFLOW_DEMO_MODE"] = "1"  # force mode démo
     try:
         result = load_lyon_addresses(force_mock=True)
@@ -100,6 +101,7 @@ def test_load_lyon_addresses_with_coords_cached():
     import os
 
     from src.data.data_loader import load_lyon_addresses_with_coords
+
     os.environ["LYONFLOW_DEMO_MODE"] = "1"
     try:
         result = load_lyon_addresses_with_coords(force_mock=True)
@@ -113,6 +115,7 @@ def test_load_cadence_for_line_signature():
     import os
 
     from src.data.data_loader import load_cadence_for_line
+
     os.environ["LYONFLOW_DEMO_MODE"] = "1"
     try:
         # Tous les kwargs doivent être supportés
@@ -161,6 +164,7 @@ def test_load_bottlenecks_top_includes_lat_lon():
     import os
 
     from src.data.data_loader import load_bottlenecks_top
+
     os.environ["LYONFLOW_DEMO_MODE"] = "1"
     try:
         result = load_bottlenecks_top(force_mock=True)
@@ -190,6 +194,7 @@ def test_load_velov_stations_includes_station_id():
     import os
 
     from src.data.data_loader import load_velov_stations
+
     os.environ["LYONFLOW_DEMO_MODE"] = "1"
     try:
         result = load_velov_stations(force_mock=True)

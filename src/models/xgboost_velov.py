@@ -46,12 +46,8 @@ class XGBoostVelovModel:
 
     def load(self, horizons: list[int] | None = None) -> None:
         """Charge les modèles depuis MLflow (si dispo) ou depuis le disque local."""
-        import mlflow
-
         from src.ml.mlflow_integration import is_mlflow_available
 
-        # Sprint 12+ — Vélov = XGBoost H+30min uniquement (focus réactivité).
-        # Avant : [30, 60] (2 horizons). Patrice : "tout en H+30min pour Vélov".
         horizons = horizons or [30]
         for h in horizons:
             model_name = f"xgb_velov_h{h}"
@@ -60,6 +56,8 @@ class XGBoostVelovModel:
             mlflow_success = False
             if is_mlflow_available():
                 try:
+                    import mlflow
+
                     artifact_uri = f"models:/{model_name}/Production"
                     local_path = mlflow.artifacts.download_artifacts(artifact_uri, dst_path=str(self._model_dir))
                     self.models[h] = joblib.load(local_path)

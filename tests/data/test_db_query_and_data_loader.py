@@ -84,6 +84,7 @@ class TestDbQueryFallback:
         # pour que le TTL de 60s ne déclenche pas un re-test de la DB
         # (qui échouerait en local et ferait retomber sur le mock fallback).
         import time as _time
+
         monkeypatch.setattr(db_query, "_db_available_cache_ts", _time.monotonic())
 
         with pytest.raises(DashboardDataError):
