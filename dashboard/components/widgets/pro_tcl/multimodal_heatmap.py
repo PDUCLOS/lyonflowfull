@@ -151,7 +151,7 @@ def _popup_html(row: pd.Series) -> str:
 def _build_folium_map(df: pd.DataFrame) -> folium.Map:  # type: ignore[name-defined]
     """Construit la carte Folium avec rectangles colorés par cellule."""
     import folium
-    from folium.plugins import Rectangle
+    from folium.vector_layers import Rectangle
 
     # Centre Lyon par défaut (Part-Dieu)
     m = folium.Map(
