@@ -17,7 +17,7 @@ from dashboard.components.widgets.elu import (
 )
 
 st.set_page_config(
-    page_title="Simulateur aménagement — Élu · LyonFlowFull",
+    page_title="Simulateur aménagement — Élu · LyonFlow",
     page_icon="✏️",
     layout="wide",
 )
@@ -53,4 +53,4 @@ if zone:
     with col2:
         render_cost_estimate(zone)
 
-st.caption("LyonFlowFull · Sprint 5 ajoutera component React deck.gl + MapboxDraw")
+st.caption("LyonFlow · Sprint 5 ajoutera component React deck.gl + MapboxDraw")

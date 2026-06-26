@@ -1,5 +1,5 @@
 #!/bin/bash
-# LyonFlowFull VPS — Nettoyage disque sda1
+# LyonFlow VPS — Nettoyage disque sda1
 # Actions : vire volumes orphelins + docker system prune
 # À lancer UNE SEULE FOIS depuis le VPS en SSH
 

@@ -1,4 +1,4 @@
-# LyonFlowFull — API Reference
+# LyonFlow — API Reference
 
 Documentation complète de l'API REST. Générée aussi automatiquement par
 FastAPI à `/docs` (Swagger UI) et `/redoc`.

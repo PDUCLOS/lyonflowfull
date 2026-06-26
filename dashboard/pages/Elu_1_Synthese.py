@@ -27,7 +27,7 @@ from dashboard.components.widgets.elu.data_quality_detail import render_data_qua
 from dashboard.components.widgets.elu.drift_status_badge import render_drift_status_badge
 
 st.set_page_config(
-    page_title="Synthèse exécutive — Élu · LyonFlowFull",
+    page_title="Synthèse exécutive — Élu · LyonFlow",
     page_icon="📈",
     layout="wide",
 )
@@ -142,4 +142,4 @@ with st.expander("📄 Génération rapport PDF", expanded=False):
     }
     render_pdf_generator(sections)
 
-st.caption("LyonFlowFull · Synthèse exécutive · Données 12 mois glissants")
+st.caption("LyonFlow · Synthèse exécutive · Données 12 mois glissants")

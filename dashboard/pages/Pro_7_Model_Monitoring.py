@@ -26,7 +26,7 @@ from dashboard.components.widgets.pro_tcl.gnn_map import render_gnn_map_section
 from src.ml.model_registry import is_model_monitoring_visible
 
 st.set_page_config(
-    page_title="Model Monitoring — Pro TCL · LyonFlowFull",
+    page_title="Model Monitoring — Pro TCL · LyonFlow",
     page_icon="🧠",
     layout="wide",
 )

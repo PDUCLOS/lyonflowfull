@@ -12,7 +12,7 @@ from dashboard.components.theme import inject_theme
 from src.config import get_settings
 
 st.set_page_config(
-    page_title="À propos — LyonFlowFull",
+    page_title="À propos — LyonFlow",
     page_icon="ℹ️",
     layout="wide",
 )
@@ -22,14 +22,14 @@ render_sidebar_navigation()
 setup_auto_refresh()
 render_freshness_badge()
 
-st.title("ℹ️ À propos de LyonFlowFull")
+st.title("ℹ️ À propos de LyonFlow")
 render_data_status_banner()
 
 st.markdown(
     """
     ### La plateforme
 
-    **LyonFlowFull** est une plateforme MLOps de prédiction et d'analyse
+    **LyonFlow** est une plateforme MLOps de prédiction et d'analyse
     du trafic multimodal sur la Métropole de Lyon. Elle fusionne trois
     projets open source en une solution unifiée :
 
@@ -65,4 +65,4 @@ st.markdown(
     """
 )
 
-st.caption(f"LyonFlowFull v{get_settings().app_version}")
+st.caption(f"LyonFlow v{get_settings().app_version}")

@@ -1,1 +1,1 @@
-"""LyonFlowFull source package."""
+"""LyonFlow source package."""

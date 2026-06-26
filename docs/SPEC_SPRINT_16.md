@@ -284,7 +284,7 @@ Fichier : `dashboard/components/widgets/elu/drift_status_badge.py`
 
 ### Objectif
 
-Passer du monitoring basique actuel (6 checks quotidiens, mono-table) à un **monitoring par source** temps réel, avec score de qualité et alertes. Port de la logique LyonTraffic `data_quality.py` adaptée au pipeline LyonFlowFull.
+Passer du monitoring basique actuel (6 checks quotidiens, mono-table) à un **monitoring par source** temps réel, avec score de qualité et alertes. Port de la logique LyonTraffic `data_quality.py` adaptée au pipeline LyonFlow.
 
 ### Existant
 

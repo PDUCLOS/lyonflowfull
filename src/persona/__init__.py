@@ -1,6 +1,6 @@
 """Module persona — gestion des personas, auth, routing.
 
-Ce module centralise toute la logique liée aux 3 personas LyonFlowFull :
+Ce module centralise toute la logique liée aux 3 personas LyonFlow :
 chargement de la config, auth par mot de passe, application des règles
 d'affichage par persona, etc.
 """

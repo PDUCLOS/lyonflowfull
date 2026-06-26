@@ -1,5 +1,5 @@
 # =============================================================================
-# LyonFlowFull — pyproject.toml
+# LyonFlow — pyproject.toml
 # =============================================================================
 # Configuration projet : build, deps, linter, format, type check
 # =============================================================================
@@ -9,7 +9,7 @@ requires = ["setuptools>=68", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "lyonflowfull"
+name = "lyonflow"
 version = "0.11.0"
 description = "Plateforme MLOps de prédiction et d'analyse du trafic multimodal sur la Métropole de Lyon"
 readme = "README.md"

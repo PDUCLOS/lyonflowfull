@@ -1,4 +1,4 @@
-"""LyonFlowFull — Configuration centralisée.
+"""LyonFlow — Configuration centralisée.
 
 Charge les variables d'environnement via Pydantic Settings. Validation au
 boot : si une variable requise est manquante, l'app ne démarre pas.

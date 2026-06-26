@@ -5,7 +5,7 @@
 1. Set ``LYONFLOW_STGCN_TRAINING=true`` dans .env (toggle principal)
 2. Set ``EC2_TRAINING_HOST=<ip_instance_gpu>`` (pour le mode EC2)
 3. Set ``LYONFLOW_GNN_EXECUTION_MODE=ec2`` (ou ``local`` pour tester en CPU)
-4. (Optionnel) Set ``LYONFLOW_NOTIFICATION_EMAIL=patrice@lyonflowfull.fr``
+4. (Optionnel) Set ``LYONFLOW_NOTIFICATION_EMAIL=patrice@lyonflow.fr``
 5. (Optionnel) Set ``LYONFLOW_SMTP_HOST=smtp.gmail.com`` + creds
 6. ``airflow dags unpause retrain_gnn``
 
@@ -56,7 +56,7 @@ def _send_email_notification(
   Préparation le template est prêt mais les paramètres
     sont vides. Pour activer les notifications :
 
-    1. Set ``LYONFLOW_NOTIFICATION_EMAIL=patrice@lyonflowfull.fr``
+    1. Set ``LYONFLOW_NOTIFICATION_EMAIL=patrice@lyonflow.fr``
     2. Set ``LYONFLOW_SMTP_HOST=smtp.gmail.com`` (ou autre)
     3. Set ``LYONFLOW_SMTP_PORT=587``
     4. Set ``LYONFLOW_SMTP_USER=<user>`` + ``LYONFLOW_SMTP_PASSWORD=<pwd>``
@@ -197,7 +197,7 @@ def _train_remote_ec2() -> dict:
     slack_arg = f"--slack-webhook {slack_webhook}" if slack_webhook else ""
 
     remote_cmd = (
-        "cd ~/lyonflowfull && "
+        "cd ~/lyonflow && "
         "source venv/bin/activate && "
         f"python -m training.stgcn.train_cli "
         f"--use-db --epochs 50 --batch-size 32 "
@@ -259,7 +259,7 @@ def _train_orchestrator(**context) -> dict:
             "3. airflow dags unpause retrain_gnn"
         )
         _send_email_notification(
-            subject="[LyonFlowFull] STGCN retrain skipped (preparation mode)",
+            subject="[LyonFlow] STGCN retrain skipped (preparation mode)",
             body=body,
         )
         return {"skipped": "DAG disabled by feature flag"}

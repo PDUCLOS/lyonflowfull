@@ -109,7 +109,7 @@ def export_table_schema_documentation() -> str:
     """
     rows = execute_query(query, ())
 
-    lines = ["# LyonFlowFull — Data Dictionary\n"]
+    lines = ["# LyonFlow — Data Dictionary\n"]
     current_table = None
     for r in rows:
         full_table = f"{r['schema_name']}.{r['table_name']}"
@@ -131,7 +131,7 @@ def export_table_schema_documentation() -> str:
 # Auto-registration au boot (idempotent)
 # -----------------------------------------------------------------------------
 def auto_register_schema() -> None:
-    """Enregistre les principales tables/colonnes du schéma LyonFlowFull.
+    """Enregistre les principales tables/colonnes du schéma LyonFlow.
 
     À appeler au démarrage de l'app ou via un DAG d'initialisation.
     Idempotent (UPSERT).

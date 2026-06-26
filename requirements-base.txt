@@ -1,5 +1,5 @@
 # =============================================================================
-# LyonFlowFull — dépendances de BASE (production : API + Streamlit)
+# LyonFlow — dépendances de BASE (production : API + Streamlit)
 # =============================================================================
 # Sprint 15+ QW4 (2026-06-19) — torch et torch-geometric extraits dans
 # requirements-torch.txt pour réduire la taille des images API et Streamlit.
@@ -107,7 +107,7 @@ grpcio>=1.60.0
 # du drift detection (Sprint 16 refacto, cf docs/SPEC_EVIDENTLY_CONFIGURATION.md).
 # Evidently sert uniquement pour les rapports HTML on-demand depuis
 # Pro_7 (déclenché manuellement, pas en DAG). Installation :
-#   pip install 'lyonflowfull[drift-reports]'
+#   pip install 'lyonflow[drift-reports]'
 # ou directement :
 #   pip install evidently>=0.7.0
 evidently>=0.7.0 ; extra == "drift-reports"

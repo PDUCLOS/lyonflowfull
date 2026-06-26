@@ -12,7 +12,7 @@
 
 **Ne pas** ouvrir d'issue publique pour les vulnérabilités de sécurité.
 
-Email : **security@lyonflowfull.fr**
+Email : **security@lyonflow.fr**
 
 Inclure :
 - Description de la vulnérabilité

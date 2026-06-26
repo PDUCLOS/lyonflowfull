@@ -1,8 +1,8 @@
-# LyonFlowFull — Data Governance & RGPD
+# LyonFlow — Data Governance & RGPD
 
 ## Principes
 
-LyonFlowFull traite **uniquement des données ouvertes** (Grand Lyon,
+LyonFlow traite **uniquement des données ouvertes** (Grand Lyon,
 Open-Meteo, Open data.gouv) et **aucune donnée personnelle nominative**.
 
 Les seules données potentiellement identifiantes :
@@ -14,7 +14,7 @@ Les seules données potentiellement identifiantes :
 
 ### Article 5 — Minimisation
 
-✅ LyonFlowFull ne collecte **que** des données open data publiques.
+✅ LyonFlow ne collecte **que** des données open data publiques.
 Les comptes Pro TCL / Élu sont strictement techniques (auth requise).
 
 ### Article 6 — Licéité du traitement
@@ -216,7 +216,7 @@ Header `X-API-Key: <LYONFLOW_API_KEY>` requis sauf pour :
 
 ## DPO (Data Protection Officer)
 
-Pour toute demande RGPD : **dpo@lyonflowfull.fr**
+Pour toute demande RGPD : **dpo@lyonflow.fr**
 Délai légal de réponse : 30 jours.
 
 ## Référence

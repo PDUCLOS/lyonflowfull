@@ -4,7 +4,7 @@
 > **Pages totales** : 18 (5 Usager + 6 Pro TCL + 5 Élu + Accueil + RGPD + A_Propos)
 > **Widgets** : 59 fichiers Python dans `dashboard/components/widgets/`
 
-Ce document centralise la documentation de toutes les pages de l'application Streamlit `LyonFlowFull`. Le projet repose sur une approche **Multi-Persona** : une même application sert 3 types d'utilisateurs avec des interfaces et des logiques complètement différentes.
+Ce document centralise la documentation de toutes les pages de l'application Streamlit `LyonFlow`. Le projet repose sur une approche **Multi-Persona** : une même application sert 3 types d'utilisateurs avec des interfaces et des logiques complètement différentes.
 
 La navigation est gérée dynamiquement par `dashboard/components/navigation.py` qui lit le fichier `config/personas.yaml` pour restreindre l'accès et l'affichage.
 
@@ -33,7 +33,7 @@ indisponible (PostgreSQL, Airflow, MLflow) lève `DashboardDataError`
 - Permet de voir l'état des consentements (anonymisés) et les audits de purge depuis la base PostgreSQL (`cached_rgpd_audit`).
 
 ### `A_Propos.py`
-**Logique :** Présentation du projet LyonFlowFull (architecture, modèles, MLOps).
+**Logique :** Présentation du projet LyonFlow (architecture, modèles, MLOps).
 
 ---
 

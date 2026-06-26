@@ -1,7 +1,7 @@
 """Page commune — RGPD & Conformité.
 
  (2026-06-17) — nettoyage :
-* Bloc "Contact DPO" viré (email placeholder dpo@lyonflowfull.fr, pas de
+* Bloc "Contact DPO" viré (email placeholder dpo@lyonflow.fr, pas de
   DPO nommé en prod — sera réintroduit quand un vrai DPO sera nommé).
 * Section "Activité RGPD" (registre Article 30) virée : affiche "Aucun
   log d'audit disponible" tant que le schéma ``rgpd.audit_log`` n'est pas
@@ -20,7 +20,7 @@ from dashboard.components.theme import inject_theme
 from src.config import get_settings
 
 st.set_page_config(
-    page_title="RGPD — LyonFlowFull",
+    page_title="RGPD — LyonFlow",
     page_icon="🔒",
     layout="wide",
 )
@@ -35,9 +35,9 @@ render_data_status_banner()
 
 st.markdown(
     """
-    ### Données traitées par LyonFlowFull
+    ### Données traitées par LyonFlow
 
-    LyonFlowFull est une plateforme **grand public** d'analyse de la mobilité
+    LyonFlow est une plateforme **grand public** d'analyse de la mobilité
     sur la Métropole de Lyon. Elle traite uniquement des **données ouvertes**
     et **anonymisées**.
 
@@ -51,7 +51,7 @@ st.markdown(
 
     ### Données personnelles
 
-    **LyonFlowFull ne collecte aucune donnée personnelle identifiante** :
+    **LyonFlow ne collecte aucune donnée personnelle identifiante** :
     - Pas de compte utilisateur obligatoire
     - Pas d'historique de trajets nominatif
     - Pas de tracking publicitaire
@@ -77,4 +77,4 @@ st.markdown(
 )
 
 st.divider()
-st.caption(f"LyonFlowFull v{get_settings().app_version} — conforme RGPD")
+st.caption(f"LyonFlow v{get_settings().app_version} — conforme RGPD")

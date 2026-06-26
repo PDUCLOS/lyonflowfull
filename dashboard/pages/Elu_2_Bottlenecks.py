@@ -24,7 +24,7 @@ from dashboard.components.widgets.elu import (
 )
 
 st.set_page_config(
-    page_title="Bottlenecks prioritaires — Élu · LyonFlowFull",
+    page_title="Bottlenecks prioritaires — Élu · LyonFlow",
     page_icon="🎯",
     layout="wide",
 )
@@ -62,7 +62,7 @@ st.markdown("---")
 render_roi_calculator()
 
 st.caption(
-    "LyonFlowFull · ROI = voyageurs × gain × valeur temps × 2 (aller-retour) × "
+    "LyonFlow · ROI = voyageurs × gain × valeur temps × 2 (aller-retour) × "
     "250 jours ouvrés / coût. Voyageurs estimés depuis SIRI Lite "
     "(n_obs × 36 : 1 obs ≈ 1 bus × ~80 passagers × ~45% occupation SYTRAL)."
 )

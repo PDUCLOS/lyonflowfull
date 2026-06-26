@@ -1,4 +1,4 @@
-# Inventaire exhaustif des widgets Streamlit — LyonFlowFull
+# Inventaire exhaustif des widgets Streamlit — LyonFlow
 
 **Date** : 2026-06-23
 **Branche** : `vps` (3 commits en attente de push : `5ea1781`, `d5c28f3`, `1882c8c`)

@@ -1,5 +1,5 @@
 # =============================================================================
-# LyonFlowFull — Streamlit config
+# LyonFlow — Streamlit config
 # =============================================================================
 # La navigation native Streamlit est DÉSACTIVÉE (hideSidebarNav = true).
 # On utilise la navigation custom par persona via dashboard/components/navigation.py

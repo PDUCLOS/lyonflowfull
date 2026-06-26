@@ -1,6 +1,6 @@
 #!/bin/bash
 # =============================================================================
-# scripts/audit-vps-predeploy.sh — Audit securise VPS LyonFlowFull
+# scripts/audit-vps-predeploy.sh — Audit securise VPS LyonFlow
 # =============================================================================
 # A executer AVANT tout deploy sur le VPS (51.83.159.224).
 # Fait dans l'ordre :

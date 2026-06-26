@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # =============================================================================
-# LyonFlowFull — Restore PostgreSQL + MinIO depuis backup
+# LyonFlow — Restore PostgreSQL + MinIO depuis backup
 # =============================================================================
 # Usage : ./scripts/restore.sh /path/to/backup/lyonflow_20260606_030000
 # =============================================================================

@@ -1,4 +1,4 @@
-name: CI LyonFlowFull
+name: CI LyonFlow
 
 on:
   push:

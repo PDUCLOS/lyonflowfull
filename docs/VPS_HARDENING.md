@@ -5,7 +5,7 @@
 # À exécuter UNE FOIS sur le VPS, pas à chaque deploy.
 # =============================================================================
 
-# Durcissement VPS LyonFlowFull
+# Durcissement VPS LyonFlow
 
 Ce document décrit les étapes de durcissement du VPS (51.83.159.224) après
 le premier déploiement. À exécuter **une seule fois** (idempotent).

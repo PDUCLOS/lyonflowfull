@@ -2,7 +2,7 @@
 # docs/MONITORING.md — Stack monitoring production (Sprint VPS-3 + Sprint 8)
 # =============================================================================
 
-# Monitoring LyonFlowFull — VPS production
+# Monitoring LyonFlow — VPS production
 
 **Dernière mise à jour : 2026-06-12 (Sprint VPS-8 — Prometheus/Grafana/Alertmanager tous UP)**
 
@@ -30,7 +30,7 @@ Stack Prometheus + Alertmanager + Grafana, activée via `make monitoring-up`.
 |---------|------------------|------------------|----------------|------------------|
 | Prometheus | 9090 | /prometheus/ | scrape_interval=15s, retention 30j | ✅ UP (config YAML v2.54 fixée) |
 | Alertmanager | 9093 | /alertmanager/ | Receivers (Sprint 8 : null-receiver) | ✅ UP (webhooks désactivés, no-op) |
-| Grafana | 3000 | /grafana/ | 1 dashboard "LyonFlowFull — API + DB Overview" provisionné | ✅ UP |
+| Grafana | 3000 | /grafana/ | 1 dashboard "LyonFlow — API + DB Overview" provisionné | ✅ UP |
 | Node exporter | 9100 | interne | CPU, RAM, disk, load, network | ✅ |
 | Postgres exporter | 9187 | interne | connections, locks, queries, WAL | ✅ |
 | Nginx exporter | 9113 | interne | requests, 5xx, latency, active conns | ✅ |
@@ -98,7 +98,7 @@ curl -s 'http://localhost:9090/api/v1/alerts' | jq '.data.alerts[] | select(.lab
 
 ## Dashboards Grafana provisionnés
 
-1. **LyonFlowFull — API + DB Overview** (uid: `lyonflowoverview`)
+1. **LyonFlow — API + DB Overview** (uid: `lyonflowoverview`)
    - API request rate (rps par endpoint)
    - API p95 latency (ms)
    - API 5xx errors

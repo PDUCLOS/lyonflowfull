@@ -16,7 +16,7 @@ explicite. Pas de fallback silencieux.
  (2026-06-19) — Première version. S'inspire de la page
 ``Lyontraffic/dashboard/pages/9_Recommandation_Trajet.py`` (winner card
 HTML lignes 1042-1057) en l'adaptant aux CSS variables du thème
-LyonFlowFull (``--bg-card``, ``--primary-color``, etc.).
+LyonFlow (``--bg-card``, ``--primary-color``, etc.).
 """
 
 from __future__ import annotations

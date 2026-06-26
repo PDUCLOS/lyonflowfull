@@ -1,6 +1,6 @@
 # Résumé des Modifications IA (Sprint 22+)
 
-Ce document a été généré pour être transmis à une autre IA. Il résume les optimisations UX/UI appliquées au projet LyonFlowFull (branche `vps`) pour réduire la consommation RAM et améliorer l'expérience utilisateur (lazy loading et organisation en onglets).
+Ce document a été généré pour être transmis à une autre IA. Il résume les optimisations UX/UI appliquées au projet LyonFlow (branche `vps`) pour réduire la consommation RAM et améliorer l'expérience utilisateur (lazy loading et organisation en onglets).
 
 ## 🚀 Périmètre des modifications (Partie Frontend)
 

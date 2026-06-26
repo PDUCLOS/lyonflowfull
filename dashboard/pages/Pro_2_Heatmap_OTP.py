@@ -17,7 +17,7 @@ from dashboard.components.widgets.pro_tcl import (
 )
 
 st.set_page_config(
-    page_title="Heatmap OTP — Pro TCL · LyonFlowFull",
+    page_title="Heatmap OTP — Pro TCL · LyonFlow",
     page_icon="📊",
     layout="wide",
 )

@@ -1,6 +1,6 @@
 # ADR Index
 
-Liste des Architecture Decision Records du projet LyonFlowFull.
+Liste des Architecture Decision Records du projet LyonFlow.
 
 | N° | Titre | Statut | Date |
 |----|-------|--------|------|

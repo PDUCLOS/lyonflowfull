@@ -1,1 +1,1 @@
-"""LyonFlowFull data package."""
+"""LyonFlow data package."""

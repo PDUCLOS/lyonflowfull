@@ -18,7 +18,7 @@ from dashboard.components.widgets.usager import (
 )
 
 st.set_page_config(
-    page_title="Alertes — LyonFlowFull",
+    page_title="Alertes — LyonFlow",
     page_icon="🔔",
     layout="wide",
 )
@@ -75,4 +75,4 @@ st.markdown("---")
 with st.expander("⚙️ Réglages des alertes", expanded=False):
     render_alert_settings()
 
-st.caption("LyonFlowFull · Alertes mises à jour toutes les 5 min")
+st.caption("LyonFlow · Alertes mises à jour toutes les 5 min")

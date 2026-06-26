@@ -8,9 +8,9 @@
 apiVersion: 1
 
 providers:
-  - name: 'LyonFlowFull dashboards'
+  - name: 'LyonFlow dashboards'
     orgId: 1
-    folder: 'LyonFlowFull'
+    folder: 'LyonFlow'
     type: file
     disableDeletion: false
     updateIntervalSeconds: 30

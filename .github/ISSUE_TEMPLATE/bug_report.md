@@ -19,7 +19,7 @@
 - OS : 
 - Python : 
 - Docker : 
-- Version LyonFlowFull : 
+- Version LyonFlow : 
 
 ## Logs
 ```

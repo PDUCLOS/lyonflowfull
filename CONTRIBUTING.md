@@ -1,6 +1,6 @@
-# Contributing à LyonFlowFull
+# Contributing à LyonFlow
 
-Merci de votre intérêt pour contribuer à LyonFlowFull ! 🎉
+Merci de votre intérêt pour contribuer à LyonFlow ! 🎉
 
 ## Code de conduite
 
@@ -81,7 +81,7 @@ Format [Conventional Commits](https://www.conventionalcommits.org/fr/) :
 
 ## Sécurité
 
-Pour signaler une vulnérabilité : **security@lyonflowfull.fr**
+Pour signaler une vulnérabilité : **security@lyonflow.fr**
 Ne pas ouvrir d'issue publique.
 
 ## Licence

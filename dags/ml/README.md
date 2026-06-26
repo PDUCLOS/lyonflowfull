@@ -1,7 +1,7 @@
 # `dags/ml/` — DAGs Machine Learning
 
 DAGs Airflow qui pilotent l'entraînement, l'inférence et le suivi qualité
-des modèles ML du projet LyonFlowFull.
+des modèles ML du projet LyonFlow.
 
 ## DAGs actifs (Sprint 22+)
 

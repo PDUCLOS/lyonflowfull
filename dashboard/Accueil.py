@@ -1,4 +1,4 @@
-"""LyonFlowFull — Page d'accueil.
+"""LyonFlow — Page d'accueil.
 
 Trois personas, un même moteur. Cette page :
 1. Affiche le sélecteur de persona (3 cartes)
@@ -22,7 +22,7 @@ from src.persona.manager import (
 )
 
 st.set_page_config(
-    page_title="LyonFlowFull",
+    page_title="LyonFlow",
     page_icon="🚦",
     layout="wide",
     initial_sidebar_state="expanded",
@@ -63,7 +63,7 @@ st.markdown(
     </style>
     <div style="text-align:center;padding:3rem 0 2rem 0;">
         <div class="animated-title">
-            🚦 LyonFlowFull
+            🚦 LyonFlow
         </div>
         <div class="subtitle">
             La plateforme MLOps qui prédit le trafic et les retards bus sur la Métropole de Lyon
@@ -113,7 +113,7 @@ if has_explicit_persona:
 # -----------------------------------------------------------------------------
 # Qui es-tu ? (Onboarding / Premier accès)
 # -----------------------------------------------------------------------------
-st.markdown("### 👋 Bienvenue sur LyonFlowFull")
+st.markdown("### 👋 Bienvenue sur LyonFlow")
 st.caption("Choisis ton profil pour voir la version de l'application adaptée à ton usage.")
 
 render_persona_switcher(layout="cards")

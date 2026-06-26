@@ -25,7 +25,7 @@ from dashboard.components.widgets.pro_tcl import (
 )
 
 st.set_page_config(
-    page_title="Corrélation bus × trafic — Pro TCL · LyonFlowFull",
+    page_title="Corrélation bus × trafic — Pro TCL · LyonFlow",
     page_icon="🔗",
     layout="wide",
 )
@@ -39,7 +39,7 @@ render_freshness_badge()
 st.title("Corrélation bus × trafic routier")
 render_data_status_banner()
 
-st.caption("L'USP technique de LyonFlowFull — croise retards bus et congestion routière par segment.")
+st.caption("L'USP technique de LyonFlow — croise retards bus et congestion routière par segment.")
 
 st.markdown("---")
 

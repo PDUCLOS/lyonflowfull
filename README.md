@@ -1,11 +1,11 @@
 # =============================================================================
-# LyonFlowFull — README principal
+# LyonFlow — README principal
 # =============================================================================
 # Plateforme MLOps end-to-end de prédiction et d'analyse du trafic multimodal
 # sur la Métropole de Lyon.
 #
 # Auteur: Patrice DUCLOS — Senior Data Analyst, Jedha RNCP 38777
-# Repo: PDUCLOS/lyonflowfull
+# Repo: PDUCLOS/lyonflow
 # Version: 0.12.1 (Sprint 22++ — Elu_2 fix + menu MLOps Usager — branche `vps` active)
 #
 # Branches :
@@ -38,7 +38,7 @@
 
 ## 1. Vue d'ensemble
 
-LyonFlowFull est une plateforme MLOps de prédiction et d'analyse du trafic
+LyonFlow est une plateforme MLOps de prédiction et d'analyse du trafic
 multimodal sur la Métropole de Lyon. Elle fusionne trois projets open source
 en une solution unifiée :
 
@@ -150,7 +150,7 @@ Voir [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) pour le détail complet.
 ```bash
 # 1. Cloner
 git clone https://github.com/PDUCLOS/lyonflowfull.git
-cd lyonflowfull
+cd lyonflow
 
 # 2. Configurer
 cp .env.example .env
@@ -267,7 +267,7 @@ Voir [docs/API.md](docs/API.md) (à venir) pour la référence complète.
 ### Structure du projet
 
 ```
-lyonflowfull/
+lyonflow/
 ├── config/                 # Configs YAML (personas, etc.)
 ├── dags/                   # Airflow DAGs
 │   ├── bronze/
@@ -504,4 +504,4 @@ MIT — voir [LICENSE](LICENSE).
 
 Patrice DUCLOS — patrice.duclos@example.fr
 
-*LyonFlowFull v0.12.1 · 2026-06-25 — branche `vps` (production VPS)*
+*LyonFlow v0.12.1 · 2026-06-25 — branche `vps` (production VPS)*

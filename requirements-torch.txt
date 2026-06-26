@@ -1,5 +1,5 @@
 # =============================================================================
-# LyonFlowFull — dépendances TORCH (training GNN — Airflow uniquement)
+# LyonFlow — dépendances TORCH (training GNN — Airflow uniquement)
 # =============================================================================
 # Sprint 15+ QW4 (2026-06-19) — torch extrait de requirements.txt.
 #

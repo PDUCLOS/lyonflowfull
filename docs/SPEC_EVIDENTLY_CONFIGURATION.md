@@ -481,7 +481,7 @@ Ajouter evidently dans `[project.optional-dependencies]` plutôt que dans les de
 drift-reports = ["evidently>=0.7.0"]
 ```
 
-Installation : `pip install lyonflowfull[drift-reports]` ou `pip install evidently>=0.7.0` directement.
+Installation : `pip install lyonflow[drift-reports]` ou `pip install evidently>=0.7.0` directement.
 
 ### Pourquoi ne pas mettre Evidently en dépendance obligatoire
 

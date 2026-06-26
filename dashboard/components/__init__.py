@@ -1,4 +1,4 @@
-"""Composants UI partagés pour le dashboard LyonFlowFull."""
+"""Composants UI partagés pour le dashboard LyonFlow."""
 
 from dashboard.components.navigation import render_sidebar_navigation
 from dashboard.components.persona_guard import apply_persona_guard

@@ -113,7 +113,7 @@ def _gauge_card(emoji: str, title: str, value: str, subtitle: str, color: str) -
 # Page
 # =============================================================================
 st.set_page_config(
-    page_title="Statut du service — LyonFlowFull",
+    page_title="Statut du service — LyonFlow",
     page_icon="🩺",
     layout="wide",
 )
@@ -307,7 +307,7 @@ estimés dans **🧭 Mon trajet**.
     )
 
 st.caption(
-    "LyonFlowFull · 4 voyants synthétiques · 8 sources Bronze · "
+    "LyonFlow · 4 voyants synthétiques · 8 sources Bronze · "
     "Modèle XGBoost H+1h · Alertes 24h glissantes"
 )
 

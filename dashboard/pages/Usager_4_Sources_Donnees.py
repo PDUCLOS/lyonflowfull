@@ -86,42 +86,42 @@ _SOURCE_BLURB: dict[str, dict[str, str]] = {
     "gold.trafic_predictions": {
         "label": "Prédictions du modèle",
         "icon": "🤖",
-        "who": "LyonFlowFull (notre modèle XGBoost)",
+        "who": "LyonFlow (notre modèle XGBoost)",
         "use": "Vitesses prédites à H+1h — alimentent Mon trajet",
         "freq": "Toutes les 30 min",
     },
     "silver.trafic_boucles_clean": {
         "label": "Boucles nettoyées",
         "icon": "🚗",
-        "who": "LyonFlowFull (déduplication + filtres)",
+        "who": "LyonFlow (déduplication + filtres)",
         "use": "Données boucles propres pour le modèle",
         "freq": "Toutes les 5 min",
     },
     "silver.tcl_vehicles_clean": {
         "label": "TCL nettoyés",
         "icon": "🚌",
-        "who": "LyonFlowFull (parsing SIRI)",
+        "who": "LyonFlow (parsing SIRI)",
         "use": "Retards et positions TCL normalisés",
         "freq": "Toutes les 5 min",
     },
     "silver.velov_clean": {
         "label": "Vélov nettoyés",
         "icon": "🚴",
-        "who": "LyonFlowFull (déduplication)",
+        "who": "LyonFlow (déduplication)",
         "use": "Stations Vélov propres pour les prédictions H+30 / H+1",
         "freq": "Toutes les 5 min",
     },
     "silver.meteo_hourly": {
         "label": "Météo horaire",
         "icon": "🌦️",
-        "who": "LyonFlowFull (agrégation horaire)",
+        "who": "LyonFlow (agrégation horaire)",
         "use": "Variables météo injectées dans les features ML",
         "freq": "Toutes les heures",
     },
     "silver.chantiers_actifs": {
         "label": "Chantiers actifs",
         "icon": "🚧",
-        "who": "LyonFlowFull (filtrage temporel)",
+        "who": "LyonFlow (filtrage temporel)",
         "use": "Chantiers en cours (début ≤ maintenant ≤ fin)",
         "freq": "Toutes les 5 min",
     },
@@ -175,7 +175,7 @@ def _age_label(minutes: float | None) -> str:
 # Page
 # =============================================================================
 st.set_page_config(
-    page_title="Sources de données — LyonFlowFull",
+    page_title="Sources de données — LyonFlow",
     page_icon="🌐",
     layout="wide",
 )
@@ -342,7 +342,7 @@ autres sources et un warning apparaît sur la page **🩺 Statut du service**.
     )
 
 st.caption(
-    "LyonFlowFull · 8 sources Bronze + 1 source Gold + tables Silver · "
+    "LyonFlow · 8 sources Bronze + 1 source Gold + tables Silver · "
     "Fraîcheur vérifiée toutes les 60s par la vue gold.v_source_health"
 )
 

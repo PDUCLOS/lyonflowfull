@@ -3,7 +3,7 @@
  Ajout du menu MLOps pour le persona Usager (citizen-friendly).
 3 pages au total : Notre modèle / Sources de données / Statut du service.
 
-Cette page explique en langage simple comment LyonFlowFull prédit le
+Cette page explique en langage simple comment LyonFlow prédit le
 trafic et expose la précision réelle des 7 derniers jours (calculée
 par le backtest engine vs données live). Aucun jargon ML.
 """
@@ -157,7 +157,7 @@ def _quality_card(score_accurate_pct: float | None, mae_kmh: float | None) -> tu
 # Page
 # =============================================================================
 st.set_page_config(
-    page_title="Notre modèle — LyonFlowFull",
+    page_title="Notre modèle — LyonFlow",
     page_icon="🤖",
     layout="wide",
 )
@@ -294,7 +294,7 @@ with st.container():
     )
 
 st.caption(
-    "LyonFlowFull · Modèle XGBoost H+1h, ré-entraîné quotidiennement · "
+    "LyonFlow · Modèle XGBoost H+1h, ré-entraîné quotidiennement · "
     "Évaluation = comparaison prédiction vs vitesse réelle observée sur 7 jours"
 )
 

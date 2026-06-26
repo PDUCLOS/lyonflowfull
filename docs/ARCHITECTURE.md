@@ -1,8 +1,8 @@
-# LyonFlowFull — Architecture détaillée
+# LyonFlow — Architecture détaillée
 
 ## Vue d'ensemble
 
-LyonFlowFull suit une architecture **Medallion** (Bronze → Silver → Gold)
+LyonFlow suit une architecture **Medallion** (Bronze → Silver → Gold)
 avec 8 sources open data ingérées toutes les 5 min, transformées en
 features ML-ready, et servies via API REST + dashboard multi-persona.
 

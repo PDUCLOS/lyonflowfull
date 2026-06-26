@@ -1,13 +1,13 @@
-# CLAUDE.md — LyonFlowFull
+# CLAUDE.md — LyonFlow
 
 > Mémoire projet — **dernière mise à jour : 2026-06-25, Sprint 22++ (Elu_2 fix + menu MLOps Usager)** (658 tests verts, dashboard 18 pages / 59 widgets, zéro mock, ruff clean).
 
 ## Projet
 
-LyonFlowFull est une plateforme MLOps end-to-end de prédiction et d'analyse du trafic multimodal sur la Métropole de Lyon. Elle fusionne trois repos sources (caroheymes/Architect-IA-final-project, PDUCLOS/LyonFlow, PDUCLOS/lyontraffic) en un projet unifié.
+LyonFlow est une plateforme MLOps end-to-end de prédiction et d'analyse du trafic multimodal sur la Métropole de Lyon. Elle fusionne trois repos sources (caroheymes/Architect-IA-final-project, PDUCLOS/LyonFlow, PDUCLOS/lyontraffic) en un projet unifié.
 
 **Auteur** : Patrice DUCLOS — Senior Data Analyst, Jedha RNCP 38777 (Architecte en IA)
-**Repo** : PDUCLOS/lyonflowfull
+**Repo** : PDUCLOS/lyonflow
 **Cible production** : **VPS unique** `51.83.159.224` (Ubuntu, 6 CPU, 12 Go RAM, **2× 100 Go SSD** : sda = OS + code, sdb = PostgreSQL + MinIO + **Docker data-root** depuis Sprint 9+).
 
 **Version actuelle** : **v0.12.1** (Sprints 1-7 + VPS 1-8 + 9+ + 11+ + 12+ + 13 + 13+ + 15+ + 17 + 17+ + 18 + 20 + 21 + 22 + 22+ + 22++) — branche `vps` ACTIVE
@@ -513,7 +513,7 @@ Branche `vps` = source de vérité du déploiement actif.
 
 | Composant | Détail |
 |-----------|--------|
-| Reverse proxy | Nginx 1.27 (Sprint VPS-1) — DNS `lyonflowfull.fr` mort, accès par IP `https://51.83.159.224` |
+| Reverse proxy | Nginx 1.27 (Sprint VPS-1) — DNS `lyonflow.fr` mort, accès par IP `https://51.83.159.224` |
 | Process supervisor | systemd unit `lyonflow.service` (Sprint VPS-2) |
 | Backup DB | systemd timer quotidien 03:00 → `scripts/backup.sh` (Sprint VPS-2) + offsite `scripts/backup-offsite.sh` |
 | Rollback | `make rollback-vps` (Sprint VPS-2) |
@@ -530,7 +530,7 @@ Branche `vps` = source de vérité du déploiement actif.
 ### ⚠️ Gotchas déploiement VPS (mis à jour Sprint 18)
 
 - **`/opt/lyonflow/logs/`** doit être `chown 50000:0` récursivement après chaque `rsync` frais. Sinon le worker Celery crash en boucle sur `PermissionError` (Sprint VPS-5).
-- **DNS `lyonflowfull.fr` mort** (NXDOMAIN) + cert TLS Let's Encrypt expiré → accès par IP `https://51.83.159.224` (warning cert self-signed).
+- **DNS `lyonflow.fr` mort** (NXDOMAIN) + cert TLS Let's Encrypt expiré → accès par IP `https://51.83.159.224` (warning cert self-signed).
 - **Disque sda1 à 64%** (35 Go libres) après migration Docker data-root (Sprint 9+). Plus de migration à prévoir pour le moment.
 - **Cache Python .pyc** dans les containers Airflow : purger `find /opt/airflow -name __pycache__ -type d -exec rm -rf {} +` après chaque modification de `src/`. Sinon les DAGs chargent l'ancienne version (Sprint 8+ leçon apprise).
 - **Mapping `dim_spatial_grid_mapping.properties_twgid`** (entiers ou strings) ≠ `traffic_features_live.channel_id` (format LYO000xx) — **Sprint 8+ : backfill via h3-py résout lat/lon mais le mapping d'identité est toujours à réconcilier**.
@@ -558,7 +558,7 @@ make tls-status             # statut cert Let's Encrypt
 ## Structure cible
 
 ```
-lyonflowfull/
+lyonflow/
 ├── CLAUDE.md
 ├── AGENTS.md
 ├── README.md

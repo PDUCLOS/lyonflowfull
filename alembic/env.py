@@ -1,4 +1,4 @@
-"""Alembic env — LyonFlowFull.
+"""Alembic env — LyonFlow.
 
 Configure Alembic pour utiliser notre config + DB.
 """

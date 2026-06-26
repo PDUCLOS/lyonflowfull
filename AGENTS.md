@@ -1,5 +1,5 @@
 # =============================================================================
-# LyonFlowFull — AGENTS.md (mémoire projet pour assistants IA)
+# LyonFlow — AGENTS.md (mémoire projet pour assistants IA)
 # =============================================================================
 # Ce fichier est la source de vérité sur les décisions de phase et conventions
 # du projet. À lire en premier par tout assistant IA.
@@ -62,7 +62,7 @@
 #   (4 schémas : bronze/silver/gold/osm + referentiel)
 #   Image Docker : pgrouting/pgrouting:16-3.5-3.7.3
 # - Path déploiement : /opt/lyonflow/
-# - Reverse proxy : Nginx 1.27 (self-signed cert, DNS lyonflowfull.fr mort → accès par IP)
+# - Reverse proxy : Nginx 1.27 (self-signed cert, DNS lyonflow.fr mort → accès par IP)
 # - Process : systemd unit lyonflow.service
 # - Backup : timer systemd quotidien 03:00 → scripts/backup.sh + offsite scripts/backup-offsite.sh
 # - Monitoring : Grafana + Alertmanager UP. Prometheus supprimé Sprint 15+ (config YAML cassée v2.54)
@@ -118,7 +118,7 @@
 #   (LYO00xxx) — backfill lat/lon OK, mapping identité à réconcilier.
 # - /opt/lyonflow/logs/ doit être chown 50000:0 récursif après chaque rsync.
 # - GNN training : code livré (stgcn_wrapper), retrain Airflow à finaliser.
-# - DNS lyonflowfull.fr mort → accès par IP. Self-signed cert (Sprint 21 fix).
+# - DNS lyonflow.fr mort → accès par IP. Self-signed cert (Sprint 21 fix).
 # - Prometheus supprimé Sprint 15+ (config YAML v2.54 cassée). Grafana sans source.
 # - test_error_display 3 failures pré-existantes (test_persona_a_5_types).
 # - OFFSITE_HOST non configuré (backup-template.sh livré, destination à choisir).

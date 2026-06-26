@@ -313,7 +313,7 @@ do_apply() {
 # --- Main ---
 
 main() {
-    log "${C_BLUE}🔧 LyonFlowFull — SQL Migration Runner${C_RESET}"
+    log "${C_BLUE}🔧 LyonFlow — SQL Migration Runner${C_RESET}"
     log "  Target: $( [[ "${DIRECT}" == "true" ]] && echo "${POSTGRES_HOST}:5432" || echo "${DOCKER_CONTAINER}" ) / ${POSTGRES_DB}"
     log "  Migrations dir: ${MIGRATIONS_DIR}"
 

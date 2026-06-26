@@ -55,7 +55,7 @@ fi
 # -----------------------------------------------------------------------------
 echo
 echo "=============================================================================="
-echo " Configuration rclone pour LyonFlowFull backup offsite"
+echo " Configuration rclone pour LyonFlow backup offsite"
 echo "=============================================================================="
 echo
 echo "Modes disponibles :"

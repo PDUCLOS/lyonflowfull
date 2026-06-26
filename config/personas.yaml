@@ -1,5 +1,5 @@
 # =============================================================================
-# LyonFlowFull — Personas
+# LyonFlow — Personas
 # =============================================================================
 # Cerveau de l'interface. Pilote l'affichage, l'auth, le routing et le thème
 # selon le persona sélectionné.

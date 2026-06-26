@@ -369,7 +369,7 @@ dispos < -2) → probable incident TC en cours.
 
 Validation des valeurs Gold/Silver dans des plages physiquement
 plausibles (Sprint 17 Axe 6, port du module `data_quality` de
-`PDUCLOS/Lyontraffic` adapté au schéma LyonFlowFull).
+`PDUCLOS/Lyontraffic` adapté au schéma LyonFlow).
 
 - **Module `src/transformation/data_quality.py`** (~450 lignes) :
   - `QualityConfig` : seuils spec §7.1 (speed 0-130, temp -20/45,
@@ -1070,7 +1070,7 @@ pour le détail complet.
 ### Removed
 - **`dashboard/pages/9_RGPD_Conformite.py`** : suppression du bloc
   "Activité RGPD" (registre Article 30) et du "Contact DPO" placeholder
-  (`dpo@lyonflowfull.fr`). Le schéma `rgpd.audit_log` n'est pas peuplé
+  (`dpo@lyonflow.fr`). Le schéma `rgpd.audit_log` n'est pas peuplé
   en prod — à recâbler quand l'implémentation sera complète.
 
 ### Documentation

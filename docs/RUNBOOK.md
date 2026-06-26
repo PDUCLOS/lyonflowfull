@@ -1,4 +1,4 @@
-# LyonFlowFull — Runbook opérationnel
+# LyonFlow — Runbook opérationnel
 
 **Dernière mise à jour : 2026-06-12 (Sprint VPS-8)**
 
@@ -397,8 +397,8 @@ docker compose exec -T streamlit python /app/scripts/seed_lieux_calendrier.py
 | Rôle | Contact |
 |------|---------|
 | Dev principal | Patrice DUCLOS |
-| RGPD / DPO | dpo@lyonflowfull.fr |
-| Sécurité | security@lyonflowfull.fr |
+| RGPD / DPO | dpo@lyonflow.fr |
+| Sécurité | security@lyonflow.fr |
 | Infra VPS | hostinger support |
 | Healthcheck | `./scripts/healthcheck-vps.sh` |
 
@@ -410,7 +410,7 @@ docker compose exec -T streamlit python /app/scripts/seed_lieux_calendrier.py
 - Grafana : http://localhost:3000
 - Prometheus : http://localhost:9090
 - Alertmanager : http://localhost:9093
-- Status page (à venir) : https://status.lyonflowfull.fr
+- Status page (à venir) : https://status.lyonflow.fr
 
 ## Voir aussi
 

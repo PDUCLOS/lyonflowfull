@@ -1,4 +1,4 @@
-"""Générateur PDF LyonFlowFull — pour rapports Élu (CM).
+"""Générateur PDF LyonFlow — pour rapports Élu (CM).
 
 Utilise WeasyPrint pour HTML→PDF. Fallback reportlab si WeasyPrint
 n'est pas installable (libpango manquante sur certains systèmes).
@@ -51,11 +51,11 @@ def _default_template() -> str:
 <body>
     <div class="header">
         <h1>{{ title }}</h1>
-        <div class="meta">LyonFlowFull · Métropole de Lyon · {{ date }}</div>
+        <div class="meta">LyonFlow · Métropole de Lyon · {{ date }}</div>
     </div>
     {{ content }}
     <div class="footer">
-        Document généré par LyonFlowFull · Données open data Grand Lyon · {{ date }}
+        Document généré par LyonFlow · Données open data Grand Lyon · {{ date }}
     </div>
 </body>
 </html>
@@ -75,7 +75,7 @@ def render_html_template(sections: dict[str, Any], template_name: str = "synthes
     html = _load_template(template_name)
 
     # Remplacements simples (pas de Jinja pour éviter la dépendance)
-    title = sections.get("title", "Rapport LyonFlowFull")
+    title = sections.get("title", "Rapport LyonFlow")
     date = sections.get("date", "2026-06-05")
 
     html = html.replace("{{ title }}", title)
@@ -166,7 +166,7 @@ def generate_pdf(html: str) -> bytes:
         buffer = BytesIO()
         c = canvas.Canvas(buffer, pagesize=A4)
         c.setFont("Helvetica-Bold", 16)
-        c.drawString(50, 800, "LyonFlowFull Report")
+        c.drawString(50, 800, "LyonFlow Report")
         c.setFont("Helvetica", 10)
         c.drawString(50, 780, "Generated via reportlab fallback (WeasyPrint unavailable)")
         # Ajouter une partie du texte HTML brut (simplifié)

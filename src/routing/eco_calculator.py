@@ -1,6 +1,6 @@
 """Calculateur d'impact écologique et économique par mode de transport.
 
-Adapté de ``PDUCLOS/Lyontraffic`` pour le pipeline LyonFlowFull :
+Adapté de ``PDUCLOS/Lyontraffic`` pour le pipeline LyonFlow :
 - Sources de données : ADEME 2024, Grille tarifaire TCL SYTRAL 2026, Ville de Lyon 2025,
   tables MET ADEME/INSERM (pour le calcul des calories).
 - Le coût estimé pour la voiture **n'inclut pas le stationnement** pour le moment.

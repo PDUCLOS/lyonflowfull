@@ -2,7 +2,7 @@
 
  (2026-06-12) — protection de la logique projet.
 
-Le repo LyonFlowFull est public sur GitHub (PDUCLOS/lyonflowfull).
+Le repo LyonFlow est public sur GitHub (PDUCLOS/lyonflow).
 Pour éviter qu'un concurrent copie-colle la logique métier (modèles
 ML, pathfinding H3, vues matérialisées KPIs) sans effort, on :
 

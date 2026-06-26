@@ -161,7 +161,7 @@
   "time": {"from": "now-1h", "to": "now"},
   "timepicker": {},
   "timezone": "browser",
-  "title": "LyonFlowFull — API + DB Overview",
+  "title": "LyonFlow — API + DB Overview",
   "uid": "lyonflow-overview",
   "version": 1,
   "weekStart": ""

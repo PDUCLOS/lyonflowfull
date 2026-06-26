@@ -15,7 +15,7 @@ from dashboard.components.widgets.pro_tcl.sensor_saturation import render_sensor
 from dashboard.components.widgets.pro_tcl.source_health_monitor import render_source_health_monitor
 
 st.set_page_config(
-    page_title="Pipeline Management — Pro TCL · LyonFlowFull",
+    page_title="Pipeline Management — Pro TCL · LyonFlow",
     page_icon="🔧",
     layout="wide",
 )

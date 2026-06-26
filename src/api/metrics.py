@@ -1,4 +1,4 @@
-"""Métriques Prometheus personnalisées pour l'API LyonFlowFull.
+"""Métriques Prometheus personnalisées pour l'API LyonFlow.
 
 Expose les métriques suivantes :
 - `lyonflow_predictions_total` : Compteur des prédictions par modèle et par horizon temporel.

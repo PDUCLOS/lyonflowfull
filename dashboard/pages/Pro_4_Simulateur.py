@@ -20,7 +20,7 @@ from dashboard.components.widgets.pro_tcl import (
 from src.data.db_query import clean_line_label
 
 st.set_page_config(
-    page_title="Simulateur fréquences — Pro TCL · LyonFlowFull",
+    page_title="Simulateur fréquences — Pro TCL · LyonFlow",
     page_icon="🎚",
     layout="wide",
 )

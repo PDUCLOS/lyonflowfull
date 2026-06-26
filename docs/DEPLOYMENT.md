@@ -1,8 +1,8 @@
-# LyonFlowFull — Guide de déploiement
+# LyonFlow — Guide de déploiement
 
 ## Vue d'ensemble
 
-Ce guide couvre le déploiement de LyonFlowFull sur :
+Ce guide couvre le déploiement de LyonFlow sur :
 - **Local** (Docker Compose, dev)
 - **VPS unique** (production, 1 serveur)
 - **K8s** (à venir — Sprint 6+, dans un répertoire dédié)
@@ -21,7 +21,7 @@ Ce guide couvre le déploiement de LyonFlowFull sur :
 ```bash
 # 1. Cloner
 git clone https://github.com/PDUCLOS/lyonflowfull.git
-cd lyonflowfull
+cd lyonflow
 
 # 2. Copier .env
 cp .env.example .env

@@ -3,7 +3,7 @@
 > **Sprint 15+ (2026-06-19)** — Spécification complète pour implémentation par agent.
 > **Auteur** : Patrice DUCLOS / Claude Opus 4.6
 > **Branche cible** : `vps`
-> **Sources** : état actuel LyonFlowFull + ancien repo PDUCLOS/Lyontraffic + recherche état de l'art 2024-2026
+> **Sources** : état actuel LyonFlow + ancien repo PDUCLOS/Lyontraffic + recherche état de l'art 2024-2026
 
 ---
 
@@ -80,7 +80,7 @@ score = clamp(0, 10)
 
 ### 2.2. Adaptation au projet actuel
 
-LyonTraffic utilisait `bronze.pvotrafic_snapshots` (schéma ancien). LyonFlowFull utilise :
+LyonTraffic utilisait `bronze.pvotrafic_snapshots` (schéma ancien). LyonFlow utilise :
 - Trafic : `gold.traffic_features_live` (a `speed_kmh`, `lat`, `lon`)
 - TCL : `gold.tcl_vehicle_realtime` (a `latitude`, `longitude`, `delay_seconds`, `is_delayed`)
 - Vélov : `silver.velov_clean` (a `lat`, `lon`, `num_bikes_available`, `num_docks_available`)
@@ -560,7 +560,7 @@ Module `QualityConfig` + `QualityReport` qui valide les données AVANT le featur
 
 ### 7.2. Implémentation
 
-Créer `src/transformation/data_quality.py` adapté au schéma LyonFlowFull :
+Créer `src/transformation/data_quality.py` adapté au schéma LyonFlow :
 
 ```python
 @dataclass

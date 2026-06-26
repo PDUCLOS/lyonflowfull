@@ -43,7 +43,7 @@ check_warn() {
     fi
 }
 
-echo "=== LyonFlowFull Coherence Check ==="
+echo "=== LyonFlow Coherence Check ==="
 echo ""
 
 # --- 1. Version unique ---

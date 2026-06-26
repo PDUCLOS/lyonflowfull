@@ -1,7 +1,7 @@
 """Module — Validation qualité des données Gold/Silver (Sprint 17 Axe 6, 2026-06-21).
 
 Port conceptuel de `PDUCLOS/Lyontraffic/src/transformation/data_quality.py`
-adapté au schéma LyonFlowFull. Valide les données AVANT le feature
+adapté au schéma LyonFlow. Valide les données AVANT le feature
 engineering, pour détecter en amont :
 
 * Plages physiquement impossibles (speed > 130 km/h, delay > 1h, bikes < 0...)

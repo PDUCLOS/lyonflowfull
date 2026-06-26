@@ -44,7 +44,7 @@ from src.data.exceptions import DashboardDataError  # noqa: E402
 from src.routing.eco_calculator import calculate_impact, is_congested_from_speed  # noqa: E402
 
 st.set_page_config(
-    page_title="Mon trajet — LyonFlowFull",
+    page_title="Mon trajet — LyonFlow",
     page_icon="🧭",
     layout="wide",
 )
@@ -350,4 +350,4 @@ if st.session_state.get("results_loaded"):
 
     st.markdown("---")
 
-st.caption(f"LyonFlowFull v{get_settings().app_version} · 100% pipeline (PostgreSQL, Airflow, MLflow)")
+st.caption(f"LyonFlow v{get_settings().app_version} · 100% pipeline (PostgreSQL, Airflow, MLflow)")

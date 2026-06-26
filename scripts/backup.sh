@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # =============================================================================
-# LyonFlowFull — Backup PostgreSQL + MinIO
+# LyonFlow — Backup PostgreSQL + MinIO
 # =============================================================================
 # Cron quotidien recommandé : 0 3 * * * (3h du matin)
 # Rétention : 7j local, envoi S3/MinIO distant optionnel
@@ -38,7 +38,7 @@ err() { echo -e "${RED}[ERR]${NC} $*" >&2; }
 # Préparation
 # -----------------------------------------------------------------------------
 mkdir -p "${BACKUP_DIR}"
-log "Début backup LyonFlowFull → ${BACKUP_DIR}/${BACKUP_NAME}"
+log "Début backup LyonFlow → ${BACKUP_DIR}/${BACKUP_NAME}"
 
 # -----------------------------------------------------------------------------
 # 1. PostgreSQL

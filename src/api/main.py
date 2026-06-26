@@ -1,4 +1,4 @@
-"""FastAPI — Endpoints REST principaux de LyonFlowFull.
+"""FastAPI — Endpoints REST principaux de LyonFlow.
 
 Expose les services suivants :
 - `/health` : Vérification publique de l'état de santé de l'API.
@@ -45,18 +45,18 @@ async def lifespan(app: FastAPI):
     """Validation settings au démarrage, log au shutdown."""
     try:
         validate_settings()
-        logger.info("LyonFlowFull API started")
+        logger.info("LyonFlow API started")
     except RuntimeError as e:
         logger.error(f"Settings validation failed: {e}")
         # On ne lève pas pour permettre /health de répondre
     yield
-    logger.info("LyonFlowFull API shutting down")
+    logger.info("LyonFlow API shutting down")
 
 
 app = FastAPI(
-    title="LyonFlowFull API",
+    title="LyonFlow API",
     version="0.6.1",
-    description="API REST pour la plateforme MLOps LyonFlowFull",
+    description="API REST pour la plateforme MLOps LyonFlow",
     lifespan=lifespan,
 )
 

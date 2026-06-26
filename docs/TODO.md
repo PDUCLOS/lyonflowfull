@@ -1,4 +1,4 @@
-# TODO — LyonFlowFull
+# TODO — LyonFlow
 
 > **Date** : 2026-06-25 · **Branche** : `vps` · **658 tests verts, ruff clean** · **v0.12.1**
 >
@@ -92,7 +92,7 @@ CREATE INDEX IF NOT EXISTS idx_ways_source_target ON osm.ways (source, target)
 
 | Item | Contexte | Action |
 |------|----------|--------|
-| DNS `lyonflowfull.fr` | NXDOMAIN | Renouveler chez registrar ou abandonner (accès IP suffit RNCP) |
+| DNS `lyonflow.fr` | NXDOMAIN | Renouveler chez registrar ou abandonner (accès IP suffit RNCP) |
 | Cert TLS Let's Encrypt | Expiré (DNS mort) | Si DNS renouvelé → `certbot renew`. Sinon self-signed |
 | Axe 2 propagation UI | Code livré Sprint 17 | Ajouter `propagation_map` à page Élu si demandé |
 | Axe 4 report modal UI | Code livré Sprint 17 | Ajouter `modal_shift_alert` à page Élu si demandé |

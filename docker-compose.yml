@@ -1,5 +1,5 @@
 # =============================================================================
-# LyonFlowFull — Docker Compose (production-ready)
+# LyonFlow — Docker Compose (production-ready)
 # =============================================================================
 # Stack complète :
 # - PostgreSQL 16 + PostGIS (Gold layer + Airflow metadata)
@@ -241,7 +241,7 @@ services:
         --username $${AIRFLOW_ADMIN_USERNAME}
         --password $${AIRFLOW_ADMIN_PASSWORD}
         --firstname Admin
-        --lastname LyonFlowFull
+        --lastname LyonFlow
         --role Admin
         --email admin@lyonflow.fr
       "

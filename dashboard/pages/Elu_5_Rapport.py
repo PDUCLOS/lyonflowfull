@@ -18,7 +18,7 @@ from dashboard.components.widgets.elu import (
 )
 
 st.set_page_config(
-    page_title="Rapport CM — Élu · LyonFlowFull",
+    page_title="Rapport CM — Élu · LyonFlow",
     page_icon="📄",
     layout="wide",
 )
@@ -99,4 +99,4 @@ sections = {
 render_pdf_generator(sections)
 
 st.markdown("---")
-st.caption("LyonFlowFull · Génération PDF via WeasyPrint (HTML→PDF) · Fallback reportlab si WeasyPrint indisponible")
+st.caption("LyonFlow · Génération PDF via WeasyPrint (HTML→PDF) · Fallback reportlab si WeasyPrint indisponible")

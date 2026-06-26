@@ -16,7 +16,7 @@ from dashboard.components.widgets.elu import (
 )
 
 st.set_page_config(
-    page_title="Avant / Après — Élu · LyonFlowFull",
+    page_title="Avant / Après — Élu · LyonFlow",
     page_icon="⏪",
     layout="wide",
 )
@@ -116,4 +116,4 @@ if amgt:
         st.markdown("##### 📈 Delta (delta_kpis)")
         render_delta_kpis(avant, apres)
 
-st.caption("LyonFlowFull · Avant/Après · Données ouvertes Grand Lyon + Open data")
+st.caption("LyonFlow · Avant/Après · Données ouvertes Grand Lyon + Open data")

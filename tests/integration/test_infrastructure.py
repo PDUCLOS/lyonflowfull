@@ -126,7 +126,7 @@ def test_api_module_importable():
     from src.api.main import app
 
     assert app is not None
-    assert app.title == "LyonFlowFull API"
+    assert app.title == "LyonFlow API"
 
 
 def test_models_importable():

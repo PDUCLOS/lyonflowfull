@@ -1,5 +1,5 @@
 # =============================================================================
-# docs/CONTROLE_VPS_VS_CLOUD_DEMO.md — Audit des 3 déploiements LyonFlowFull
+# docs/CONTROLE_VPS_VS_CLOUD_DEMO.md — Audit des 3 déploiements LyonFlow
 # =============================================================================
 # Date : 2026-06-07
 # Auteur : PDUCLOS
@@ -8,7 +8,7 @@
 
 # Contrôle vps ↔ cloud-demo ↔ kubernetes
 
-Ce document compare les 3 contextes de déploiement de LyonFlowFull pour
+Ce document compare les 3 contextes de déploiement de LyonFlow pour
 valider qu'ils peuvent coexister sans collision et identifier les risques.
 
 ## 1. Matrice de synthèse

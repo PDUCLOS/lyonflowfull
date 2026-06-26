@@ -147,4 +147,4 @@ def render_sidebar_navigation() -> None:
 
         from src.config import get_settings
 
-        st.caption(f"LyonFlowFull v{get_settings().app_version}")
+        st.caption(f"LyonFlow v{get_settings().app_version}")

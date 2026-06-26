@@ -1,9 +1,9 @@
-# Structure du repo — LyonFlowFull
+# Structure du repo — LyonFlow
 
 ## Arbre annote
 
 ```
-lyonflowfull/
+lyonflow/
 ├── CLAUDE.md                # Project memory (instructions repo)
 ├── AGENTS.md                # Conventions equipe
 ├── README.md                # Entry point lecture rapide

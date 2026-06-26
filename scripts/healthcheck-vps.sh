@@ -61,7 +61,7 @@ psql_query() {
         "SET statement_timeout='${timeout}'; ${query}" 2>&1 | tail -1
 }
 
-echo "=== LyonFlowFull VPS Healthcheck (Sprint 15+) ==="
+echo "=== LyonFlow VPS Healthcheck (Sprint 15+) ==="
 echo ""
 
 # 1. Containers (docker ps, pas docker compose exec)

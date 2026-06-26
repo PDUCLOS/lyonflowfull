@@ -429,7 +429,7 @@ Créer `src/routing/eco_calculator.py` avec :
 ```python
 """Calculateur d'impact écologique et économique par mode de transport.
 
-Adapté de PDUCLOS/Lyontraffic pour le pipeline LyonFlowFull (Sprint 15+).
+Adapté de PDUCLOS/Lyontraffic pour le pipeline LyonFlow (Sprint 15+).
 Sources données : ADEME 2024, Grille TCL SYTRAL 2026, Ville de Lyon 2025.
 """
 
@@ -1050,7 +1050,7 @@ Reprendre le pattern HTML inline utilisé dans `transit_trip.py` et `velov_trip.
 - Variables CSS `var(--bg-card)`, `var(--primary-color)`, etc.
 - Police 0.8-1.1rem selon hiérarchie
 
-Pour la winner card Phase 2, s'inspirer du HTML de LyonTraffic (§9.1 lignes 1042-1057) mais adapter aux CSS variables du thème LyonFlowFull.
+Pour la winner card Phase 2, s'inspirer du HTML de LyonTraffic (§9.1 lignes 1042-1057) mais adapter aux CSS variables du thème LyonFlow.
 
 ---
 

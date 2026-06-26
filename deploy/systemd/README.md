@@ -1,6 +1,6 @@
 # deploy/systemd — Units systemd versionnés
 
-Ce dossier contient les **units systemd versionnés** pour LyonFlowFull,
+Ce dossier contient les **units systemd versionnés** pour LyonFlow,
 à installer sur le VPS via `make install-systemd` (cf. Makefile).
 
 ## État actuel (2026-06-22)

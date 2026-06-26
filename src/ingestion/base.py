@@ -1,4 +1,4 @@
-"""DataCollector — Classe abstraite pour tous les collecteurs LyonFlowFull.
+"""DataCollector — Classe abstraite pour tous les collecteurs LyonFlow.
 
 Ce module définit la fondation (Template Method Pattern) de l'ensemble
 des processus d'ingestion de données du projet.
@@ -348,7 +348,7 @@ class DataCollector(abc.ABC):
                 "name": file_name,
                 "parents": [parent_id],
                 "description": (
-                    f"LyonFlowFull Bronze artifact | source={self.source} "
+                    f"LyonFlow Bronze artifact | source={self.source} "
                     f"| n_records={result.n_records} | "
                     f"fetched_at={result.fetched_at.isoformat()}"
                 ),

@@ -1,4 +1,4 @@
-# Structure Git — LyonFlowFull
+# Structure Git — LyonFlow
 
 Ce repo utilise **4 branches longues** correspondant aux 3 phases du
 projet + une branche fixe d'archive VPS.

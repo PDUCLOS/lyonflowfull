@@ -1,7 +1,7 @@
 # =============================================================================
 # monitoring/prometheus/prometheus.yml — Config principale Prometheus
 # =============================================================================
-# Sprint VPS-3 : scrape les services LyonFlowFull toutes les 15s, retention
+# Sprint VPS-3 : scrape les services LyonFlow toutes les 15s, retention
 # 30j. Alertes via alertmanager.yml (webhook Discord/Slack).
 # =============================================================================
 

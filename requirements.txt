@@ -1,5 +1,5 @@
 # =============================================================================
-# LyonFlowFull — dépendances Python (LOCAL DEV / CI / E2E)
+# LyonFlow — dépendances Python (LOCAL DEV / CI / E2E)
 # =============================================================================
 # Sprint 15+ QW4 (2026-06-19) — agrégateur.
 # Pour usage local (développement, tests pytest, e2e) qui a besoin
