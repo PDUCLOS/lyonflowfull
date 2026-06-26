@@ -615,7 +615,7 @@ def render_data_quality_panel() -> None:
         ("silver", "velov_clean", "measurement_time", "5 min"),
         ("silver", "tcl_vehicles_clean", "recorded_at", "5 min"),
         ("silver", "meteo_hourly", "measurement_time", "1h"),
-        ("gold", "traffic_features_live", "measurement_time", "5 min"),
+        ("gold", "traffic_features_live", "computed_at", "5 min"),
         ("gold", "trafic_predictions", "calculated_at", "1h"),
         ("gold", "velov_features", "measurement_time", "5 min"),
         ("gold", "velov_predictions", "prediction_timestamp", "1h"),

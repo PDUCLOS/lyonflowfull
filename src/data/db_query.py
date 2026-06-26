@@ -105,12 +105,12 @@ def get_latest_traffic(limit: int = 100) -> pd.DataFrame:
         DataFrame avec colonnes: measurement_time, node_idx, channel_id,
         speed_kmh, importance_code. Vide si DB down (mock fallback).
     """
-    # Schema réel : gold.traffic_features_live = computed_at, channel_id, speed_kmh
-    # (pas de node_idx ni importance_code dans la table effective)
+    # Schema réel v0.3.1 : gold.traffic_features_live utilise sin_hour/cos_hour/sin_dow/cos_dow
+    # (pas de hour_of_day ni day_of_week — colonnes supprimées Sprint VPS-5)
     query = """
         SELECT computed_at AS measurement_time, channel_id, speed_kmh,
                vitesse_limite_kmh, lag_1, lag_2, lag_3,
-               hour_of_day, day_of_week
+               sin_hour, cos_hour, sin_dow, cos_dow
         FROM gold.traffic_features_live
         WHERE computed_at >= NOW() - INTERVAL '2 hours'
         ORDER BY computed_at DESC
