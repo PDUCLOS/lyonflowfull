@@ -35,10 +35,27 @@ def render_kpi_cards() -> None:
             # Exclure bool (sous-classe de int)
             if isinstance(delta, bool):
                 delta_str = "—"
-            elif isinstance(delta, float):
-                delta_str = f"{delta:+.1f}"
+            elif isinstance(delta, (int, float)):
+                # Sprint 23 (2026-06-26) - numpy.float64 est sous-classe de float
+                # (numpy 2.x) mais numpy.int64 ne l'est PAS de int. pandas Series
+                # .values[] peut renvoyer l'un ou l'autre. Format robuste :
+                # on convertit en float si possible, sinon int.
+                try:
+                    f = float(delta)
+                    delta_str = f"{f:+.1f}"
+                except (TypeError, ValueError):
+                    try:
+                        delta_str = f"{int(delta):+d}"
+                    except (TypeError, ValueError):
+                        delta_str = "—"
+            elif hasattr(delta, "item"):
+                # numpy scalar (int64, float32, etc.) — convertir via .item()
+                try:
+                    delta_str = f"{float(delta.item()):+.1f}"
+                except (TypeError, ValueError):
+                    delta_str = "—"
             else:
-                delta_str = f"{delta:+d}"
+                delta_str = "—"
 
             if isinstance(current, bool):
                 value_str = "✅" if current else "❌"
