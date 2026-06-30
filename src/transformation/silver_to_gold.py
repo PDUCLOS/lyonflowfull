@@ -452,7 +452,12 @@ LEFT JOIN traffic_hourly th ON th.hour_of_day = bh.hour
 
 
 def _build_infrastructure_bottlenecks() -> int:
+    # Sprint 24+ (2026-06-29) — statement_timeout contre hang silencieux.
+    # JOIN global sur ~4.4M lignes peut déraper (mauvais plan, lock en attente).
+    # Couper côté Postgres à 10 min — identique à _refresh_matview_safe —
+    # évite de bloquer le worker Celery + tenir un lock 30 min.
     with raw_connection() as conn, conn.cursor() as cur:
+        cur.execute("SET statement_timeout = 600000")  # 10 min
         cur.execute("DELETE FROM gold.infrastructure_bottlenecks")
         cur.execute(_BOTTLENECK_SQL)
         n = cur.rowcount
