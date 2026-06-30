@@ -50,6 +50,7 @@ PURGE_WHITELIST = {
     "bronze.calendrier_scolaire",
     "bronze.jours_feries",
     "rgpd.audit_log",
+    "gold.traffic_features_live",
 }
 
 
@@ -60,7 +61,7 @@ def _validate_table(table: str) -> tuple[str, str]:
         table: nom complet 'schema.table'
 
     Returns:
-        Tuple (schema, table_name)
+        Tuple (schema, table_name).
 
     Raises:
         ValueError: si la table n'est pas whitelistée.
@@ -74,36 +75,49 @@ def _validate_table(table: str) -> tuple[str, str]:
     return schema, table_name
 
 
-def _purge_bronze(table: str, days: int) -> int:
-    """Purge une table Bronze/Silver/RGPD avec rétention.
+def _purge_table(
+    table: str,
+    days: int,
+    *,
+    ts_column: str = "fetched_at",
+) -> int:
+    """Purge une table (Bronze/Silver/Gold/RGPD) avec rétention.
 
     Args:
         table: nom complet 'schema.table' (doit être dans PURGE_WHITELIST).
         days: nombre de jours de rétention (entier > 0).
+        ts_column: colonne timestamp utilisée pour la rétention.
+            - 'fetched_at' (défaut) : tables Bronze/Silver ingestées par les
+              collecteurs temps réel.
+            - 'computed_at' : gold.traffic_features_live (calculée par
+              transform_silver_to_gold, pas ingérée).
 
     Returns:
         Nombre de lignes supprimées.
 
     Raises:
-        ValueError: si table ou days invalides.
+        ValueError: si table, ts_column ou days invalides.
     """
     schema, table_name = _validate_table(table)
     if not isinstance(days, int) or days < 1:
         raise ValueError(f"days doit être un entier > 0, reçu: {days}")
+    if not ts_column.replace("_", "").isalnum():
+        raise ValueError(f"ts_column invalide : {ts_column}")
 
     # SQL paramétré via make_interval (PostgreSQL, pas de f-string)
     query = f"""
         DELETE FROM {schema}.{table_name}
-        WHERE fetched_at < NOW() - make_interval(days => %s)
+        WHERE {ts_column} < NOW() - make_interval(days => %s)
     """
-    # Note: schema/table_name sont validés par _validate_table, pas user-controlled
+    # Note: schema/table_name/ts_column sont validés, pas user-controlled
 
     from src.db import raw_connection
 
     with raw_connection() as conn, conn.cursor() as cur:
         cur.execute(query, (days,))
         deleted = cur.rowcount
-        # Log la purge (RGPD audit)
+        # Log la purge (RGPD audit) — table alias convention:
+        # "schema.table" pour garder la trace cross-schema.
         cur.execute(
             """
                 INSERT INTO rgpd.purge_log
@@ -112,8 +126,15 @@ def _purge_bronze(table: str, days: int) -> int:
             """,
             (schema, table_name, deleted, days),
         )
-        logger.info(f"Purged {deleted} rows from {table} (> {days}j)")
+        logger.info(
+            f"Purged {deleted} rows from {table} (>{days}j, "
+            f"ts={ts_column})"
+        )
         return deleted
+
+
+# Backward-compat alias (legacy callers)
+_purge_bronze = _purge_table
 
 
 # =============================================================================
@@ -339,29 +360,40 @@ with DAG(
 
 
 # -----------------------------------------------------------------------------
-# DAG 2: Purge Bronze (rétention)
+# DAG 2: Purge (Bronze + Gold) — rétention
+# -----------------------------------------------------------------------------
+# Sprint P3.4+ (2026-06-30) : étendu pour purger gold.traffic_features_live
+# (7 jours) en plus des tables Bronze. Le DAG_ID reste 'purge_bronze' pour
+# ne pas casser les triggers Airflow existants.
 # -----------------------------------------------------------------------------
 with DAG(
     dag_id="purge_bronze",
-    description="Purge Bronze (rétention: 7-45j selon volume)",
+    description="Purge Bronze + Gold (rétention: 7j par défaut)",
     schedule="0 3 * * *",
     start_date=datetime(2026, 1, 1),
     catchup=False,
     max_active_runs=1,
     tags=["maintenance", "purge"],
 ) as dag_purge:
+    # (table, days, ts_column) — ts_column='fetched_at' par défaut pour Bronze,
+    # 'computed_at' pour gold.traffic_features_live (calculée par
+    # transform_silver_to_gold, pas ingérée).
     retentions = [
-        ("bronze.trafic_boucles", 7),
-        ("bronze.velov", 7),
-        ("bronze.tcl_vehicles", 7),
-        ("bronze.meteo", 7),
-        ("bronze.air_quality", 7),
-        ("bronze.chantiers", 7),
+        ("bronze.trafic_boucles",          7, "fetched_at"),
+        ("bronze.velov",                    7, "fetched_at"),
+        ("bronze.tcl_vehicles",             7, "fetched_at"),
+        ("bronze.meteo",                    7, "fetched_at"),
+        ("bronze.air_quality",              7, "fetched_at"),
+        ("bronze.chantiers",                7, "fetched_at"),
+        # Sprint P3.4+ : purge gold.traffic_features_live (UPSERT massif
+        # */10min, grossit sans borne). 7j couvre le besoin dashboard
+        # (filtré NOW() - 2h dans les requêtes live) + buffer analyse.
+        ("gold.traffic_features_live",      7, "computed_at"),
     ]
-    for table, days in retentions:
+    for table, days, ts_column in retentions:
         PythonOperator(
             task_id=f"purge_{table.replace('.', '_')}_d{days}",
-            python_callable=_purge_bronze,
-            op_kwargs={"table": table, "days": days},
+            python_callable=_purge_table,
+            op_kwargs={"table": table, "days": days, "ts_column": ts_column},
             execution_timeout=timedelta(minutes=5),
         )
