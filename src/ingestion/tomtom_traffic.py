@@ -349,8 +349,9 @@ def save_lyon_tiles_to_bronze(results: list[dict]) -> int:
     if not results:
         return 0
 
-    from src.db.connection import raw_connection
     from psycopg2.extras import execute_batch
+
+    from src.db.connection import raw_connection
 
     rows = [
         (

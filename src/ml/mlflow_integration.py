@@ -334,8 +334,9 @@ class MLflowTracker:
             run_id = self._run.info.run_id
             uri = f"runs:/{run_id}/{model_name}.pkl"
 
-            from mlflow.tracking import MlflowClient
             import contextlib
+
+            from mlflow.tracking import MlflowClient
 
             client = MlflowClient()
             # On ignore l'erreur si le "Registered Model" parent existe déjà
