@@ -9,7 +9,7 @@ Sprint P0 (2026-06-14) — Fix AUDIT_INTEGRATION_LIVE.md § 1.1.3.
 Problème : ``gold.trafic_predictions`` n'a aucun index sur
 ``calculated_at``. Le DAG ``dag_live_speed_retrain`` fait :
 
-* INSERT hourly (~4400 rows/h : 4 horizons × ~1100 axes)
+* INSERT hourly (~4400 rows/h : 4 horizons x ~1100 axes)
 * DELETE WHERE calculated_at < NOW() - INTERVAL '7 days' (cleanup)
 * SELECT WHERE calculated_at >= NOW() - INTERVAL '2 hours' (dashboard)
 

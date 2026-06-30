@@ -77,15 +77,8 @@ class XGBoostSpeedModel:
 
     def load(self, horizons: list[int] | None = None) -> None:
         """Charge les modèles depuis MLflow (si dispo) ou depuis le disque local."""
-        import mlflow
-
         from src.ml.mlflow_integration import is_mlflow_available
 
-        # Sprint 8+2 (2026-06-12) — Focus H+1h uniquement (fiabilité VPS).
-        # Avant : [5, 60, 180, 360] — 4 modèles entraînés, 4x le coût
-        #          compute et la mémoire.
-        # Après : [60] — 1 seul modèle, horizon = 1h, conforme au focus
-        #          Sprint VPS-6 (gold.trafic_predictions.horizon_h=1).
         horizons = horizons or [60]
         for h in horizons:
             model_name = f"xgb_speed_h{h}"
@@ -95,7 +88,8 @@ class XGBoostSpeedModel:
             mlflow_success = False
             if is_mlflow_available():
                 try:
-                    # Télécharge l'artifact depuis le registre (Production)
+                    import mlflow
+
                     artifact_uri = f"models:/{model_name}/Production"
                     local_path = mlflow.artifacts.download_artifacts(artifact_uri, dst_path=str(self._model_dir))
                     self.models[h] = joblib.load(local_path)

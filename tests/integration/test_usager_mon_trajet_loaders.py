@@ -82,11 +82,12 @@ def test_stub_get_latest_drift_report_returns_none():
 
 def test_load_lyon_addresses_cached_returns_list():
     """Le loader autocomplete Mon Trajet ne doit pas crash en mode prod."""
-    from src.data.data_loader import load_lyon_addresses
-
     # mode démo : retour mock ; mode prod : peut lever DashboardDataError
     # (acceptable — on vérifie au moins que la fonction est callable)
     import os
+
+    from src.data.data_loader import load_lyon_addresses
+
     os.environ["LYONFLOW_DEMO_MODE"] = "1"  # force mode démo
     try:
         result = load_lyon_addresses(force_mock=True)
@@ -97,9 +98,10 @@ def test_load_lyon_addresses_cached_returns_list():
 
 def test_load_lyon_addresses_with_coords_cached():
     """Loader coords pour markers — même logique."""
+    import os
+
     from src.data.data_loader import load_lyon_addresses_with_coords
 
-    import os
     os.environ["LYONFLOW_DEMO_MODE"] = "1"
     try:
         result = load_lyon_addresses_with_coords(force_mock=True)
@@ -110,9 +112,10 @@ def test_load_lyon_addresses_with_coords_cached():
 
 def test_load_cadence_for_line_signature():
     """Loader cadence — vérifie la signature (3 kwargs acceptés)."""
+    import os
+
     from src.data.data_loader import load_cadence_for_line
 
-    import os
     os.environ["LYONFLOW_DEMO_MODE"] = "1"
     try:
         # Tous les kwargs doivent être supportés
@@ -158,9 +161,10 @@ def test_load_bottlenecks_top_includes_lat_lon():
     Avant le fix, lat/lon étaient absents du dict → la carte Élu
     tombait toujours sur le fallback hardcodé.
     """
+    import os
+
     from src.data.data_loader import load_bottlenecks_top
 
-    import os
     os.environ["LYONFLOW_DEMO_MODE"] = "1"
     try:
         result = load_bottlenecks_top(force_mock=True)
@@ -187,9 +191,10 @@ def test_load_velov_stations_includes_station_id():
     Avant le fix, seul ``id`` (int) était exposé → le widget Vélov
     matchait jamais les prédictions H+30min.
     """
+    import os
+
     from src.data.data_loader import load_velov_stations
 
-    import os
     os.environ["LYONFLOW_DEMO_MODE"] = "1"
     try:
         result = load_velov_stations(force_mock=True)

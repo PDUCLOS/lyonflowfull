@@ -120,9 +120,7 @@ class AirflowSettings(BaseSettings):
     fernet_key: str = Field(default="", alias="AIRFLOW_FERNET_KEY")
     # C3 (Sprint 11+) — JWT secret pour l'API Airflow (auth sur /api/v1).
     # Requis en production.
-    jwt_secret_key: str = Field(
-        default="", alias="AIRFLOW__API__AUTH__JWT_SECRET_KEY"
-    )
+    jwt_secret_key: str = Field(default="", alias="AIRFLOW__API__AUTH__JWT_SECRET_KEY")
 
 
 class MLSettings(BaseSettings):
@@ -229,13 +227,9 @@ def validate_settings() -> None:
 
     # C1 (Sprint 11+) — Refuse le default password en production
     if s.app_env == "production" and s.db.password == "dev-password-not-for-prod":
-        dangerous_defaults.append(
-            "POSTGRES_PASSWORD est encore le default 'dev-password-not-for-prod' en production"
-        )
+        dangerous_defaults.append("POSTGRES_PASSWORD est encore le default 'dev-password-not-for-prod' en production")
     if s.app_env == "production" and s.db.password == "lyonflow_demo_2026":
-        dangerous_defaults.append(
-            "POSTGRES_PASSWORD est le password DEMO ('lyonflow_demo_2026') en production"
-        )
+        dangerous_defaults.append("POSTGRES_PASSWORD est le password DEMO ('lyonflow_demo_2026') en production")
 
     # C3 (Sprint 11+) — Secrets Airflow/JWT obligatoires en production
     if s.app_env == "production" and not s.airflow.fernet_key:
@@ -249,7 +243,4 @@ def validate_settings() -> None:
     if missing:
         raise RuntimeError(f"Variables d'environnement manquantes : {', '.join(missing)}")
     if dangerous_defaults:
-        raise RuntimeError(
-            "Configuration dangereuse détectée :\n  - "
-            + "\n  - ".join(dangerous_defaults)
-        )
+        raise RuntimeError("Configuration dangereuse détectée :\n  - " + "\n  - ".join(dangerous_defaults))

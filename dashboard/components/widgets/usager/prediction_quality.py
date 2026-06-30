@@ -123,8 +123,7 @@ def render_prediction_quality() -> None:
 
     st.markdown("#### 🎯 Qualité de la prédiction H+1h")
     st.caption(
-        f"Basé sur **{metrics['n_obs']} observations** des 7 derniers jours. "
-        "Source : `gold.predictions_vs_actuals`."
+        f"Basé sur **{metrics['n_obs']} observations** des 7 derniers jours. Source : `gold.predictions_vs_actuals`."
     )
 
     col1, col2, col3, col4 = st.columns(4)

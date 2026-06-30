@@ -59,9 +59,14 @@ def get_db_connection() -> psycopg2.extensions.connection:
 
 def fetch_cadence_summary(conn) -> list[dict]:
     """Lit la vue v_cadence_summary (cadence observée 7j glissants)."""
-    with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
-        cur.execute("SELECT * FROM referentiel.v_cadence_summary")
-        return [dict(row) for row in cur.fetchall()]
+    try:
+        with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
+            cur.execute("SELECT * FROM referentiel.v_cadence_summary")
+            return [dict(row) for row in cur.fetchall()]
+    except psycopg2.Error as e:
+        conn.rollback()
+        logger.warning("v_cadence_summary inaccessible (%s) — migration manquante ? Skip seed.", e)
+        return []
 
 
 def upsert_cadence(conn, rows: list[dict], dry_run: bool = False) -> tuple[int, int]:

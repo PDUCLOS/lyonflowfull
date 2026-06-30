@@ -59,8 +59,8 @@ DEFAULT_ARGS = {
 # que 13 jours d'historique, 30j ne déclenchait jamais d'archive).
 SILVER_TABLES: list[tuple[str, str]] = [
     ("trafic_vitesse_propre", "transformed_at"),  # 28 Go, 1.5M rows
-    ("tcl_vehicles_clean", "fetched_at"),         # ~260 Mo
-    ("velov_clean", "fetched_at"),                # ~282 Mo
+    ("tcl_vehicles_clean", "fetched_at"),  # ~260 Mo
+    ("velov_clean", "fetched_at"),  # ~282 Mo
 ]
 
 RETENTION_DAYS = 7  # garde 7 jours en DB (Gold lit les 2 derniers jours, le reste va sur MinIO froid)

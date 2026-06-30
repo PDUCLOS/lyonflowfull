@@ -52,20 +52,15 @@ def render_bottleneck_map(height: int = 500) -> None:
         return
 
     # Sprint P2.2 : compter ceux qui ont lat/lon (DB) vs fallback (démo)
-    n_with_coords = sum(
-        1 for b in bottlenecks
-        if b.get("lat") is not None and b.get("lon") is not None
-    )
-    n_with_fallback = sum(
-        1 for b in bottlenecks
-        if b.get("lat") is None and b.get("zone") in _FALLBACK_COORDS
-    )
+    n_with_coords = sum(1 for b in bottlenecks if b.get("lat") is not None and b.get("lon") is not None)
+    n_with_fallback = sum(1 for b in bottlenecks if b.get("lat") is None and b.get("zone") in _FALLBACK_COORDS)
     n_skipped = len(bottlenecks) - n_with_coords - n_with_fallback
     if n_skipped > 0:
         logger.warning(
             "bottleneck_map: %d/%d bottlenecks sans coords (ni DB ni fallback). "
             "Vérifier que la migration 0006 est appliquée.",
-            n_skipped, len(bottlenecks),
+            n_skipped,
+            len(bottlenecks),
         )
 
     try:

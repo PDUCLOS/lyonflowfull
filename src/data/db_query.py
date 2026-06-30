@@ -105,12 +105,12 @@ def get_latest_traffic(limit: int = 100) -> pd.DataFrame:
         DataFrame avec colonnes: measurement_time, node_idx, channel_id,
         speed_kmh, importance_code. Vide si DB down (mock fallback).
     """
-    # Schema réel : gold.traffic_features_live = computed_at, channel_id, speed_kmh
-    # (pas de node_idx ni importance_code dans la table effective)
+    # Schema réel v0.3.1 : gold.traffic_features_live utilise sin_hour/cos_hour/sin_dow/cos_dow
+    # (pas de hour_of_day ni day_of_week — colonnes supprimées Sprint VPS-5)
     query = """
         SELECT computed_at AS measurement_time, channel_id, speed_kmh,
                vitesse_limite_kmh, lag_1, lag_2, lag_3,
-               hour_of_day, day_of_week
+               sin_hour, cos_hour, sin_dow, cos_dow
         FROM gold.traffic_features_live
         WHERE computed_at >= NOW() - INTERVAL '2 hours'
         ORDER BY computed_at DESC
@@ -586,6 +586,7 @@ def get_data_freshness(schema: str = "bronze", table: str = "trafic_boucles") ->
     # même après whitelist. Defense in depth (ne jamais faire confiance à
     # f-string même si input est validée).
     from psycopg2 import sql as pg_sql
+
     query = pg_sql.SQL("SELECT MAX(fetched_at) FROM {}.{}").format(
         pg_sql.Identifier(schema),
         pg_sql.Identifier(table),
@@ -619,20 +620,17 @@ def get_bronze_source_counts(hours: int = 1) -> pd.DataFrame:
 
     rows = []
     from psycopg2 import sql as pg_sql
+
     for table, label in sources:
         # Une requête par table (pas de UNION sur des tables hétérogènes)
         try:
             count = execute_scalar(
-                pg_sql.SQL("SELECT COUNT(*) FROM bronze.{} WHERE fetched_at >= NOW() - make_interval(hours => %s)").format(
-                    pg_sql.Identifier(table)
-                ),
+                pg_sql.SQL(
+                    "SELECT COUNT(*) FROM bronze.{} WHERE fetched_at >= NOW() - make_interval(hours => %s)"
+                ).format(pg_sql.Identifier(table)),
                 (hours,),
             )
-            last = execute_scalar(
-                pg_sql.SQL("SELECT MAX(fetched_at) FROM bronze.{}").format(
-                    pg_sql.Identifier(table)
-                )
-            )
+            last = execute_scalar(pg_sql.SQL("SELECT MAX(fetched_at) FROM bronze.{}").format(pg_sql.Identifier(table)))
             rows.append(
                 {
                     "source": label,
@@ -859,8 +857,7 @@ def get_line_kpis(line_ids: list[str] | None = None) -> dict:
     except Exception as e:
         # Vue absente ou query invalide — fail-soft.
         logger.warning(
-            "get_line_kpis: query gold.mv_line_kpis_live a échoué (%s) — "
-            "fallback dict vide.",
+            "get_line_kpis: query gold.mv_line_kpis_live a échoué (%s) — fallback dict vide.",
             e,
         )
         return {}
@@ -878,10 +875,7 @@ def get_line_kpis(line_ids: list[str] | None = None) -> dict:
             freq_pph_val = float(freq_pph) if freq_pph is not None else 0.0
         except (TypeError, ValueError):
             freq_pph_val = 0.0
-        if freq_pph_val > 0:
-            frequency_min = round(60.0 / freq_pph_val, 1)
-        else:
-            frequency_min = 0.0
+        frequency_min = round(60.0 / freq_pph_val, 1) if freq_pph_val > 0 else 0.0
 
         out[line_id] = {
             "otp_pct": float(row.get("otp_pct") or 0),
@@ -1070,8 +1064,7 @@ def get_lieux_lyon_names() -> list[str]:
         df = _df_from_query(query)
     except Exception as e:
         logger.warning(
-            "get_lieux_lyon_names: query referentiel.lieux_lyon a échoué (%s) — "
-            "fallback liste vide.",
+            "get_lieux_lyon_names: query referentiel.lieux_lyon a échoué (%s) — fallback liste vide.",
             e,
         )
         return []
@@ -1105,8 +1098,7 @@ def get_lieux_lyon_with_coords() -> list[dict]:
         df = _df_from_query(query)
     except Exception as e:
         logger.warning(
-            "get_lieux_lyon_with_coords: query referentiel.lieux_lyon a échoué (%s) — "
-            "fallback liste vide.",
+            "get_lieux_lyon_with_coords: query referentiel.lieux_lyon a échoué (%s) — fallback liste vide.",
             e,
         )
         return []
