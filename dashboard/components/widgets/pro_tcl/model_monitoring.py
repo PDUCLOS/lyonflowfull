@@ -600,30 +600,12 @@ def render_velov_model_analysis() -> None:
             else:
                 st.caption("Colonnes confidence_* absentes — modèle sans CI.")
 
-    # Backtest MAE si gold.predictions_vs_actuals existe avec vélov
-    try:
-        from src.data.db_query import _df_from_query  # type: ignore
-
-        backtest = _df_from_query(
-            """
-            SELECT model_name, horizon_minutes,
-                   AVG(ABS(predicted - actual)) AS mae,
-                   COUNT(*) AS n_obs,
-                   MAX(target_timestamp) AS last_obs
-            FROM gold.predictions_vs_actuals
-            WHERE model_name LIKE 'xgboost_velov%%'
-              AND target_timestamp >= NOW() - INTERVAL '7 days'
-            GROUP BY model_name, horizon_minutes
-            ORDER BY model_name, horizon_minutes
-            """
-        )
-        if not backtest.empty:
-            st.markdown("**Backtest MAE 7j (Elementary-style)**")
-            st.dataframe(backtest, use_container_width=True, hide_index=True)
-        else:
-            st.caption("Backtest vide — alimenter `gold.predictions_vs_actuals` (DAG `evaluate_velov`).")
-    except Exception as e:
-        st.caption(f"Backtest indisponible : {e}")
+    # Backtest MAE : retiré Sprint 24+ (table gold.predictions_vs_actuals archivée avec le GNN).
+    # Le suivi MAE reste via MLflow Registry (section 1 de Pro_7).
+    st.caption(
+        "Backtest détaillé : voir la section MLflow Model Registry ci-dessus "
+        "(MAE/RMSE par run d'entraînement)."
+    )
 
 
 def render_data_quality_panel() -> None:

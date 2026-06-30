@@ -43,7 +43,6 @@ from src.data.db_query import (
     get_infrastructure_bottlenecks,
     get_latest_traffic,
     get_nearest_velov_stations,
-    get_predictions_vs_actuals,
     get_rgpd_audit_log,
     get_rgpd_consents_summary,
     get_traffic_bottlenecks,
@@ -329,16 +328,6 @@ def load_infra_bottlenecks(top: int = 15) -> pd.DataFrame:
 # =============================================================================
 # Prédictions & monitoring
 # =============================================================================
-
-
-def load_predictions_vs_actuals(limit: int = 200) -> pd.DataFrame:
-    """Backtesting prédictions vs réalité.
-
-    Raises:
-        DashboardDataError: en mode prod, si PostgreSQL ne répond pas.
-    """
-    _require_db_or_raise("predictions_vs_actuals")
-    return get_predictions_vs_actuals(limit=limit)
 
 
 def load_rgpd_audit(limit: int = 50) -> pd.DataFrame:

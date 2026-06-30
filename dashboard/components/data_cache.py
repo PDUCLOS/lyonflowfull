@@ -86,11 +86,6 @@ def cached_bottlenecks_top() -> list[dict]:
     return dl.load_bottlenecks_top()
 
 
-@st.cache_data(ttl=TTL_FAST, show_spinner=False)
-def cached_predictions_vs_actuals(limit: int = 200) -> pd.DataFrame:
-    return dl.load_predictions_vs_actuals(limit=limit)
-
-
 # Axe A — Backtest Engine
 @st.cache_data(ttl=TTL_FAST, show_spinner=False)
 def cached_xgb_vs_tomtom(hours: int = 24, limit: int = 500) -> pd.DataFrame:

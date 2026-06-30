@@ -1,4 +1,4 @@
-"""Page Pro TCL — Model Monitoring (MLflow Registry + drift + GNN map).
+"""Page Pro TCL — Model Monitoring (MLflow Registry + drift).
 
 Lit les modeles depuis MLflow Tracking Server (live). Si le serveur
 n'est pas joignable, leve DashboardDataError (fail loud, zero mock).
@@ -22,7 +22,6 @@ from dashboard.components.persona_guard import apply_persona_guard
 from dashboard.components.theme import inject_theme
 from dashboard.components.widgets.pro_tcl import render_model_monitoring_page
 from dashboard.components.widgets.pro_tcl.backtest_dashboard import render_backtest_dashboard
-from dashboard.components.widgets.pro_tcl.gnn_map import render_gnn_map_section
 from src.ml.model_registry import is_model_monitoring_visible
 
 st.set_page_config(
@@ -55,7 +54,7 @@ if not is_model_monitoring_visible():
             <div class="lyf-detail" style="opacity:0.7;">
                 Pour l'activer : set <code>LYONFLOW_DASHBOARD_MODEL_MONITORING=true</code>
                 dans .env, puis redémarrer Streamlit. Le dashboard bascule
-                alors en mode live MLflow (registry + drift + GNN map).
+                alors en mode live MLflow (registry + drift).
             </div>
         </div>
         """,
@@ -64,18 +63,14 @@ if not is_model_monitoring_visible():
     st.stop()  # Ne pas afficher le contenu détaillé du dashboard
 
 st.caption(
-    "Vue opérateur : registry MLflow · modèles XGBoost Speed/Velov + GNN staging · "
+    "Vue opérateur : registry MLflow · modèle XGBoost Speed/Velov · "
   "métriques MAE/RMSE/R² · drift detection. **Sprint 9** : branchement MLflow Tracking API live."
 )
 
 # Section 1 : Model Registry Status (toggle + status)
 render_model_monitoring_page()
 
-# Section 2 : GNN Map préparée, désactivée par défaut)
-st.markdown("---")
-render_gnn_map_section()
-
-# Section 3 : Backtest XGBoost vs TomTom Axe A)
+# Section 2 : Backtest XGBoost vs TomTom (Axe A)
 # 4 KPIs + scatter + courbe MAE + distribution + top 10 pires prédictions.
 # Button-gate via deferred_render ) car widget 🟠 lourd (3 Plotly + 1 MV).
 st.markdown("---")
@@ -88,5 +83,5 @@ deferred_render(
 
 st.caption(
     "Model Monitoring · Pour relancer un entraînement : `make logs` puis "
-    "`airflow dags trigger retrain_xgboost_speed` (ou `retrain_gnn` quand activé)"
+    "`airflow dags trigger retrain_xgboost_speed`"
 )

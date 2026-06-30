@@ -138,23 +138,15 @@ class MLSettings(BaseSettings):
     weight_jam: float = Field(default=15.0, alias="WEIGHT_JAM")
     weight_slow: float = Field(default=5.0, alias="WEIGHT_SLOW")
     default_speed_kmh: float = Field(default=30.0, alias="LYON_DEFAULT_SPEED")
-  # ---- Model Registry (coexistence XGBoost + GNN) ----
-    # Modèles actifs en production. Valeurs acceptées :
-    #   - "xgboost" : seul XGBoost sert les prédictions prod
-    #   - "stgcn"   : seul GNN sert les prédictions prod
-    #   - "both"    : les 2 tournent en // (GNN = challenger, XGBoost = champion)
-    # Quand Patrice valide une solution, on bascule sur le winner seul.
-    models_active: str = Field(default="both", alias="LYONFLOW_MODELS_ACTIVE")
-  # ---- GNN training désactivé par défaut (préparation) ----
-    # Quand Patrice a setup l'instance EC2 GPU et validé la solution,
-    # on bascule ce toggle à True pour activer le retrain nightly.
-    stgcn_training_enabled: bool = Field(default=False, alias="LYONFLOW_STGCN_TRAINING")
-    # Activer l'entraînement nightly XGBoost (toujours actif sur VPS).
+    # Activer l'entraînement hourly/daily XGBoost (toujours actif sur VPS).
     xgboost_training_enabled: bool = Field(default=True, alias="LYONFLOW_XGBOOST_TRAINING")
   # ---- Dashboards préparés mais désactivés par défaut ----
     # Carte GNN géographique (visualisation des prédictions spatiales).
     # Préparée dans Pro_7_Model_Monitoring, masquée par défaut.
     gnn_map_visible: bool = Field(default=False, alias="LYONFLOW_DASHBOARD_GNN_MAP")
+    # Carte trafic (visualisation live vs prédit H+1h).
+    # Préparée dans Pro/Usager/Elu, masquée par défaut.
+    traffic_map_visible: bool = Field(default=False, alias="LYONFLOW_DASHBOARD_TRAFFIC_MAP")
     # Dashboard Model Monitoring complet (lit MLflow live).
     # Préparé dans Pro_7_Model_Monitoring, masqué par défaut.
     model_monitoring_visible: bool = Field(default=False, alias="LYONFLOW_DASHBOARD_MODEL_MONITORING")

@@ -318,24 +318,6 @@ def get_traffic_bottlenecks(top: int = 20) -> pd.DataFrame:
     return df
 
 
-def get_predictions_vs_actuals(limit: int = 1000) -> pd.DataFrame:
-    """Backtesting — comparaisons prédictions vs réalité.
-
-    Returns:
-        DataFrame: horizon_minutes, model_name, predicted_speed, actual_speed,
-        error_kmh, error_pct.
-    """
-    query = """
-        SELECT horizon_minutes, model_name, predicted_speed, actual_speed,
-               error_kmh, error_pct
-        FROM gold.predictions_vs_actuals
-        ORDER BY prediction_id DESC
-        LIMIT %s
-    """
-    df = _df_from_query(query, (limit,))
-    return df
-
-
 # =============================================================================
 # Vélov (Gold)
 # =============================================================================

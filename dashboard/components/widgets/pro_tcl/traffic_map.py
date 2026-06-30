@@ -1,17 +1,14 @@
-"""Widget — Carte trafic temps réel vs prédictions H+1h.
+"""Widget — Carte trafic temps réel vs prédictions H+1h (XGBoost).
 
- refonte complète :
 * Couleur **relative** : ratio vitesse / vitesse_limite (pas de seuils fixes).
   Un segment à 50% de sa limite est orange, qu'il soit limité à 30 ou 90 km/h.
 * **Comparaison live ↔ H+1h** : tooltip affiche vitesse actuelle, prédite,
   et delta (flèche tendance). Couleur = ratio actuel.
 * Source : ``get_traffic_live_vs_predicted()`` — JOIN live × predictions.
-* Pro_7 Model Monitoring garde la source prédictions seules.
 
-Trois entrées publiques :
+Deux entrées publiques :
 * ``render_traffic_map(...)``        — carte plein-format (Pro_1).
 * ``render_traffic_map_compact(...)`` — version réduite (Usager_1, Elu_1).
-* ``render_gnn_map_section()``       — section dédiée Pro_7 (prédictions seules).
 """
 
 from __future__ import annotations
@@ -24,9 +21,7 @@ import streamlit as st
 
 from dashboard.components.colors import COLORS
 from dashboard.components.loading_state import loading_wrapper
-from src.ml.mlflow_integration import is_mlflow_available
-from src.ml.model_registry import is_gnn_map_visible, is_stgcn_enabled
-from src.models.stgcn_wrapper import STGCNWrapper
+from src.ml.model_registry import is_traffic_map_visible
 
 logger = logging.getLogger(__name__)
 
@@ -108,17 +103,12 @@ def _load_predictions(horizon: int, limit: int = 1500) -> pd.DataFrame | None:
 
 
 def _check_gnn_model(horizon: int) -> dict:
-    try:
-        wrapper = STGCNWrapper.get(horizon)
-        if wrapper.load():
-            return {"loaded": True, "reason": "OK", "fallback": "SpatioTemporalGCN"}
-        return {
-            "loaded": False,
-            "reason": f"Modèle .pt absent pour H+{horizon}min.",
-            "fallback": "XGBoost (fallback)",
-        }
-    except Exception as e:  # pragma: no cover
-        return {"loaded": False, "reason": str(e), "fallback": "XGBoost (fallback)"}
+    """DEPRECATED — conservé en shim no-op pour rétro-compat imports.
+
+    Le projet n'utilise plus le GNN depuis Sprint 24+ (2026-06-30).
+    XGBoost est l'unique modèle en production.
+    """
+    return {"loaded": False, "reason": "GNN archivé (Sprint 24+)", "fallback": "XGBoost (unique)"}
 
 
 # ---------------------------------------------------------------------------
@@ -296,8 +286,8 @@ def render_traffic_map(
     key_suffix: str = "",
 ) -> None:
     with loading_wrapper("Chargement carte trafic…", "⏳"):
-        if not is_gnn_map_visible():
-            st.info("Carte trafic désactivée. Set `LYONFLOW_DASHBOARD_GNN_MAP=true` dans .env.")
+        if not is_traffic_map_visible():
+            st.info("Carte trafic désactivée. Set `LYONFLOW_DASHBOARD_TRAFFIC_MAP=true` dans .env.")
             return
 
         df = _load_live_vs_predicted(limit=2000)
@@ -325,7 +315,7 @@ def render_traffic_map_compact(
     key_suffix: str = "",
 ) -> None:
     with loading_wrapper("Chargement carte trafic…", "⏳"):
-        if not is_gnn_map_visible():
+        if not is_traffic_map_visible():
             return
 
         df = _load_live_vs_predicted(limit=1500)
@@ -337,55 +327,3 @@ def render_traffic_map_compact(
         _render_pydeck_live_vs_pred(df, height=height, zoom=10.7)
         _legend_ratio()
 
-
-# ---------------------------------------------------------------------------
-# API publique : Pro_7 Model Monitoring — prédictions seules (ratio-based)
-# ---------------------------------------------------------------------------
-def render_gnn_map_section() -> None:
-    with loading_wrapper("Chargement carte modèle…", "⏳"):
-        st.markdown("##### 🗺️ Carte trafic — prédictions spatiales (modèle)")
-
-        if not is_gnn_map_visible():
-            st.markdown(
-                """
-                <div style="background:linear-gradient(135deg, var(--border-card) 0%, var(--persona-elu) 100%);
-                            border:1px dashed var(--persona-elu-accent);border-radius:8px;padding:1rem;margin:0.5rem 0;">
-                    <div style="font-size:0.8rem;opacity:0.8;text-transform:uppercase;
-                                letter-spacing:1px;">🟡 Carte désactivée</div>
-                    <div class="lyf-label" style="margin:0.5rem 0;">
-                        Set <code>LYONFLOW_DASHBOARD_GNN_MAP=true</code> dans .env pour activer.
-                    </div>
-                </div>
-                """,
-                unsafe_allow_html=True,
-            )
-            return
-
-        if not is_stgcn_enabled():
-            st.warning("STGCN désactivé dans LYONFLOW_MODELS_ACTIVE — carte non disponible.")
-            return
-        if not is_mlflow_available():
-            st.warning("MLflow non disponible — prédictions non récupérables.")
-            return
-
-        horizon = 60
-        if is_stgcn_enabled() and is_mlflow_available():
-            status = _check_gnn_model(horizon)
-            if not status["loaded"]:
-                st.caption(f"⚠️ GNN indisponible ({status['reason']}) — fallback XGBoost.")
-
-        merged = _load_predictions(horizon, limit=1500)
-        if merged is None:
-            st.info(
-                "Pas de prédictions H+1h. Vérifie `gold.trafic_predictions` "
-                "(DAG retrain XGBoost :25 / GNN 03h)."
-            )
-            return
-
-        _freshness_line(merged, ts_col="calculated_at")
-        dominant = _render_pydeck_predictions(merged, height=450)
-        _legend_ratio()
-        st.caption(
-            f"Source : `gold.trafic_predictions` · "
-            f"Modèle : {dominant} · {len(merged)} nœuds · H+1h"
-        )

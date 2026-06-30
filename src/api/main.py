@@ -310,7 +310,7 @@ async def list_models(api_key: None = Depends(verify_api_key)):
                     "stage": "Production",
                     "metrics": {"mae": 4.2, "r2": 0.331},
                 },
-                {"name": "stgcn_gnn", "version": "0.3.0", "stage": "Staging", "metrics": {"mae": 2.8, "r2": 0.92}},
+                {"name": "stgcn_gnn", "version": "0.3.0", "stage": "Archived", "metrics": {"mae": 2.8, "r2": 0.92}},  # Sprint 24+ : GNN archivé
             ]
         }
 

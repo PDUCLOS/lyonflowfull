@@ -14,11 +14,6 @@ from dashboard.components.widgets.pro_tcl.cause_analysis import render_cause_ana
 from dashboard.components.widgets.pro_tcl.coherence_scatter import render_coherence_scatter
 from dashboard.components.widgets.pro_tcl.correlation_matrix import render_correlation_matrix
 from dashboard.components.widgets.pro_tcl.frequency_slider import render_frequency_slider
-from dashboard.components.widgets.pro_tcl.gnn_map import (
-    render_gnn_map_section,
-    render_traffic_map,
-    render_traffic_map_compact,
-)
 from dashboard.components.widgets.pro_tcl.line_comparison import render_line_comparison
 from dashboard.components.widgets.pro_tcl.line_kpis import render_line_kpis
 from dashboard.components.widgets.pro_tcl.line_selector import render_line_selector
@@ -37,6 +32,10 @@ from dashboard.components.widgets.pro_tcl.pipeline_management import render_pipe
 from dashboard.components.widgets.pro_tcl.propagation_map import render_propagation_map
 from dashboard.components.widgets.pro_tcl.segment_table import render_segment_table
 from dashboard.components.widgets.pro_tcl.source_health_monitor import render_source_health_monitor
+from dashboard.components.widgets.pro_tcl.traffic_map import (
+    render_traffic_map,
+    render_traffic_map_compact,
+)
 
 __all__ = [
     "render_alert_ticker",
@@ -47,7 +46,6 @@ __all__ = [
     "render_coherence_scatter",
     "render_correlation_matrix",
     "render_frequency_slider",
-    "render_gnn_map_section",
     "render_line_comparison",
     "render_line_kpis",
     "render_line_selector",
