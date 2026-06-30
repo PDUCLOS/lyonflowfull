@@ -39,6 +39,24 @@ def transform_silver_to_gold(target: str = "all", dry_run: bool = False) -> dict
         logger.info("[DRY-RUN] Silver → Gold %s skipped", target)
         return {}
 
+    # Sprint 8+ (2026-06-30) — _ensure_helpers UNE FOIS par dispatch (au
+    # lieu d'une fois par _build_*). Les fonctions PL/pgSQL (_is_vacances,
+    # _is_ferie) sont idempotentes (CREATE OR REPLACE) mais recréer
+    # 3-5 fois par run est inutile + ajoute ~30ms de latence par task.
+    # On garde les appels dans chaque _build_* comme safety net
+    # idempotent (au cas où transform_silver_to_gold n'est pas le point
+    # d'entrée, ex: appel direct d'une fonction interne).
+    if not dry_run:
+        try:
+            with raw_connection() as conn, conn.cursor() as cur:
+                _ensure_helpers(cur)
+        except Exception as exc:
+            logger.warning(
+                "_ensure_helpers au dispatch a échoué (%s), les _build_* "
+                "retenteront via leur appel interne.",
+                exc,
+            )
+
     results: dict[str, int] = {}
     if target in ("traffic", "all"):
         results["traffic"] = _build_traffic_features()
