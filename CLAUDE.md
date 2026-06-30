@@ -1,6 +1,6 @@
 # CLAUDE.md — LyonFlow
 
-> Mémoire projet — **dernière mise à jour : 2026-06-25, Sprint 22++ (Elu_2 fix + menu MLOps Usager)** (658 tests verts, dashboard 18 pages / 59 widgets, zéro mock, ruff clean).
+> Mémoire projet — **dernière mise à jour : 2026-06-30, Sprint P3.4 (Optimisations pipeline Bronze→Silver→Gold)** (658 tests verts, dashboard 18 pages / 59 widgets, zéro mock, ruff clean).
 
 ## Projet
 
@@ -10,8 +10,22 @@ LyonFlow est une plateforme MLOps end-to-end de prédiction et d'analyse du traf
 **Repo** : PDUCLOS/lyonflow
 **Cible production** : **VPS unique** `51.83.159.224` (Ubuntu, 6 CPU, 12 Go RAM, **2× 100 Go SSD** : sda = OS + code, sdb = PostgreSQL + MinIO + **Docker data-root** depuis Sprint 9+).
 
-**Version actuelle** : **v0.12.1** (Sprints 1-7 + VPS 1-8 + 9+ + 11+ + 12+ + 13 + 13+ + 15+ + 17 + 17+ + 18 + 20 + 21 + 22 + 22+ + 22++) — branche `vps` ACTIVE
+**Version actuelle** : **v0.13.0** (Sprints 1-7 + VPS 1-8 + 9+ + 11+ + 12+ + 13 + 13+ + 15+ + 17 + 17+ + 18 + 20 + 21 + 22 + 22+ + 22++ + P3.4) — branche `vps` ACTIVE
 **Statut** : production VPS stable. Voir CHANGELOG.md pour le détail de chaque sprint.
+
+### État au 2026-06-30 (Sprint P3.4 — v0.13.0 — Optimisations pipeline Bronze→Silver→Gold)
+
+- **18 pages × 3 personas** (5 Usager + 6 Pro TCL + 5 Élu + Accueil + RGPD + A_Propos) · **59 widgets** · **8 collecteurs Bronze** · **15 DAGs Airflow**
+- ~280 fichiers Python · ~25 000 lignes
+- **658 tests verts** · ruff clean
+- **Sprint P3.4 (2026-06-30, commit `8e1eb7d`, v0.13.0) — Optimisations pipeline** :
+  - **execute_batch** : `psycopg2.extras.execute_batch(page_size=500)` pour vélov, TCL, meteo. Remplace les boucles N `cur.execute()` individuels.
+  - **Filtre 10-min** : `WHERE fetched_at > NOW() - INTERVAL '10 minutes'` sur vélov et TCL (réduit les scans bronze de ~10×).
+  - **CTE `latest_meteo`** : remplace le LATERAL join dans `_TRAFFIC_SQL` / `_VELOV_SQL`. `silver.meteo_hourly` lue 1× au lieu de 1520× à chaque cycle.
+  - **Race condition corrigée** : `transform_bronze_to_silver` passe de `*/5` à `2-57/5` (offset +2 min).
+  - **Autovacuum** : migration `0002_perf_optimizations` — tuning agressif sur `gold.tcl_vehicle_realtime` et `gold.traffic_features_live`.
+  - **PL/pgSQL permanentes** : `_is_ferie(date)` et `_is_vacances(date)` créées en DB dès le déploiement (migration Alembic). `_ensure_helpers()` devient NOP.
+  - **Migration 039** : versionnage de `gold.velov_features` + `gold.velov_predictions` (existaient sans fichier dédié — risque de perte si DB recréée).
 
 ### État au 2026-06-25 (Sprint 22+ + 22++ — v0.12.1 — Menu MLOps Usager + Elu_2 DB-driven)
 

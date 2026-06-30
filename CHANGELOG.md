@@ -5,6 +5,53 @@ Toutes les modifications notables de ce projet sont documentées ici.
 Le format suit [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/),
 et ce projet adhère au [Semantic Versioning](https://semver.org/lang/fr/).
 
+## [0.13.0] - 2026-06-30 — Sprint P3.4 : Optimisations pipeline Bronze→Silver→Gold (branche `vps`)
+
+**Commit** : `8e1eb7d` — ruff clean.
+
+Audit complet du pipeline data (15 items) + implémentation des 8 items safe. Zéro régression.
+
+### Performance
+
+- **execute_batch Bronze→Silver** — `psycopg2.extras.execute_batch(page_size=500)` pour
+  `_transform_velov()`, `_transform_tcl_vehicles()`, `_transform_meteo()` :
+  remplace les boucles `cur.execute()` N-individuelles par un seul aller-retour DB.
+- **Filtre date Vélov/TCL** — `WHERE fetched_at > NOW() - INTERVAL '10 minutes'`
+  sur les deux sources temps-réel. Réduit les scans bronze de ~10× (12 fetches/h × 5 min).
+- **CTE `latest_meteo`** — Remplace le `LATERAL join` dans `_TRAFFIC_SQL` et `_VELOV_SQL`
+  (`silver_to_gold.py`). `silver.meteo_hourly` lue 1× au lieu de 1× par capteur
+  (1520 capteurs → gain ~1520× sur le scan meteo à chaque cycle */10).
+- **Race condition schedule** — `transform_bronze_to_silver` : `*/5` → `2-57/5`
+  (offset +2 min). Élimine le conflit `collect_bronze` vs `transform` au top de la minute.
+- **Timeout Bronze** — `execution_timeout` : 2 → 4 min pour les 6 collecteurs temps-réel.
+  Garde une marge avant le slot silver (+2 min).
+
+### Infrastructure DB
+
+- **Autovacuum `gold.tcl_vehicle_realtime`** — `scale_factor=0.01`, `cost_delay=2ms`,
+  `analyze_scale_factor=0.005`. DELETE massif toutes les 10 min → bloat rapide sans tuning.
+- **Autovacuum `gold.traffic_features_live`** — `scale_factor=0.02`, `cost_delay=5ms`,
+  `analyze_scale_factor=0.01`.
+- **Fonctions PL/pgSQL permanentes** — `_is_ferie(date)` et `_is_vacances(date)` créées
+  via migration Alembic `0002_perf_optimizations`. Plus de `CREATE OR REPLACE` à chaque
+  dispatch DAG (`_ensure_helpers()` devient NOP si elles existent).
+
+### Versionnage DB
+
+- **Migration 039** — `scripts/sql/migration_039_velov_features_predictions.sql` :
+  versionnage explicite de `gold.velov_features` et `gold.velov_predictions` (existaient
+  dans `migrate_realign_v0.3.1.sql` mais sans fichier dédié — risque de perte si DB recréée).
+
+### Items déférés (Sprint P3.5)
+
+- #6 UPSERT bottlenecks (DELETE+INSERT → ON CONFLICT)
+- #9 pgBouncer (infra)
+- #12 Vraies coordonnées bottlenecks (dépend référentiel)
+- #13 Curseur `processed_at` Bronze
+- #15 Split tasks bus_delay/bottleneck
+
+---
+
 ## [0.12.1] - 2026-06-25 — Sprint 22++ : Fix 9 bugs Elu_2_Bottlenecks — branche sur vraies données DB (branche `vps`)
 
 **Commit** : `80bbb9b` — **658 tests verts (+8 nouveaux)** — ruff clean.
