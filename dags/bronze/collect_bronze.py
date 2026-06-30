@@ -56,5 +56,5 @@ with DAG(
             task_id=f"collect_{cls.__name__.lower()}",
             python_callable=_run_collector,
             op_kwargs={"collector_class": cls},
-            execution_timeout=timedelta(minutes=2),
+            execution_timeout=timedelta(minutes=4),
         )

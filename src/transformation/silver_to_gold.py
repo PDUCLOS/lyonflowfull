@@ -126,7 +126,13 @@ def _ensure_helpers(cur) -> None:
 # -----------------------------------------------------------------------------
 
 _TRAFFIC_SQL = """
-WITH recent AS (
+WITH latest_meteo AS (
+    SELECT temperature_c, rain_mm, visibility, wind_speed_10m, weather_code
+    FROM silver.meteo_hourly
+    ORDER BY measurement_time DESC
+    LIMIT 1
+),
+recent AS (
     SELECT
         s.measurement_time,
         s.channel_id,
@@ -210,13 +216,7 @@ SELECT
 FROM fresh f
 LEFT JOIN gold.dim_spatial_grid_mapping m
        ON m.properties_twgid = f.channel_id
-LEFT JOIN LATERAL (
-    SELECT temperature_c, rain_mm, visibility, wind_speed_10m, weather_code
-    FROM silver.meteo_hourly
-    WHERE measurement_time <= f.measurement_time
-    ORDER BY measurement_time DESC
-    LIMIT 1
-) met ON TRUE
+LEFT JOIN latest_meteo met ON TRUE
 ON CONFLICT (channel_id, fetched_at) DO UPDATE SET
     speed_kmh         = EXCLUDED.speed_kmh,
     lag_1             = EXCLUDED.lag_1,
@@ -236,7 +236,13 @@ ON CONFLICT (channel_id, fetched_at) DO UPDATE SET
 
 
 _VELOV_SQL = """
-WITH recent AS (
+WITH latest_meteo AS (
+    SELECT temperature_c, rain_mm
+    FROM silver.meteo_hourly
+    ORDER BY measurement_time DESC
+    LIMIT 1
+),
+recent AS (
     SELECT fetched_at, station_id, num_bikes_available
     FROM silver.velov_clean
     WHERE fetched_at > NOW() - INTERVAL '2 hours'
@@ -285,13 +291,7 @@ SELECT
     _is_vacances(f.fetched_at::date) AS is_vacances,
     _is_ferie(f.fetched_at::date)    AS is_ferie
 FROM fresh f
-LEFT JOIN LATERAL (
-    SELECT temperature_c, rain_mm
-    FROM silver.meteo_hourly
-    WHERE measurement_time <= f.fetched_at
-    ORDER BY measurement_time DESC
-    LIMIT 1
-) met ON TRUE
+LEFT JOIN latest_meteo met ON TRUE
 ON CONFLICT (station_id_encoded, measurement_time) DO UPDATE SET
     bikes_available = EXCLUDED.bikes_available,
     bikes_lag_1     = EXCLUDED.bikes_lag_1,
@@ -524,15 +524,12 @@ def _purge_old_traffic_features(retention_hours: int | None = None) -> int:
         Nombre de rows purgées.
     """
     if retention_hours is None:
-        retention_hours = int(
-            os.getenv("GOLD_TRAFFIC_FEATURES_RETENTION_HOURS", "48")
-        )
+        retention_hours = int(os.getenv("GOLD_TRAFFIC_FEATURES_RETENTION_HOURS", "48"))
     with raw_connection() as conn, conn.cursor() as cur:
         # Garde-fou anti-hang : 5 min suffit largement pour un DELETE indexé.
         cur.execute("SET statement_timeout = 300000")
         cur.execute(
-            "DELETE FROM gold.traffic_features_live "
-            "WHERE computed_at < NOW() - INTERVAL %s",
+            "DELETE FROM gold.traffic_features_live WHERE computed_at < NOW() - INTERVAL %s",
             (f"{retention_hours} hours",),
         )
         n = cur.rowcount
@@ -584,8 +581,7 @@ def _refresh_matview_safe(
         row = cur.fetchone()
         if row is None:
             logger.warning(
-                "%s absente — migration non appliquée. %s "
-                "Le widget consommateur affichera 'vue non alimentée'.",
+                "%s absente — migration non appliquée. %s Le widget consommateur affichera 'vue non alimentée'.",
                 fqmv,
                 migration_hint,
             )

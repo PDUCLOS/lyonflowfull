@@ -30,7 +30,7 @@ with DAG(
     dag_id="transform_bronze_to_silver",
     description="Bronze → Silver toutes les 5 min (5 sources en parallèle)",
     default_args=default_args,
-    schedule_interval="*/5 * * * *",
+    schedule_interval="2-57/5 * * * *",
     start_date=datetime(2026, 1, 1),
     catchup=False,
     max_active_runs=1,

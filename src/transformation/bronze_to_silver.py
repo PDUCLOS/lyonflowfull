@@ -1,7 +1,7 @@
 """Transformations des données : Passage de la couche Bronze à Silver.
 
-Pour chaque source de la couche Bronze, ce module crée ou met à jour 
-la table correspondante dans la couche Silver. 
+Pour chaque source de la couche Bronze, ce module crée ou met à jour
+la table correspondante dans la couche Silver.
 
 Opérations effectuées :
 - Déduplication via `DISTINCT ON (channel_id, measurement_time)`.
@@ -22,6 +22,8 @@ from __future__ import annotations
 import contextlib
 import logging
 import re
+
+import psycopg2.extras
 
 from src.db import raw_connection
 
@@ -57,16 +59,16 @@ def transform_to_silver(source: str, dry_run: bool = False) -> int:
 def _parse_grandlyon_vitesse(raw: object) -> float | None:
     """Parse la nouvelle forme WFS Grand Lyon v3 (2026+).
 
-    Exemples acceptés :
-      - "18 km/h"        → 18.0
-      - "56.5 km/h"      → 56.5
-      - "Vitesse réglementaire"  → None (capteur en vitesse libre, vitesse_kmh inconnue)
-      - "" / None        → None
-   - "0 km/h"     → None audit saturation : un capteur à 0
-        est suspect, on l'écarte pour ne pas fausser la moyenne)
+     Exemples acceptés :
+       - "18 km/h"        → 18.0
+       - "56.5 km/h"      → 56.5
+       - "Vitesse réglementaire"  → None (capteur en vitesse libre, vitesse_kmh inconnue)
+       - "" / None        → None
+    - "0 km/h"     → None audit saturation : un capteur à 0
+         est suspect, on l'écarte pour ne pas fausser la moyenne)
 
-    Returns:
-        Vitesse en km/h (float) ou None si non exploitable.
+     Returns:
+         Vitesse en km/h (float) ou None si non exploitable.
     """
     if raw is None:
         return None
@@ -75,7 +77,7 @@ def _parse_grandlyon_vitesse(raw: object) -> float | None:
             value = float(raw)  # type: ignore[arg-type]  # mypy: raw est Any
         except (TypeError, ValueError):
             return None
-    # filter les 0 (capteurs bloqués au sens "no data")
+        # filter les 0 (capteurs bloqués au sens "no data")
         return value if value > 0 else None
     s = raw.strip()
     if not s:
@@ -83,7 +85,7 @@ def _parse_grandlyon_vitesse(raw: object) -> float | None:
     m = re.match(r"^\s*(\d+(?:[.,]\d+)?)\s*km/h", s)
     if m:
         value = float(m.group(1).replace(",", "."))
-    # filter les 0 (cf. ci-dessus)
+        # filter les 0 (cf. ci-dessus)
         return value if value > 0 else None
     return None
 
@@ -153,7 +155,7 @@ def _transform_trafic_boucles() -> int:
                         # un LineString directement. Workaround : on prend le
                         # point médian du segment. Cela donne une position
                         # approximative du capteur (centre du tronçon routier).
-            # TODO modifier le schéma pour passer en
+                        # TODO modifier le schéma pour passer en
                         # geometry(LineString, 4326) (ou geometry générique) et
                         # stocker le segment complet.
                         mid = coords[len(coords) // 2]
@@ -215,7 +217,7 @@ def _transform_trafic_boucles() -> int:
 def _transform_velov() -> int:
     """Bronze.velov → silver.velov_clean.
 
-  payload GBFS unifié ``{status: [...], information: [...]}``.
+    Payload GBFS unifié ``{status: [...], information: [...]}``.
     Join par ``station_id`` pour récupérer ``name/lat/lon/address`` depuis
     l'endpoint ``station_information`` (l'endpoint ``status`` ne contient
     plus que les compteurs temps réel depuis l'API Grand Lyon de juin 2026).
@@ -223,23 +225,39 @@ def _transform_velov() -> int:
     Backward-compat : si ``raw_data`` est l'ancien format (liste plate
     de stations avec name/lat/lon au top-level), on dégrade proprement.
     """
+    _sql = """
+        INSERT INTO silver.velov_clean
+            (fetched_at, measurement_time, station_id, station_name,
+             num_bikes_available, num_docks_available, is_active,
+             lat, lon)
+        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
+        ON CONFLICT (station_id, measurement_time) DO UPDATE
+        SET station_name        = EXCLUDED.station_name,
+            num_bikes_available = EXCLUDED.num_bikes_available,
+            num_docks_available = EXCLUDED.num_docks_available,
+            is_active           = EXCLUDED.is_active,
+            lat                 = EXCLUDED.lat,
+            lon                 = EXCLUDED.lon
+    """
     with raw_connection() as conn, conn.cursor() as cur:
+        # Filtre 10 min : évite de relire 200 snapshots = 16h de données
         cur.execute("""
-                SELECT id, fetched_at, raw_data
-                FROM bronze.velov
-                ORDER BY fetched_at DESC
-                LIMIT 200
-            """)
+            SELECT id, fetched_at, raw_data
+            FROM bronze.velov
+            WHERE fetched_at > NOW() - INTERVAL '10 minutes'
+            ORDER BY fetched_at DESC
+            LIMIT 200
+        """)
         rows = cur.fetchall()
 
-        n_inserted = 0
-        seen = set()
+        batch: list[tuple] = []
+        seen: set = set()
         for _id, fetched_at, raw_data in rows:
             if not isinstance(raw_data, dict):
                 continue
 
-      # Format nouveau ) : {status: [...], information: [...]}
-      # Format legacy (avant ) : {data: {stations: [...]}} ou liste plate
+            # Format nouveau : {status: [...], information: [...]}
+            # Format legacy : {data: {stations: [...]}} ou liste plate
             if "status" in raw_data and "information" in raw_data:
                 stations_status = raw_data.get("status", []) or []
                 stations_info_list = raw_data.get("information", []) or []
@@ -247,11 +265,11 @@ def _transform_velov() -> int:
                 info_by_id: dict[str, dict] = {
                     str(s.get("station_id")): s for s in stations_info_list if s.get("station_id") is not None
                 }
-                stations_iter = ({**st, **info_by_id.get(str(st.get("station_id")), {})} for st in stations_status)
+                stations_iter = [{**st, **info_by_id.get(str(st.get("station_id")), {})} for st in stations_status]
             else:
                 # Backward-compat : ancien format où name/lat/lon étaient dans status
                 stations_legacy = raw_data.get("data", {}).get("stations", []) or raw_data.get("stations", [])
-                stations_iter = (st for st in stations_legacy)
+                stations_iter = list(stations_legacy)
 
             for st in stations_iter:
                 sid = st.get("station_id")
@@ -261,45 +279,28 @@ def _transform_velov() -> int:
                 if key in seen:
                     continue
                 seen.add(key)
-
-                try:
-                    cur.execute(
-                        """
-                            INSERT INTO silver.velov_clean
-                                (fetched_at, measurement_time, station_id, station_name,
-                                 num_bikes_available, num_docks_available, is_active,
-                                 lat, lon)
-                            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
-                            ON CONFLICT (station_id, measurement_time) DO UPDATE
-                            SET station_name = EXCLUDED.station_name,
-                                num_bikes_available = EXCLUDED.num_bikes_available,
-                                num_docks_available = EXCLUDED.num_docks_available,
-                                is_active = EXCLUDED.is_active,
-                                lat = EXCLUDED.lat,
-                                lon = EXCLUDED.lon
-                        """,
-                        (
-                            fetched_at,
-                            fetched_at,  # measurement_time = fetched_at (GBFS pas de timestamp station-level)
-                            sid,
-                            st.get("name", "") or f"Station {sid}",
-                            st.get("num_bikes_available", 0),
-                            st.get("num_docks_available", 0),
-                            bool(
-                                st.get("is_installed", 1) == 1
-                                and st.get("is_renting", 1) == 1
-                                and st.get("is_returning", 1) == 1
-                            ),
-                            st.get("lat"),
-                            st.get("lon"),
+                batch.append(
+                    (
+                        fetched_at,
+                        fetched_at,  # measurement_time = fetched_at (GBFS pas de timestamp station-level)
+                        sid,
+                        st.get("name", "") or f"Station {sid}",
+                        st.get("num_bikes_available", 0),
+                        st.get("num_docks_available", 0),
+                        bool(
+                            st.get("is_installed", 1) == 1
+                            and st.get("is_renting", 1) == 1
+                            and st.get("is_returning", 1) == 1
                         ),
+                        st.get("lat"),
+                        st.get("lon"),
                     )
-                    n_inserted += 1
-                except Exception as e:
-                    logger.warning(f"Skip Vélov station {sid}: {e}")
+                )
 
-        logger.info(f"Silver velov: {n_inserted} rows inserted/updated")
-        return n_inserted
+        if batch:
+            psycopg2.extras.execute_batch(cur, _sql, batch, page_size=500)
+        logger.info("Silver velov: %d rows inserted/updated", len(batch))
+        return len(batch)
 
 
 def _parse_siri_delay(raw_delay) -> int:
@@ -351,21 +352,29 @@ def _transform_tcl_vehicles() -> int:
     Ancien code ``mvj.get("LineRef")`` retournait un dict, qui passait la garde
     ``if not line_ref`` (dict truthy) puis crashait à l'INSERT TEXT.
     """
+    _sql = """
+        INSERT INTO silver.tcl_vehicles_clean
+            (fetched_at, measurement_time, line_ref,
+             direction_ref, journey_ref, stop_ref,
+             delay_seconds, lat, lon)
+        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
+        ON CONFLICT (line_ref, journey_ref, stop_ref, measurement_time)
+        DO UPDATE SET
+            delay_seconds = EXCLUDED.delay_seconds,
+            fetched_at    = EXCLUDED.fetched_at
+    """
     with raw_connection() as conn, conn.cursor() as cur:
+        # Filtre 10 min (+ LIMIT 200 OOM-guard hérité Sprint-23)
         cur.execute("""
-                SELECT id, fetched_at, raw_data
-                FROM bronze.tcl_vehicles
-                ORDER BY fetched_at DESC
-        -- (2026-06-17) — réduit de 5000 → 200 (~16h de
-                -- fetches @5min). La lecture de 5000 SIRI JSON (~2.5 Go en
-                -- mémoire Python) OOM-kill le worker Airflow (6 Go de
-                -- memory limit) avant la fin de la tâche. 200 couvre
-                -- largement toute fenêtre roulante 15-min.
-                LIMIT 200
-            """)
+            SELECT id, fetched_at, raw_data
+            FROM bronze.tcl_vehicles
+            WHERE fetched_at > NOW() - INTERVAL '10 minutes'
+            ORDER BY fetched_at DESC
+            LIMIT 200
+        """)
         rows = cur.fetchall()
 
-        n_inserted = 0
+        batch: list[tuple] = []
         seen: set[tuple[str, str, str, object]] = set()
         for _id, fetched_at, raw_data in rows:
             if not isinstance(raw_data, dict):
@@ -401,37 +410,24 @@ def _transform_tcl_vehicles() -> int:
                 loc = mvj.get("VehicleLocation") or {}
                 direction_ref = _siri_ref(mvj.get("DirectionRef"))
 
-                try:
-                    cur.execute(
-                        """
-                            INSERT INTO silver.tcl_vehicles_clean
-                                (fetched_at, measurement_time, line_ref,
-                                 direction_ref, journey_ref, stop_ref,
-                                 delay_seconds, lat, lon)
-                            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
-                            ON CONFLICT (line_ref, journey_ref, stop_ref, measurement_time)
-                            DO UPDATE SET
-                                delay_seconds = EXCLUDED.delay_seconds,
-                                fetched_at    = EXCLUDED.fetched_at
-                        """,
-                        (
-                            fetched_at,
-                            fetched_at,
-                            line_ref,
-                            direction_ref,
-                            journey_ref,
-                            stop_ref,
-                            delay_s,
-                            loc.get("Latitude") if isinstance(loc, dict) else None,
-                            loc.get("Longitude") if isinstance(loc, dict) else None,
-                        ),
+                batch.append(
+                    (
+                        fetched_at,
+                        fetched_at,
+                        line_ref,
+                        direction_ref,
+                        journey_ref,
+                        stop_ref,
+                        delay_s,
+                        loc.get("Latitude") if isinstance(loc, dict) else None,
+                        loc.get("Longitude") if isinstance(loc, dict) else None,
                     )
-                    n_inserted += 1
-                except Exception as e:
-                    logger.warning("Skip TCL %s/%s: %s", line_ref, journey_ref, e)
+                )
 
-        logger.info("Silver tcl_vehicles: %d rows inserted/updated", n_inserted)
-        return n_inserted
+        if batch:
+            psycopg2.extras.execute_batch(cur, _sql, batch, page_size=500)
+        logger.info("Silver tcl_vehicles: %d rows inserted/updated", len(batch))
+        return len(batch)
 
 
 def _transform_meteo() -> int:
@@ -445,7 +441,19 @@ def _transform_meteo() -> int:
             """)
         rows = cur.fetchall()
 
-        n_inserted = 0
+        _sql = """
+            INSERT INTO silver.meteo_hourly
+                (measurement_time, temperature_c, humidity,
+                 rain_mm, wind_speed_10m, weather_code)
+            VALUES (%s, %s, %s, %s, %s, %s)
+            ON CONFLICT (measurement_time) DO UPDATE
+            SET temperature_c  = EXCLUDED.temperature_c,
+                humidity       = EXCLUDED.humidity,
+                rain_mm        = EXCLUDED.rain_mm,
+                wind_speed_10m = EXCLUDED.wind_speed_10m,
+                weather_code   = EXCLUDED.weather_code
+        """
+        batch: list[tuple] = []
         for _id, _fetched_at, raw_data in rows:
             if not isinstance(raw_data, dict):
                 continue
@@ -458,35 +466,21 @@ def _transform_meteo() -> int:
             codes = hourly.get("weather_code", [])
 
             for i, t in enumerate(times):
-                try:
-                    cur.execute(
-                        """
-                            INSERT INTO silver.meteo_hourly
-                                (measurement_time, temperature_c, humidity,
-                                 rain_mm, wind_speed_10m, weather_code)
-                            VALUES (%s, %s, %s, %s, %s, %s)
-                            ON CONFLICT (measurement_time) DO UPDATE
-                            SET temperature_c  = EXCLUDED.temperature_c,
-                                humidity       = EXCLUDED.humidity,
-                                rain_mm        = EXCLUDED.rain_mm,
-                                wind_speed_10m = EXCLUDED.wind_speed_10m,
-                                weather_code   = EXCLUDED.weather_code
-                        """,
-                        (
-                            t,
-                            temps[i] if i < len(temps) else None,
-                            hums[i] if i < len(hums) else None,
-                            rains[i] if i < len(rains) else None,
-                            winds[i] if i < len(winds) else None,
-                            codes[i] if i < len(codes) else None,
-                        ),
+                batch.append(
+                    (
+                        t,
+                        temps[i] if i < len(temps) else None,
+                        hums[i] if i < len(hums) else None,
+                        rains[i] if i < len(rains) else None,
+                        winds[i] if i < len(winds) else None,
+                        codes[i] if i < len(codes) else None,
                     )
-                    n_inserted += 1
-                except Exception as e:
-                    logger.warning(f"Skip meteo {t}: {e}")
+                )
 
-        logger.info(f"Silver meteo: {n_inserted} rows inserted/updated")
-        return n_inserted
+        if batch:
+            psycopg2.extras.execute_batch(cur, _sql, batch, page_size=500)
+        logger.info("Silver meteo: %d rows inserted/updated", len(batch))
+        return len(batch)
 
 
 def _transform_chantiers() -> int:
