@@ -185,6 +185,11 @@ def _heatmap_delta(df: pd.DataFrame, top_n: int = 20) -> None:
         return
 
     plot_df = df.dropna(subset=["delta_kmh"]).copy()
+    # Coercition NUMERIC : psycopg2 renvoie des Decimal (dtype object)
+    # qui cassent nlargest / sort_values / Plotly. (Sprint 24+ même fix
+    # que bus_traffic_spatial : helper _coerce_numeric_columns sur la MV.)
+    plot_df["delta_kmh"] = pd.to_numeric(plot_df["delta_kmh"], errors="coerce")
+    plot_df = plot_df.dropna(subset=["delta_kmh"])
     plot_df["abs_delta"] = plot_df["delta_kmh"].abs()
     plot_df = plot_df.nlargest(top_n, "abs_delta")
 
