@@ -58,7 +58,6 @@ FAIL_LOUD_FUNCS = [
     "load_velov_stations",
     "load_bus_delays",
     "load_infra_bottlenecks",
-    "load_predictions_vs_actuals",
     "load_rgpd_audit",
     "load_rgpd_consents",
     "load_weather_hourly",

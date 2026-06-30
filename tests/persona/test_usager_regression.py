@@ -59,8 +59,8 @@ def test_velov_widget_render_velov_trip_still_callable():
 
 def test_plan_car_trip_still_importable_after_sprint14():
     """plan_car_trip reste importable + signature inchangée après Sprint 14.
-  Convention canonique hotfix 7 : (lon, lat, lon, lat)
     Convention canonique hotfix 7 : (lon, lat, lon, lat)
+      Convention canonique hotfix 7 : (lon, lat, lon, lat)
     """
     import inspect
 

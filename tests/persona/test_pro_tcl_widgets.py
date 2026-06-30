@@ -52,9 +52,7 @@ def test_pro_tcl_pages_exist():
     # (audit Pro TCL B-22) : Pro_5_Export supprimé du dashboard
     # (page stub, JSON placeholder, WeasyPrint non branché). Décision
     # utilisateur 2026-06-19.
-    assert not (pages_dir / "Pro_5_Export.py").exists(), (
-        "Pro_5_Export.py doit avoir été supprimé (audit B-22)"
-    )
+    assert not (pages_dir / "Pro_5_Export.py").exists(), "Pro_5_Export.py doit avoir été supprimé (audit B-22)"
 
 
 def test_correlation_page_uses_correlation_matrix():

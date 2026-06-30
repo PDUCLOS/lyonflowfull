@@ -2,7 +2,7 @@
 
 Vérifie que les nouveaux helpers ``get_multimodal_grid``,
 ``get_multimodal_grid_diagnosis_counts`` et leurs wrappers ``load_*``
-respectent la politique zéro mock de 
+respectent la politique zéro mock de
 * Helpers bas-niveau (db_query) → DataFrame vide si DB indispo.
 * Wrappers data_loader → lèvent ``DashboardDataError`` si DB indispo ou
   si la MV est vide (cas pathologique = DAG refresh pas passé).

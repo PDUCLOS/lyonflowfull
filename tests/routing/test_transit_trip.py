@@ -340,10 +340,10 @@ def test_time_bucket_from_date_format():
 def test_plan_transit_trip_direct_villeurbanne_confluence():
     """Villeurbanne → Confluence : intersection M_A → trajet direct (DB live).
 
-  Le référentiel lieux_transports ) seed :
-      - Villeurbanne : M_A (rank 1, Laurent Bonnevay 400m)
-      - Confluence    : M_A (rank 1, Confluence 80m)
-    Intersection = {M_A} → trajet direct.
+    Le référentiel lieux_transports ) seed :
+        - Villeurbanne : M_A (rank 1, Laurent Bonnevay 400m)
+        - Confluence    : M_A (rank 1, Confluence 80m)
+      Intersection = {M_A} → trajet direct.
     """
     from src.routing.pathfinder_multimodal import plan_transit_trip
 

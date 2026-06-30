@@ -1,14 +1,14 @@
 """Tests Axe 7 (2026-06-20) — Météo impact helpers + widget.
 
 Vérifie que le nouvel helper ``get_meteo_impact`` et le widget
-``meteo_impact`` respectent la politique zéro mock de 
+``meteo_impact`` respectent la politique zéro mock de
 * Helper bas-niveau (db_query) → DataFrame vide si DB indispo.
 * Widget helpers (``_find_worst_band``, ``_format_delta_*``) → logique
   pure, testable hors-ligne.
 
 Voir ``docs/SPEC_OPTIMISATION_INTERDEPENDANCES.md`` (Axe 7, 2026-06-20)
 pour le contexte fonctionnel, et ``docs/SPEC_SPRINT_17.md`` pour la
-livraison """
+livraison"""
 
 from __future__ import annotations
 

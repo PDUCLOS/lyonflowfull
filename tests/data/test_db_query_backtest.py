@@ -33,8 +33,8 @@ def disable_db(monkeypatch):
 def test_get_xgb_vs_tomtom_empty_when_db_down():
     """get_xgb_vs_tomtom() doit retourner un DataFrame vide si DB indispo.
 
-  Politique ``_df_from_query`` retourne DataFrame vide + warning
-    (pas de DashboardDataError) — le caller gère l'absence de données.
+    Politique ``_df_from_query`` retourne DataFrame vide + warning
+      (pas de DashboardDataError) — le caller gère l'absence de données.
     """
     result = db_query.get_xgb_vs_tomtom(hours=24, limit=500)
     assert isinstance(result, pd.DataFrame)

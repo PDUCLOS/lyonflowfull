@@ -103,9 +103,9 @@ def _load_twgid() -> pl.DataFrame:
 def _add_h3_index(df: pl.DataFrame) -> pl.DataFrame:
     """Ajoute colonne h3_cell — utilise l'API vectorisée de h3-py v4.5+.
 
-  fix : avant on itérait row-par-row (1 appel Python par
-    cellule, ~10x plus lent). Maintenant ``h3.latlng_to_cell`` accepte
-    directement des arrays numpy et retourne un array, le tout en C.
+    fix : avant on itérait row-par-row (1 appel Python par
+      cellule, ~10x plus lent). Maintenant ``h3.latlng_to_cell`` accepte
+      directement des arrays numpy et retourne un array, le tout en C.
     """
     lat_arr = df["lat"].to_numpy()
     lon_arr = df["lon"].to_numpy()
@@ -116,7 +116,7 @@ def _add_h3_index(df: pl.DataFrame) -> pl.DataFrame:
 def _expand_k_ring(df: pl.DataFrame) -> pl.DataFrame:
     """Explose les h3_cell en k_ring(K_RING) — chaque nœud → 7 cellules.
 
-  fix : ``h3.grid_disk`` est aussi vectorisé en v4.5+.
+    fix : ``h3.grid_disk`` est aussi vectorisé en v4.5+.
     """
     cells = df["h3_cell"].to_numpy()
     # grid_disk vectorisé : retourne un array d'array
