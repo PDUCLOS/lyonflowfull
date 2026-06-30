@@ -60,6 +60,9 @@ extend-exclude = [
     "nginx",
     "scripts/systemd",
     "scripts/*.sh",
+    # Code archivé (Sprint 21+) : code figé hors prod, pas de refacto actif,
+    # exclu du lint. Cf. audit Sprint 21 ("ruff clean hors archive").
+    "archive",
 ]
 
 [tool.ruff.lint]
@@ -92,7 +95,7 @@ ignore = [
     # actif. Ignore les warnings de style non-bloquants.
     "B905", "E712", "UP038", "F841",
 ]
-"archive/legacy/gnn/*" = [
+"archive/legacy/gnn/**" = [
     # GNN archivé en Sprint 24 (commit 2ffd37b7). Code figé — pas de
     # refacto actif. Mêmes tolérances que dags/legacy_github/*.
     "N806",  # X_train, Y_train (math convention)
