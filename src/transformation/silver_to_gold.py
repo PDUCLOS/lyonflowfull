@@ -466,65 +466,102 @@ def _build_infrastructure_bottlenecks() -> int:
 
 
 def _refresh_multimodal_grid() -> int:
-    """Refresh la vue matérialisée ``gold.mv_multimodal_grid`` (Sprint 15+).
+    """Refresh ``gold.mv_multimodal_grid`` (Sprint 15+, migration 017).
 
-    Agrège sur grille 0.01° (~1 km) Lyon :
-    * gold.traffic_features_live (vitesse, % congestion)
-    * gold.tcl_vehicle_realtime (retard, % véhicules en retard)
-    * silver.velov_clean (vélos/docks dispo)
-    * silver.meteo_hourly (température, précipitations — CROSS JOIN)
-
-    REFRESH CONCURRENTLY (pas de lock exclusif sur la MV côté dashboard).
-    Requiert l'index unique ``idx_mv_multimodal_grid_latlon`` créé dans
-    la migration 017. Si la MV n'existe pas (migration pas appliquée),
-    on log un warning et on retourne 0 sans planter — le DAG continue.
-
-    Returns:
-        Nombre de cellules dans la MV après refresh (0 si MV absente).
+    Agrège sur grille 0.01° (~1 km) Lyon : trafic (vitesse, % congestion),
+    TCL (retard), Vélov (dispo), météo. Refresh robuste via
+    :func:`_refresh_matview_safe` (Sprint 24).
     """
-    with raw_connection() as conn, conn.cursor() as cur:
-        # Vérifie que la MV existe avant de tenter le refresh
-        cur.execute(
-            """
-            SELECT 1 FROM pg_matviews
-            WHERE schemaname = 'gold' AND matviewname = 'mv_multimodal_grid'
-            """
-        )
-        if cur.fetchone() is None:
-            logger.warning(
-                "gold.mv_multimodal_grid absente — migration 017 non appliquée. "
-                "Le widget multimodal_heatmap affichera 'vue non alimentée'. "
-                "Appliquer scripts/sql/migration_017_multimodal_grid.sql puis "
-                "redémarrer ce DAG."
-            )
-            return 0
-        # CONCURRENTLY = refresh sans lock exclusif (dashboard peut lire
-        # la MV en parallèle). Requiert l'index unique idx_mv_multimodal_grid_latlon.
-        cur.execute("REFRESH MATERIALIZED VIEW CONCURRENTLY gold.mv_multimodal_grid")
-        cur.execute("SELECT COUNT(*) FROM gold.mv_multimodal_grid")
-        n = int(cur.fetchone()[0])
-    logger.info("gold.mv_multimodal_grid: %d cellules refreshed", n)
-    return n
+    return _refresh_matview_safe(
+        "mv_multimodal_grid",
+        migration_hint="Appliquer scripts/sql/migration_017_multimodal_grid.sql.",
+    )
 
 
 def _refresh_bus_traffic_spatial() -> int:
-    """Refresh ``gold.mv_bus_traffic_spatial`` (Sprint 15+, Axe 3).
+    """Refresh ``gold.mv_bus_traffic_spatial`` (Sprint 15+, Axe 3, migration 018).
 
-    JOIN spatial bus x trafic par zone 0.001 deg (~100 m). Requiert
-    l'index unique ``idx_mv_bus_traffic_spatial_pk`` de migration 018.
+    JOIN spatial bus x trafic par zone 0.001° (~100 m). Refresh robuste via
+    :func:`_refresh_matview_safe` (Sprint 24) — corrige le 0 ligne dû au
+    CONCURRENTLY sur MV jamais peuplée.
     """
+    return _refresh_matview_safe(
+        "mv_bus_traffic_spatial",
+        migration_hint="Appliquer scripts/sql/migration_018_bus_traffic_spatial.sql.",
+    )
+
+
+def _refresh_matview_safe(
+    matview: str,
+    *,
+    migration_hint: str = "",
+    timeout_ms: int = 600_000,  # 10 min — coupe avant le execution_timeout Airflow
+) -> int:
+    """Refresh idempotent et robuste d'une vue matérialisée ``gold.<matview>``.
+
+    Stratégie :
+      * MV absente            → warning + return 0 (le DAG continue).
+      * MV non peuplée        → ``REFRESH`` plain (obligatoire au 1er passage).
+      * MV déjà peuplée       → ``REFRESH ... CONCURRENTLY`` (pas de lock lecture),
+                                 fallback plain si CONCURRENTLY échoue.
+      * statement_timeout posé pour éviter tout hang silencieux.
+
+    Args:
+        matview: nom court de la MV (sans le schéma), ex. ``mv_bus_traffic_spatial``.
+        migration_hint: message d'aide si la MV est absente (n° de migration).
+        timeout_ms: budget temps Postgres avant abort (défaut 10 min).
+
+    Returns:
+        Nombre de lignes dans la MV après refresh (0 si MV absente).
+    """
+    fqmv = f"gold.{matview}"
     with raw_connection() as conn, conn.cursor() as cur:
+        # Garde-fou anti-hang : abort côté Postgres, pas seulement côté Airflow.
+        cur.execute("SET statement_timeout = %s", (timeout_ms,))
+
+        # La MV existe-t-elle, et est-elle déjà peuplée ?
         cur.execute(
             """
-            SELECT 1 FROM pg_matviews
-            WHERE schemaname = 'gold' AND matviewname = 'mv_bus_traffic_spatial'
-            """
+            SELECT ispopulated
+            FROM pg_matviews
+            WHERE schemaname = 'gold' AND matviewname = %s
+            """,
+            (matview,),
         )
-        if cur.fetchone() is None:
-            logger.warning("gold.mv_bus_traffic_spatial absente — migration 018 non appliquée.")
+        row = cur.fetchone()
+        if row is None:
+            logger.warning(
+                "%s absente — migration non appliquée. %s "
+                "Le widget consommateur affichera 'vue non alimentée'.",
+                fqmv,
+                migration_hint,
+            )
             return 0
-        cur.execute("REFRESH MATERIALIZED VIEW CONCURRENTLY gold.mv_bus_traffic_spatial")
-        cur.execute("SELECT COUNT(*) FROM gold.mv_bus_traffic_spatial")
+
+        is_populated = bool(row[0])
+        if not is_populated:
+            # 1er passage OBLIGATOIRE en plain : CONCURRENTLY est interdit
+            # sur une MV jamais peuplée. C'était la cause du 0 ligne.
+            logger.info("%s jamais peuplée → REFRESH plain (1er passage).", fqmv)
+            cur.execute(f"REFRESH MATERIALIZED VIEW {fqmv}")
+        else:
+            try:
+                # CONCURRENTLY = le dashboard peut lire la MV pendant le refresh
+                # (pas de lock exclusif). Requiert un index unique sur la MV.
+                cur.execute(f"REFRESH MATERIALIZED VIEW CONCURRENTLY {fqmv}")
+            except Exception as exc:
+                # Index unique manquant, conflit, etc. → on garantit quand même
+                # une MV fraîche via un refresh plain (lock court) au lieu de
+                # laisser des données stale.
+                conn.rollback()
+                logger.warning(
+                    "%s : REFRESH CONCURRENTLY a échoué (%s) → fallback REFRESH plain.",
+                    fqmv,
+                    exc,
+                )
+                cur.execute(f"REFRESH MATERIALIZED VIEW {fqmv}")
+
+        cur.execute(f"SELECT COUNT(*) FROM {fqmv}")
         n = int(cur.fetchone()[0])
-    logger.info("gold.mv_bus_traffic_spatial: %d zones refreshed", n)
+    logger.info("%s: %d lignes refreshed.", fqmv, n)
     return n
