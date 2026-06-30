@@ -1,0 +1,86 @@
+-- =============================================================================
+-- migration_038_drop_dead_indexes.sql
+-- =============================================================================
+-- Sprint 24+ (2026-06-29) — Nettoyage des index jamais scannés (idx_scan=0)
+-- détectés par pg-audit §5.
+--
+-- ⚠️ STATUT : STUB — NE PAS APPLIQUER TEL QUEL.
+--
+-- GARDE-FOUS (audit Patrice 2026-06-29) :
+--   1. stats_reset récent (< quelques jours) → idx_scan=0 = faux positif.
+--      Check : SELECT stats_reset FROM pg_stat_database WHERE datname='lyonflow';
+--   2. Index sur gold.traffic_features_live (idx_gold_traffic_ml 585MB,
+--      idx_gold_traffic_channel 224MB) : leur idx_scan=0 peut être causé
+--      par le bug Sprint 24 (les requêtes plantaient, l'index jamais atteint).
+--      → Re-mesure OBLIGATOIRE après 2-3 cycles */30 post-Sprint 24.
+--   3. PRIMARY KEY : idx_scan=0 sur pkey = faux positif classique
+--      (pkey utilisées pour checks d'unicité à l'INSERT, pas comptés).
+--      → NE JAMAIS DROP une pkey.
+--
+-- Quand appliquer : ~2-3h après que deploy-sprint24 ait tourné, et que
+-- re-pg-audit §5 confirme que les compteurs idx_scan restent à 0 sur
+-- les index listés ci-dessous.
+--
+-- Convention : DROP INDEX CONCURRENTLY (pas de lock table), chaque statement
+-- est sa propre transaction (autocommit psql dans apply-migrations.sh).
+-- IF EXISTS pour idempotence (re-run safe).
+-- =============================================================================
+
+-- 🔴 CANDIDATS FORTS (> 100 MB, jamais scannés) — re-mesure post-Sprint 24
+--DROP INDEX CONCURRENTLY IF EXISTS gold.idx_gold_traffic_ml;            -- 585 MB
+--DROP INDEX CONCURRENTLY IF EXISTS silver.idx_silver_velov_station_time; -- 499 MB
+--DROP INDEX CONCURRENTLY IF EXISTS gold.idx_gold_traffic_channel;        -- 224 MB
+--DROP INDEX CONCURRENTLY IF EXISTS silver.idx_silver_tcl_line_time;      -- 132 MB
+
+-- 🟡 CANDIDATS MOYENS (50-100 MB) — vérifier qu'aucune query ne les utilise
+--DROP INDEX CONCURRENTLY IF EXISTS bronze.uq_trafic_boucles_nodup;       -- 53 MB
+--DROP INDEX CONCURRENTLY IF EXISTS silver.uq_silver_trafic_vitesse_propre_twgid_ts; -- 47 MB
+--DROP INDEX CONCURRENTLY IF EXISTS silver.idx_silver_trafic_vitesse_propre_twgid_ts; -- 47 MB
+--DROP INDEX CONCURRENTLY IF EXISTS bronze.idx_trafic_boucles_geom_2154;  -- 46 MB
+--DROP INDEX CONCURRENTLY IF EXISTS bronze.idx_trafic_boucles_geom_4326;  -- 46 MB
+
+-- 🟢 PETITS CANDIDATS (< 50 MB) — gain marginal, à grouper si on drop les gros
+--DROP INDEX CONCURRENTLY IF EXISTS bronze.idx_pvotrafic_code;            -- 41 MB
+--DROP INDEX CONCURRENTLY IF EXISTS bronze.uq_pvotrafic_code_collected;   -- 41 MB
+--DROP INDEX CONCURRENTLY IF EXISTS gold.idx_gold_velov_features_station; -- 38 MB
+--DROP INDEX CONCURRENTLY IF EXISTS gold.idx_velov_features_station_id_measurement; -- 38 MB
+--DROP INDEX CONCURRENTLY IF EXISTS gold.idx_trafic_predictions_horizon_recent; -- 37 MB
+--DROP INDEX CONCURRENTLY IF EXISTS gold.idx_mv_fact_traffic_pivot_ts_node; -- 35 MB
+
+-- ⛔ NE JAMAIS DROP (false positive probable : checks d'unicité INSERT)
+-- gold.traffic_features_live_pkey (103 MB)
+-- silver.velov_clean_pkey (438 MB)
+-- silver.tcl_vehicles_clean_pkey (134 MB)
+-- gold.road_importance_ref_pkey (91 MB)
+
+-- =============================================================================
+-- INSTRUCTIONS D'ACTIVATION (à cocher après re-mesure OK)
+-- =============================================================================
+--
+-- 1. Re-pg-audit §5 sur le VPS :
+--      ssh ubuntu@51.83.159.224 "cd /opt/lyonflow && \
+--        docker exec lyonflow-postgres psql -U lyonflow -d lyonflow -P pager=off -c \"
+--          SELECT schemaname||'.'||relname AS table, indexrelname AS idx,
+--                 pg_size_pretty(pg_relation_size(indexrelid)) AS size, idx_scan
+--          FROM pg_stat_user_indexes
+--          WHERE idx_scan = 0 AND pg_relation_size(indexrelid) > 50000000
+--          ORDER BY pg_relation_size(indexrelid) DESC;
+--        \""
+--
+-- 2. Vérifier stats_reset (doit être > 1 jour) :
+--      SELECT stats_reset, NOW() - stats_reset AS age
+--      FROM pg_stat_database WHERE datname='lyonflow';
+--
+-- 3. Décommenter les DROP index des lignes confirmées
+--
+-- 4. Appliquer :
+--      bash scripts/apply-migrations.sh
+--      (ou ./scripts/apply-migrations.sh --force 38 si déjà trackée)
+--
+-- 5. Re-pg-audit pour confirmer la libération d'espace :
+--      Section §2 du pg-audit doit montrer réduction de la taille totale
+--      des tables concernées.
+--
+-- Rollback : CREATE INDEX CONCURRENTLY ... USING ... (reprendre la déf
+-- d'origine depuis un pg_dump du schéma pre-migration si besoin).
+-- =============================================================================

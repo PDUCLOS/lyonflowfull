@@ -21,13 +21,12 @@ Pourquoi ce DAG existe :
 
 from __future__ import annotations
 
+import os
 from datetime import datetime, timedelta
 
 import psycopg2
 from airflow.decorators import dag, task
 from airflow.operators.empty import EmptyOperator
-
-from src.config import get_settings
 
 _DAG_ID = "refresh_sensor_saturation"
 _DAG_SCHEDULE = "7,22,37,52 * * * *"  # toutes les 15 min, décalé :07
@@ -55,12 +54,12 @@ def refresh_sensor_saturation_dag() -> None:
     @task
     def refresh() -> None:
         """REFRESH MATERIALIZED VIEW CONCURRENTLY (no-read-block)."""
-        settings = get_settings()
         conn = psycopg2.connect(
-            host=settings.postgres_host,
-            user=settings.postgres_user,
-            password=settings.postgres_password,
-            dbname=settings.postgres_db,
+            host=os.getenv("POSTGRES_HOST", "postgres"),
+            port=int(os.getenv("POSTGRES_PORT", "5432")),
+            dbname=os.getenv("POSTGRES_DB", "lyonflow"),
+            user=os.getenv("POSTGRES_USER", "lyonflow"),
+            password=os.environ["POSTGRES_PASSWORD"],
             connect_timeout=30,
         )
         try:

@@ -71,7 +71,7 @@ with DAG(
     max_active_runs=1,
     tags=["transform", "gold"],
 ) as dag:
-traffic = PythonOperator(
+    traffic = PythonOperator(
         task_id="build_traffic_features",
         python_callable=_run_traffic,
         execution_timeout=timedelta(minutes=5),
