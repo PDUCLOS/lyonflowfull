@@ -98,14 +98,14 @@ class RedisSettings(BaseSettings):
 class MLflowSettings(BaseSettings):
     """MLflow tracking.
 
-    Note : le nom d'expérience (``experiment_name``) n'est PAS un setting
-    global. Chaque modèle log dans sa propre expérience dédiée (séparation
-    par modèle = bonne pratique MLflow) :
-    * ``xgboost_speed`` — XGBoost Speed H+1h (cf. ``src/models/xgboost_speed.py``)
-    * ``xgboost_velov`` — XGBoost Vélov H+30min + H+1h (cf. ``src/models/xgboost_velov.py``)
+      Note : le nom d'expérience (``experiment_name``) n'est PAS un setting
+      global. Chaque modèle log dans sa propre expérience dédiée (séparation
+      par modèle = bonne pratique MLflow) :
+      * ``xgboost_speed`` — XGBoost Speed H+1h (cf. ``src/models/xgboost_speed.py``)
+      * ``xgboost_velov`` — XGBoost Vélov H+30min + H+1h (cf. ``src/models/xgboost_velov.py``)
 
-    Un setting ``experiment_name`` global avait été introduit par erreur
-  (jamais câblé runtime). Supprimé pour éviter la confusion.
+      Un setting ``experiment_name`` global avait été introduit par erreur
+    (jamais câblé runtime). Supprimé pour éviter la confusion.
     """
 
     tracking_uri: str = Field(default="http://localhost:5000", alias="MLFLOW_TRACKING_URI")
@@ -140,7 +140,7 @@ class MLSettings(BaseSettings):
     default_speed_kmh: float = Field(default=30.0, alias="LYON_DEFAULT_SPEED")
     # Activer l'entraînement hourly/daily XGBoost (toujours actif sur VPS).
     xgboost_training_enabled: bool = Field(default=True, alias="LYONFLOW_XGBOOST_TRAINING")
-  # ---- Dashboards préparés mais désactivés par défaut ----
+    # ---- Dashboards préparés mais désactivés par défaut ----
     # Carte GNN géographique (visualisation des prédictions spatiales).
     # Préparée dans Pro_7_Model_Monitoring, masquée par défaut.
     gnn_map_visible: bool = Field(default=False, alias="LYONFLOW_DASHBOARD_GNN_MAP")

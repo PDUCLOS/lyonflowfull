@@ -1,8 +1,8 @@
 """Routing — Intégration du réseau routier OSM via pgRouting.
 
-Remplacement de l'ancien graphe H3 K=2 (`dim_spatial_grid_mapping` + `dim_gnn_adjacency`) 
-par le réseau routier OpenStreetMap (OSM) natif importé via `osm2pgrouting`. 
-Le calcul des chemins optimaux en voiture est désormais délégué à la fonction 
+Remplacement de l'ancien graphe H3 K=2 (`dim_spatial_grid_mapping` + `dim_gnn_adjacency`)
+par le réseau routier OpenStreetMap (OSM) natif importé via `osm2pgrouting`.
+Le calcul des chemins optimaux en voiture est désormais délégué à la fonction
 PostGIS `pgr_dijkstra` côté base de données PostgreSQL.
 
 Deux interfaces distinctes cohabitent pour des usages différents :
@@ -14,7 +14,7 @@ Deux interfaces distinctes cohabitent pour des usages différents :
    - Le coût est évalué selon le ratio length_m / maxspeed_forward (actualisé par DAG).
 
 2. **Graphe H3 (Composant hérité pour GNN)** — `build_routing_graph()` (conservé)
-   - Utilisé exclusivement par les modèles Graph Neural Networks (GNN) pour 
+   - Utilisé exclusivement par les modèles Graph Neural Networks (GNN) pour
      les prédictions spatiales d'adjacence.
    - Déprécié pour le calcul d'itinéraires automobiles (routing).
    - Conservé uniquement pour garantir la rétro-compatibilité des algorithmes ML.
@@ -118,15 +118,15 @@ def _build_graph_from_db(
 ) -> nx.Graph:
     """Construit le graphe routier depuis la DB.
 
-  hotfix 2 (2026-06-12) — Le bon graphe routier n'est PAS
-    silver.trafic_boucles_clean (qui sont des Points isolés par
-  capteur) mais le graphe H3 déjà construit en     * gold.dim_spatial_grid_mapping : 1520 nœuds routiers H3 res 13
-    * gold.dim_gnn_adjacency : 4072 arêtes K=2 (chaque nœud relié à
-      ses voisins H3 les plus proches)
+    hotfix 2 (2026-06-12) — Le bon graphe routier n'est PAS
+      silver.trafic_boucles_clean (qui sont des Points isolés par
+    capteur) mais le graphe H3 déjà construit en     * gold.dim_spatial_grid_mapping : 1520 nœuds routiers H3 res 13
+      * gold.dim_gnn_adjacency : 4072 arêtes K=2 (chaque nœud relié à
+        ses voisins H3 les plus proches)
 
-    On croise avec gold.traffic_features_live pour récupérer la
-    vitesse temps réel du nœud H3 le plus proche du capteur
-    (mapping approximatif via lat/lon).
+      On croise avec gold.traffic_features_live pour récupérer la
+      vitesse temps réel du nœud H3 le plus proche du capteur
+      (mapping approximatif via lat/lon).
     """
     # 1. Charger les nœuds H3 (lat/lon par node_idx)
     nodes_query = """
@@ -141,7 +141,7 @@ def _build_graph_from_db(
     G = nx.Graph()  # noqa: N806
 
     # 2. Charger la vitesse temps réel la plus récente par node H3
-  # (2026-06-12) — Le JOIN direct ``m.properties_twgid =
+    # (2026-06-12) — Le JOIN direct ``m.properties_twgid =
     # t.channel_id`` ne matche JAMAIS (LYO0xxxx ≠ "537"). On passe par
     # ``gold.mv_twgid_to_lyo`` qui mappe par proximité géographique
     # (seuil 500m). Refresh manuel : REFRESH MATERIALIZED VIEW
@@ -298,7 +298,7 @@ def get_node_speed(graph: nx.Graph, node_id: str, horizon_minutes: int = 0) -> f
         return 30.0  # fallback
 
     # Pour l'instant on retourne current_speed_kmh
-  # intégrer gold.trafic_predictions pour horizon > 0
+    # intégrer gold.trafic_predictions pour horizon > 0
     return float(data.get("current_speed_kmh", 30.0))
 
 
@@ -394,25 +394,25 @@ def compute_route_pgrouting_ksp(
 ) -> list[list[dict]] | None:
     """Calcule K itinéraires voiture alternatifs via pgr_ksp (algorithme Yen).
 
-    Wrapper sur ``osm.route_car_ksp()`` côté PostgreSQL. Chaque route retournée
-    est une liste d'arêtes avec géométrie OSM (identique au contrat de
-    ``compute_route_pgrouting``).
+      Wrapper sur ``osm.route_car_ksp()`` côté PostgreSQL. Chaque route retournée
+      est une liste d'arêtes avec géométrie OSM (identique au contrat de
+      ``compute_route_pgrouting``).
 
-  (2026-06-22) : usager veut comparer des alternatives réelles
-    au lieu d'avoir toujours le même Dijkstra (surtout quand capteurs
-    trafic couvrent mal la zone).
+    (2026-06-22) : usager veut comparer des alternatives réelles
+      au lieu d'avoir toujours le même Dijkstra (surtout quand capteurs
+      trafic couvrent mal la zone).
 
-    Args:
-        origin_lon, origin_lat: coords GPS du point de départ.
-        dest_lon, dest_lat: coords GPS du point d'arrivée.
-        k: nombre d'alternatives (1..5, défaut 3).
+      Args:
+          origin_lon, origin_lat: coords GPS du point de départ.
+          dest_lon, dest_lat: coords GPS du point d'arrivée.
+          k: nombre d'alternatives (1..5, défaut 3).
 
-    Returns:
-        Liste de K routes, chaque route étant une liste de dicts d'arêtes
-        (même format que ``compute_route_pgrouting``). Chaque arête a en
-        plus la clé ``total_length_m`` / ``total_cost_s`` (dupliqués sur
-        toutes les lignes pour affichage rapide client).
-        ``None`` si pas de chemin ou DB indispo.
+      Returns:
+          Liste de K routes, chaque route étant une liste de dicts d'arêtes
+          (même format que ``compute_route_pgrouting``). Chaque arête a en
+          plus la clé ``total_length_m`` / ``total_cost_s`` (dupliqués sur
+          toutes les lignes pour affichage rapide client).
+          ``None`` si pas de chemin ou DB indispo.
     """
     from src.db import execute_query
 

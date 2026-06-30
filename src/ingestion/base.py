@@ -8,7 +8,7 @@ Fonctionnement (Template Method) :
 2. `validate()`  : Vérifie la cohérence minimale des données.
 3. `save_raw()`  : Sauvegarde les données dans la couche Bronze (Base de données et Cloud).
 
-Tous les collecteurs concrets (Trafic, Vélov, Météo, etc.) héritent de 
+Tous les collecteurs concrets (Trafic, Vélov, Météo, etc.) héritent de
 cette classe et implémentent uniquement la méthode `fetch_raw()`.
 
 Mécanismes de robustesse intégrés :
@@ -45,19 +45,21 @@ logger = logging.getLogger(__name__)
 
 class HTTPMethod(StrEnum):
     """Énumération des méthodes HTTP supportées."""
+
     GET = "GET"
     POST = "POST"
 
 
 class CollectorError(Exception):
     """Exception personnalisée levée lorsqu'un collecteur rencontre un échec critique."""
+
     pass
 
 
 @dataclass
 class FetchResult:
     """Structure de données représentant le résultat d'une opération de collecte (fetch).
-    
+
     Attributes:
         source (str): Identifiant de la source de données.
         fetched_at (datetime): Timestamp de la fin du téléchargement.
@@ -69,6 +71,7 @@ class FetchResult:
         error (str | None): Détails de l'erreur en cas d'échec.
         metadata (dict): Informations contextuelles additionnelles.
     """
+
     source: str
     fetched_at: datetime
     raw_data: Any
@@ -92,7 +95,7 @@ class DataCollector(abc.ABC):
             def fetch_raw(self) -> FetchResult:
                 # Effectue l'appel API et retourne un FetchResult
                 ...
-        
+
         collector = TraficGrandLyon()
         result = collector.run()
         ```
@@ -106,7 +109,7 @@ class DataCollector(abc.ABC):
         max_retries: int = 3,
     ):
         """Initialise la base du collecteur.
-        
+
         Args:
             source (str): Nom unique identifiant la source (ex: "meteo_openmeteo").
             bronze_table (str): Nom de la table PostgreSQL cible dans le schéma "bronze".
@@ -132,10 +135,10 @@ class DataCollector(abc.ABC):
     @abc.abstractmethod
     def fetch_raw(self) -> FetchResult:
         """Méthode principale à implémenter : récupère les données brutes depuis l'API.
-        
+
         Returns:
             FetchResult: Conteneur avec les données et les statistiques de la requête.
-            
+
         Raises:
             CollectorError: En cas d'erreur bloquante.
         """
@@ -143,14 +146,14 @@ class DataCollector(abc.ABC):
 
     def validate(self, result: FetchResult) -> bool:
         """Valide la cohérence des données collectées.
-        
-        Par défaut, applique une validation très souple (il ne doit pas y avoir 
-        de compte négatif). Les classes enfants peuvent la surcharger pour 
+
+        Par défaut, applique une validation très souple (il ne doit pas y avoir
+        de compte négatif). Les classes enfants peuvent la surcharger pour
         appliquer des règles plus strictes.
-        
+
         Args:
             result (FetchResult): Résultat de l'appel `fetch_raw`.
-            
+
         Returns:
             bool: True si les données sont valides, False sinon.
         """
@@ -162,10 +165,10 @@ class DataCollector(abc.ABC):
 
     def run(self) -> FetchResult:
         """Point d'entrée de l'exécution complète du collecteur.
-        
-        Séquence : Téléchargement (`fetch_raw`) -> Validation (`validate`) -> 
+
+        Séquence : Téléchargement (`fetch_raw`) -> Validation (`validate`) ->
         Persistance (`_save_raw`).
-        
+
         Gère également les erreurs globales et met à jour les métriques internes.
 
         Returns:
@@ -212,20 +215,20 @@ class DataCollector(abc.ABC):
 
     def _save_raw(self, result: FetchResult) -> None:
         """Persiste les données brutes dans la couche Bronze.
-        
-        1. Base de données PostgreSQL (table `bronze.<table>`). Format natif JSONB.
-        2. Google Drive (en guise d'archive froide/backup).
-        
-    Note ) : Assure l'idempotence de l'insertion. Si aucun enregistrement 
-        n'a été trouvé, la persistance base de données est ignorée pour éviter 
-        les erreurs de contraintes d'unicité, mais le backup GDrive est conservé.
+
+            1. Base de données PostgreSQL (table `bronze.<table>`). Format natif JSONB.
+            2. Google Drive (en guise d'archive froide/backup).
+
+        Note ) : Assure l'idempotence de l'insertion. Si aucun enregistrement
+            n'a été trouvé, la persistance base de données est ignorée pour éviter
+            les erreurs de contraintes d'unicité, mais le backup GDrive est conservé.
         """
         # Si aucun enregistrement, on évite l'insertion DB (Idempotence)
         if result.n_records == 0 or not result.raw_data:
             logger.warning(
                 "Collecteur %s : 0 enregistrements détectés. "
                 "L'insertion dans la base de données Bronze est ignorée (Règle d'idempotence).",
-                self.source
+                self.source,
             )
             # Tentative de sauvegarde Drive pour conserver l'historique des requêtes "vides"
             try:
@@ -259,7 +262,7 @@ class DataCollector(abc.ABC):
 
     def _save_to_minio(self, result: FetchResult, raw_json: str) -> None:
         """Effectue une sauvegarde brute sur un serveur compatible S3 (MinIO).
-        
+
         Note : Cette méthode est marquée comme DÉPRÉCIÉE au profit de Google Drive.
         Elle reste fonctionnelle si le paramètre MINIO_ENABLED=True.
         """
@@ -296,8 +299,8 @@ class DataCollector(abc.ABC):
 
     def _save_to_gdrive(self, result: FetchResult, raw_json: str) -> None:
         """Sauvegarde les données au format JSON dans Google Drive.
-        
-        Prérequis : Un projet GCP avec l'API Google Drive activée, et 
+
+        Prérequis : Un projet GCP avec l'API Google Drive activée, et
         le processus d'authentification OAuth 2.0 complété.
         """
         if not self.s.gdrive.enabled:
@@ -330,9 +333,8 @@ class DataCollector(abc.ABC):
                     creds.refresh(Request())
                 else:
                     logger.warning(
-                        "Jeton Google Drive absent ou expiré (%s). "
-                        "Veuillez exécuter le flux d'authentification OAuth.",
-                        token_path
+                        "Jeton Google Drive absent ou expiré (%s). Veuillez exécuter le flux d'authentification OAuth.",
+                        token_path,
                     )
                     return
                 # Persistance du token actualisé
@@ -361,7 +363,7 @@ class DataCollector(abc.ABC):
             )
 
             file = service.files().create(body=file_metadata, media_body=media, fields="id,name,webViewLink").execute()
-            logger.info("Upload GDrive réussi : %s → %s", file.get('name'), file.get('webViewLink'))
+            logger.info("Upload GDrive réussi : %s → %s", file.get("name"), file.get("webViewLink"))
 
         except ImportError as e:
             logger.warning("Librairie Google API cliente non installée: %s", e)
@@ -386,16 +388,16 @@ class DataCollector(abc.ABC):
         auth: tuple[str, str] | None = None,
     ) -> httpx.Response:
         """Exécute une requête HTTP GET robuste avec gestion native des retries.
-        
+
         Args:
             url (str): URL de l'API.
             params (dict | None): Paramètres d'URL (query string).
             headers (dict | None): En-têtes HTTP additionnels.
             auth (tuple[str, str] | None): Tuple d'authentification Basic (utilisateur, mot_de_passe).
-            
+
         Returns:
             httpx.Response: Réponse de l'appel API.
-            
+
         Raises:
             httpx.HTTPError: Si l'appel échoue après 3 tentatives ou si le code statut indique une erreur.
         """
@@ -412,12 +414,12 @@ class DataCollector(abc.ABC):
     )
     def _http_post(self, url: str, json_data: dict | None = None, headers: dict | None = None) -> httpx.Response:
         """Exécute une requête HTTP POST robuste avec gestion native des retries.
-        
+
         Args:
             url (str): URL de l'API cible.
             json_data (dict | None): Dictionnaire de données (sera converti en JSON body).
             headers (dict | None): En-têtes HTTP additionnels.
-            
+
         Returns:
             httpx.Response: La réponse HTTP de l'API.
         """
@@ -428,13 +430,13 @@ class DataCollector(abc.ABC):
 
     def _count_records(self, data: Any) -> int:
         """Utilitaire interne pour dénombrer les enregistrements dans la réponse JSON.
-        
+
         Parcourt de manière heuristique les structures courantes renvoyées par
         les API (listes directes, attributs 'features', 'data', 'results', etc.).
-        
+
         Args:
             data (Any): Données parsées de l'API (dictionnaire ou liste).
-            
+
         Returns:
             int: Le nombre estimé d'enregistrements (0 si aucun).
         """

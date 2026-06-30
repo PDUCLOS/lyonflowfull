@@ -72,9 +72,10 @@ logger = logging.getLogger(__name__)
 # Détection d'environnement
 # -----------------------------------------------------------------------------
 
+
 def is_mlflow_available() -> bool:
     """Vérifie si la librairie MLflow est installée sur le système.
-    
+
     Returns:
         bool: True si `mlflow` peut être importé, False sinon.
     """
@@ -88,7 +89,7 @@ def is_mlflow_available() -> bool:
 
 def is_tracking_server_reachable() -> bool:
     """Vérifie si le serveur MLflow (défini par MLFLOW_TRACKING_URI) répond.
-    
+
     Returns:
         bool: True si le serveur répond aux requêtes de base, False en cas
         d'erreur ou si `mlflow` n'est pas installé.
@@ -121,7 +122,7 @@ DEFAULT_ARTIFACT_ROOT = "./mlruns"
 
 def get_tracking_uri() -> str:
     """Lit l'URI du tracking MLflow depuis l'environnement ou retourne la valeur par défaut.
-    
+
     Returns:
         str: L'URL du serveur MLflow.
     """
@@ -130,7 +131,7 @@ def get_tracking_uri() -> str:
 
 def get_artifact_root() -> str:
     """Lit le répertoire des artefacts MLflow depuis l'environnement ou retourne la valeur par défaut.
-    
+
     Returns:
         str: Le chemin de base pour le stockage des artefacts.
     """
@@ -141,10 +142,11 @@ def get_artifact_root() -> str:
 # Tracker principal (Wrapper MLflow)
 # -----------------------------------------------------------------------------
 
+
 class MLflowTracker:
     """Wrapper centralisé pour tracker des entraînements sur MLflow.
 
-    Utilise le pattern context manager (`with ...`) pour garantir que chaque 
+    Utilise le pattern context manager (`with ...`) pour garantir que chaque
     run est fermé proprement (même en cas d'exception).
 
     Si MLflow n'est pas disponible ou si le serveur est down, le tracker
@@ -158,7 +160,7 @@ class MLflowTracker:
         tracking_uri: str | None = None,
     ):
         """Initialise le tracker MLflow pour un modèle spécifique.
-        
+
         Args:
             experiment_name (str | None): Nom de l'expérience MLflow. Il est
                 fortement recommandé de le définir explicitement (ex: "xgboost_speed").
@@ -185,7 +187,7 @@ class MLflowTracker:
 
     def _initialize(self) -> None:
         """Configure la connexion au serveur de tracking MLflow.
-        
+
         Bascule le tracker en mode `no-op` silencieusement si MLflow est
         indisponible ou injoignable, afin de ne pas bloquer l'exécution.
         """
@@ -248,7 +250,7 @@ class MLflowTracker:
 
     def log_params(self, params: dict[str, Any]) -> None:
         """Enregistre un dictionnaire de paramètres pour le run courant.
-        
+
         Args:
             params (dict): Dictionnaire clé-valeur des paramètres (ex: {"lr": 0.01}).
         """
@@ -262,7 +264,7 @@ class MLflowTracker:
 
     def log_metrics(self, metrics: dict[str, float], step: int | None = None) -> None:
         """Enregistre les métriques de performance du run courant.
-        
+
         Args:
             metrics (dict): Dictionnaire clé-valeur des métriques (ex: {"mae": 1.2}).
             step (int | None): Étape ou époque de l'entraînement associée (optionnel).
@@ -277,7 +279,7 @@ class MLflowTracker:
 
     def log_artifact(self, local_path: str) -> None:
         """Upload un fichier local comme artefact dans MLflow.
-        
+
         Args:
             local_path (str): Chemin d'accès local du fichier à sauvegarder.
         """
@@ -291,7 +293,7 @@ class MLflowTracker:
 
     def set_tag(self, key: str, value: str) -> None:
         """Ajoute ou modifie un tag pour le run courant.
-        
+
         Args:
             key (str): Nom du tag.
             value (str): Valeur du tag.
@@ -305,7 +307,7 @@ class MLflowTracker:
 
     def log_dict(self, data: dict, artifact_file: str) -> None:
         """Sauvegarde un dictionnaire Python en tant qu'artefact JSON.
-        
+
         Args:
             data (dict): Données à sauvegarder.
             artifact_file (str): Nom de l'artefact (ex: "config.json").
@@ -320,7 +322,7 @@ class MLflowTracker:
 
     def register_model(self, model_name: str) -> None:
         """Enregistre le modèle du run courant dans le Model Registry.
-        
+
         Si le modèle existe déjà, une nouvelle version sera créée.
 
         Args:
@@ -347,7 +349,7 @@ class MLflowTracker:
 
     def transition_to_production(self, model_name: str) -> None:
         """Promeut la dernière version existante de ce modèle à l'état 'Production'.
-        
+
         Archive automatiquement toutes les versions précédentes actuellement en Production.
 
         Args:
@@ -364,10 +366,7 @@ class MLflowTracker:
 
             # Transition vers la phase "Production" et archivage de l'existant
             client.transition_model_version_stage(
-                name=model_name,
-                version=latest.version,
-                stage="Production",
-                archive_existing_versions=True
+                name=model_name, version=latest.version, stage="Production", archive_existing_versions=True
             )
             logger.info("Transition réussie: %s (version %s) vers Production", model_name, latest.version)
         except Exception as e:
@@ -376,9 +375,9 @@ class MLflowTracker:
     @property
     def run_id(self) -> str | None:
         """ID unique du run courant.
-        
+
         Returns:
-            str | None: L'ID si le run est actif, None en cas de mode no-op 
+            str | None: L'ID si le run est actif, None en cas de mode no-op
             ou si aucun run n'est lancé.
         """
         if self._run is None:
@@ -389,6 +388,7 @@ class MLflowTracker:
 # -----------------------------------------------------------------------------
 # Helpers d'introspection (Consommés par le dashboard)
 # -----------------------------------------------------------------------------
+
 
 def list_registered_models(experiment: str | None = None, max_results: int = 50) -> list[dict]:
     """Liste tous les modèles enregistrés dans une expérience MLflow donnée.
@@ -485,7 +485,7 @@ def get_latest_run(model_name: str, experiment: str | None = None) -> dict | Non
         experiment (str | None): Nom de l'expérience (None = toutes).
 
     Returns:
-        dict | None: Dictionnaire contenant les `metrics`, `params`, `tags`, 
+        dict | None: Dictionnaire contenant les `metrics`, `params`, `tags`,
         `trained_at` et `run_id`. Renvoie None si introuvable.
     """
     runs = list_registered_models(experiment=experiment, max_results=200)
@@ -497,7 +497,7 @@ def get_latest_run(model_name: str, experiment: str | None = None) -> dict | Non
 
 def compare_models(model_a: str, model_b: str, metric: str = "mae", experiment: str | None = None) -> dict:
     """Compare deux modèles sur la base d'une métrique spécifique.
-    
+
     Se base sur le dernier run de chaque modèle.
 
     Args:
@@ -507,7 +507,7 @@ def compare_models(model_a: str, model_b: str, metric: str = "mae", experiment: 
         experiment (str | None): Expérience concernée.
 
     Returns:
-        dict: Contient le détail du run `a`, du run `b`, le différentiel (`delta`), 
+        dict: Contient le détail du run `a`, du run `b`, le différentiel (`delta`),
         la `metric` comparée, et le gagnant (`winner`).
     """
     run_a = get_latest_run(model_a, experiment=experiment)
@@ -536,14 +536,14 @@ def compare_models(model_a: str, model_b: str, metric: str = "mae", experiment: 
 def get_experiment_summary(experiment: str) -> dict:
     """Retourne un résumé synthétique de l'expérience demandée.
 
-  Note `experiment` est désormais obligatoire.
+    Note `experiment` est désormais obligatoire.
 
-    Args:
-        experiment (str): Nom de l'expérience MLflow.
+      Args:
+          experiment (str): Nom de l'expérience MLflow.
 
-    Returns:
-        dict: Résumé avec `name`, `run_count`, `latest_run_at`, 
-        `model_names`, et disponibilité (`available`).
+      Returns:
+          dict: Résumé avec `name`, `run_count`, `latest_run_at`,
+          `model_names`, et disponibilité (`available`).
     """
     runs = list_registered_models(experiment=experiment, max_results=200)
     if not runs:
@@ -574,10 +574,11 @@ def get_experiment_summary(experiment: str) -> dict:
 # Stub pour mode No-op
 # -----------------------------------------------------------------------------
 
+
 class _NoopRun:
     """Mock/Stub utilisé lorsque MLflow n'est pas disponible.
-    
-    Permet au code client d'interagir avec l'objet Run sans erreurs 
+
+    Permet au code client d'interagir avec l'objet Run sans erreurs
     quand le serveur est hors-ligne.
     """
 
@@ -587,6 +588,7 @@ class _NoopRun:
 # -----------------------------------------------------------------------------
 # Méthode utilitaire One-Liner
 # -----------------------------------------------------------------------------
+
 
 def quick_log(
     experiment: str,
@@ -606,7 +608,7 @@ def quick_log(
 
     Returns:
         str | None: Le run_id généré par MLflow (ou "noop" si inactif).
-        
+
     Example:
         ```python
         run_id = quick_log(

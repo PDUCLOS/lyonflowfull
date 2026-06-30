@@ -1,6 +1,6 @@
 """Collecteur — Boucles magnétiques de trafic Grand Lyon (pvotrafic).
 
-Ce module est le cœur de l'ingestion temps réel du trafic automobile. 
+Ce module est le cœur de l'ingestion temps réel du trafic automobile.
 Il interroge les capteurs (boucles) intégrés à la voirie lyonnaise.
 
 API utilisée : https://data.grandlyon.com/geoserver/metropole-de-lyon/ows
@@ -21,7 +21,7 @@ class TraficGrandLyon(DataCollector):
 
     def __init__(self):
         """Initialise le collecteur de trafic.
-        
+
         Définit l'accès WFS au GeoServer de la Métropole, ainsi que les
         identifiants de connexion (Basic Auth).
         """
@@ -48,13 +48,13 @@ class TraficGrandLyon(DataCollector):
 
     def fetch_raw(self) -> FetchResult:
         """Exécute la requête WFS GetFeature pour récupérer l'état des boucles.
-        
-        Retourne les métriques d'occupation et de débit pour chaque capteur 
+
+        Retourne les métriques d'occupation et de débit pour chaque capteur
         configuré dans le référentiel de la voirie.
-        
+
         Returns:
             FetchResult: Un objet contenant les données GeoJSON (FeatureCollection).
-            
+
         Raises:
             CollectorError: En cas d'échec de la requête HTTP ou JSON.
         """

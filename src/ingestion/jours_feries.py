@@ -1,7 +1,7 @@
 """Collecteur — Jours fériés en France (calendrier.api.gouv.fr).
 
 Module responsable de l'ingestion des jours fériés via l'API gouvernementale.
-Ces données sont utiles pour les modèles prédictifs, le trafic étant 
+Ces données sont utiles pour les modèles prédictifs, le trafic étant
 sensiblement différent lors des jours fériés.
 
 API utilisée : https://calendrier.api.gouv.fr/jours-feries/
@@ -25,7 +25,7 @@ class JoursFeries(DataCollector):
 
     def __init__(self):
         """Initialise le collecteur de jours fériés.
-        
+
         Configure l'URL cible et la table de destination dans la couche Bronze.
         """
         super().__init__(
@@ -40,13 +40,13 @@ class JoursFeries(DataCollector):
 
     def fetch_raw(self) -> FetchResult:
         """Récupère les jours fériés de l'année en cours et de l'année suivante.
-        
+
         L'API gouvernementale segmente les données par année et par zone (métropole).
         Le collecteur effectue donc deux requêtes (N et N+1) pour anticiper.
-        
+
         Returns:
             FetchResult: Les données agrégées sous forme de dictionnaire indexé par année.
-            
+
         Raises:
             CollectorError: Si aucune donnée n'a pu être collectée.
         """

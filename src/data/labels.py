@@ -2,13 +2,13 @@
 
 Ce module contient les **référentiels statiques** : libellés en français,
 codes couleurs hexagonaux, et étiquettes des modes de transport. Ce ne sont PAS
-des données simulées (mocks) : il s'agit de conventions d'interface utilisateur 
+des données simulées (mocks) : il s'agit de conventions d'interface utilisateur
 immuables.
 
 Historiquement, ces constantes se trouvaient dans un module lié aux mocks,
-ce qui prêtait à confusion. Cette dette technique de nomenclature a été corrigée : 
-le module neutre `labels.py` regroupe désormais tous ces référentiels visuels. 
-Les véritables mocks (données générées pour tests) sont strictement confinés 
+ce qui prêtait à confusion. Cette dette technique de nomenclature a été corrigée :
+le module neutre `labels.py` regroupe désormais tous ces référentiels visuels.
+Les véritables mocks (données générées pour tests) sont strictement confinés
 dans le répertoire `tests/fixtures/mock_data/`.
 """
 

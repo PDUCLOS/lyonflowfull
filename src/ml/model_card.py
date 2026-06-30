@@ -1,7 +1,7 @@
 """Générateur de Fiches Modèles (Model Cards) — Documentation MLOps automatisée.
 
-Génère automatiquement un document de type "Model Card" au format Markdown 
-à l'issue de chaque session d'entraînement XGBoost. Cette approche s'inspire 
+Génère automatiquement un document de type "Model Card" au format Markdown
+à l'issue de chaque session d'entraînement XGBoost. Cette approche s'inspire
 du framework standard "Model Cards for Model Reporting" (Mitchell et al. 2019).
 
 **Contenu généré** :
@@ -12,9 +12,9 @@ du framework standard "Model Cards for Model Reporting" (Mitchell et al. 2019).
 - Suivi de la dérive (Data Drift) si un rapport PSI est disponible
 - Recommandations pour le ré-entraînement futur
 
-**Résultat produit** : 
-Sauvegarde locale sous `models/{model_name}_v{version}_{date}.md` et 
-téléchargement automatique vers MLflow en tant qu'artefact (directement 
+**Résultat produit** :
+Sauvegarde locale sous `models/{model_name}_v{version}_{date}.md` et
+téléchargement automatique vers MLflow en tant qu'artefact (directement
 consultable via l'interface UI du Model Registry).
 """
 

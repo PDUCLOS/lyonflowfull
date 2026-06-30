@@ -1,6 +1,6 @@
 """Collecteur — Réseau TCL SIRI Lite (positions des bus et tramways).
 
-Ingère la position en temps réel des véhicules de transport en commun 
+Ingère la position en temps réel des véhicules de transport en commun
 du réseau TCL via le standard d'échange SIRI Lite.
 
 API utilisée : https://data.grandlyon.com/siri-lite/2.0/vehicle-monitoring.json
@@ -22,7 +22,7 @@ class TclSiriLite(DataCollector):
 
     def __init__(self):
         """Initialise le collecteur SIRI Lite.
-        
+
         Configure l'endpoint et l'authentification HTTP Basic (obligatoire
         depuis les révisions 2025 de l'API Grand Lyon).
         """
@@ -45,11 +45,11 @@ class TclSiriLite(DataCollector):
 
     def fetch_raw(self) -> FetchResult:
         """Récupère la position instantanée des bus et tramways.
-        
+
         Returns:
-            FetchResult: Le document JSON SIRI Lite contenant les listes 
+            FetchResult: Le document JSON SIRI Lite contenant les listes
             de `VehicleActivity`.
-            
+
         Raises:
             CollectorError: En cas d'erreur réseau, d'authentification ou JSON.
         """

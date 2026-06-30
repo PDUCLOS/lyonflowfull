@@ -18,14 +18,14 @@ from src.ingestion.base import CollectorError, DataCollector, FetchResult
 
 class CalendrierScolaire(DataCollector):
     """Collecteur du calendrier scolaire français (focus Zone A / Lyon).
-    
+
     Permet d'alimenter les modèles d'apprentissage (ML) avec les informations
     de vacances scolaires, qui impactent fortement le flux de trafic.
     """
 
     def __init__(self):
         """Initialise le collecteur du calendrier scolaire.
-        
+
         Définit l'URL de base et le dataset `fr-en-calendrier-scolaire`.
         """
         super().__init__(
@@ -41,13 +41,13 @@ class CalendrierScolaire(DataCollector):
 
     def fetch_raw(self) -> FetchResult:
         """Récupère les données brutes de vacances depuis l'API gouvernementale.
-        
+
         Construit la requête pour filtrer uniquement la Zone A ou spécifiquement
         la région de Lyon, avec un tri décroissant sur la date de début.
-        
+
         Returns:
             FetchResult: Conteneur standard avec les données brutes (vacances).
-            
+
         Raises:
             CollectorError: Si l'appel API ou le décodage JSON échoue.
         """

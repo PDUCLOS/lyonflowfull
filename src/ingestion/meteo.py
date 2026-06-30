@@ -1,12 +1,12 @@
 """Collecteur — Prévisions Météo (Open-Meteo).
 
-Ce module ingère les prévisions et archives météorologiques pour la 
-région lyonnaise, qui constituent des 'features' essentielles pour 
+Ce module ingère les prévisions et archives météorologiques pour la
+région lyonnaise, qui constituent des 'features' essentielles pour
 le modèle de prédiction du trafic (XGBoost / STGCN).
 
 API utilisée : https://api.open-meteo.com/v1/forecast
 Fréquence d'ingestion recommandée : 1 heure
-Variables collectées : Température, humidité, précipitations, vitesse du vent, 
+Variables collectées : Température, humidité, précipitations, vitesse du vent,
                      et codes météorologiques (WMO).
 """
 
@@ -23,8 +23,8 @@ class MeteoOpenMeteo(DataCollector):
 
     def __init__(self):
         """Initialise le collecteur météo.
-        
-        Configure l'URL de l'API et charge les coordonnées géographiques depuis 
+
+        Configure l'URL de l'API et charge les coordonnées géographiques depuis
         l'environnement (par défaut, le centre de Lyon).
         """
         super().__init__(
@@ -38,10 +38,10 @@ class MeteoOpenMeteo(DataCollector):
 
     def fetch_raw(self) -> FetchResult:
         """Récupère les relevés horaires météo (1 jour passé, 2 jours futurs).
-        
+
         Returns:
             FetchResult: Conteneur avec le payload brut JSON renvoyé par Open-Meteo.
-            
+
         Raises:
             CollectorError: En cas d'erreur de connexion ou de format inattendu.
         """

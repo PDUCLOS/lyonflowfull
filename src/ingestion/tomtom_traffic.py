@@ -115,7 +115,7 @@ def _reset_daily_quota_if_needed() -> None:
 
 def _quota_remaining() -> int:
     """Calcule le nombre de requêtes TomTom restantes pour la journée en cours.
-    
+
     Returns:
         int: Le quota restant (toujours >= 0).
     """
@@ -125,11 +125,11 @@ def _quota_remaining() -> int:
 
 def _tile_key(lat: float, lon: float) -> str:
     """Génère une clé de cache unique correspondant à la tuile arrondie à 0.02°.
-    
+
     Args:
         lat (float): Latitude du point.
         lon (float): Longitude du point.
-        
+
     Returns:
         str: La clé formatée (ex: "45.7400_4.8400").
     """
@@ -140,10 +140,10 @@ def _tile_key(lat: float, lon: float) -> str:
 
 def _cache_get(key: str) -> dict | None:
     """Récupère une entrée du cache mémoire si elle n'est pas expirée.
-    
+
     Args:
         key (str): Clé de la tuile.
-        
+
     Returns:
         dict | None: Les données de trafic si présentes et valides, sinon None.
     """
@@ -160,7 +160,7 @@ def _cache_get(key: str) -> dict | None:
 
 def _cache_set(key: str, value: dict | None) -> None:
     """Stocke une valeur dans le cache mémoire avec le timestamp actuel.
-    
+
     Args:
         key (str): Clé de la tuile.
         value (dict | None): Les données TomTom à mettre en cache.
@@ -172,9 +172,10 @@ def _cache_set(key: str, value: dict | None) -> None:
 # Interactions avec l'API TomTom
 # -----------------------------------------------------------------------------
 
+
 def get_api_key() -> str | None:
     """Récupère la clé API TomTom depuis l'environnement ou les paramètres.
-    
+
     Returns:
         str | None: La clé API nettoyée, ou None si elle n'est pas configurée.
     """
@@ -193,15 +194,15 @@ def get_api_key() -> str | None:
 )
 def _query_tomtom_flow(lat: float, lon: float, api_key: str) -> dict:
     """Exécute une requête HTTP sur l'API TomTom Flow Segment avec gestion des retries.
-    
+
     Args:
         lat (float): Latitude cible.
         lon (float): Longitude cible.
         api_key (str): Clé d'authentification API.
-        
+
     Returns:
         dict: Réponse JSON brute de l'API.
-        
+
     Raises:
         httpx.HTTPError: En cas d'échec répété de la requête (Code HTTP non-200).
     """
@@ -216,7 +217,7 @@ def _query_tomtom_flow(lat: float, lon: float, api_key: str) -> dict:
 
 def get_flow(lat: float, lon: float, use_cache: bool = True) -> dict | None:
     """Récupère l'état du trafic en temps réel pour un point GPS donné.
-    
+
     Logique :
     1. Si `use_cache` est True, recherche dans le cache local (tuile). Si trouvé, retourne.
     2. Vérifie la clé API et le quota journalier (fallback sur None si dépassé).
@@ -303,13 +304,14 @@ def get_flow(lat: float, lon: float, use_cache: bool = True) -> dict | None:
 # Collecte Batch (Bronze)
 # -----------------------------------------------------------------------------
 
+
 def collect_lyon_tiles() -> list[dict]:
     """Interroge TomTom Flow pour les 12 tuiles majeures du centre de Lyon.
-    
+
     Cette fonction est idempotente grâce au cache de 5 minutes : si elle
     est appelée en boucle, elle ne consommera le quota qu'une fois toutes
     les 5 minutes.
-    
+
     Returns:
         list[dict]: Liste de dictionnaires de résultats TomTom.
     """
@@ -334,13 +336,13 @@ def collect_lyon_tiles() -> list[dict]:
 
 def save_lyon_tiles_to_bronze(results: list[dict]) -> int:
     """Insère les données collectées dans la table `bronze.tomtom_traffic`.
-    
+
     Gère les doublons (`ON CONFLICT DO NOTHING`) basés sur la clé de la tuile
     et le timestamp de collecte.
-    
+
     Args:
         results (list[dict]): Liste des objets TomTom retournés par la collecte.
-        
+
     Returns:
         int: Le nombre de lignes effectivement insérées dans la base de données.
     """
@@ -390,6 +392,7 @@ def save_lyon_tiles_to_bronze(results: list[dict]) -> int:
 # Interface Dashboard (Pont Gold / TomTom)
 # -----------------------------------------------------------------------------
 
+
 def get_live_flow_for_bbox(
     min_lat: float,
     min_lon: float,
@@ -398,15 +401,15 @@ def get_live_flow_for_bbox(
     use_cache: bool = True,
 ) -> list[dict]:
     """Récupère les points TomTom situés dans une 'bounding box' donnée.
-    
+
     Utilisé par le dashboard pour la "Carte trafic". Parcourt toutes les
     tuiles (espacées de 0.02°) dans la zone fournie et interroge l'API TomTom.
-    
+
     Args:
         min_lat, min_lon (float): Coordonnées sud-ouest.
         max_lat, max_lon (float): Coordonnées nord-est.
         use_cache (bool): Favorise l'usage du cache (True par défaut).
-        
+
     Returns:
         list[dict]: Les points de trafic actuels pour la zone demandée.
     """
@@ -440,9 +443,10 @@ def reset_cache() -> None:
 # Health Check (Supervision)
 # -----------------------------------------------------------------------------
 
+
 def health() -> dict:
     """Fournit des métriques de santé sur le connecteur TomTom.
-    
+
     Returns:
         dict: Statistiques sur le quota, la configuration et l'état du cache.
     """
@@ -461,6 +465,7 @@ def health() -> dict:
 # -----------------------------------------------------------------------------
 # Encapsulation Standard (Pattern DataCollector)
 # -----------------------------------------------------------------------------
+
 
 class TomTomTrafficFlow(DataCollector):
     """Encapsulation standardisée du collecteur TomTom.
@@ -481,16 +486,14 @@ class TomTomTrafficFlow(DataCollector):
 
     def fetch_raw(self) -> FetchResult:
         """Déclenche la collecte brute depuis l'API TomTom.
-        
+
         Returns:
             FetchResult: Contient la liste des observations de trafic.
         """
         api_key = get_api_key()
         if not api_key:
             # Opération transparente si non configuré, pour ne pas casser le DAG Airflow.
-            logger.warning(
-                "Clé API TomTom absente. La collecte `fetch_raw()` renverra un résultat vide."
-            )
+            logger.warning("Clé API TomTom absente. La collecte `fetch_raw()` renverra un résultat vide.")
             return FetchResult(
                 source=self.source,
                 fetched_at=datetime.now(UTC),
@@ -509,9 +512,9 @@ class TomTomTrafficFlow(DataCollector):
 
     def _save_raw(self, result: FetchResult) -> None:
         """Surcharge l'insertion de base pour utiliser une table structurée (en colonnes).
-        
+
         Bypasse l'insertion `JSONB` native de la classe parente `DataCollector`.
-        
+
         Args:
             result (FetchResult): Résultat de la collecte à insérer.
         """
@@ -525,7 +528,7 @@ class TomTomTrafficFlow(DataCollector):
             self.source,
             n_inserted,
             result.n_records,
-            self.bronze_table
+            self.bronze_table,
         )
 
         # Tentative de sauvegarde de secours (GDrive) comme sur le flux normal

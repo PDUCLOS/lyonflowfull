@@ -2,7 +2,7 @@
 
 La philosophie de ce client est d'échouer de manière explicite ("fail loud") en production :
 
-* Si Airflow est indisponible, le client lève une exception ``DashboardDataError``. 
+* Si Airflow est indisponible, le client lève une exception ``DashboardDataError``.
   Le widget appelant intercepte cette exception et affiche une alerte via ``st.error``.
 * Aucun mécanisme de repli (fallback mock) n'est autorisé.
 
@@ -85,7 +85,7 @@ def get_dags_status() -> list[dict[str, Any]]:
 
     Returns:
         Une liste de dictionnaires contenant :
-        `dag_id`, `schedule`, `last_run`, `last_status`, `last_duration_s`, 
+        `dag_id`, `schedule`, `last_run`, `last_status`, `last_duration_s`,
         `next_run`, `description`, `paused`, `last_dag_run_id`.
 
     Raises:
@@ -172,10 +172,10 @@ def _fetch_dags_from_airflow() -> list[dict[str, Any]]:
 
 def trigger_dag(dag_id: str) -> bool:
     """Déclenche manuellement une nouvelle exécution d'un DAG.
-    
+
     Args:
         dag_id: L'identifiant du DAG à lancer.
-        
+
     Returns:
         True si la requête POST a réussi (statut 200/201), False sinon.
     """
@@ -228,7 +228,9 @@ def clear_stuck_dag_run(dag_id: str, dag_run_id: str) -> bool:
                 len(r.json().get("task_instances", [])),
             )
         else:
-            logger.warning("clear_stuck_dag_run(%s, %s): Code HTTP %d — %s", dag_id, dag_run_id, r.status_code, r.text[:200])
+            logger.warning(
+                "clear_stuck_dag_run(%s, %s): Code HTTP %d — %s", dag_id, dag_run_id, r.status_code, r.text[:200]
+            )
         return ok
     except Exception as exc:
         logger.warning("Échec du nettoyage des tâches pour le DAG (%s, %s) : %s", dag_id, dag_run_id, exc)

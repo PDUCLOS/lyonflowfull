@@ -1,14 +1,14 @@
 """Détecteur de Dérive (Drift Detector) — Comparaison XGBoost vs TomTom (PSI + Evidently).
 
 Architecture :
-- **Moteur principal** : PSI (Population Stability Index, via ``src.monitoring.psi``). 
+- **Moteur principal** : PSI (Population Stability Index, via ``src.monitoring.psi``).
   Zéro dépendance, déterministe et léger. Couvre 100% des besoins opérationnels quotidiens.
-- **Moteur optionnel** : Evidently (génération de rapports HTML à la demande, 
-  utile pour le dashboard professionnel ou l'analyse locale). Chargement paresseux (lazy load) 
+- **Moteur optionnel** : Evidently (génération de rapports HTML à la demande,
+  utile pour le dashboard professionnel ou l'analyse locale). Chargement paresseux (lazy load)
   afin d'éviter de saturer les DAGs réguliers avec des dépendances lourdes (+250 Mo Docker).
 
 Ce module est exécuté quotidiennement (ex: via le DAG ``daily_drift_report``)
-juste après l'actualisation de la vue ``gold.mv_xgb_vs_tomtom``. Les résultats 
+juste après l'actualisation de la vue ``gold.mv_xgb_vs_tomtom``. Les résultats
 sont persistés dans la table ``gold.model_drift_reports``.
 
 Diagnostic différentiel :

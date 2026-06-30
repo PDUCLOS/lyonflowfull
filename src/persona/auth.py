@@ -49,17 +49,17 @@ _DEMO_PASSWORD = "demo2026"  # nosec B105
 def _get_expected_password(persona_id: str) -> str | None:
     """Récupère le mot de passe attendu.
 
-  (2026-06-16) — Force ``_DEMO_PASSWORD`` (toujours
-    ``demo2026``). Les env vars ``PERSONA_*_PASSWORD`` du .env sont
-    ignorées volontairement pour que la démo Jedha fonctionne partout
-    avec le même mot de passe.
+    (2026-06-16) — Force ``_DEMO_PASSWORD`` (toujours
+      ``demo2026``). Les env vars ``PERSONA_*_PASSWORD`` du .env sont
+      ignorées volontairement pour que la démo Jedha fonctionne partout
+      avec le même mot de passe.
 
-    Si on veut remettre l'override par env var, il faudra flagger ça
-    explicitement (variable d'env ``LYONFLOW_AUTH_USE_ENV_PASSWORD=1``).
+      Si on veut remettre l'override par env var, il faudra flagger ça
+      explicitement (variable d'env ``LYONFLOW_AUTH_USE_ENV_PASSWORD=1``).
 
-    Returns:
-        None si le persona n'a pas d'auth requise (usager).
-        Chaîne attendue sinon (= _DEMO_PASSWORD).
+      Returns:
+          None si le persona n'a pas d'auth requise (usager).
+          Chaîne attendue sinon (= _DEMO_PASSWORD).
     """
     pconf = get_persona_config(persona_id)
     if not pconf.get("access", {}).get("password_env"):
@@ -99,11 +99,11 @@ def logout() -> None:
 def require_password() -> None:
     """Affiche un formulaire de mot de passe si l'auth est requise.
 
-    À utiliser dans la page d'accueil pour déverrouiller un persona protégé.
+      À utiliser dans la page d'accueil pour déverrouiller un persona protégé.
 
-  pour la démo, on affiche le mot de passe par défaut
-    dans l'info box (sous l'input) pour faciliter les tests Jedha.
-    À retirer en production réelle.
+    pour la démo, on affiche le mot de passe par défaut
+      dans l'info box (sous l'input) pour faciliter les tests Jedha.
+      À retirer en production réelle.
     """
     persona_id = get_current_persona()
     pconf = get_persona_config(persona_id)
@@ -128,7 +128,7 @@ def require_password() -> None:
         return
 
     st.info(f"🔐 **{label}** est un espace protégé. Saisis le mot de passe.")
-  # démo : on affiche le mdp par défaut dans une info box
+    # démo : on affiche le mdp par défaut dans une info box
     # (à retirer en prod).
     with st.expander("Information Aide démo (mots de passe par défaut)"):
         st.markdown(f"**Mot de passe démo Jedha** : `{_DEMO_PASSWORD}`")

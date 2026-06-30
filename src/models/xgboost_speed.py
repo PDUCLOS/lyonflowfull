@@ -78,7 +78,7 @@ class XGBoostSpeedModel:
         # Double `or` pour que mypy comprenne que le résultat est toujours str.
         resolved_dir = model_dir or os.getenv("LYONFLOW_MODELS_DIR") or "/app/models"
         self.model_dir = Path(resolved_dir)
-        self.models: dict[int, xgb.XGBRegressor] = {}  # horizon_minutes → model
+        self.models: dict[int, xgb.XGBRegressor | dict[str, xgb.XGBRegressor]] = {}  # horizon_minutes → model
 
     def load(self, horizons: list[int] | None = None) -> None:
         """Charge les modèles depuis MLflow (si dispo) ou depuis le disque local.
@@ -94,11 +94,11 @@ class XGBoostSpeedModel:
 
         from src.ml.mlflow_integration import is_mlflow_available
 
-    # (2026-06-12) — Focus H+1h uniquement (fiabilité VPS).
+        # (2026-06-12) — Focus H+1h uniquement (fiabilité VPS).
         # Avant : [5, 60, 180, 360] — 4 modèles entraînés, 4x le coût
         #          compute et la mémoire.
         # Après : [60] — 1 seul modèle, horizon = 1h, conforme au focus
-    #     (gold.trafic_predictions.horizon_h=1).
+        #     (gold.trafic_predictions.horizon_h=1).
         horizons = horizons or [60]
         for h in horizons:
             model_name = f"xgb_speed_h{h}"
@@ -168,10 +168,10 @@ class XGBoostSpeedModel:
 
         # Entraînement — 3 modèles quantile (P10, P50, P90) pour intervalles
         # de confiance réels. XGBoost 2.0+ supporte nativement quantile error.
-    # P4.2 : remplace l'heuristique ±5 km/h.
+        # P4.2 : remplace l'heuristique ±5 km/h.
         quantiles = {"p10": 0.1, "p50": 0.5, "p90": 0.9}
-        models = {}
-        metrics = {}
+        models: dict[str, xgb.XGBRegressor] = {}
+        metrics: dict[str, float] = {}
         for label, alpha in quantiles.items():
             model = xgb.XGBRegressor(
                 n_estimators=n_estimators,
@@ -185,11 +185,11 @@ class XGBoostSpeedModel:
             model.fit(X_train, y_train, eval_set=[(X_test, y_test)], verbose=False)
             y_pred_q = model.predict(X_test)
             models[label] = model
-            metrics[label] = {
-                "mae": float(np.mean(np.abs(y_test - y_pred_q))),
-                "rmse": float(np.sqrt(np.mean((y_test - y_pred_q) ** 2))),
-                "r2": float(1 - np.sum((y_test - y_pred_q) ** 2) / max(np.sum((y_test - y_test.mean()) ** 2), 1e-9)),
-            }
+            metrics[f"{label}_mae"] = float(np.mean(np.abs(y_test - y_pred_q)))
+            metrics[f"{label}_rmse"] = float(np.sqrt(np.mean((y_test - y_pred_q) ** 2)))
+            metrics[f"{label}_r2"] = float(
+                1 - np.sum((y_test - y_pred_q) ** 2) / max(np.sum((y_test - y_test.mean()) ** 2), 1e-9)
+            )
 
         # Métrique agrégée = P50 (médiane) pour rétro-compat dashboard
         y_pred = models["p50"].predict(X_test)
@@ -208,7 +208,7 @@ class XGBoostSpeedModel:
         models_path.parent.mkdir(parents=True, exist_ok=True)
         joblib.dump(models, models_path)
 
-    # MLflow tracking opt-out via MLFLOW_TRACKING_URI=""
+        # MLflow tracking opt-out via MLFLOW_TRACKING_URI=""
         # Le tracker gère le no-op gracieux si le serveur est down.)
         if os.getenv("MLFLOW_TRACKING_URI", "") != "":
             try:
@@ -237,7 +237,7 @@ class XGBoostSpeedModel:
             except Exception as e:  # pragma: no cover
                 logger.warning("MLflow tracking failed (non-bloquant): %s", e)
 
-    # MLOps — Génère et sauvegarde un Model Card (Markdown)
+        # MLOps — Génère et sauvegarde un Model Card (Markdown)
         try:
             from src.data.db_query import get_latest_drift_report
             from src.ml.model_card import generate_xgboost_card, save_card
@@ -285,23 +285,23 @@ class XGBoostSpeedModel:
     ) -> dict:
         """Prédit la vitesse pour un canal (string LYO000xx) à H+1h.
 
-        Args:
-            channel_id: identifiant canal trafic (ex. "LYO00007")
-      horizon_minutes: doit être 60 focus H+1h).
-                            Si autre valeur, fallback (30.0 km/h) et warning.
-            features: dict de features. Si None, lookup gold.
+            Args:
+                channel_id: identifiant canal trafic (ex. "LYO00007")
+          horizon_minutes: doit être 60 focus H+1h).
+                                Si autre valeur, fallback (30.0 km/h) et warning.
+                features: dict de features. Si None, lookup gold.
 
-        Returns:
-            Dict avec predicted_speed, confidence_low/high.
+            Returns:
+                Dict avec predicted_speed, confidence_low/high.
 
-        EXPLICATION MÉTIER (Analyse) :
-        La prédiction à H+1h se base sur les "lags" (vitesse il y a 5, 10, 15 min),
-        et sur des facteurs exogènes (heure de la journée encodée en sinus/cosinus, météo).
-        Si l'horizon demandé n'est pas 60 minutes, la fonction renvoie volontairement
-        un "fallback" (30 km/h) afin de limiter les coûts de calculs inutiles,
-    car le a recentré le besoin métier exclusivement sur le H+1h.
+            EXPLICATION MÉTIER (Analyse) :
+            La prédiction à H+1h se base sur les "lags" (vitesse il y a 5, 10, 15 min),
+            et sur des facteurs exogènes (heure de la journée encodée en sinus/cosinus, météo).
+            Si l'horizon demandé n'est pas 60 minutes, la fonction renvoie volontairement
+            un "fallback" (30 km/h) afin de limiter les coûts de calculs inutiles,
+        car le a recentré le besoin métier exclusivement sur le H+1h.
         """
-    # (2026-06-12) — Focus H+1h uniquement. Si un caller
+        # (2026-06-12) — Focus H+1h uniquement. Si un caller
         # demande un autre horizon, fallback direct (pas de coût compute).
         if horizon_minutes != 60:
             logger.warning(
@@ -340,7 +340,7 @@ class XGBoostSpeedModel:
             }
 
         X = pd.DataFrame([features])[FEATURE_COLS]
-    # P4.2 : 3 modèles quantile (P10, P50, P90) par horizon.
+        # P4.2 : 3 modèles quantile (P10, P50, P90) par horizon.
         # Retourne vrais intervalles de confiance au lieu de l'heuristique ±5 km/h.
         models = self.models[horizon_minutes]
         if isinstance(models, dict):
@@ -366,18 +366,18 @@ class XGBoostSpeedModel:
     def _load_training_data(self, horizon_minutes: int) -> pd.DataFrame:
         """Charge les données d'entraînement depuis ``gold.xgb_training_set``.
 
-    (2026-06-12) — La table ``gold.xgb_training_set`` est
-        materialisée quotidiennement par le DAG ``build_xgb_training_set``
-        (02h30) avec un self-join H+1h indexé. Le target_speed est
-        pré-calculé en base, donc plus de ``LEAD() OVER (...)`` sur 2.4M
-        rows à l'entraînement (qui timeout depuis Streamlit).
+        (2026-06-12) — La table ``gold.xgb_training_set`` est
+            materialisée quotidiennement par le DAG ``build_xgb_training_set``
+            (02h30) avec un self-join H+1h indexé. Le target_speed est
+            pré-calculé en base, donc plus de ``LEAD() OVER (...)`` sur 2.4M
+            rows à l'entraînement (qui timeout depuis Streamlit).
 
-        Note : ``horizon_minutes`` est conservé pour la signature
-        d'API, mais l'implémentation est H+1h uniquement (focus fiabilité
-    VPS, ). La table contient déjà le target à 60 min.
+            Note : ``horizon_minutes`` est conservé pour la signature
+            d'API, mais l'implémentation est H+1h uniquement (focus fiabilité
+        VPS, ). La table contient déjà le target à 60 min.
 
-        Returns:
-            DataFrame avec les colonnes de FEATURE_COLS + ``target_speed``.
+            Returns:
+                DataFrame avec les colonnes de FEATURE_COLS + ``target_speed``.
         """
         query = """
             SELECT
@@ -405,9 +405,9 @@ class XGBoostSpeedModel:
     def _lookup_features(self, channel_id: str) -> dict:
         """Récupère les dernières features pour un canal (string LYO000xx).
 
-    `channel_id` est un string (LYO000xx) au lieu d'un int
-        `node_idx`. Voir gold.dim_spatial_grid_mapping.
-    aligné sur le schéma RÉEL (lag_1, lag_2, lag_3, etc.).
+        `channel_id` est un string (LYO000xx) au lieu d'un int
+            `node_idx`. Voir gold.dim_spatial_grid_mapping.
+        aligné sur le schéma RÉEL (lag_1, lag_2, lag_3, etc.).
         """
         query = """
             SELECT

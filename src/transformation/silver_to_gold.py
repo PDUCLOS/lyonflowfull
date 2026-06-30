@@ -52,8 +52,7 @@ def transform_silver_to_gold(target: str = "all", dry_run: bool = False) -> dict
                 _ensure_helpers(cur)
         except Exception as exc:
             logger.warning(
-                "_ensure_helpers au dispatch a échoué (%s), les _build_* "
-                "retenteront via leur appel interne.",
+                "_ensure_helpers au dispatch a échoué (%s), les _build_* retenteront via leur appel interne.",
                 exc,
             )
 

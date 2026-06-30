@@ -19,15 +19,15 @@ from src.ingestion.base import CollectorError, DataCollector, FetchResult
 
 class AirQualityOpenMeteo(DataCollector):
     """Collecteur de qualité de l'air Open-Meteo centré sur Lyon.
-    
+
     Hérite de la classe `DataCollector` pour bénéficier du cadre standardisé
     d'ingestion (gestion des retries, insertions Bronze, etc.).
     """
 
     def __init__(self):
         """Initialise le collecteur de la qualité de l'air.
-        
-        Configure l'URL de l'API, la table cible (`air_quality`) et les 
+
+        Configure l'URL de l'API, la table cible (`air_quality`) et les
         coordonnées géographiques par défaut de Lyon (ou celles définies
         via les variables d'environnement `LYON_LATITUDE` / `LYON_LONGITUDE`).
         """
@@ -42,14 +42,14 @@ class AirQualityOpenMeteo(DataCollector):
 
     def fetch_raw(self) -> FetchResult:
         """Récupère les données brutes depuis l'API Open-Meteo.
-        
+
         Effectue une requête HTTP GET pour récupérer les relevés horaires des
         principaux polluants atmosphériques (passés et prévisionnels).
-        
+
         Returns:
             FetchResult: Conteneur englobant les données brutes, les métadonnées
             de l'appel, et le statut.
-            
+
         Raises:
             CollectorError: Si une erreur réseau ou d'API survient lors du fetch.
         """

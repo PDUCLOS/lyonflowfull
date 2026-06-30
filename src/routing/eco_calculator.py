@@ -4,15 +4,15 @@ Adapté de ``PDUCLOS/Lyontraffic`` pour le pipeline LyonFlow :
 - Sources de données : ADEME 2024, Grille tarifaire TCL SYTRAL 2026, Ville de Lyon 2025,
   tables MET ADEME/INSERM (pour le calcul des calories).
 - Le coût estimé pour la voiture **n'inclut pas le stationnement** pour le moment.
-  Le point d'ancrage futur se trouve dans ``_voiture_parking_cost(duration_min)`` 
-  qui pourra lire la table ``gold.tarifs_modes`` et appliquer la grille tarifaire 
+  Le point d'ancrage futur se trouve dans ``_voiture_parking_cost(duration_min)``
+  qui pourra lire la table ``gold.tarifs_modes`` et appliquer la grille tarifaire
   (zones 1/2/3 de Lyon).
 
-Politique stricte du projet (ZÉRO MOCK) : Ce module est purement calculatoire (Python) 
+Politique stricte du projet (ZÉRO MOCK) : Ce module est purement calculatoire (Python)
 et n'effectue aucun appel réseau/base de données interne.
-Si un paramètre fourni est invalide (mode de transport inconnu, distance négative), 
-il lève immédiatement une ``ValueError``. La gestion de la disponibilité de la base 
-de données est déléguée en amont, notamment via 
+Si un paramètre fourni est invalide (mode de transport inconnu, distance négative),
+il lève immédiatement une ``ValueError``. La gestion de la disponibilité de la base
+de données est déléguée en amont, notamment via
 ``src.routing.pathfinder_multimodal._require_db_or_raise()``.
 
 Exemple d'utilisation :
@@ -270,7 +270,7 @@ def recommend_mode(
     if feasible:
         winner = min(feasible, key=lambda k: feasible[k])
     else:
-    # Fail loud : si aucun mode n'a de durée, on NE TOMBE PAS
+        # Fail loud : si aucun mode n'a de durée, on NE TOMBE PAS
         # sur le mode le moins coûteux (= Vélov gratuit, trompeur). L'appelant
         # DOIT passer ``durations`` non-vide.
         raise ValueError(
@@ -333,20 +333,20 @@ def _build_explanation(
 def is_congested_from_speed(avg_speed_kmh: float) -> bool:
     """Détecte la congestion voiture depuis la vitesse moyenne.
 
-    Seuil : < 25 km/h = bouchon (référence ADEME, étude impact trafic urbain).
-    Utilisé par ``Usager_1_Mon_Trajet`` pour passer le flag à ``calculate_impact``
-    sans dupliquer la logique.
+      Seuil : < 25 km/h = bouchon (référence ADEME, étude impact trafic urbain).
+      Utilisé par ``Usager_1_Mon_Trajet`` pour passer le flag à ``calculate_impact``
+      sans dupliquer la logique.
 
-  helper public (avant : préfixe ``_``). Le seuil est importé
-    depuis ``src.data._constants`` (single source of truth, plus de magic
-    number 25.0 dupliqué).
+    helper public (avant : préfixe ``_``). Le seuil est importé
+      depuis ``src.data._constants`` (single source of truth, plus de magic
+      number 25.0 dupliqué).
 
-    Args:
-        avg_speed_kmh: vitesse moyenne du trafic routier en km/h. Si 0 ou
-            négatif, retourne ``False`` (= pas de données = pas de congestion).
+      Args:
+          avg_speed_kmh: vitesse moyenne du trafic routier en km/h. Si 0 ou
+              négatif, retourne ``False`` (= pas de données = pas de congestion).
 
-    Returns:
-        True si vitesse > 0 ET vitesse < seuil ADEME (25 km/h).
+      Returns:
+          True si vitesse > 0 ET vitesse < seuil ADEME (25 km/h).
     """
     return avg_speed_kmh > 0 and avg_speed_kmh < _CONGESTION_SPEED_THRESHOLD_KMH
 

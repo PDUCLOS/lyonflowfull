@@ -1,7 +1,7 @@
 """Collecteur — Chantiers Métropole du Grand Lyon (data.grandlyon.com).
 
 Ce module ingère les données des chantiers perturbants sur la voirie du
-Grand Lyon, informations cruciales pour le calcul des itinéraires et 
+Grand Lyon, informations cruciales pour le calcul des itinéraires et
 la prédiction des embouteillages.
 
 API utilisée : https://download.data.grandlyon.com/wfs/grandlyon (GeoServer WFS)
@@ -22,7 +22,7 @@ class ChantiersGrandLyon(DataCollector):
 
     def __init__(self):
         """Initialise le collecteur de chantiers.
-        
+
         Configure le point d'accès WFS (Web Feature Service) du GeoServer
         de la Métropole de Lyon. Gère également l'authentification HTTP Basic
         si les identifiants sont fournis en variables d'environnement.
@@ -51,13 +51,13 @@ class ChantiersGrandLyon(DataCollector):
 
     def fetch_raw(self) -> FetchResult:
         """Récupère les objets cartographiques (FeatureCollection) des chantiers.
-        
+
         Exécute une requête standard OGC WFS `GetFeature` et demande un format
         de sortie JSON (GeoJSON), limité à 2000 éléments.
-        
+
         Returns:
             FetchResult: Conteneur des données GeoJSON brutes et des métadonnées.
-            
+
         Raises:
             CollectorError: Si le serveur WFS retourne une erreur ou est injoignable.
         """

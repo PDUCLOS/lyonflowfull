@@ -3,11 +3,11 @@
 Le système est conçu pour échouer de manière explicite ("fail loud") en production.
 
 Les fonctions ``load_X()`` du module `data_loader` et certains widgets lèvent
-l'exception ``DashboardDataError`` lorsque la source de données (PostgreSQL, 
+l'exception ``DashboardDataError`` lorsque la source de données (PostgreSQL,
 Airflow, MLflow) est indisponible. Les widgets interceptent l'exception et affichent
-un message explicite via ``st.error(...)``. 
+un message explicite via ``st.error(...)``.
 
-Politique stricte de "zéro mock" : aucune source ne possède de mécanisme de repli 
+Politique stricte de "zéro mock" : aucune source ne possède de mécanisme de repli
 silencieux (fallback).
 """
 
@@ -24,7 +24,7 @@ class DashboardDataError(Exception):
     Attributes:
         source: Nom court de la source (ex. ``"postgresql"``, ``"airflow"``,
             ``"mlflow"``, ``"weather_db"``).
-        detail: Message technique additionnel (destiné aux journaux de logs, 
+        detail: Message technique additionnel (destiné aux journaux de logs,
             pas nécessairement affiché à l'utilisateur final).
     """
 

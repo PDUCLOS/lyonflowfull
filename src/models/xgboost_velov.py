@@ -8,7 +8,7 @@ Features principales exploitées :
 - Variables météorologiques : température, précipitations
 - Contexte historique : Lags et moyennes glissantes (rolling means)
 
-Chaque session d'entraînement est automatiquement journalisée dans MLflow 
+Chaque session d'entraînement est automatiquement journalisée dans MLflow
 via le module centralisé `src.ml.mlflow_integration`.
 """
 
@@ -59,9 +59,9 @@ class XGBoostVelovModel:
 
         from src.ml.mlflow_integration import is_mlflow_available
 
-    # focus H+1h strict. Avant : [30, 60] — H+30min n'est
+        # focus H+1h strict. Avant : [30, 60] — H+30min n'est
         # plus alimenté par le DAG retrain_xgboost_velov (cf. règle
-    # projet ). Conserver [30, 60] chargerait un modèle
+        # projet ). Conserver [30, 60] chargerait un modèle
         # .pkl potentiellement absent → fail loud au runtime.
         horizons = horizons or [60]
         for h in horizons:
@@ -124,7 +124,7 @@ class XGBoostVelovModel:
         model_path.parent.mkdir(parents=True, exist_ok=True)
         joblib.dump(model, model_path)
 
-    # MLflow tracking opt-out via MLFLOW_TRACKING_URI="")
+        # MLflow tracking opt-out via MLFLOW_TRACKING_URI="")
         if os.getenv("MLFLOW_TRACKING_URI", "") != "":
             try:
                 from src.ml.mlflow_integration import MLflowTracker

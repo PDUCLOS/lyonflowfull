@@ -1,8 +1,8 @@
 """Package Ingestion — Classes DataCollector de base et collecteurs concrets.
 
 Ce module expose les collecteurs sous forme de CLASSES (et non d'instances)
-afin d'éviter tout effet de bord (requêtes HTTP, lecture de variables 
-d'environnement) lors de l'importation. L'instanciation doit se faire 
+afin d'éviter tout effet de bord (requêtes HTTP, lecture de variables
+d'environnement) lors de l'importation. L'instanciation doit se faire
 uniquement à la demande, typiquement au sein des DAGs Airflow.
 """
 
@@ -25,7 +25,7 @@ REALTIME_COLLECTORS: list[type[DataCollector]] = [
     AirQualityOpenMeteo,
     ChantiersGrandLyon,
     TclSiriLite,
-  # (2026-06-18) — TomTomTrafficFlow réactivé.
+    # (2026-06-18) — TomTomTrafficFlow réactivé.
     # Wrapper DataCollector autour de collect_lyon_tiles() et
     # save_lyon_tiles_to_bronze(). Le DAG collect_tomtom_traffic s'exécute
     # désormais toutes les 15 minutes sur 12 tuiles de Lyon.

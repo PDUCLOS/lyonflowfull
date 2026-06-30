@@ -310,7 +310,12 @@ async def list_models(api_key: None = Depends(verify_api_key)):
                     "stage": "Production",
                     "metrics": {"mae": 4.2, "r2": 0.331},
                 },
-                {"name": "stgcn_gnn", "version": "0.3.0", "stage": "Archived", "metrics": {"mae": 2.8, "r2": 0.92}},  # Sprint 24+ : GNN archivé
+                {
+                    "name": "stgcn_gnn",
+                    "version": "0.3.0",
+                    "stage": "Archived",
+                    "metrics": {"mae": 2.8, "r2": 0.92},
+                },  # Sprint 24+ : GNN archivé
             ]
         }
 
@@ -322,14 +327,14 @@ async def list_models(api_key: None = Depends(verify_api_key)):
 async def predict_traffic(req: PredictTrafficRequest, api_key: None = Depends(verify_api_key)):
     """Prédit la vitesse trafic pour un nœud et un horizon.
 
-    EXPLICATION MÉTIER (Analyse) :
-    Cette route est appelée par le Dashboard (Persona Pro TCL) pour afficher la carte de prédiction.
-  Depuis le , le modèle ML s'attend à recevoir un identifiant `channel_id` de type texte
-    (ex: 'LYO00007'), alors que l'API et le frontend utilisent historiquement un `node_idx` (entier).
-    Nous réalisons donc ici une traduction "node_idx -> channel_id" en interrogeant PostgreSQL
-    (`gold.dim_spatial_grid_mapping`).
+      EXPLICATION MÉTIER (Analyse) :
+      Cette route est appelée par le Dashboard (Persona Pro TCL) pour afficher la carte de prédiction.
+    Depuis le , le modèle ML s'attend à recevoir un identifiant `channel_id` de type texte
+      (ex: 'LYO00007'), alors que l'API et le frontend utilisent historiquement un `node_idx` (entier).
+      Nous réalisons donc ici une traduction "node_idx -> channel_id" en interrogeant PostgreSQL
+      (`gold.dim_spatial_grid_mapping`).
     """
-  # métriques ML
+    # métriques ML
     with PREDICTION_LATENCY.labels(model="xgboost_speed").time():
         # Récupération channel_id via mapping node_idx
         from src.db import execute_query
@@ -369,7 +374,7 @@ async def predict_traffic(req: PredictTrafficRequest, api_key: None = Depends(ve
 @app.post("/api/v1/predict/velov", response_model=PredictVelovResponse, tags=["predict"])
 async def predict_velov(req: PredictVelovRequest, api_key: None = Depends(verify_api_key)):
     """Prédit la disponibilité Vélov pour une station et un horizon."""
-  # métriques ML
+    # métriques ML
     with PREDICTION_LATENCY.labels(model="xgboost_velov").time():
         from src.models.xgboost_velov import XGBoostVelovModel
 
@@ -477,7 +482,7 @@ async def itinerary(req: ItineraryRequest, api_key: None = Depends(verify_api_ke
                 start_lat=s.start_lat,
                 end_lon=s.end_lon,
                 end_lat=s.end_lat,
-        geometry=s.geometry, # polyline OSM
+                geometry=s.geometry,  # polyline OSM
             )
             for s in itin.segments
         ],
@@ -577,7 +582,7 @@ async def login(req: LoginRequest, request: Request):
         )
         raise HTTPException(status_code=401, detail="Identifiants invalides")
 
-  # JWT généré create_jwt déjà implémenté, le TODO était obsolète)
+    # JWT généré create_jwt déjà implémenté, le TODO était obsolète)
     token = create_jwt(
         user_id=str(user["user_id"]),
         username=user["username"],

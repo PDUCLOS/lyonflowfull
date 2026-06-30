@@ -1,7 +1,7 @@
 """Population Stability Index (PSI) — Détection de dérive (Drift) légère en pur Python.
 
-Ce détecteur de dérive est notamment utilisé par le DAG de préparation des données 
-d'entraînement (`build_xgb_training_set`) pour comparer les distributions 
+Ce détecteur de dérive est notamment utilisé par le DAG de préparation des données
+d'entraînement (`build_xgb_training_set`) pour comparer les distributions
 (features et target) entre deux fenêtres temporelles (ex: semaine de référence vs semaine courante).
 Les résultats sont persistés dans la table `gold.model_drift_reports`.
 
@@ -11,8 +11,8 @@ Les résultats sont persistés dans la table `gold.model_drift_reports`.
 - Rapide, déterministe (complexité temporelle minimale après calcul des histogrammes).
 - Interprétation claire : < 0.1 (Stable), entre 0.1 et 0.2 (Modéré), > 0.2 (Dérive significative).
 
-**Méthode de regroupement (Bucketing)** : 
-Approche basée sur les quantiles via `pd.qcut` (10 buckets par défaut) afin 
+**Méthode de regroupement (Bucketing)** :
+Approche basée sur les quantiles via `pd.qcut` (10 buckets par défaut) afin
 de gérer efficacement les distributions asymétriques ou non-uniformes (ex: vitesse du trafic).
 """
 

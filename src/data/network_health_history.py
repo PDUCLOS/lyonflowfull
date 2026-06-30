@@ -19,13 +19,13 @@ def get_network_health_history(hours: int = 24) -> list[dict]:
     """Récupère l'historique des scores de santé du réseau sur une période donnée.
 
     Args:
-        hours: Fenêtre temporelle en heures (par défaut 24h, ce qui équivaut 
+        hours: Fenêtre temporelle en heures (par défaut 24h, ce qui équivaut
                à environ 96 instantanés enregistrés toutes les 15 minutes).
 
     Returns:
         Une liste de dictionnaires contenant les clés suivantes :
         {recorded_at, score, traffic_score, tcl_score, velov_score, meteo_score}.
-        Retourne une liste vide si la table n'est pas encore provisionnée ou 
+        Retourne une liste vide si la table n'est pas encore provisionnée ou
         ne contient aucune ligne.
     """
     try:
@@ -44,7 +44,6 @@ def get_network_health_history(hours: int = 24) -> list[dict]:
             ORDER BY recorded_at ASC
             """,
             (cutoff,),
-            fetch=True,
         )
         return [dict(row) for row in rows] if rows else []
     except Exception as e:
