@@ -3,6 +3,15 @@
 Itère sur `REALTIME_COLLECTORS` (6 classes) et lance chaque collecteur
 en parallèle. Les collecteurs calendaires (vacances scolaires, jours
 fériés) sont dans `collect_calendriers_monthly.py` (DAG mensuel).
+
+Note timeout : TCL SIRI Lite / Grand Lyon Velov sont des APIs publiques
+avec latences variables. En heure de pointe (8h-9h, 17h-19h) ou lors
+de maintenances, la réponse peut dépasser 2 min. Un timeout trop court
+coupe la collecte à mi-parcours — les données partielles passent en
+Bronze sans signal d'erreur. execution_timeout = 4 min + retries = 2
+(couverture 2 min → 4 min → 4 min = 10 min max) évite de perdre les
+données sur incident court sans allonger excessivement le timeout
+normal.
 """
 
 from __future__ import annotations
@@ -56,5 +65,8 @@ with DAG(
             task_id=f"collect_{cls.__name__.lower()}",
             python_callable=_run_collector,
             op_kwargs={"collector_class": cls},
+            # timeout 4 min (était 2 min) : APIs SIRI Lite + Velov peuvent
+            # dépasser 2 min en heure de pointe. retries=2 + retry_delay=1min
+            # = 3 essais au total (4+4+4 = 12 min) sans spammer.
             execution_timeout=timedelta(minutes=4),
         )
