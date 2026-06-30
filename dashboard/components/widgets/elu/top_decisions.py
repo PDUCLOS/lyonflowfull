@@ -1,6 +1,6 @@
 """Widget — Top décisions à arbitrer ce trimestre.
 
- Bottlenecks via data_loader.cached_bottlenecks_top().
+Bottlenecks via data_loader.cached_bottlenecks_top().
 """
 
 from __future__ import annotations

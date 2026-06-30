@@ -35,7 +35,7 @@ def render_weather_widget(weather: dict | None = None) -> None:
             return
         if not df.empty:
             current = df.iloc[0].to_dict()
-      # weather_code est un int WMO (Open-Meteo). On le convertit
+            # weather_code est un int WMO (Open-Meteo). On le convertit
             # en label FR lisible + emoji via _wmo_to_label().
             raw_code = current.get("condition_label") or current.get("weather_code")
             label, icon_from_code = _wmo_to_label(raw_code)
@@ -47,14 +47,14 @@ def render_weather_widget(weather: dict | None = None) -> None:
                 "wind_kmh": current.get("wind_kmh", 0),
                 "next_3h": [],
             }
-    # (2026-06-12) — viré le fallback MOCK_WEATHER.
+        # (2026-06-12) — viré le fallback MOCK_WEATHER.
         else:
             st.warning("⚠️ Météo indisponible — silver.meteo_hourly est vide.")
             return
 
     icon = str(weather.get("condition_icon", "☀️"))
     cond = str(weather.get("condition", ""))
-  # arrondi 1 décimale pour éviter les artefacts float32
+    # arrondi 1 décimale pour éviter les artefacts float32
     # ('16.700000762939453' → '16.7').
     temp = round(float(weather.get("temp_c", 0)), 1)
     rain = round(float(weather.get("rain_mm_h", 0)), 1)

@@ -258,7 +258,7 @@ def render_meteo_impact() -> None:
             "Le DAG `refresh_meteo_impact` doit tourner (1×/jour à 04h30). "
             "Causes possibles : (1) DAG en attente de son 1er cycle, "
             "(2) `migration_022_meteo_impact.sql` non appliquée, "
-      "(3) moins de 30 jours d'historique météo OK)."
+            "(3) moins de 30 jours d'historique météo OK)."
         )
         return
 

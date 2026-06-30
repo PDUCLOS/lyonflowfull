@@ -1,6 +1,6 @@
 """Widget — Courbe d'évolution sur 12 mois (Plotly).
 
- KPIs via data_loader.cached_elu_kpis_dict().
+KPIs via data_loader.cached_elu_kpis_dict().
 """
 
 from __future__ import annotations

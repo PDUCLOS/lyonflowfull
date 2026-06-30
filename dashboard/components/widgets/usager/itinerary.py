@@ -237,7 +237,7 @@ def _render_map(
             icon=folium.Icon(color="red", icon="stop"),
         ).add_to(m)
 
-    # chaque segment peut avoir une géométrie OSM multi-vertices
+        # chaque segment peut avoir une géométrie OSM multi-vertices
         # (LineString). On l'utilise pour tracer des polylines qui suivent
         # les vraies rues, pas des lignes droites entre nœuds H3.
         for seg in itinerary.segments:

@@ -129,10 +129,7 @@ def render_otp_heatmap(
 
         if show_line_selector and line_labels:
             all_ids = sorted(line_labels.keys(), key=lambda k: line_labels.get(k, k))
-            display_options = [
-                f"{_line_type_icon(line_labels[lid])} {line_labels[lid]}"
-                for lid in all_ids
-            ]
+            display_options = [f"{_line_type_icon(line_labels[lid])} {line_labels[lid]}" for lid in all_ids]
             id_by_display = dict(zip(display_options, all_ids))
 
             st.caption(f"{len(all_ids)} lignes disponibles dans gold.mv_otp_heatmap")
@@ -147,7 +144,10 @@ def render_otp_heatmap(
                 selected_line_ids = [id_by_display[c] for c in chosen]
 
         lines, z_data = _compute_matrix(
-            otp_data, line_labels, days=days, top_n=top_n,
+            otp_data,
+            line_labels,
+            days=days,
+            top_n=top_n,
             selected_line_ids=selected_line_ids,
         )
         if not lines:

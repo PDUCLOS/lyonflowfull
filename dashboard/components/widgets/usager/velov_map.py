@@ -46,12 +46,12 @@ def _docks_to_color(docks: int) -> list:
 def _load_stations_with_predictions() -> pd.DataFrame:
     """Joint stations courantes + prédictions H+1h du modèle XGBoost Vélo'v.
 
-  focus H+1h strict. Avant : 2 horizons (H+30min, H+1h),
-    mais le DAG ``retrain_xgboost_velov`` n'insérait que H+1h (dead code).
+    focus H+1h strict. Avant : 2 horizons (H+30min, H+1h),
+      mais le DAG ``retrain_xgboost_velov`` n'insérait que H+1h (dead code).
 
-    Returns:
-        DataFrame: station_id, station_name, lat, lng, bikes_available,
-        docks_available, predicted_bikes_h1 (H+1h).
+      Returns:
+          DataFrame: station_id, station_name, lat, lng, bikes_available,
+          docks_available, predicted_bikes_h1 (H+1h).
     """
     stations = get_velov_stations_geo()
     if stations.empty:

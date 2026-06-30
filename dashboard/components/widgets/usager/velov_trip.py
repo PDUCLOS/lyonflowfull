@@ -99,7 +99,7 @@ def render_velov_trip(
                 show_error("db_down", str(e))
                 return
 
-    # (2026-06-17) — viré le check `itin.source == "demo"` :
+        # (2026-06-17) — viré le check `itin.source == "demo"` :
         # plan_velov_trip() ne retourne plus source="demo" (mode démo supprimé).
 
         if not itin.segments:
@@ -110,7 +110,7 @@ def render_velov_trip(
             return
 
         _render_velov_summary(itin)
-    # (2026-06-19) — Cards stations proéminentes (départ + arrivée)
+        # (2026-06-19) — Cards stations proéminentes (départ + arrivée)
         # avec vélos/docks/méca-élec/statut coloré/distance à pied.
         _render_station_cards(itin)
         # Diagnostics VIDE/PLEINE
@@ -133,7 +133,7 @@ def render_velov_trip(
         _render_velov_map(itin, origin_coords, dest_coords, height=height)
         _render_velov_segments(itin)
 
-    # Axe C — Retour dict pour comparateur multimodal.
+        # Axe C — Retour dict pour comparateur multimodal.
         # itin.total_distance_m est en mètres, total_duration_min en minutes.
         return {
             "duration_min": float(itin.total_duration_min),

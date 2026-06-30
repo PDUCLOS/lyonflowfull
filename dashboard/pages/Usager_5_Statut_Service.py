@@ -145,8 +145,8 @@ if k_data:
     pill, status = _status_pill("{status}", score)
     data_value = f"{pill} {status}"
     data_sub = f"{k_data['n_healthy']}/{k_data['n_total']} sources à jour · score {score:.0f}/100"
-    data_color = COLORS["status_ok"] if score >= 80 else (
-        COLORS["status_warning"] if score >= 50 else COLORS["status_critical"]
+    data_color = (
+        COLORS["status_ok"] if score >= 80 else (COLORS["status_warning"] if score >= 50 else COLORS["status_critical"])
     )
 else:
     data_value = "⚪ Indéterminé"
@@ -274,9 +274,7 @@ else:
         )
 
     if len(alerts_df) > 5:
-        st.caption(
-            f"+ {len(alerts_df) - 5} autres alertes — voir la page 🔔 Alertes"
-        )
+        st.caption(f"+ {len(alerts_df) - 5} autres alertes — voir la page 🔔 Alertes")
 
 st.markdown("---")
 
@@ -306,10 +304,7 @@ estimés dans **🧭 Mon trajet**.
         """,
     )
 
-st.caption(
-    "LyonFlow · 4 voyants synthétiques · 8 sources Bronze · "
-    "Modèle XGBoost H+1h · Alertes 24h glissantes"
-)
+st.caption("LyonFlow · 4 voyants synthétiques · 8 sources Bronze · Modèle XGBoost H+1h · Alertes 24h glissantes")
 
 # Cohérence inter-pages
 _ = STATUS_COLORS

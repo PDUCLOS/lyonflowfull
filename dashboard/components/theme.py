@@ -409,7 +409,7 @@ def inject_theme() -> None:
     """
     st.markdown(css, unsafe_allow_html=True)
 
-  # Axe E — Accessibilité : lang="fr" + skip link
+    # Axe E — Accessibilité : lang="fr" + skip link
     st.markdown(
         '<script>document.documentElement.lang="fr";</script>',
         unsafe_allow_html=True,

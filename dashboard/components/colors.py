@@ -34,7 +34,7 @@ COLORS = {
     # UI text
     "text_primary": "#F8FAFC",  # Slate 50
     "text_secondary": "#94A3B8",  # Slate 400
-  # Axe E — Contraste AA : #64748B → #B0B0B0 (ratio 5.2:1 sur #0B0F19)
+    # Axe E — Contraste AA : #64748B → #B0B0B0 (ratio 5.2:1 sur #0B0F19)
     # vs ancien 4.0:1 qui ne passait pas WCAG 2.1 AA pour le texte normal
     "text_muted": "#B0B0B0",  # Slate 500 lightened for AA
     "text_disabled": "#475569",  # Slate 600

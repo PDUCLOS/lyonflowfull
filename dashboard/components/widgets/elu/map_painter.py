@@ -29,10 +29,7 @@ def render_map_painter(height: int = 400) -> dict:
     """
     st.markdown("##### ✏️ Simulateur d'aménagement")
 
-    st.caption(
-    "🚧 sélection manuelle. component React custom "
-        "deck.gl + MapboxDraw pour dessiner librement."
-    )
+    st.caption("🚧 sélection manuelle. component React custom deck.gl + MapboxDraw pour dessiner librement.")
 
     try:
         import folium

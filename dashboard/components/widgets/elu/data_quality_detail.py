@@ -207,7 +207,7 @@ def render_data_quality_detail() -> None:
     if df.empty:
         st.info(
             "Aucun check qualité dans `gold.data_quality_log`. Le DAG "
-      "`data_quality_daily` doit tourner (tâches Axe 6, "
+            "`data_quality_daily` doit tourner (tâches Axe 6, "
             "1×/jour 04h15). Causes possibles : (1) DAG en attente de "
             "son 1er cycle, (2) `migration_025_data_quality_log.sql` "
             "non appliquée."

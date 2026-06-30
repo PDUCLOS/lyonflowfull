@@ -1,6 +1,6 @@
 """Widget — Sélecteur d'un aménagement passé.
 
- Aménagements via data_loader.cached_amenagements_passes().
+Aménagements via data_loader.cached_amenagements_passes().
 """
 
 from __future__ import annotations

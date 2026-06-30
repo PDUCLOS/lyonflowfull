@@ -141,43 +141,43 @@ def compute_propagation_correlations(
 ) -> pd.DataFrame:
     """Calcule la corrélation croisée laggée pour chaque paire de capteurs.
 
-  Axe 2 — voir docstring du module. Fonction **pure** (pas
-    d'I/O) : prend deux DataFrames en entrée, retourne les CORR. Testable
-    en unitaire avec des données synthétiques (cf. tests/widgets/pro_tcl/).
+    Axe 2 — voir docstring du module. Fonction **pure** (pas
+      d'I/O) : prend deux DataFrames en entrée, retourne les CORR. Testable
+      en unitaire avec des données synthétiques (cf. tests/widgets/pro_tcl/).
 
-    Args:
-        pairs_df: ``node_a, lat_a, lon_a, node_b, lat_b, lon_b`` (sortie
-            de ``load_congestion_propagation_pairs()``).
-        speeds_df: ``properties_twgid, channel_id, computed_at, speed_kmh``
-            (sortie de ``load_traffic_speeds_for_propagation()``).
-        max_lag_steps: nb max de pas de lag à scanner (5 min × lag).
-            Défaut 3 = ±15 min. Assez pour détecter la propagation H+1
-            typique d'un bouchon (formation lente).
-        min_obs: nb min d'observations communes par paire pour la
-            considérer analysable. Défaut 30 (~2.5h sur 6h glissantes).
+      Args:
+          pairs_df: ``node_a, lat_a, lon_a, node_b, lat_b, lon_b`` (sortie
+              de ``load_congestion_propagation_pairs()``).
+          speeds_df: ``properties_twgid, channel_id, computed_at, speed_kmh``
+              (sortie de ``load_traffic_speeds_for_propagation()``).
+          max_lag_steps: nb max de pas de lag à scanner (5 min × lag).
+              Défaut 3 = ±15 min. Assez pour détecter la propagation H+1
+              typique d'un bouchon (formation lente).
+          min_obs: nb min d'observations communes par paire pour la
+              considérer analysable. Défaut 30 (~2.5h sur 6h glissantes).
 
-    Returns:
-        DataFrame avec colonnes :
-            ``node_a, node_b, lat_a, lon_a, lat_b, lon_b, correlation,
-            best_lag_steps, best_lag_minutes, n_points, intensity``.
-        ``correlation`` = meilleur Pearson r sur les lags scannés (signe
-        conservé). ``best_lag_steps`` = lag qui maximise |r| (positif
-        si A lead B, négatif si B lead A). ``intensity`` ∈ {strong,
-        medium, weak, noise} pour la couleur/legende.
+      Returns:
+          DataFrame avec colonnes :
+              ``node_a, node_b, lat_a, lon_a, lat_b, lon_b, correlation,
+              best_lag_steps, best_lag_minutes, n_points, intensity``.
+          ``correlation`` = meilleur Pearson r sur les lags scannés (signe
+          conservé). ``best_lag_steps`` = lag qui maximise |r| (positif
+          si A lead B, négatif si B lead A). ``intensity`` ∈ {strong,
+          medium, weak, noise} pour la couleur/legende.
 
-    Notes perf :
-        * Pivot large (T × P) puis numpy ops vectorisées.
-        * Filtrage agressif : on garde seulement les paires où BOTH
-          nœuds ont ≥ min_obs observations (sinon CORR non significatif).
-        * Boucle Python sur les paires filtrées (typiquement 1-5k après
-          filtre), pas sur les 50k initiales.
+      Notes perf :
+          * Pivot large (T × P) puis numpy ops vectorisées.
+          * Filtrage agressif : on garde seulement les paires où BOTH
+            nœuds ont ≥ min_obs observations (sinon CORR non significatif).
+          * Boucle Python sur les paires filtrées (typiquement 1-5k après
+            filtre), pas sur les 50k initiales.
 
-    Convention de signe du lag (cf. docstring du module) :
-        * ``best_lag_steps > 0`` → B est l'indicateur leader de A
-          (B "lead" A). Source de propagation = B.
-        * ``best_lag_steps < 0`` → A est l'indicateur leader de B
-          (A "lead" B). Source de propagation = A.
-        * ``best_lag_steps == 0`` → synchrone, pas de direction claire.
+      Convention de signe du lag (cf. docstring du module) :
+          * ``best_lag_steps > 0`` → B est l'indicateur leader de A
+            (B "lead" A). Source de propagation = B.
+          * ``best_lag_steps < 0`` → A est l'indicateur leader de B
+            (A "lead" B). Source de propagation = A.
+          * ``best_lag_steps == 0`` → synchrone, pas de direction claire.
     """
     if pairs_df.empty or speeds_df.empty:
         return pd.DataFrame(
@@ -368,46 +368,46 @@ def compute_granger_causality(
 ) -> pd.DataFrame:
     """Test de causalité Granger pour les top N paires par |CORR|.
 
-  Axe 2 niveau 2 (spec §3.3). Pour chaque paire du top N
-    (tri par |correlation| DESC), on teste :
-    * "A Granger-cause B ?" → p-value (lag 1..maxlag, on garde le min)
-    * "B Granger-cause A ?" → p-value (lag 1..maxlag, on garde le min)
+    Axe 2 niveau 2 (spec §3.3). Pour chaque paire du top N
+      (tri par |correlation| DESC), on teste :
+      * "A Granger-cause B ?" → p-value (lag 1..maxlag, on garde le min)
+      * "B Granger-cause A ?" → p-value (lag 1..maxlag, on garde le min)
 
-    Direction Granger = celle avec la p-value la plus faible.
-    Significativité = min(p_a_to_b, p_b_to_a) < significance.
+      Direction Granger = celle avec la p-value la plus faible.
+      Significativité = min(p_a_to_b, p_b_to_a) < significance.
 
-    Convention Granger ``statsmodels`` :
-    * ``grangercausalitytests(x, maxlag)`` teste si la **2ème colonne**
-      Granger-cause la **1ère colonne**. Donc pour tester "A cause B",
-      on passe ``x = [[b_series], [a_series]]``.
+      Convention Granger ``statsmodels`` :
+      * ``grangercausalitytests(x, maxlag)`` teste si la **2ème colonne**
+        Granger-cause la **1ère colonne**. Donc pour tester "A cause B",
+        on passe ``x = [[b_series], [a_series]]``.
 
-    Args:
-        pairs_df: DataFrame avec colonnes ``node_a, node_b, correlation``
-            (sortie de ``compute_propagation_correlations``). On prend
-            le top N par |correlation|.
-        speeds_df: long format ``properties_twgid, computed_at, speed_kmh``.
-        maxlag: nb de lags à tester (défaut 3 = ±15 min cohérent avec
-            la fenêtre CORR).
-        top_n: nb de paires à analyser (les N plus corrélées).
-        significance: seuil p-value pour marquer "significatif" (défaut 0.05).
+      Args:
+          pairs_df: DataFrame avec colonnes ``node_a, node_b, correlation``
+              (sortie de ``compute_propagation_correlations``). On prend
+              le top N par |correlation|.
+          speeds_df: long format ``properties_twgid, computed_at, speed_kmh``.
+          maxlag: nb de lags à tester (défaut 3 = ±15 min cohérent avec
+              la fenêtre CORR).
+          top_n: nb de paires à analyser (les N plus corrélées).
+          significance: seuil p-value pour marquer "significatif" (défaut 0.05).
 
-    Returns:
-        DataFrame avec colonnes ``node_a, node_b, granger_p_a_to_b,
-        granger_p_b_to_a, granger_min_p, granger_direction,
-        granger_significant``.
+      Returns:
+          DataFrame avec colonnes ``node_a, node_b, granger_p_a_to_b,
+          granger_p_b_to_a, granger_min_p, granger_direction,
+          granger_significant``.
 
-        ``granger_direction`` ∈ {"A→B", "B→A", "none"} (none si aucune
-        direction significative). ``granger_significant`` = bool.
+          ``granger_direction`` ∈ {"A→B", "B→A", "none"} (none si aucune
+          direction significative). ``granger_significant`` = bool.
 
-    Notes perf :
-        * top_n=200 × 2 directions × maxlag=3 = 1200 F-tests ≈ 5-10s.
-        * statsmodels.log/print verbeux : on capture stdout/stderr dans
-          un no-op context pour éviter de polluer les logs Streamlit.
-        * Séries constantes ou trop courtes : on skip (p=None, direction="none").
+      Notes perf :
+          * top_n=200 × 2 directions × maxlag=3 = 1200 F-tests ≈ 5-10s.
+          * statsmodels.log/print verbeux : on capture stdout/stderr dans
+            un no-op context pour éviter de polluer les logs Streamlit.
+          * Séries constantes ou trop courtes : on skip (p=None, direction="none").
 
-    Raises:
-        ImportError: si statsmodels n'est pas installé (rare — ajouté
-            à requirements-base.txt).
+      Raises:
+          ImportError: si statsmodels n'est pas installé (rare — ajouté
+              à requirements-base.txt).
     """
 
     if pairs_df.empty or speeds_df.empty:
@@ -735,7 +735,7 @@ def _build_folium_map(corr_df: pd.DataFrame) -> folium.Map:
 def _render_kpi_banner(corr_df: pd.DataFrame, granger_df: pd.DataFrame) -> None:
     """Bandeau 4 KPI cards : Paires analysées / Corrélées / Directionnelle / Granger significatif.
 
-  (Axe 2 niveau 2) — 4ème card = "Granger significatif" (p < 0.05).
+    (Axe 2 niveau 2) — 4ème card = "Granger significatif" (p < 0.05).
     """
     if corr_df.empty:
         st.info("Aucune paire analysable (pas assez d'observations communes).")
@@ -927,7 +927,7 @@ def render_propagation_map(
         )
         return
 
-  # Calcul Granger niveau 2) sur le top N
+    # Calcul Granger niveau 2) sur le top N
     granger_df = pd.DataFrame()
     try:
         with st.spinner(
@@ -985,7 +985,7 @@ def render_propagation_map(
         f"JOIN `gold.traffic_features_live` × `gold.mv_twgid_to_lyo` sur "
         f"fenêtre {hours_window}h glissantes. CORR = Pearson r scan laggé "
         f"(±{max_lag_steps} pas = ±{max_lag_steps * 5} min). Direction = "
-    f"le capteur dont la série lead. **Granger** niveau 2) = "
+        f"le capteur dont la série lead. **Granger** niveau 2) = "
         f"test de causalité statsmodels sur les top {granger_top_n} paires par "
         f"|r|, seuil p < {GRANGER_SIGNIFICANCE:.2f}. Refresh DAG toutes les 30 min. "
         f"Seuil min obs : {MIN_OBS_PER_SENSOR} points par paire."

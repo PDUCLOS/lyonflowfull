@@ -85,7 +85,7 @@ def render_transit_trip(origin: str, destination: str) -> dict | None:
     st.markdown("---")
     _render_transit_disclaimer()
 
-  # Axe C — Retour dict pour comparateur multimodal.
+    # Axe C — Retour dict pour comparateur multimodal.
     return {
         "duration_min": float(itin.get("total_duration_min", 0.0)),
         "distance_km": float(itin.get("total_distance_km", 0.0)),

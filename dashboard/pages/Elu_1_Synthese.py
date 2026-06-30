@@ -86,7 +86,7 @@ st.markdown("---")
 # 2 colonnes : tendance + décisions
 col1, col2 = st.columns([3, 2])
 with col1:
-  # double-wrap expander+deferred_render retiré (P6) :
+    # double-wrap expander+deferred_render retiré (P6) :
     # le button-gate seul suffit (le calcul Plotly ne s'exécute qu'au
     # clic, pas à l'ouverture de l'expander).
     deferred_render(

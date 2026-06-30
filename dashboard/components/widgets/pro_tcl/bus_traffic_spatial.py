@@ -224,9 +224,15 @@ def render_bus_traffic_spatial(
     # échouent sur object ("cannot use method 'nlargest' with this dtype").
     # Coercition explicite (même classe de bug que le fix gnn_map Sprint 23).
     _num_cols = (
-        "bus_delay_sec", "traffic_speed_kmh", "traffic_congestion",
-        "bus_observations", "bus_delayed_count", "traffic_sensors",
-        "hour", "lat", "lon",
+        "bus_delay_sec",
+        "traffic_speed_kmh",
+        "traffic_congestion",
+        "bus_observations",
+        "bus_delayed_count",
+        "traffic_sensors",
+        "hour",
+        "lat",
+        "lon",
     )
     for _c in _num_cols:
         if _c in df.columns:

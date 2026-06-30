@@ -31,7 +31,7 @@ render_data_status_banner()
 
 st.caption(
     "Vue opérateur : statut DAGs Airflow · 6 health checks · fraîcheur des 8 sources Bronze. "
-  "Source : Airflow REST API + PostgreSQL Gold · "
+    "Source : Airflow REST API + PostgreSQL Gold · "
 )
 
 # Axe B — Monitoring multi-source (remplace les health checks séquentiels)

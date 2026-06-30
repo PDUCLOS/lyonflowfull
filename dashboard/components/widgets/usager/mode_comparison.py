@@ -182,7 +182,7 @@ def _render_mode_card(
         f'<span class="lyf-sublabel" style="opacity:0.6;">score: {score:.1f}</span>' if score is not None else ""
     )
 
-  # Axe C — Badge "estimé/calculé" selon result.source.
+    # Axe C — Badge "estimé/calculé" selon result.source.
     # computed = durée réellement calculée par le widget trajet
     # estimated = fallback vitesse moyenne (avant que l'usager clique "Voir détail")
     source = result.get("source", "estimated")

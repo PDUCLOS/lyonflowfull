@@ -81,7 +81,7 @@ def render_lieux_velov_map(
     m = folium.Map(location=[center_lat, center_lon], zoom_start=12, tiles="CartoDB positron")
 
     # Markers lieux + polylines vers la borne Vélov la plus proche + markers bornes.
-  # (2026-06-17) — fix carte jamais rendue : la boucle précédente
+    # (2026-06-17) — fix carte jamais rendue : la boucle précédente
     # ne faisait que du st.markdown et n'ajoutait rien à `m`. Maintenant on
     # peuple la carte et on appelle st_folium_with_alt() à la fin.
     for lieu in lieux_with_velov:

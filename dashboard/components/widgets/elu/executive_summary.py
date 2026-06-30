@@ -1,6 +1,6 @@
 """Widget — Bloc narratif 'Synthèse exécutive' auto-généré.
 
- KPIs via data_loader.cached_elu_kpis_dict().
+KPIs via data_loader.cached_elu_kpis_dict().
 """
 
 from __future__ import annotations

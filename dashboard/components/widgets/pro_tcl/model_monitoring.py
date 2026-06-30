@@ -602,10 +602,7 @@ def render_velov_model_analysis() -> None:
 
     # Backtest MAE : retiré Sprint 24+ (table gold.predictions_vs_actuals archivée avec le GNN).
     # Le suivi MAE reste via MLflow Registry (section 1 de Pro_7).
-    st.caption(
-        "Backtest détaillé : voir la section MLflow Model Registry ci-dessus "
-        "(MAE/RMSE par run d'entraînement)."
-    )
+    st.caption("Backtest détaillé : voir la section MLflow Model Registry ci-dessus (MAE/RMSE par run d'entraînement).")
 
 
 def render_data_quality_panel() -> None:

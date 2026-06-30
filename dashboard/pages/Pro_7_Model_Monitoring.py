@@ -64,7 +64,7 @@ if not is_model_monitoring_visible():
 
 st.caption(
     "Vue opérateur : registry MLflow · modèle XGBoost Speed/Velov · "
-  "métriques MAE/RMSE/R² · drift detection. **Sprint 9** : branchement MLflow Tracking API live."
+    "métriques MAE/RMSE/R² · drift detection. **Sprint 9** : branchement MLflow Tracking API live."
 )
 
 # Section 1 : Model Registry Status (toggle + status)
@@ -82,6 +82,5 @@ deferred_render(
 )
 
 st.caption(
-    "Model Monitoring · Pour relancer un entraînement : `make logs` puis "
-    "`airflow dags trigger retrain_xgboost_speed`"
+    "Model Monitoring · Pour relancer un entraînement : `make logs` puis `airflow dags trigger retrain_xgboost_speed`"
 )

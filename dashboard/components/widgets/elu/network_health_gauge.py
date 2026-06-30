@@ -197,7 +197,7 @@ def render_network_health_gauge() -> None:
         return
 
     if df.empty:
-    # P1.2 (fin) : migré en show_error persona-aware.
+        # P1.2 (fin) : migré en show_error persona-aware.
         # "config_missing" = action de configuration requise côté ops.
         show_error(
             "config_missing",
@@ -254,7 +254,7 @@ def render_network_health_gauge() -> None:
             f"— leurs poids ont été redistribués sur les autres composantes."
         )
 
-  # P4.3 : sparkline 24h via gold.network_health_history.
+    # P4.3 : sparkline 24h via gold.network_health_history.
     # Lit les 96 derniers snapshots (24h × 4/h) et affiche une mini-tendance.
     # Si la table est vide (< 24h de données après déploiement du DAG), la
     # sparkline affiche "Historique bientôt disponible".

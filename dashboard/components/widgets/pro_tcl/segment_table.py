@@ -12,12 +12,12 @@ import streamlit as st
 from dashboard.components.data_cache import cached_infra_bottlenecks
 from dashboard.components.error_display import show_error
 from dashboard.components.loading_state import loading_wrapper
-from src.data.db_query import clean_line_label # libellé lisible des lignes TCL.
+from src.data.db_query import clean_line_label  # libellé lisible des lignes TCL.
 from src.data.exceptions import DashboardDataError
 
 # DIAGNOSIS_LABELS est un libellé FR d'un code SQL (cf. infra_bottlenecks.diagnosis),
 # pas une métrique inventée — on l'importe toujours.
-from src.data.labels import DIAGNOSIS_LABELS # référentiel statique, plus un mock.
+from src.data.labels import DIAGNOSIS_LABELS  # référentiel statique, plus un mock.
 
 _DELAY_THRESHOLD = 120
 _SPEED_THRESHOLD = 25
@@ -41,7 +41,7 @@ def render_segment_table(line_id: str | None = None, height: int = 400) -> None:
                 {
                     "line_id": row.get("line_ref", "?"),
                     "name": row.get("segment_id", "—"),
-          # (audit Pro TCL D3) : libellés FR dans l'UI.
+                    # (audit Pro TCL D3) : libellés FR dans l'UI.
                     "bus_state": "En retard" if delay_s > _DELAY_THRESHOLD else "À l'heure",
                     "traffic_state": "Congestionné" if speed < _SPEED_THRESHOLD else "Fluide",
                     "diagnosis": row.get("diagnosis", "ok"),
@@ -51,7 +51,7 @@ def render_segment_table(line_id: str | None = None, height: int = 400) -> None:
                 }
             )
     else:
-    # (2026-06-12) — viré le fallback SEGMENTS (mock).
+        # (2026-06-12) — viré le fallback SEGMENTS (mock).
         st.info("Aucun segment bottleneck — gold.infrastructure_bottlenecks est vide.")
         return
 
@@ -65,7 +65,7 @@ def render_segment_table(line_id: str | None = None, height: int = 400) -> None:
     df_display = pd.DataFrame(
         [
             {
-        # (audit Pro TCL B2) : libellé lisible L66 au lieu
+                # (audit Pro TCL B2) : libellé lisible L66 au lieu
                 # de l'identifiant SYTRAL brut (ActIV:Line::66:SYTRAL_h20).
                 "Ligne": clean_line_label(s["line_id"]),
                 "Segment": s["name"],

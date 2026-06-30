@@ -128,6 +128,7 @@ def _freshness_line(df: pd.DataFrame, ts_col: str = "live_at") -> None:
     now = datetime.now(tz=timezone.utc)
     if latest.tzinfo is None:
         from zoneinfo import ZoneInfo
+
         latest = latest.replace(tzinfo=ZoneInfo("UTC"))
     age_s = (now - latest).total_seconds()
     if age_s < 300:
@@ -217,9 +218,7 @@ def _render_pydeck_predictions(df: pd.DataFrame, height: int, zoom: float = 11.0
     df["color"] = df["_ratio"].apply(lambda r: [*_ratio_to_rgb(r), 220])
 
     model_col = "model_version" if "model_version" in df.columns else "model_name"
-    dominant_model = (
-        df[model_col].mode().iloc[0] if model_col in df.columns and not df[model_col].mode().empty else "?"
-    )
+    dominant_model = df[model_col].mode().iloc[0] if model_col in df.columns and not df[model_col].mode().empty else "?"
 
     layer = pdk.Layer(
         "ScatterplotLayer",
@@ -249,10 +248,7 @@ def _render_pydeck_predictions(df: pd.DataFrame, height: int, zoom: float = 11.0
 
 
 def _legend_ratio() -> None:
-    st.markdown(
-        "**Légende** (% de la vitesse limite) : "
-        "🟢 >75% · 🟡 50-75% · 🟠 30-50% · 🔴 <30%"
-    )
+    st.markdown("**Légende** (% de la vitesse limite) : 🟢 >75% · 🟡 50-75% · 🟠 30-50% · 🔴 <30%")
 
 
 def _stats_bar(df: pd.DataFrame) -> None:
@@ -326,4 +322,3 @@ def render_traffic_map_compact(
         _freshness_line(df)
         _render_pydeck_live_vs_pred(df, height=height, zoom=10.7)
         _legend_ratio()
-

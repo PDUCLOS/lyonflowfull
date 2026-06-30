@@ -172,8 +172,7 @@ st.title("🤖 Notre modèle")
 render_data_status_banner()
 
 st.caption(
-    "Transparence sur la prédiction : comment ça marche, et quelle est "
-    "sa précision réelle sur les 7 derniers jours."
+    "Transparence sur la prédiction : comment ça marche, et quelle est sa précision réelle sur les 7 derniers jours."
 )
 
 # ── 1. Bloc pédagogique ─────────────────────────────────────────────────────

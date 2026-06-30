@@ -65,7 +65,7 @@ def render_traffic_widget(traffic: dict | None = None) -> None:
     with col3:
         st.metric("Bouchons actifs", n_bottlenecks)
 
-  # Prédictions focus H+1h, les autres horizons masqués)
+    # Prédictions focus H+1h, les autres horizons masqués)
     st.markdown("##### 🔮 Prédiction H+1h")
     preds = traffic.get("predictions", {})
     p = preds.get("h_plus_1h", {})

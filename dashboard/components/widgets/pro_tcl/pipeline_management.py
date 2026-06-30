@@ -265,7 +265,7 @@ def render_health_panel() -> None:
             }.get(status, COLORS["text_muted"])
             icon = {"ok": "✅", "warning": "⚠️", "critical": "🔴"}.get(status, "❓")
             name = r.get("name", "—")
-      # (audit Pro TCL B-09 + B-11) : ``details`` peut
+            # (audit Pro TCL B-09 + B-11) : ``details`` peut
             # contenir des messages d'erreur PostgreSQL bruts (ex: "to add
             # explicit type casts") avec des ``<``, ``>``, ``&`` qui
             # cassent le parsing HTML de Streamlit. On escape + on tronque
