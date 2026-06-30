@@ -92,6 +92,15 @@ ignore = [
     # actif. Ignore les warnings de style non-bloquants.
     "B905", "E712", "UP038", "F841",
 ]
+"archive/legacy/gnn/*" = [
+    # GNN archivé en Sprint 24 (commit 2ffd37b7). Code figé — pas de
+    # refacto actif. Mêmes tolérances que dags/legacy_github/*.
+    "N806",  # X_train, Y_train (math convention)
+    "N803",  # X, Y en arg (math convention)
+    "RUF001", "RUF002", "RUF003",  # emojis docstrings
+    "B905",  # zip strict
+    "E402",  # imports après docstrings
+]
 "dashboard/components/widgets/*" = [
     "RUF001", "RUF002", "RUF003",  # emojis docstrings (intentional)
     "B905",  # zip without strict (Streamlit patterns)
