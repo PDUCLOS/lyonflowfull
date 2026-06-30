@@ -14,6 +14,7 @@ REPLACE idempotent) — pas de migration Alembic.
 from __future__ import annotations
 
 import logging
+import os
 
 from src.db import raw_connection
 
@@ -26,7 +27,9 @@ def transform_silver_to_gold(target: str = "all", dry_run: bool = False) -> dict
     Args:
         target: 'traffic' | 'velov' | 'bus_delay' | 'tcl_realtime'
             | 'bottleneck' | 'multimodal_grid'
-            | 'bus_traffic_spatial' | 'all'
+            | 'bus_traffic_spatial'
+            | 'purge_traffic_features' (opt-in uniquement)
+            | 'all'
         dry_run: log uniquement.
 
     Returns:
@@ -51,6 +54,11 @@ def transform_silver_to_gold(target: str = "all", dry_run: bool = False) -> dict
         results["multimodal_grid"] = _refresh_multimodal_grid()
     if target in ("bus_traffic_spatial", "all"):
         results["bus_traffic_spatial"] = _refresh_bus_traffic_spatial()
+    # Sprint 24+ (2026-06-29) — purge gold.traffic_features_live. Opt-in
+    # uniquement (PAS dans 'all' : la purge ne doit pas tourner sur le
+    # chemin critique */10 — risque de bloquer le refresh léger).
+    if target == "purge_traffic_features":
+        results["purge_traffic_features"] = _purge_old_traffic_features()
     return results
 
 
@@ -489,6 +497,51 @@ def _refresh_bus_traffic_spatial() -> int:
         "mv_bus_traffic_spatial",
         migration_hint="Appliquer scripts/sql/migration_018_bus_traffic_spatial.sql.",
     )
+
+
+def _purge_old_traffic_features(retention_hours: int | None = None) -> int:
+    """Purge gold.traffic_features_live > N heures (Sprint 24+ — 2026-06-29).
+
+    Allège les scans gold downstream :
+    * ``mv_multimodal_grid`` (migration 017, grille 1 km)
+    * ``mv_bus_traffic_spatial`` (migration 036, fenêtre 48 h)
+    * ``gold.infrastructure_bottlenecks`` (legacy, à supprimer)
+
+    L'index ``idx_gold_traffic_features_live_computed_at`` (migration 037)
+    rend le DELETE < 1 s même sur 1 M+ rows purgées.
+
+    Rétention configurable via ``GOLD_TRAFFIC_FEATURES_RETENTION_HOURS``
+    (défaut 48). 48 h est aligné sur la fenêtre de ``mv_bus_traffic_spatial``
+    (Sprint 24) — au-delà, les MV n'ont pas besoin des données. Si un
+    consumer downstream requiert plus d'historique, augmenter la valeur et
+    vérifier au préalable par ``grep gold.traffic_features_live`` dans le
+    code.
+
+    Args:
+        retention_hours: override explicite (test). Si None, lit l'env var.
+
+    Returns:
+        Nombre de rows purgées.
+    """
+    if retention_hours is None:
+        retention_hours = int(
+            os.getenv("GOLD_TRAFFIC_FEATURES_RETENTION_HOURS", "48")
+        )
+    with raw_connection() as conn, conn.cursor() as cur:
+        # Garde-fou anti-hang : 5 min suffit largement pour un DELETE indexé.
+        cur.execute("SET statement_timeout = 300000")
+        cur.execute(
+            "DELETE FROM gold.traffic_features_live "
+            "WHERE computed_at < NOW() - INTERVAL %s",
+            (f"{retention_hours} hours",),
+        )
+        n = cur.rowcount
+    logger.info(
+        "gold.traffic_features_live: %d rows purged (>%sh retention)",
+        n,
+        retention_hours,
+    )
+    return n
 
 
 def _refresh_matview_safe(
