@@ -219,6 +219,19 @@ def render_bus_traffic_spatial(
         )
         return
 
+    # Sprint 24+ (2026-06-29) — les colonnes PostgreSQL NUMERIC arrivent en
+    # Decimal via psycopg2 → pandas infère dtype 'object'. nlargest()/tri/Plotly
+    # échouent sur object ("cannot use method 'nlargest' with this dtype").
+    # Coercition explicite (même classe de bug que le fix gnn_map Sprint 23).
+    _num_cols = (
+        "bus_delay_sec", "traffic_speed_kmh", "traffic_congestion",
+        "bus_observations", "bus_delayed_count", "traffic_sensors",
+        "hour", "lat", "lon",
+    )
+    for _c in _num_cols:
+        if _c in df.columns:
+            df[_c] = pd.to_numeric(df[_c], errors="coerce")
+
     counts = _diagnosis_counts(diag_df)
     n_total = sum(counts.values())
     _render_kpi_banner(counts, n_total)
