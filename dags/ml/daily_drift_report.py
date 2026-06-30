@@ -67,12 +67,12 @@ def _run_and_persist(**context) -> dict:
 with DAG(
     dag_id=DAG_ID,
     default_args=DEFAULT_ARGS,
-  description=("Sprint 16 Axe A — Daily Evidently drift report sur XGBoost vs TomTom"),
+    description=("Sprint 16 Axe A — Daily Evidently drift report sur XGBoost vs TomTom"),
     schedule_interval="30 5 * * *",
     start_date=datetime(2026, 6, 20),
     catchup=False,
     max_active_runs=1,
-  tags=["ml", "monitoring", "drift", "sprint16"],
+    tags=["ml", "monitoring", "drift", "sprint16"],
 ) as dag:
     drift = PythonOperator(
         task_id="compute_and_persist_drift",

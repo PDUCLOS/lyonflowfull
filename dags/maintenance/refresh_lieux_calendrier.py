@@ -59,10 +59,10 @@ def _refresh_mv_otp_heatmap(**context) -> None:
 def _refresh_lieux_calendrier(**context) -> None:
     """Re-popule referentiel.lieux_calendrier via le script seed.
 
-    Le calendrier (jours feries, vacances) evolue peu, mais les
-    cadences (7j glissants) doivent etre recalculees pour rester
-  representatives. remplacer par une vue materialisee
-    raffraichie en place.
+      Le calendrier (jours feries, vacances) evolue peu, mais les
+      cadences (7j glissants) doivent etre recalculees pour rester
+    representatives. remplacer par une vue materialisee
+      raffraichie en place.
     """
     try:
         result = subprocess.run(
@@ -102,7 +102,7 @@ with DAG(
     start_date=datetime(2026, 6, 11),
     catchup=False,
     max_active_runs=1,
-  tags=["gold", "refresh", "sprint-7"],
+    tags=["gold", "refresh", "sprint-7"],
 ) as dag:
     PythonOperator(
         task_id="refresh_mv_line_kpis",

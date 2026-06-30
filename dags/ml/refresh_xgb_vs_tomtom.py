@@ -77,12 +77,12 @@ def _refresh_mv(**context) -> dict:
 with DAG(
     dag_id=DAG_ID,
     default_args=DEFAULT_ARGS,
-  description=("Sprint 16 Axe A — Refresh MV gold.mv_xgb_vs_tomtom (backtest XGBoost vs TomTom)"),
+    description=("Sprint 16 Axe A — Refresh MV gold.mv_xgb_vs_tomtom (backtest XGBoost vs TomTom)"),
     schedule_interval="*/30 * * * *",
     start_date=datetime(2026, 6, 20),
     catchup=False,
     max_active_runs=1,
-  tags=["ml", "backtest", "tomtom", "sprint16"],
+    tags=["ml", "backtest", "tomtom", "sprint16"],
 ) as dag:
     refresh = PythonOperator(
         task_id="refresh_mv_xgb_vs_tomtom",

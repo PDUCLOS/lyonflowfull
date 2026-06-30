@@ -101,7 +101,7 @@ with DAG(
         execution_timeout=timedelta(minutes=3),
     )
 
-  # (2026-06-19) — Refresh de gold.mv_multimodal_grid (migration 17).
+    # (2026-06-19) — Refresh de gold.mv_multimodal_grid (migration 17).
     # Dépend de toutes les sources upstream (traffic + TCL + Vélov alimentent
     # la grille via les CTE_FULL OUTER JOIN de la MV).
     multimodal_grid = PythonOperator(
@@ -110,7 +110,7 @@ with DAG(
         execution_timeout=timedelta(minutes=2),
     )
 
-  # (2026-06-19) — Axe 3 : correlation bus x trafic spatialisee.
+    # (2026-06-19) — Axe 3 : correlation bus x trafic spatialisee.
     # JOIN spatial 0.001° (~100 m) : retard bus corrélé au trafic de la MÊME
     # zone. Coexiste avec bottleneck (Option B, non-breaking).
     bus_traffic_spatial = PythonOperator(

@@ -92,12 +92,12 @@ def _train_xgboost_speed_h1h() -> dict:
 with DAG(
     dag_id=DAG_ID,
     default_args=DEFAULT_ARGS,
-  description="Entraînement quotidien XGBoost H+1h Optimisation)",
+    description="Entraînement quotidien XGBoost H+1h Optimisation)",
     schedule_interval="0 3 * * *",  # 03h00 tous les jours
     start_date=datetime(2026, 6, 12),
     catchup=False,
     max_active_runs=1,
-  tags=["ml", "training", "xgboost", "daily", "sprint9"],
+    tags=["ml", "training", "xgboost", "daily", "sprint9"],
 ) as dag:
     train = PythonOperator(
         task_id="train_xgboost_speed_h1h",

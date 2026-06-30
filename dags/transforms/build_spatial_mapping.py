@@ -21,17 +21,17 @@ logger = logging.getLogger(__name__)
 def _build_spatial_mapping() -> int:
     """Construit gold.dim_spatial_grid_mapping depuis silver.trafic_boucles_clean.
 
-    Stratégie :
-    1. Récupère tous les channels distincts avec leur geom (WGS84)
-    2. Assigne un node_idx séquentiel (0..N-1)
-    3. Calcule matrix_i/j via h3 si dispo
-    4. UPSERT dans gold.dim_spatial_grid_mapping (PK = properties_twgid)
+      Stratégie :
+      1. Récupère tous les channels distincts avec leur geom (WGS84)
+      2. Assigne un node_idx séquentiel (0..N-1)
+      3. Calcule matrix_i/j via h3 si dispo
+      4. UPSERT dans gold.dim_spatial_grid_mapping (PK = properties_twgid)
 
-  Schema v0.3.1 :
-    * `silver.trafic_boucles_clean` a ``geom`` (geometry 4326) et ``geom_2154``
-      (Lambert 93). Plus de ``geom_wgs84``.
-    * `gold.dim_spatial_grid_mapping` PK = ``properties_twgid`` (et plus
-      ``channel_id``). Colonnes ``lat`` + ``lon`` en double precision.
+    Schema v0.3.1 :
+      * `silver.trafic_boucles_clean` a ``geom`` (geometry 4326) et ``geom_2154``
+        (Lambert 93). Plus de ``geom_wgs84``.
+      * `gold.dim_spatial_grid_mapping` PK = ``properties_twgid`` (et plus
+        ``channel_id``). Colonnes ``lat`` + ``lon`` en double precision.
     """
     from src.db import execute_query
 
@@ -112,7 +112,7 @@ def _build_spatial_mapping() -> int:
 def _build_adjacency() -> int:
     """Construit gold.dim_gnn_adjacency : arêtes entre nodes proches (K=2 grid).
 
-  la PK de dim_gnn_adjacency est (node_u, node_v) — inchangé.
+    la PK de dim_gnn_adjacency est (node_u, node_v) — inchangé.
     """
     from src.db import execute_query
 

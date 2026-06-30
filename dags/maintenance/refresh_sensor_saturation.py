@@ -34,17 +34,17 @@ _DAG_SCHEDULE = "7,22,37,52 * * * *"  # toutes les 15 min, décalé :07
 
 @dag(
     dag_id=_DAG_ID,
-  description="Refresh MV gold.mv_sensor_saturation saturation/amplitude)",
+    description="Refresh MV gold.mv_sensor_saturation saturation/amplitude)",
     start_date=datetime(2026, 6, 22),
     schedule=_DAG_SCHEDULE,
     catchup=False,
     max_active_runs=1,  # pas de chevauchement (REFRESH CONCURRENTLY le permet, mais ceinture+bretelles)
     default_args={
         "owner": "lyonflow",
-    "retries": 0, # critique : le cycle suivant rattrape )
+        "retries": 0,  # critique : le cycle suivant rattrape )
         "execution_timeout": timedelta(minutes=5),
     },
-  tags=["maintenance", "saturation", "sprint22+"],
+    tags=["maintenance", "saturation", "sprint22+"],
 )
 def refresh_sensor_saturation_dag() -> None:
     """DAG qui rafraîchit la matérialisation toutes les 15 min."""

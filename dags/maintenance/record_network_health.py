@@ -107,7 +107,7 @@ def _purge_old() -> int:
 default_args = {
     "owner": "lyonflow",
     "depends_on_past": False,
-  "retries": 0, # le cycle */15 min suivant rattrape (cf. )
+    "retries": 0,  # le cycle */15 min suivant rattrape (cf. )
     "retry_delay": timedelta(minutes=5),
     "execution_timeout": timedelta(minutes=2),  # fonction SQL rapide (~1s)
 }
@@ -120,7 +120,7 @@ with DAG(
     start_date=datetime(2026, 6, 22, tzinfo=UTC),
     catchup=False,  # pas de backfill des snapshots passés
     max_active_runs=1,  # 1 seule exécution concurrente (évite ON CONFLICT)
-  tags=["maintenance", "sprint-21", "p4.3", "network-health"],
+    tags=["maintenance", "sprint-21", "p4.3", "network-health"],
 ) as dag:
     record = PythonOperator(
         task_id="record_health",

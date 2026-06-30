@@ -89,8 +89,7 @@ def check_critical_dags() -> dict[str, dict[str, Any]]:
     """
     with _pg_conn(dbname="airflow") as conn, conn.cursor() as cur:
         cur.execute(
-            "SELECT dag_id, is_paused, is_active "
-            "FROM dag WHERE dag_id = ANY(%s)",
+            "SELECT dag_id, is_paused, is_active FROM dag WHERE dag_id = ANY(%s)",
             (CRITICAL_DAGS,),
         )
         rows = cur.fetchall()
@@ -113,9 +112,7 @@ def check_critical_dags() -> dict[str, dict[str, Any]]:
         logger.error(msg)
         raise AirflowException(msg)
 
-    logger.info(
-        "✅ Tous les %d DAGs critiques OK (actifs, non pausés)", len(CRITICAL_DAGS)
-    )
+    logger.info("✅ Tous les %d DAGs critiques OK (actifs, non pausés)", len(CRITICAL_DAGS))
     return state_map
 
 
@@ -126,10 +123,7 @@ def check_gold_freshness() -> dict[str, str]:
 
     with _pg_conn() as conn, conn.cursor() as cur:
         for table, ts_col, max_age_min in FRESHNESS_CHECKS:
-            cur.execute(
-                f"SELECT MAX({ts_col}), NOW() - MAX({ts_col}) "
-                f"FROM {table}"
-            )
+            cur.execute(f"SELECT MAX({ts_col}), NOW() - MAX({ts_col}) FROM {table}")
             row = cur.fetchone()
             max_ts, age = row if row else (None, None)
             if max_ts is None or age is None:
@@ -138,9 +132,7 @@ def check_gold_freshness() -> dict[str, str]:
                 continue
             age_min = age.total_seconds() / 60
             if age_min > max_age_min:
-                anomalies.append(
-                    f"{table}: stale ({age_min:.0f} min > {max_age_min} min)"
-                )
+                anomalies.append(f"{table}: stale ({age_min:.0f} min > {max_age_min} min)")
                 results[table] = f"STALE ({age_min:.0f} min)"
             else:
                 results[table] = f"OK ({age_min:.0f} min)"

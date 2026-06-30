@@ -76,7 +76,7 @@ def _log_health(**context) -> None:
 default_args = {
     "owner": "lyonflow",
     "depends_on_past": False,
-  "retries": 0, # Politique le cycle suivant rattrape
+    "retries": 0,  # Politique le cycle suivant rattrape
     "execution_timeout": timedelta(minutes=2),
 }
 
@@ -88,7 +88,7 @@ with DAG(
     start_date=datetime(2026, 6, 18),
     catchup=False,
     max_active_runs=1,
-  tags=["bronze", "traffic", "tomtom", "sprint-13+"],
+    tags=["bronze", "traffic", "tomtom", "sprint-13+"],
 ) as dag:
     collect = PythonOperator(
         task_id="collect_tomtom_flow",
