@@ -13,9 +13,9 @@ LyonFlow est une plateforme MLOps end-to-end de prédiction et d'analyse du traf
 **Version actuelle** : **v0.12.1** (Sprints 1-7 + VPS 1-8 + 9+ + 11+ + 12+ + 13 + 13+ + 15+ + 17 + 17+ + 18 + 20 + 21 + 22 + 22+ + 22++) — branche `vps` ACTIVE
 **Statut** : production VPS stable. Voir CHANGELOG.md pour le détail de chaque sprint.
 
-### État au 2026-07-01 (Purge GNN + incidents I/O récurrents + bugfixes prod)
+### État au 2026-07-01 (Purge GNN + bugfixes prod + MLOps + certification RNCP)
 
-> Changements locaux, **pas encore commités** (règle projet : accord explicite avant commit/push).
+> Commité localement (`0cc2693`), pas encore pushé sur `origin/vps`.
 
 - **Purge GNN du code actif** : tandem GNN archivé Sprint 24+ mais des traces actives subsistaient (fonctions mortes, config, docs). Nettoyage complet :
   - `src/routing/graph.py` : viré `build_routing_graph`, `get_node_speed`, `get_nearest_node` (0 appelant réel, legacy H3 K=2 remplacé par pgRouting Sprint 18).
@@ -41,40 +41,10 @@ LyonFlow est une plateforme MLOps end-to-end de prédiction et d'analyse du traf
 - **Bilan DAGs** : 25/27 actifs (était ~20/26 avec plusieurs en échec silencieux). Les 2 pausés restants sont documentés et intentionnels (`retrain_xgboost_speed`, `refresh_heavy_mv` — ce dernier lié au retrait en cours d'`infrastructure_bottlenecks`, C2).
 - **Docs** : triage complet (voir `archive/README.md` mis à jour) — 17 docs déplacés vers `archive/{sprints,audits,analysis,misc}/` (specs/rapports livrés, snapshots datés). `docs/POSTGRES_TUNING_PROD.md` et `docs/AUDIT_AIRFLOW_POSTGRES_SPRINT24.md` mis à jour avec statut réel. Rapport complet pour certification RNCP : `docs/AUDIT_CERTIFICATION_2026-07-01.md`.
 
-### État au 2026-06-25 (Sprint 22+ + 22++ — v0.12.1 — Menu MLOps Usager + Elu_2 DB-driven)
-
-- **18 pages × 3 personas** (5 Usager + 6 Pro TCL + 5 Élu + Accueil + RGPD + A_Propos) · **59 widgets** · **8 collecteurs Bronze** · **15 DAGs Airflow**
-- ~280 fichiers Python · ~25 000 lignes
-- **658 tests verts** · ruff clean
-- **Sprint 22+ (2026-06-25, commit `691eaaf`, v0.12.0) — Menu MLOps Usager** :
-  - **3 pages citoyen** sans jargon ML/DAG/PostGIS (cf. `theme.show_technical: false`) :
-    - 🤖 **Notre modèle** (`Usager_3_Notre_Modele.py`) : précision 7j en clair, donut accuracy_band, courbe MAE.
-    - 🌐 **Sources de données** (`Usager_4_Sources_Donnees.py`) : 8 sources + fraîcheur + score santé.
-    - 🩺 **Statut du service** (`Usager_5_Statut_Service.py`) : 4 voyants synthétiques + top 5 incidents.
-  - **Helpers réutilisés** : `cached_xgb_accuracy_summary`, `cached_predictions_vs_actuals`, `cached_source_health`, `cached_recent_alerts`.
-- **Sprint 22++ (2026-06-25, commit `80bbb9b`, v0.12.1) — Elu_2 sur vraies données DB** :
-  - Spec complète `docs/SPEC_FIX_ELU2_BOTTLENECKS.md` (491 lignes, 9 bugs).
-  - **Bug 3/9** : `get_bottlenecks_summary` lit `gold.mv_bus_traffic_spatial` (MV spatiale 0.001°) au lieu de `gold.infrastructure_bottlenecks` (JOIN global par heure).
-  - **Bug 1/4/5/7** : `load_bottlenecks_top` data-driven — gain = `avg_delay_s/60*0.5`, cout = `f(diagnosis)`, ROI = formule unifiée, voyageurs = `n_obs × 36`.
-  - **Bug 2** : `bottleneck_map` lit vraies coords lat/lon, couleur par diagnostic (plus de dict coords hardcodé).
-  - **Bug 4** : `bottleneck_ranking` colonne Diagnostic (🔴 infra / 🟠 ops / 🟢 voie bus / ⚪ ok).
-  - **Bug 7** : `roi_calculator` affiche diagnostic, ROI cohérent avec ranking.
-- **Tests** : +8 verts (3 dans `test_db_query_and_data_loader.py`, 5 dans `test_elu_widgets.py`).
-- **Docs** : `DASHBOARD_PAGES.md`, `CLAUDE.md`, `CHANGELOG.md` mis à jour pour refléter 18 pages / 59 widgets / 658 tests.
-
-### État au 2026-06-22 (Ops cleanup VPS — sda1 88% → 47%)
-
-- sda1 libéré de **40 GB** (88% → **47%**, 52G libres).
-- **Cleanup Docker** : `docker builder prune -a` (-34.52 GB cache) + containerd overlayfs snapshotter GC (`/var/lib/containerd` 48G → 20G, snapshots **253 → 161**/255 max).
-- **Backup obsolète purgé** : `/opt/lyonflow/backups/backup_pre_028_*.dump` (13G, pre-migration 028 vérifiée OK : `osm.sensor_positions` 1159 + `osm.mv_sensor_to_way` 41737).
-- **Backup-offsite systemd timer CRÉÉ** (était absent malgré la doc — corrigé) :
-  - `/etc/systemd/system/lyonflow-backup.service` (oneshot, env from `/opt/lyonflow/.backup-offsite.conf`)
-  - `/etc/systemd/system/lyonflow-backup.timer` (Quotidien **03:00 UTC** ± 15min random, `Persistent=true`)
-  - Config `/opt/lyonflow/.backup-offsite.conf` (chmod 600) avec template + instructions `rclone config` interactif
-  - Status : `Active: active (waiting)` next `Tue 2026-06-23 03:03:33 UTC`
-  - **Action user requise** : `sudo rclone config` (Google Drive OAuth) + décommenter `GDRIVE_BACKUP_DEST=backups/lyonflow` dans `.backup-offsite.conf`
-- **Prometheus absent confirmé** (intentionnel, Sprint 15+) — voir commentaires `docker-compose.monitoring.yml:14-18`. Exporters (node/postgres/nginx) + Grafana + Alertmanager UP mais affichent "no data".
-- **Nginx restart-loop résolu** (était "Restarting 1141 fois" → maintenant healthy).
+> **Historique détaillé des sprints antérieurs** (22++ → Sprint 5) : voir
+> `CHANGELOG.md` (changelog structuré par version) et `archive/sprints/`
+> (rapports complets). Retiré d'ici le 2026-07-01 pour garder ce fichier
+> exploitable — c'était ~200 lignes de narration déjà dupliquée ailleurs.
 
 ## Décisions ouvertes (en attente Patrice)
 
@@ -93,152 +63,19 @@ LyonFlow est une plateforme MLOps end-to-end de prédiction et d'analyse du traf
 - Prometheus : laisser absent (Sprint 15+ justifié, exporters coûtent 200 MB mais Grafana mort de toute façon)
 - Axes 2/4/6/7 : Axe 6 (qualité données) en priorité 1 post-Jedha
 
-### État au 2026-06-22 (Sprint 21 — v0.11.0 — UX + Quantile + Sparkline + Docs cleanup)
-
-- 15 pages × 3 personas · **~60 widgets** · **8 collecteurs Bronze** · **15 DAGs Airflow**
-- ~180 fichiers Python · ~24 000 lignes
-- **615 tests verts** · ruff clean
-- **Sprint 20 (UX unifiée) — 4 axes livrés** :
-  - **Axe B — Plotly theme** : `plotly_theme.py` (`LYF_TEMPLATE` + `COLORS` dict). 11/11 widgets migrés, 0 `plotly_dark` restant.
-  - **Axe D — Error display** : `error_display.py` (`show_error(error_type, detail)` adapté par persona). 16 widgets migrés.
-  - **Axe A — Loading wrapper** : `loading_state.py` (`loading_wrapper()` context manager). 32/32 widgets DB-hitting wrappés.
-  - **Axe F — Freshness badge** : `freshness_badge.py` (badge prochaine MAJ). 15/15 pages câblées.
-  - **Axe E — Accessibilité** : `a11y.py` (`plotly_with_alt`, `sr_only`). 18 alt texts pré-écrits.
-- **Sprint 21 (bonus)** :
-  - **Quantile regression XGBoost** : `XGBoostQuantileModel` (P10/P50/P90). Migration 029 `gold.trafic_predictions_quantile`. Bandes d'incertitude Plotly.
-  - **Sparkline 24h** : `sparkline.py` widget + migration 030 `gold.mv_network_health_history`. Câblé dans `network_health_gauge`.
-  - **Backup template** : `scripts/backup-template.sh` (pg_dump structuré).
-- **Documentation cleanup (Sprint 21)** :
-  - 13 docs stale archivés (`archive/sprints/`, `archive/audits/`, `archive/misc/`).
-  - Merge `tests/ml/test_drift_detector.py` (doublon) → `tests/monitoring/`.
-  - `SECURITY.md` version 0.1.x → 0.11.x. `DASHBOARD_PAGES.md` section "mode démo" supprimée.
-
-### État au 2026-06-21 (Sprint 18 — v0.10.0 — pgRouting routing voiture OSM)
-
-- 15 pages × 3 personas · **51 widgets** · **8 collecteurs Bronze** · **14 DAGs Airflow** (+1 `refresh_osm_traffic_costs` */15)
-- ~175 fichiers Python · ~23 000 lignes
-- **35 tests routing (26 unit + 9 pgRouting)** · ruff clean
-- **Sprint 18 (2026-06-21) — pgRouting : routing voiture sur réseau routier OSM** :
-  - **Root cause zigzag** : graphe H3 K=2 (GNN) utilisé pour le pathfinding voiture → itinéraires traversant le Rhône. Fix : `pgr_dijkstra` sur réseau routier OSM réel (~101k arêtes).
-  - **Image Docker** : `postgis/postgis:16-3.4` → `pgrouting/pgrouting:16-3.5-3.7.3` (PGDATA byte-compatible).
-  - **Import OSM** : Geofabrik Rhône-Alpes → osmium extract bbox Lyon → osm2pgrouting. 87k vertices, 101k arêtes, 14 types highway.
-  - **Trafic temps réel** : `osm.sensor_positions` (1159 capteurs GiST) → `osm.mv_sensor_to_way` (41 737 arêtes, LATERAL KNN <->). DAG `refresh_osm_traffic_costs` `*/15 min` (~39 597 arêtes updated, ~20s).
-  - **Refacto Python** : `graph.py` + `compute_route_pgrouting()`, `pathfinder.py` via pgRouting, `itinerary.py` polylines OSM multi-vertices. Contrat `plan_car_trip()`/`_road_itinerary_between()` préservé.
-  - **Supprimé** : `snap_to_roads.py` (dead code). Exports retirés : `build_routing_graph`, `shortest_path`, `get_nearest_node`.
-  - **Schéma `osm.*`** : `ways`, `ways_vertices_pgr`, `sensor_positions`, `mv_sensor_to_way`, fonctions `route_car()` + `refresh_traffic_costs()`.
-
-### État au 2026-06-19 (Sprint 15+ — v0.7.1 — mypy clean + training/stgcn package)
-
-- 15 pages × 3 personas · **51 widgets** · **8 collecteurs Bronze** · **13 DAGs Airflow**
-- ~170 fichiers Python · ~22 000 lignes
-- **301 tests verts / 4 SKIP / 14 deselected** · ruff clean · **mypy clean (82 fichiers, 0 erreur)**
-- **Sprint 15+ v0.7.1 — Type safety** :
-  - **Root cause "Source file found twice"** : `training/` n'avait pas de `__init__.py` → mypy résolvait `training/stgcn/dataset.py` à la fois comme `dataset` ET `training.stgcn.dataset`. Fix : `__init__.py` dans `training/` + `training/stgcn/` (+ cohérence avec `src/__init__.py` + `src/data/__init__.py`).
-  - **`pyproject.toml [tool.mypy]`** : `explicit_package_bases = true` (sécurité).
-  - **42 → 0 erreurs mypy** en 6 catégories : `Unused type: ignore` (12), `None has no attribute` (6), `Incompatible types` (8), `Argument X` Path optional (3), `int/float from object` (4), autres (2 — MLflow API + max type-var).
-  - **Patterns réutilisables** : `cast(int, execute_scalar(...) or 0)`, double `or` pour `Path(model_dir or os.getenv(...) or default)`, assertions `is not None` après try/except.
-  - **Aucun changement de logique métier** — typage pur. 19 fichiers, +89/-47 lignes.
-
-### État au 2026-06-19 (Sprint 15+ — v0.7.0 — Interdépendances multimodales)
-
-- 15 pages × 3 personas · **51 widgets** (+3 : multimodal_heatmap, bus_traffic_spatial, mode_comparison) · **8 collecteurs Bronze** · **13 DAGs Airflow** (10 actifs + 1 cron backfill + 1 archive silver + 1 TomTom actif)
-- 9 endpoints API · 3 modèles ML · RGPD complet · ~170 fichiers Python · ~22 000 lignes
-- **283 tests verts (+65 nouveaux) / 4 SKIP / 14 deselected** · ruff clean
-- **Sprint 15+ (2026-06-19) — Analyse interdépendances multimodales (Axes 1 + 3)** :
-  - **Spec complète** : `docs/SPEC_OPTIMISATION_INTERDEPENDANCES.md` (7 axes, 883 lignes). Diagnostic lacunes + solutions SQL + widgets + tests + roadmap priorisée.
-  - **Axe 1 — Grille multimodale** (migration 17) : vue matérialisée `gold.mv_multimodal_grid` fusionnant trafic + TCL + Vélov + météo sur grille 0.01° (~1 km). Score multimodal 0-10 par cellule. Widget `multimodal_heatmap.py` : carte Folium rectangles colorés + 4 KPI cards + tableau top saturées. DAG refresh */10 min (REFRESH CONCURRENTLY).
-  - **Axe 3 — Bus × trafic spatialisé** (migration 18) : vue matérialisée `gold.mv_bus_traffic_spatial` avec JOIN spatial 0.001° (~100 m). Corrige le bottleneck global (`_BOTTLENECK_SQL` JOIN par heure globale → JOIN par zone locale). Widget `bus_traffic_spatial.py` : scatter Plotly + KPI + top zones. Option B non-breaking (coexiste avec ancien bottleneck). DAG refresh */15 min.
-  - **Comparateur modes Usager** : spec `docs/SPEC_COMPARATEUR_MODES_USAGER.md`. Migration 16 `referentiel.tarifs_modes`. Eco-calculator (`eco_calculator.py`), widgets `mode_comparison.py` + `mode_summary.py`. Radio "Optimiser pour" (temps/coût) dans search_bar.
-  - **Tests** : +65 tests (multimodal_grid 7 + bus_traffic_spatial 11 + comparateur + fixtures + audit).
-
-### Roadmap interdépendances (7 axes, voir SPEC_OPTIMISATION_INTERDEPENDANCES.md)
-- ✅ **Axe 1** (Sprint 15+) : grille multimodale 0.01° (fusion trafic + TCL + Vélov + météo)
-- ✅ **Axe 3** (Sprint 15+) : bus × trafic spatialisé (JOIN zone 100 m)
-- ✅ **Axe 5** (Sprint 15+) : score santé réseau 0-100 (migration 019 `gold.fn_network_health_score()` + widget jauge Plotly `network_health_gauge.py` en bandeau Élu). Redistribution poids si source indisponible.
-- ⏸ **Axe 6** : qualité données (`data_quality.py`, port LyonTraffic)
+### Roadmap interdépendances (7 axes — voir `docs/SPEC_OPTIMISATION_INTERDEPENDANCES.md`)
+- ✅ **Axe 1** : grille multimodale 0.01° (fusion trafic + TCL + Vélov + météo)
+- ✅ **Axe 3** : bus × trafic spatialisé (JOIN zone 100 m)
+- ✅ **Axe 5** : score santé réseau 0-100 (`gold.fn_network_health_score()` + jauge `network_health_gauge.py`, bandeau Élu)
+- ⏸ **Axe 6** : qualité données (`data_quality.py`, port LyonTraffic) — priorité 1 post-Jedha
 - ⏸ **Axe 4** : report modal Vélov ↔ TC (PostGIS ST_DWithin 300 m, z-score)
 - ⏸ **Axe 2** : propagation congestion (lag cross-correlation Granger simplifié)
 - ⏸ **Axe 7** : météo comme variable d'interaction (impact quantifié par mode)
 
-### État au 2026-06-18 (Sprint 13+ — v0.6.7 — TomTom Niveau 1)
-
-- 15 pages × 3 personas · **48 widgets** (+1 coherence_scatter) · **8 collecteurs Bronze** (TomTom réactivé) · **13 DAGs Airflow** (10 actifs + 1 cron backfill + 1 archive silver + 1 **TomTom actif**)
-- 9 endpoints API · 3 modèles ML · RGPD complet · ~165 fichiers Python · ~21 000 lignes
-- **218 tests verts (+15 nouveaux) / 10 SKIP / 7 deselected** · ruff clean
-- **Sprint 13+ (2026-06-18) — TomTom Niveau 1 (cross-validation sources)** :
-  - **Dette Sprint 8 résolue** : DAG `collect_tomtom_traffic` sort du no-op. Nouvelle classe `TomTomTrafficFlow(DataCollector)` wrappe les fonctions existantes (`collect_lyon_tiles()` + `save_lyon_tiles_to_bronze()`). `*/15 min`, `retries=0`. Quota free tier 2500 req/jour largement respecté (1152 req/jour).
-  - **Vue SQL `gold.v_coherence_tomtom_vs_grandlyon`** (migration 14) : JOIN spatial PostGIS `ST_DWithin < 200 m` entre tuiles TomTom (12 tuiles 0.02°) et capteurs `gold.channels_ref`. Pour chaque paire (tile_key, channel_id) calcule `delta_kmh`, `ratio_diff`, `status` (ok | minor_drift | drift | no_data).
-  - **Vue SQL `gold.v_tomtom_gl_drift`** (migration 14) : capteurs avec ≥ 60% drift sur 24h → candidats "capteur HS". C'est le **détecteur automatique de capteurs en panne** côté Grand Lyon.
-  - **Widget Pro_TCL `coherence_scatter`** : 4 KPI cards par status + scatter Plotly TomTom vs GL avec ligne y=x + heatmap top 20 deltas + tableau capteurs HS suspects. Câblé dans `Pro_3_Correlation.py` (sous la matrice bus × trafic).
-  - **Helpers DB** : `get_tomtom_coherence()` + `get_tomtom_gl_drift()` (db_query) + `load_tomtom_coherence()` + `load_tomtom_gl_drift()` (data_loader, fail loud via `DashboardDataError` — politique zéro mock Sprint 8). Caches Streamlit `cached_tomtom_coherence` (30s) + `cached_tomtom_gl_drift` (60s).
-  - **Câblage ingestion** : `TomTomTrafficFlow` importé + ajouté à `REALTIME_COLLECTORS` dans `src/ingestion/__init__.py`. Pattern unifié avec les 7 autres collecteurs Bronze.
-  - **Tests** : 10 nouveaux tests (4 class `TestTomTomTrafficFlowNoKey`, 4 `TestTomTomTrafficFlowWithKey`, 3 `TestTomTomTrafficFlowImports` + 6 coherence helpers + 5 widget smoke) = **+15 verts**.
-
-### Roadmap TomTom (3 niveaux, voir CHANGELOG.md pour décision utilisateur)
-- ✅ **Niveau 1** (Sprint 13+) : ingestion propre + cohérence sources + détecteur HS
-- ⏸ **Niveau 2** (Sprint 14, ~1 sem) : backtest engine — MAE croisé XGBoost vs TomTom (oracle externe). Drift detection Evidently.
-- ⏸ **Niveau 3** (Sprint 15+, optionnel) : TomTom Routing API pour routing voiture temps réel. Payant, gain UX marginal vs Niveau 2.
-
-### État au 2026-06-17 (Sprint 11+)
-
-- 15 pages × 3 personas · 47 widgets · 8 collecteurs Bronze · **13 DAGs Airflow** (10 actifs + 1 cron backfill + 1 TomTom no-op + 1 archive silver-to-minio)
-- 9 endpoints API · 3 modèles ML (XGBoost H+1h focus + SpatioTemporalGCN sur données réelles) · RGPD complet
-- ~165 fichiers Python · ~21 000 lignes · **206 tests verts / 3 SKIP / 7 deselected (integration)** · ruff 54 → 6 erreurs cosmétiques
-- Couche data complète (db_query + data_loader) — `gold.trafic_predictions` repeuplée toutes les 15 min par `dag_inference_xgboost`
-- **Sprint 11+ (2026-06-17) — 3 fronts livrés** :
-  - **Libellés TCL lisibles** : `clean_line_label()` dans `src/data/db_query.py` convertit `ActIV:Line::66:SYTRAL_h20` → `L66 ; 20h`. Widgets Pro TCL (`line_kpis`, `otp_heatmap`, `bottlenecks`) affichent `L66` au lieu de l'identifiant brut. 30 tests unitaires (parametrize sur 5 catégories).
-  - **OOM-kill SIRI/Velov résolu** : `_transform_tcl_vehicles()` et `_transform_velov()` avec `LIMIT 5000 → 200` (worker Celery 6 Go pic mémoire passe de 5.8 Go à 1.2 Go). Tasks stables depuis 14h.
-  - **Reorg documentation** : 26 docs historiques (8 sprints, 12 audits, 4 analyses, 2 misc) déplacés sous `archive/{sprints,audits,analysis,misc}/`. `archive/README.md` documente la convention (déplacer, jamais supprimer, traçabilité RNCP 38777).
-  - Voir [archive/sprints/SPRINT_11_REPORT.md](archive/sprints/SPRINT_11_REPORT.md) pour détails.
-
-### État au 2026-06-18 (Sprint 13 — v0.6.6)
-
-- 15 pages × 3 personas · 47 widgets · 8 collecteurs Bronze · 13 DAGs Airflow
-- 9 endpoints API · 3 modèles ML · RGPD complet · ~165 fichiers Python · ~21 000 lignes
-- **203 tests verts / 4 SKIP / 7 deselected** · ruff clean (6 cosmétiques pré-existantes)
-- **Sprint 13 (2026-06-18) — Audit cohérence pipeline + UX** :
-  - **Version unique** : source de vérité `src/config.py` (`get_settings().app_version`). Sidebar, A_Propos, RGPD, Usager_1 — tous importent dynamiquement. Zéro version hardcodée dans le dashboard.
-  - **Auto-refresh par persona** : `dashboard/components/auto_refresh.py` + `streamlit-autorefresh`. Pro TCL 30s, Usager 60s, Élu 300s. Câblé dans les 15 pages.
-  - **Nettoyage complet `force_mock`** : suppression de `_is_demo_mode()`, `_maybe_force_mock()`, `_demo_mode_cache` dans `data_loader.py`. Param `force_mock` viré de ~60 signatures (data_loader + data_cache). Docstrings nettoyées dans 5 widgets.
-  - **Cross-persona widgets** : `dashboard/components/widgets/common/__init__.py` re-exporte `render_traffic_map_compact`. `Usager_1` et `Elu_1` importent depuis `widgets.common` (plus de dépendance directe Pro TCL → Usager).
-  - **Script cohérence** : `scripts/coherence-check.sh` (12 checks) + target `make coherence-check`. Vérifie : version unique, zéro mock, auto-refresh, cross-persona, TTL cohérence.
-  - **`pyproject.toml`** : version `0.6.6`, dépendance `streamlit-autorefresh>=1.0.0`
-
-### État au 2026-06-18 (Sprint 12+ — v0.6.5)
-
-- 15 pages × 3 personas · 47 widgets · 8 collecteurs Bronze · 13 DAGs Airflow
-- 9 endpoints API · 3 modèles ML · RGPD complet · ~165 fichiers Python · ~21 000 lignes
-- **198 tests verts / 0 régression** · ruff clean
-- **Sprint 12+ (2026-06-18, commit `862d991`) — Cleanup final audits Pro TCL + Usager** :
-  - **UX "mode démo"** : `model_monitoring.py` 3 docstrings "MLflow ou mock" → "MLflow live" + bandeau warning MLflow reformulé
-  - **Commentaires obsolètes** : `Elu_1_Synthese.py:68` + `Elu_5_Rapport.py:56` corrigés ("fallback mock auto" → "fail loud si DB indispo")
-  - **Code cleanup `force_mock`** : 35 calls sites dans **26 fichiers dashboard/** nettoyés (`force_mock=False` viré, param conservé dans signatures pour rétro-compat)
-  - **Weather widget** : `_weather_icon()` utilise `_LABEL_TO_EMOJI` constant module-level
-  - **Ruff** : 2 trailing whitespace W291 auto-fixées
-  - **Trackers d'audit fermés** : 100% des 30 items des `archive/audits/AUDIT_PRO_TCL_FIXES.md` (14) + `AUDIT_USAGER_FIXES.md` (16) — majorité déjà livrée dans les Sprints 8+ à 11+, ce sprint finit le ménage
-
-### État au 2026-06-12
-
-- 15 pages × 3 personas · 47 widgets · 8 collecteurs Bronze · **13 DAGs Airflow** (10 actifs + 1 cron backfill + 1 TomTom no-op + 1 archive silver-to-minio)
-- 9 endpoints API · 3 modèles ML (XGBoost H+1h focus + SpatioTemporalGCN sur données réelles) · RGPD complet
-- ~165 fichiers Python · ~21 000 lignes · **176 tests verts / 3 SKIP / 7 deselected (integration)** · ruff 54 erreurs cosmétiques (Sprint 9+ : cleanup `_is_demo_mode` + fix W291/I001 en cours)
-- Couche data complète (db_query + data_loader) — `gold.trafic_predictions` repeuplée toutes les 15 min par `dag_inference_xgboost`
-- **Sprint 8 (2026-06-12)** — **3 dettes critiques résolues** :
-  - **ZÉRO MOCK DANS LE PROJET** : suppression complète de `src/data/mock/` (déplacé dans `tests/fixtures/mock_data/`). Tous les widgets, data_loader, db_query, airflow_client fail loud via `DashboardDataError`. 18 fallbacks mock virés.
-  - **Focus H+1h** (Sprint VPS-6) : features XGBoost alignées schéma v0.3.1 (11 features : `speed_kmh, lag_1, lag_2, lag_3, rolling_mean_3, sin_hour, cos_hour, temperature_2m, precipitation, is_vacances, is_ferie`). 1 modèle H+1h uniquement.
-  - **Ingestion Bronze stable** : `air_quality` (72 records) et `chantiers` (428 records) débloqués (dette schéma UNIQUE INDEX sur colonnes extracted). Healthcheck `scripts/healthcheck-vps.sh` 20/20 OK.
-- **Sprint 8+** : durcissement Prometheus/Grafana/Alertmanager (config YAML cassée depuis v2.54, restart-loop résolu). Backups offsite (Sprint VPS-2) toujours actifs.
-- **Sprint 9+ (2026-06-12, commit `7947cb1` + `fc806d2`)** — **Optimisation pipeline** :
-  - **Découplage training/inf** : `dag_live_speed_retrain` (1x/30min, lourd) → `dag_daily_speed_train` (03h00, 1x/jour) + `dag_inference_xgboost` (15min, inférence pure, pas de fit()). **-98% CPU training**.
-  - **Bug critique baseline 30.0** : `XGBoostSpeedModel.predict()` renvoyait 30.0 km/h constant (fallback silencieux) quand modèle pas chargé. **Fail loud** désormais (RuntimeError).
-  - **Mapping LYO ↔ properties_twgid** : `gold.mv_twgid_to_lyo` (Polars + h3-py v4.5 vectorisé, H3 res 10 + k_ring(1)) — 1007 mappings, mean dist 103m. **speed_map graphe : 100% à 30.0 → 62% réel** (24 km/h mean).
-  - **GNN sur données réelles** : `training/stgcn/dataset.py` aligné sur `caroheymes/Architect-IA-final-project`, lit `gold.fact_traffic_series` (889 234 rows × 1544 nœuds × 7 jours, vitesses 1-130 km/h). Plus de fallback `synthetic()`. Volume bind `training/` ajouté à airflow-scheduler.
-  - **Materialised training set** : `gold.xgb_training_set` (quotidien 02h30, self-join H+1h indexé, 358 695 rows en 54s) + covering index `idx_gold_traffic_channel_computed`. XGBoost ne fait plus de `LEAD() OVER` 2.4M rows.
-  - **Carte itinéraire voiture** : polyligne continue pointillée (au lieu de 8 traits dispersés) + cercles H3. Sprint 10+ : snap-to-roads Overpass.
-  - **MinIO sdb2** : migré de `sda1` (80% plein) vers `/mnt/postgres-data/minio` (bind mount sdb2, 43 Go libres). DAG `silver_archive_to_minio` quotidien 04h00 (Parquet snappy + DELETE + VACUUM ANALYZE).
-  - **Fix bugs latents** : `Usager_1_Mon_Trajet.py` import conflict (F811) + undefined names (F821). `time` ajouté à `xgboost_speed.py`. MLflow tracking vérifié (URI propagé).
-  - **Tests** : 170 → 176 verts (Sprint 8+ → 9+), aucune régression.
-  - Voir [archive/sprints/SPRINT_9_OPTIMISATIONS.md](archive/sprints/SPRINT_9_OPTIMISATIONS.md) pour détails.
+### Roadmap TomTom (3 niveaux — voir CHANGELOG.md pour décision utilisateur)
+- ✅ **Niveau 1** : ingestion propre + cohérence sources + détecteur capteur HS
+- ⏸ **Niveau 2** : backtest engine — MAE croisé XGBoost vs TomTom (oracle externe), drift detection Evidently (réactivé 2026-07-01, cf. état ci-dessus)
+- ⏸ **Niveau 3** (optionnel) : TomTom Routing API pour routing voiture temps réel — payant, gain UX marginal vs Niveau 2
 
 ### Phases
 
