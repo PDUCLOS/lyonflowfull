@@ -197,7 +197,7 @@ def get_traffic_for_node(node_idx: int, hours: int = 24) -> pd.DataFrame:
 
 
 def get_traffic_predictions(horizon_minutes: int, limit: int = 200) -> pd.DataFrame:
-    """Prédictions de trafic Gold (XGBoost + GNN si dispo) — H+1h uniquement.
+    """Prédictions de trafic Gold (XGBoost) — H+1h uniquement.
 
     Args:
         horizon_minutes: Horizon de prédiction en minutes. Doit valoir 60
@@ -607,7 +607,7 @@ def get_bottlenecks_summary(top: int = 50) -> pd.DataFrame:
 
 
 def get_spatial_mapping() -> pd.DataFrame:
-    """Mapping nœuds GNN ↔ channel_id (capteurs).
+    """Mapping nœuds spatiaux ↔ channel_id (capteurs).
 
     Returns:
         DataFrame: node_idx, channel_id, matrix_i, matrix_j, h3_id, lat, lng.
@@ -617,17 +617,6 @@ def get_spatial_mapping() -> pd.DataFrame:
                lat, lon AS lng
         FROM gold.dim_spatial_grid_mapping
         ORDER BY node_idx
-    """
-    df = _df_from_query(query)
-    return df
-
-
-def get_gnn_adjacency() -> pd.DataFrame:
-    """Arêtes du graphe GNN (K=2 grid_disk, bidirectionnel)."""
-    query = """
-        SELECT node_u, node_v, is_connected, distance_m
-        FROM gold.dim_gnn_adjacency
-        WHERE is_connected = TRUE
     """
     df = _df_from_query(query)
     return df
@@ -2085,7 +2074,7 @@ def get_velov_transit_coupling_summary() -> pd.DataFrame:
 
 # Sprint 17 Axe 2 — Propagation de congestion (migration 024 v3)
 # Vue matérialisée gold.mv_congestion_propagation_pairs : index des paires
-# de capteurs adjacents (K=2 grid via gold.dim_gnn_adjacency) avec lat/lon
+# de capteurs adjacents (K=2 grid via gold.dim_spatial_adjacency) avec lat/lon
 # des 2 nœuds. PAS de CORR calculée ici (trop coûteux en SQL — testé : 4 min
 # timeout). Le widget propagation_map.py calcule les CORR en Python
 # (pandas/numpy, vectorisé) depuis gold.traffic_features_live (6h × 5min).

@@ -69,6 +69,23 @@ def _require_db_or_raise(source: str) -> None:
         )
 
 
+def _coerce_numeric_columns(df: pd.DataFrame, columns: list[str]) -> pd.DataFrame:
+    """Convertit les colonnes NUMERIC psycopg2 (``Decimal``, dtype object) en ``float64``.
+
+    Sans coercition, ``df.nlargest()``/``sort_values()``/tris Plotly échouent en
+    ``TypeError`` silencieux (cf. fix Sprint 24+ ``bus_traffic_spatial``).
+    """
+    if not columns:
+        return df
+    result = df.copy()
+    for col in columns:
+        if col not in result.columns:
+            logger.warning("_coerce_numeric_columns: colonne '%s' absente du DataFrame, ignorée", col)
+            continue
+        result[col] = pd.to_numeric(result[col], errors="coerce")
+    return result
+
+
 # =============================================================================
 # Trafic routier
 # =============================================================================
@@ -1119,7 +1136,7 @@ def load_velov_itinerary(
 
 
 def load_spatial_mapping() -> pd.DataFrame:
-    """Mapping nœuds GNN ↔ channel_id (capteurs). Sprint 9 — pour la carte GNN.
+    """Mapping nœuds spatiaux ↔ channel_id (capteurs). Sprint 9 — pour la carte trafic.
 
     Raises:
         DashboardDataError: en mode prod, si PostgreSQL ne répond pas.
@@ -1131,7 +1148,7 @@ def load_spatial_mapping() -> pd.DataFrame:
 
 
 def load_traffic_predictions_for_map(horizon_minutes: int = 60, limit: int = 500) -> pd.DataFrame:
-    """Prédictions trafic pour la carte GNN (Sprint 9).
+    """Prédictions trafic pour la carte (Sprint 9).
 
     Raises:
         DashboardDataError: en mode prod, si PostgreSQL ne répond pas.
@@ -1155,7 +1172,7 @@ def load_traffic_combined_for_map() -> pd.DataFrame:
 
     Combine 3 sources par ordre de priorité :
     1. ``gold_live`` — capteurs Grand Lyon < 5 min (le plus frais)
-    2. ``gold_pred`` — prédictions GNN/XGBoost H+1h
+    2. ``gold_pred`` — prédictions XGBoost H+1h
     3. ``tomtom`` — trafic temps réel TomTom (zones hors couverture boucles)
 
     Source : ``gold.v_traffic_combined`` (vue SQL).
@@ -1374,7 +1391,7 @@ def load_network_health_score() -> pd.DataFrame:
 # Sprint 17 Axe 2 — Propagation de congestion (migration 024 v3)
 # =============================================================================
 # Vue matérialisée gold.mv_congestion_propagation_pairs : index des paires
-# de capteurs adjacents (K=2 grid via gold.dim_gnn_adjacency) avec lat/lon
+# de capteurs adjacents (K=2 grid via gold.dim_spatial_adjacency) avec lat/lon
 # des 2 nœuds. PAS de CORR calculée ici (trop coûteux en SQL — testé : 4 min
 # timeout). Le widget propagation_map.py calcule les CORR en Python
 # (pandas/numpy, vectorisé) depuis gold.traffic_features_live (6h × 5min).

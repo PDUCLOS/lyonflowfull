@@ -40,6 +40,7 @@ def _refresh_traffic_costs() -> int:
         user=os.getenv("POSTGRES_USER", "lyonflow"),
         password=os.environ["POSTGRES_PASSWORD"],
         connect_timeout=30,
+        options="-c statement_timeout=240000",  # 240s < execution_timeout Airflow (5min) — sans ça, un timeout Airflow tue le worker mais pas la requête Postgres (I/O bloquant), qui continue à saturer sdb
     )
     try:
         with conn.cursor() as cur:
@@ -55,9 +56,13 @@ with DAG(
     dag_id="refresh_osm_traffic_costs",
     default_args=default_args,
     description="Refresh coûts trafic temps réel sur arêtes OSM (pgRouting)",
-    schedule="*/15 * * * *",
+    # Décalé 3,18,33,48 (au lieu de */15 pile) — évite le thundering herd
+    # :00/:15/:30/:45 avec collect_bronze/dag_inference_xgboost/etc.
+    # (cf. docs/AUDIT_AIRFLOW_POSTGRES_SPRINT24.md item C1).
+    schedule="3,18,33,48 * * * *",
     start_date=datetime(2026, 6, 1),
     catchup=False,
+    max_active_runs=1,
     tags=["maintenance", "routing", "pgrouting"],
 ) as dag:
     refresh = PythonOperator(

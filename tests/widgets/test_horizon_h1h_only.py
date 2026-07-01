@@ -103,16 +103,6 @@ def test_load_traffic_predictions_h1h_only():
     assert "data_age_seconds" in src, "load_traffic doit propager data_age_seconds"
 
 
-def test_gnn_map_h1h_only():
-    """gnn_map : Pro_7 utilise _load_predictions(horizon=60) — H+1h strict."""
-    src = inspect.getsource(
-        __import__(
-            "dashboard.components.widgets.pro_tcl.gnn_map", fromlist=["render_gnn_map_section"]
-        ).render_gnn_map_section
-    )
-    assert "horizon = 60" in src, "render_gnn_map_section doit fixer horizon = 60"
-
-
 def test_model_monitoring_horizons_h1h_only():
     """model_monitoring.horizons = [60] uniquement (pas 6 horizons)."""
     with open("/Users/patriceduclos/Documents/Lyonfull/dashboard/components/widgets/pro_tcl/model_monitoring.py") as f:

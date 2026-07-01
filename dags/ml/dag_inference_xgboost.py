@@ -17,7 +17,7 @@ CPU/RAM). Maintenant :
 from __future__ import annotations
 
 import logging
-from datetime import datetime, timedelta
+from datetime import UTC, datetime, timedelta
 
 import psycopg2
 import psycopg2.extras
@@ -142,7 +142,7 @@ def _predict_and_persist() -> dict:
                 (
                     str(axis["channel_id"]),
                     horizon_h,
-                    datetime.now(),
+                    datetime.now(UTC),
                     speed,
                     etat,
                     color,

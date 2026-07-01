@@ -17,10 +17,10 @@ def render_impact_projection(zone: str | None = None) -> None:
         st.info("Sélectionnez une zone sur la carte pour voir la projection.")
         return
 
-    # Modèle simplifié GNN + XGBoost)
+    # Modèle simplifié XGBoost
     st.warning(
         "⚠️ **Estimation générique** — ces valeurs (-12% VP, +18% bus, +45% vélo, -23% CO₂) "
-        "ne sont PAS calculées pour la zone sélectionnée. modèle ML (GNN + XGBoost) "
+        "ne sont PAS calculées pour la zone sélectionnée. En attente d'un modèle ML (XGBoost) "
         "affiné par zone."
     )
     col1, col2, col3, col4 = st.columns(4)

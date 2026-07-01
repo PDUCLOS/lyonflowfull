@@ -102,15 +102,6 @@ def _load_predictions(horizon: int, limit: int = 1500) -> pd.DataFrame | None:
     return merged if not merged.empty else None
 
 
-def _check_gnn_model(horizon: int) -> dict:
-    """DEPRECATED — conservé en shim no-op pour rétro-compat imports.
-
-    Le projet n'utilise plus le GNN depuis Sprint 24+ (2026-06-30).
-    XGBoost est l'unique modèle en production.
-    """
-    return {"loaded": False, "reason": "GNN archivé (Sprint 24+)", "fallback": "XGBoost (unique)"}
-
-
 # ---------------------------------------------------------------------------
 # Freshness
 # ---------------------------------------------------------------------------
@@ -152,7 +143,11 @@ def _render_pydeck_live_vs_pred(df: pd.DataFrame, height: int, zoom: float = 11.
         st.dataframe(df[cols].head(50), use_container_width=True, hide_index=True)
         return
 
-    df = df.copy()
+    from src.data.data_loader import _coerce_numeric_columns
+
+    df = _coerce_numeric_columns(
+        df, columns=["speed_now", "speed_pred_1h", "ratio_now", "delta_kmh", "vitesse_limite_kmh"]
+    )
     df["color"] = df["ratio_now"].apply(lambda r: [*_ratio_to_rgb(r), 210])
 
     if "vitesse_limite_kmh" in df.columns:

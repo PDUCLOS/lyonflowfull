@@ -1,14 +1,16 @@
 """DAG — Retrain ML models.
 
-XGBoost Speed : hourly
-XGBoost Velov : hourly (2 horizons : H+30min, H+1h)
+XGBoost Speed : hourly, **PAUSED 2026-07-01** — redondant avec
+``dag_daily_speed_train`` (1x/jour 03h) qui lit la même table
+``gold.xgb_training_set`` matérialisée quotidiennement. Un retrain hourly sur
+une source qui ne change qu'1x/jour produit des runs MLflow bit-identiques
+(vérifié : mêmes métriques à 12 décimales sur 24 runs consécutifs).
+XGBoost Velov : hourly, H+1h uniquement (focus H+1h strict, cf. Sprint VPS-6 —
+H+30min n'est plus entraîné).
 
- Toggle ``LYONFLOW_XGBOOST_TRAINING`` permet de désactiver
-le retrain nightly (par exemple quand le GNN a pris le relais en prod).
-Quand Patrice valide le GNN :
-1. Set ``LYONFLOW_MODELS_ACTIVE=stgcn``
-2. Set ``LYONFLOW_XGBOOST_TRAINING=false``
-3. Le DAG skip automatiquement (ce task_id log "skipped" + return 0)
+Toggle ``LYONFLOW_XGBOOST_TRAINING`` (+ ``LYONFLOW_MODELS_ACTIVE``) permet
+de désactiver le retrain nightly. Si désactivé, le DAG skip automatiquement
+(ce task_id log "skipped" + return 0).
 """
 
 from __future__ import annotations
@@ -110,7 +112,7 @@ default_args = {
 # DAG 1: retrain_xgboost_speed (hourly :25 — match CLAUDE.md)
 with DAG(
     dag_id="retrain_xgboost_speed",
-    description="Retrain XGBoost Speed hourly (4 horizons : 5min, 1h, 3h, 6h) — toggleable",
+    description="PAUSED 2026-07-01 (redondant avec dag_daily_speed_train) — Retrain XGBoost Speed H+1h hourly, toggleable",
     default_args=default_args,
     schedule="25 * * * *",
     start_date=datetime(2026, 1, 1),
@@ -127,7 +129,7 @@ with DAG(
 # DAG 2: retrain_xgboost_velov (hourly :50 — match CLAUDE.md)
 with DAG(
     dag_id="retrain_xgboost_velov",
-    description="Retrain XGBoost Velov hourly (2 horizons : 30min, 1h) — toggleable",
+    description="Retrain XGBoost Velov H+1h hourly (focus H+1h strict) — toggleable",
     default_args=default_args,
     schedule="50 * * * *",
     start_date=datetime(2026, 1, 1),

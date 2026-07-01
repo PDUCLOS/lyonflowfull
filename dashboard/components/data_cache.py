@@ -5,7 +5,7 @@ sont ajustes par typologie:
 
 - Live trafic / velov / TCL: 30s (donnees temps reel)
 - KPIs / heatmaps: 60s (agreges 5min cote DB)
-- MLflow / spatial mapping / GNN: 300s (change rarement)
+- MLflow / spatial mapping: 300s (change rarement)
 - Synthese / referentiel: 600s (quasi statique)
 
 Usage cote widgets::
@@ -97,6 +97,17 @@ def cached_xgb_vs_tomtom(hours: int = 24, limit: int = 500) -> pd.DataFrame:
 def cached_xgb_accuracy_summary(hours: int = 168) -> pd.DataFrame:
     """KPIs agrégés par heure (MAE, MAPE, P90) pour la courbe MAE."""
     return dbq.get_xgb_accuracy_summary(hours=hours)
+
+
+@st.cache_data(ttl=TTL_SLOW, show_spinner=False)
+def cached_predictions_vs_actuals(limit: int = 200) -> pd.DataFrame:
+    """Échantillon récent de prédictions XGBoost H+1h.
+
+    ``gold.predictions_vs_actuals`` (backtest) a été archivée Sprint 24+
+    avec le GNN — on utilise ``gold.trafic_predictions`` (live) comme preuve
+    que le service produit bien des prédictions H+1h.
+    """
+    return dbq.get_traffic_predictions(horizon_minutes=60, limit=limit)
 
 
 @st.cache_data(ttl=TTL_SLOW, show_spinner=False)
@@ -212,7 +223,7 @@ def cached_spatial_mapping() -> pd.DataFrame:
 
 @st.cache_data(ttl=TTL_SLOW, show_spinner=False)
 def cached_traffic_predictions_for_map(horizon_minutes: int = 60, limit: int = 500) -> pd.DataFrame:
-    """Cache les prédictions trafic pour la carte GNN.
+    """Cache les prédictions trafic pour la carte.
 
     Args typés explicitement (pas *args/**kwargs) pour garantir le hashage
     correct des arguments par @st.cache_data (sinon UnhashableParamError si

@@ -22,7 +22,6 @@ from src.routing.graph import (
     compute_route_pgrouting,
     compute_route_pgrouting_ksp,
     get_nearest_osm_node,
-    get_node_speed,
 )
 from src.routing.pathfinder import (
     Itinerary,
@@ -41,6 +40,5 @@ __all__ = [
     "compute_route_pgrouting_ksp",
     "get_comparison",
     "get_nearest_osm_node",
-    "get_node_speed",
     "recommend_mode",
 ]

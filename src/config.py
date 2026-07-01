@@ -102,7 +102,7 @@ class MLflowSettings(BaseSettings):
       global. Chaque modèle log dans sa propre expérience dédiée (séparation
       par modèle = bonne pratique MLflow) :
       * ``xgboost_speed`` — XGBoost Speed H+1h (cf. ``src/models/xgboost_speed.py``)
-      * ``xgboost_velov`` — XGBoost Vélov H+30min + H+1h (cf. ``src/models/xgboost_velov.py``)
+      * ``xgboost_velov`` — XGBoost Vélov H+1h (cf. ``src/models/xgboost_velov.py``)
 
       Un setting ``experiment_name`` global avait été introduit par erreur
     (jamais câblé runtime). Supprimé pour éviter la confusion.
@@ -132,18 +132,10 @@ class AirflowSettings(BaseSettings):
 class MLSettings(BaseSettings):
     """Hyperparamètres ML."""
 
-    seq_len: int = Field(default=120, alias="SEQ_LEN")
-    horizons: list[int] = Field(default=[6, 12, 36], alias="HORIZONS")
-    hidden_channels: int = Field(default=128, alias="HIDDEN_CHANNELS")
-    weight_jam: float = Field(default=15.0, alias="WEIGHT_JAM")
-    weight_slow: float = Field(default=5.0, alias="WEIGHT_SLOW")
     default_speed_kmh: float = Field(default=30.0, alias="LYON_DEFAULT_SPEED")
     # Activer l'entraînement hourly/daily XGBoost (toujours actif sur VPS).
     xgboost_training_enabled: bool = Field(default=True, alias="LYONFLOW_XGBOOST_TRAINING")
     # ---- Dashboards préparés mais désactivés par défaut ----
-    # Carte GNN géographique (visualisation des prédictions spatiales).
-    # Préparée dans Pro_7_Model_Monitoring, masquée par défaut.
-    gnn_map_visible: bool = Field(default=False, alias="LYONFLOW_DASHBOARD_GNN_MAP")
     # Carte trafic (visualisation live vs prédit H+1h).
     # Préparée dans Pro/Usager/Elu, masquée par défaut.
     traffic_map_visible: bool = Field(default=False, alias="LYONFLOW_DASHBOARD_TRAFFIC_MAP")

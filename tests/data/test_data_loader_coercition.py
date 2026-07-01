@@ -5,8 +5,8 @@ centralise la conversion des colonnes ``NUMERIC`` PostgreSQL — que psycopg2
 renvoie en ``decimal.Decimal`` (dtype ``object`` pandas) — en ``float64``.
 
 Pourquoi : sans coercition, ``df.nlargest()``, ``df.sort_values()`` et
-les tris Plotly échouent en ``TypeError`` silencieux (cf. fixes
-Sprint 23 ``gnn_map`` et Sprint 24+ ``bus_traffic_spatial``).
+les tris Plotly échouent en ``TypeError`` silencieux (cf. fix
+Sprint 24+ ``bus_traffic_spatial``).
 
 Tests purs (pas de DB) : on construit un DataFrame avec des ``Decimal``
 en main et on vérifie le comportement du helper.

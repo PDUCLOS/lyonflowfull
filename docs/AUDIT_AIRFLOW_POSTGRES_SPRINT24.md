@@ -5,6 +5,17 @@
 > migrations, docker-compose). Les chiffres live se confirment avec
 > `scripts/pg-audit.sh` (lecture seule, à lancer sur le VPS).
 
+> **MAJ 2026-07-01** — Item #1 (tuning Postgres) confirmé appliqué (voir
+> `POSTGRES_TUNING_PROD.md`). **Item #3 (thundering herd :00/:30) toujours PAS
+> fait** — root cause confirmé de 3 incidents I/O récurrents le 2026-07-01
+> (sessions `refresh_traffic_costs`/`mv_sensor_saturation` bloquées 20-45 min,
+> pileup de retries). Mitigation ajoutée en attendant : `statement_timeout=240s`
+> sur les connexions psycopg2 de `refresh_osm_traffic_costs.py` et
+> `refresh_sensor_saturation.py` (empêche le pileup mais ne règle pas la
+> contention de fond — item #3 reste la vraie priorité). `build_spatial_mapping`
+> découvert en échec quotidien depuis 8+ jours (même bug : `execute_query()`
+> sans statement_timeout bloqué sur `silver.trafic_boucles_clean`), à corriger.
+
 ---
 
 ## A. Synthèse — le fix Sprint 24 ne suffit pas seul

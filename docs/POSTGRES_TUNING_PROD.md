@@ -1,6 +1,11 @@
 # PostgreSQL Production Tuning — VPS LyonFlow
 
-> **Statut** : Sprint 24+ (2026-06-29) — **PRÉPARÉ MAIS NON APPLIQUÉ**
+> **Statut** : **APPLIQUÉ** (confirmé live 2026-07-01 : `shared_buffers=1GB`,
+> `work_mem=32MB`, `maintenance_work_mem=256MB`, `effective_cache_size=3GB`,
+> `random_page_cost=1.1`, `effective_io_concurrency=200` tous actifs dans
+> `postgresql.auto.conf`). `wal_compression` reste `off` (non appliqué, gain
+> marginal). `idle_in_transaction_session_timeout` ajouté 2026-07-01 (0 → 10min,
+> hors scope initial de ce doc — root cause d'un incident lock séparé).
 > **Cible** : VPS unique `51.83.159.224` (6 CPU, 12 Go RAM, 2× 100 Go SSD)
 > **Méthode** : `ALTER SYSTEM` (réversible, traçable dans `postgresql.auto.conf`)
 

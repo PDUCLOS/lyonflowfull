@@ -33,13 +33,13 @@ st.markdown(
     du trafic multimodal sur la Métropole de Lyon. Elle fusionne trois
     projets open source en une solution unifiée :
 
-    - `caroheymes/Architect-IA-final-project` (ST-GRU-GNN spatial)
+    - `caroheymes/Architect-IA-final-project` (architecture initiale)
     - `PDUCLOS/LyonFlow` (routing multimodal, ingestion ABC)
     - `PDUCLOS/lyontraffic` (production Medallion, XGBoost live)
 
     ### Les 4 piliers ML
 
-    1. **Trafic routier** — tandem GNN (spatial) + XGBoost (réactif)
+    1. **Trafic routier** — XGBoost (réactif, H+1h)
     2. **Bus TCL** — analyse SIRI Lite + diagnostic infrastructure
     3. **Vélov** — prédiction disponibilité H+30min
     4. **Recommandation trajet** — scoring composite 50% temps + 30% coût + 20% CO₂

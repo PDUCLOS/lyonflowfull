@@ -5,6 +5,83 @@ Toutes les modifications notables de ce projet sont documentées ici.
 Le format suit [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/),
 et ce projet adhère au [Semantic Versioning](https://semver.org/lang/fr/).
 
+## [Unreleased] - 2026-07-01 — Préparation certification RNCP : purge GNN + bugfixes prod + MLOps + DB (pas encore commité)
+
+**600 tests verts** (601 avant retrait 1 test GNN) · ruff clean.
+
+### Retiré
+
+- Tandem GNN (ST-GRU-GNN) — code mort restant après l'archivage Sprint 24+ :
+  `src/routing/graph.py` (`build_routing_graph`, `get_node_speed`,
+  `get_nearest_node`), package `training/` (vide), 6 champs config hyperparams,
+  entrée `stgcn_gnn` de l'API `/models`.
+- `gold.dim_gnn_adjacency` renommée `gold.dim_spatial_adjacency` (migration_040)
+  — la table servait en fait `gold.mv_congestion_propagation_pairs` (Axe 2),
+  indépendante du GNN. Renommage plutôt que suppression.
+
+### Corrigé
+
+- `traffic_map.py` : crash `TypeError: Expected numeric dtype` (colonnes
+  NUMERIC psycopg2/Decimal non coercées avant `.round()`). Nouveau helper
+  `_coerce_numeric_columns` (`src/data/data_loader.py`).
+- `cached_predictions_vs_actuals` manquante → `ImportError` sur
+  `Usager_3_Notre_Modele.py` / `Usager_5_Statut_Service.py` (page crash prod).
+  `gold.predictions_vs_actuals` archivée Sprint 24+ sans mise à jour de ces
+  2 pages (ajoutées après, Sprint 22+). Fix : lit `gold.trafic_predictions`.
+- `model_monitoring.py` : badge "XGB H+60min dispo" toujours ❌ (check fichier
+  local `/app/models/xgb_speed_h60.json` inexistant, container streamlit sans
+  volume `models/`). Fix : check fraîcheur `gold.trafic_predictions`.
+- `refresh_osm_traffic_costs.py`, `refresh_sensor_saturation.py` :
+  `statement_timeout=240s` ajouté — `execution_timeout` Airflow tuait le
+  worker sans annuler la requête Postgres sous-jacente, causant un pileup de
+  sessions zombies (3 incidents I/O récurrents dans la session, 20-45 min
+  chacun).
+- `idle_in_transaction_session_timeout` 0→10min (root cause d'un incident lock
+  antérieur, cf. `docs/AUDIT_DB_2026-06-30.md`).
+
+### Corrigé (suite — préparation certification RNCP, même jour)
+
+- `build_spatial_mapping` : requête bornée 24h (cost -80%, 17.7s vs >8min) +
+  connexion unique réutilisée au lieu de ~30k connexions individuelles. En
+  échec quotidien depuis 8+ jours, run manuel validé en succès (30s).
+- `maintenance_record_network_health` : `execute_query(fetch=True)` — kwarg
+  inexistant, DAG en échec silencieux depuis sa création. `gold.network_health_history`
+  vide depuis toujours (sparkline Élu cassée). Kwarg retiré, testé.
+- `dag_inference_velov.py` (nouveau) : `gold.velov_predictions` n'avait jamais
+  eu une seule ligne — le modèle Vélov s'entraînait mais aucune prédiction
+  n'était jamais persistée. 454 lignes au premier cycle.
+- MLflow Model Registry : client `mlflow` 3.14.0 (dashboard/API) incompatible
+  avec le serveur 2.12.1 — `search_registered_models()` retournait `[]`
+  silencieusement. Pin `mlflow<2.16` + `setuptools<81`, images rebuild.
+- `maintenance_backfill_dim_spatial_lat_lon` réactivé : 1543 lignes
+  `dim_spatial_grid_mapping` sans lat/lon → 0.
+- Drift monitoring réactivé (`refresh_xgb_vs_tomtom` + `daily_drift_report`,
+  mort 25 jours). `retrain_xgboost_speed` pausé (redondant, confirmé bit-identique
+  sur 24 runs/jour).
+- `VACUUM FULL osm.ways` (1,4 Go/3,8M dead → 39 Mo/0) + `silver.meteo_hourly`
+  (718% bloat → 0). Mémoire container Postgres 2,5G → 4G.
+- `silver_archive_to_minio` réactivé (connectivité vérifiée), tournera cette
+  nuit pour archiver `silver.trafic_vitesse_propre` (29 Go).
+
+Bilan DAGs : 25/27 actifs (2 pausés intentionnels et documentés). Rapport
+complet : `docs/AUDIT_CERTIFICATION_2026-07-01.md`.
+
+### Reste ouvert (non-bloquant)
+
+- Thundering herd `:00`/`:30` — 5 DAGs re-décalés, root cause de fond
+  (contention partagée) toujours présente.
+- C2 (retrait `infrastructure_bottlenecks`) — étape 1/5 faite, étapes 3-5
+  reportées (migration widgets + DROP TABLE, ~6h, risque moyen).
+
+### Docs
+
+- Triage complet : 17 docs déplacés vers `archive/{sprints,audits,analysis,misc}/`
+  (specs/rapports livrés, snapshots datés). `archive/README.md` mis à jour.
+  `docs/POSTGRES_TUNING_PROD.md` et `docs/AUDIT_AIRFLOW_POSTGRES_SPRINT24.md`
+  mis à jour avec statut réel.
+
+---
+
 ## [0.12.1] - 2026-06-25 — Sprint 22++ : Fix 9 bugs Elu_2_Bottlenecks — branche sur vraies données DB (branche `vps`)
 
 **Commit** : `80bbb9b` — **658 tests verts (+8 nouveaux)** — ruff clean.

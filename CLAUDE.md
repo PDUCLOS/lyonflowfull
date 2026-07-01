@@ -1,6 +1,6 @@
 # CLAUDE.md — LyonFlow
 
-> Mémoire projet — **dernière mise à jour : 2026-06-25, Sprint 22++ (Elu_2 fix + menu MLOps Usager)** (658 tests verts, dashboard 18 pages / 59 widgets, zéro mock, ruff clean).
+> Mémoire projet — **dernière mise à jour : 2026-07-01, préparation certification RNCP 38777** (600 tests verts, dashboard 18 pages / 59 widgets, zéro mock, ruff clean, 25/27 DAGs actifs). Voir "État au 2026-07-01" ci-dessous et `docs/AUDIT_CERTIFICATION_2026-07-01.md` pour le rapport complet.
 
 ## Projet
 
@@ -12,6 +12,34 @@ LyonFlow est une plateforme MLOps end-to-end de prédiction et d'analyse du traf
 
 **Version actuelle** : **v0.12.1** (Sprints 1-7 + VPS 1-8 + 9+ + 11+ + 12+ + 13 + 13+ + 15+ + 17 + 17+ + 18 + 20 + 21 + 22 + 22+ + 22++) — branche `vps` ACTIVE
 **Statut** : production VPS stable. Voir CHANGELOG.md pour le détail de chaque sprint.
+
+### État au 2026-07-01 (Purge GNN + incidents I/O récurrents + bugfixes prod)
+
+> Changements locaux, **pas encore commités** (règle projet : accord explicite avant commit/push).
+
+- **Purge GNN du code actif** : tandem GNN archivé Sprint 24+ mais des traces actives subsistaient (fonctions mortes, config, docs). Nettoyage complet :
+  - `src/routing/graph.py` : viré `build_routing_graph`, `get_node_speed`, `get_nearest_node` (0 appelant réel, legacy H3 K=2 remplacé par pgRouting Sprint 18).
+  - `training/` : dossier supprimé (package vide depuis l'archivage, 0 import).
+  - `src/config.py` : viré 6 champs hyperparams GNN morts (`seq_len`, `horizons`, `hidden_channels`, `weight_jam`, `weight_slow`, `gnn_map_visible`).
+  - `src/api/main.py`, `pyproject.toml` (per-file-ignores morts), CLAUDE.md (stack/piliers ML/provenance/structure/env vars), dashboard (wording user-facing).
+  - **Piège évité** : `gold.dim_gnn_adjacency` n'était pas mort — sert `gold.mv_congestion_propagation_pairs` (Axe 2, indépendant du GNN). Renommée `gold.dim_spatial_adjacency` (migration_040, appliquée VPS, 12865 lignes préservées) plutôt que supprimée.
+- **Bugs prod trouvés + fixés** (déployés VPS) :
+  - `traffic_map.py` : crash `TypeError: Expected numeric dtype` — colonnes NUMERIC psycopg2 (Decimal) non coercées avant `.round()`. Fix via nouveau helper `_coerce_numeric_columns` (`src/data/data_loader.py`).
+  - `cached_predictions_vs_actuals` manquante dans `data_cache.py` — crash `ImportError` sur `Usager_3_Notre_Modele.py` et `Usager_5_Statut_Service.py`. `gold.predictions_vs_actuals` (backtest) avait été archivée avec le GNN Sprint 24+ sans mettre à jour ces 2 pages (ajoutées après, Sprint 22+). Fix : lit `gold.trafic_predictions` (live) à la place.
+  - `model_monitoring.py` : badge "XGB H+60min dispo" toujours ❌ — `ModelRegistry.is_available()` vérifie un fichier local (`/app/models/xgb_speed_h60.json`) inexistant car le container `streamlit` n'a aucun volume `models/` monté. Fix : check fraîcheur `gold.trafic_predictions` à la place.
+  - Titre carte Pro_1 clarifié : "Trafic — Live (temps réel) vs H+1h (prédit)".
+- **Incidents I/O VPS récurrents (3× dans la session)** : `refresh_traffic_costs` et `mv_sensor_saturation` bloqués 20-45 min en boucle, saturant sdb. Root cause : `execution_timeout` Airflow tue le worker Python mais **pas** la requête Postgres sous-jacente (I/O bloquant insensible à l'annulation) → pileup de sessions zombies à chaque cycle `*/15min`. Fix : `statement_timeout=240s` ajouté aux connexions psycopg2 de `refresh_osm_traffic_costs.py` et `refresh_sensor_saturation.py`. Tuning `idle_in_transaction_session_timeout` 0→10min appliqué (confirmé actif). **Root cause de fond non réglée** : thundering herd `:00`/`:30` (10 DAGs concurrents, cf. `docs/AUDIT_AIRFLOW_POSTGRES_SPRINT24.md` item C1/#3) — la vraie priorité pour éliminer ces incidents plutôt que les mitiger.
+- **`build_spatial_mapping` — RÉSOLU** (était en échec 8+ jours, 2026-06-20 → 2026-06-27). Root cause double : requête sans borne temporelle (10,2M lignes scannées, cost 483k) + ~30 000 connexions Postgres individuelles/run (1 par ligne/arête). Fix : requête bornée 24h (cost 99k, -80%, 17.7s mesuré vs >8min avant) + connexion unique réutiluée + `statement_timeout=480s`. Run manuel validé : succès en 30s, `dim_spatial_grid_mapping` (3946 lignes) + `dim_spatial_adjacency` (58061 arêtes) rafraîchis.
+- **`maintenance_backfill_dim_spatial_lat_lon` — RÉSOLU** (unpaused + déclenché). 1543 lignes `dim_spatial_grid_mapping` sans lat/lon → 0 après backfill.
+- **`maintenance_record_network_health` — bug trouvé + corrigé** : `execute_query(fetch=True)` — kwarg inexistant, DAG en échec silencieux depuis sa création (2026-06-22). `gold.network_health_history` était vide depuis toujours → sparkline santé réseau (widget Élu) cassée. Kwarg retiré, DAG unpaused + testé, première ligne insérée.
+- **`silver_archive_to_minio` — unpaused** (connectivité MinIO vérifiée, buckets OK). Tournera sur son schedule normal (04h00) pour archiver `silver.trafic_vitesse_propre` (29 Go).
+- **DB control — RÉSOLU** : `VACUUM FULL osm.ways` (1,4 Go/3,8M tuples morts → 39 Mo/0 mort, routing revérifié fonctionnel) + `VACUUM FULL silver.meteo_hourly` (718% bloat → 0). `ANALYZE` global relancé (stats remises à jour après recréation container). Mémoire container Postgres 2,5G → **4G** (alignée sur le tuning interne déjà actif).
+- **Nouveau DAG `dag_inference_velov.py`** — miroir de `dag_inference_xgboost.py`. `gold.velov_predictions` était vide depuis toujours (0 ligne, aucun jamais) : le modèle Vélov s'entraînait mais rien ne persistait de prédiction. 454 lignes produites au premier cycle, widget `Usager_1_Mon_Trajet` confirmé sans erreur.
+- **MLflow Model Registry — faux "vide" résolu** : client `mlflow` 3.14.0 (dashboard/API, non épinglé) incompatible avec le serveur 2.12.1 (2.x) — `search_registered_models()` retournait `[]` silencieusement. Fix : `mlflow<2.16` + `setuptools<81` (pkg_resources retiré en v81) épinglés dans `requirements-base.txt`, images `streamlit`/`api` rebuild + redéployées. Confirmé : 6 modèles versionnés, stage Production, visibles depuis tous les containers.
+- **Drift monitoring réactivé** : `refresh_xgb_vs_tomtom` + `daily_drift_report` étaient pausés (dépendance en cascade), `gold.model_drift_reports` mort depuis 2026-06-06 (25 jours). Les deux unpaused, premier cycle confirmé succès.
+- **`retrain_xgboost_speed` pausé intentionnellement** : redondant avec `dag_daily_speed_train` (source `gold.xgb_training_set` ne change qu'1×/jour, un retrain horaire produisait 24 runs MLflow bit-identiques/jour, vérifié à 12 décimales).
+- **Bilan DAGs** : 25/27 actifs (était ~20/26 avec plusieurs en échec silencieux). Les 2 pausés restants sont documentés et intentionnels (`retrain_xgboost_speed`, `refresh_heavy_mv` — ce dernier lié au retrait en cours d'`infrastructure_bottlenecks`, C2).
+- **Docs** : triage complet (voir `archive/README.md` mis à jour) — 17 docs déplacés vers `archive/{sprints,audits,analysis,misc}/` (specs/rapports livrés, snapshots datés). `docs/POSTGRES_TUNING_PROD.md` et `docs/AUDIT_AIRFLOW_POSTGRES_SPRINT24.md` mis à jour avec statut réel. Rapport complet pour certification RNCP : `docs/AUDIT_CERTIFICATION_2026-07-01.md`.
 
 ### État au 2026-06-25 (Sprint 22+ + 22++ — v0.12.1 — Menu MLOps Usager + Elu_2 DB-driven)
 
@@ -56,6 +84,9 @@ LyonFlow est une plateforme MLOps end-to-end de prédiction et d'analyse du traf
 | **Prometheus absent** (intentionnel Sprint 15+) | 🟡 À confirmer | Grafana affiche "no data" sur dashboards provisionnés |
 | **Phase 3 / Phase 4 (K8s, cloud-demo)** | 🌑 Dormant | Aucune action avant AWS/GCP post-Jedha |
 | **Axes spec interdépendances (2/4/6/7)** | ⏸ À planifier | Pas bloquant pour RNCP 38777 |
+| **Thundering herd `:00`/`:30`** (10 DAGs concurrents) | 🟡 Mitigé (2026-07-01) | 5 DAGs re-décalés hors `:00/:15/:30/:45`, root cause de fond (contention CPU/IO partagée) toujours présente mais moins de collisions exactes |
+| **C2 — retrait `infrastructure_bottlenecks`** | 🟡 Étape 1/5 faite (writer pausé) | Étapes 3-5 (migrer 2 widgets + DROP TABLE) reportées à un créneau dédié (~6h, risque moyen) |
+| **`silver.trafic_vitesse_propre` 29 Go** | 🟡 Archivage MinIO relancé (2026-07-01) | DAG unpaused, tournera cette nuit (04h00, ~2h), libérera l'espace progressivement |
 
 **Recommandation par défaut** (si pas de décision user explicite) :
 - rclone : GCP Service Account JSON (pas d'OAuth, automation-friendly)
@@ -243,9 +274,8 @@ Voir [AGENTS.md](AGENTS.md) pour les conventions et la mémoire projet.
 | Orchestration | Apache Airflow 2.9 (**10 DAGs actifs** + 1 cron backfill + 1 archive silver + 1 TomTom */15 + 1 **refresh_osm_traffic_costs** */15) |
 | Base de données | PostgreSQL 16 + PostGIS 3.5 + **pgRouting 3.7.3** (4 schémas : bronze/silver/gold/osm + referentiel). Image Docker : `pgrouting/pgrouting:16-3.5-3.7.3` |
 | ML Tracking / Registry | MLflow 2.12 |
-| ML Trafic (spatial) | ST-GRU-GNN (PyTorch Geometric) — **daily 03h** |
-| ML Trafic (réactif) | XGBoost **H+1h uniquement** (1 modèle, focus fiabilité VPS) — toutes les 30 min |
-| ML Vélov | XGBoost (label encoding, 2 horizons H+30min + H+1h) — toutes les heures :50 |
+| ML Trafic | XGBoost **H+1h uniquement** (1 modèle, focus fiabilité VPS) — toutes les 30 min |
+| ML Vélov | XGBoost (label encoding, H+1h) — toutes les heures :50 |
 | ML Bus | XGBoost delay (phase analyse — collecte SIRI Lite en prod) |
 | API | FastAPI |
 | Dashboard | Streamlit multi-pages (18 pages × 3 personas — 5 Usager + 6 Pro TCL + 5 Élu + Accueil + RGPD + A_Propos) |
@@ -259,20 +289,14 @@ Voir [AGENTS.md](AGENTS.md) pour les conventions et la mémoire projet.
 
 ## 4 Piliers ML
 
-### 1. Trafic routier : GNN + XGBoost en tandem
+### 1. Trafic routier : XGBoost
 
 | Modèle | Rôle | Retrain | Force |
 |--------|------|---------|-------|
-| ST-GRU-GNN | Spatial — propagation congestion entre segments | Daily 03h | Dépendances spatiales, horizons longs |
 | XGBoost speed H+1h | Réactif — changements récents | Toutes les 30 min | Météo/vacances/lags, focus fiabilité |
 
-**Architecture GNN** (SpatioTemporalGCN) :
-- GRU (5 canaux input, hidden_channels) → dernier hidden state
-- 2× GCNConv + LeakyReLU + skip connections
-- Linear → prédictions multi-horizon
-- Graphe : ~1520 nœuds (H3 res 13), ~9540 arêtes K=2
-
-**Ensemble** : les deux prédictions conservées. Recommandation trajet utilise le meilleur par segment (MAE comparé dans `gold.predictions_vs_actuals`).
+> Le tandem GNN (ST-GRU-GNN spatial) a été archivé Sprint 24+ (2026-06-30) —
+> voir table « Supprimé / Archivé ». XGBoost H+1h est l'unique modèle trafic en production.
 
 ### 2. Bus : Analyse → Prédiction
 
@@ -289,9 +313,9 @@ Voir [AGENTS.md](AGENTS.md) pour les conventions et la mémoire projet.
 - XGBoost delay : prédire `delay_seconds` par ligne/segment/heure
 - Features : heure, jour, vacances, météo, vitesse trafic adjacente, historique retard
 
-### 3. Vélov : 2 horizons, économe
+### 3. Vélov : H+1h, économe
 
-- **H+30min et H+1h uniquement** (focus H+1h comme le trafic)
+- **H+1h uniquement** (focus H+1h strict comme le trafic — H+30min plus entraîné depuis Sprint VPS-6, `xgb_velov_h30.pkl` orphelin)
 - Label encoding stations (pas 458 one-hot → économie RAM de 9GB à ~500MB)
 - **Features Sprint 8+ (référentiel schema v0.3.1)** : `station_id_encoded, bikes_lag_1/2/3, rolling_mean_3h, hour_sin/cos, temperature_c, rain_mm, is_vacances, is_ferie`
 - Retrain **hourly :50**
@@ -299,7 +323,7 @@ Voir [AGENTS.md](AGENTS.md) pour les conventions et la mémoire projet.
 ### 4. Recommandation trajet multimodale
 
 Pour chaque mode (voiture, bus/tram, vélov, marche, métro) :
-- **Voiture** : **pgRouting `pgr_dijkstra` sur réseau routier OSM** (Sprint 18) — `compute_itinerary()` → `osm.route_car()` (~87k vertices, ~101k arêtes). Trafic temps réel injecté `*/15 min` via `osm.refresh_traffic_costs()` (41 737 arêtes mappées à capteurs Grand Lyon < 200m). Graphe H3 K=2 conservé uniquement pour le GNN.
+- **Voiture** : **pgRouting `pgr_dijkstra` sur réseau routier OSM** (Sprint 18) — `compute_itinerary()` → `osm.route_car()` (~87k vertices, ~101k arêtes). Trafic temps réel injecté `*/15 min` via `osm.refresh_traffic_costs()` (41 737 arêtes mappées à capteurs Grand Lyon < 200m).
 - **Bus/Tram** : prédiction retard SIRI → temps ajusté
 - **Vélov** : smart routing (Sprint VPS-6) — `plan_velov_trip()` avec scoring composite (distance + vélos/docks dispo), alternatives si borne #1 VIDE/PLEINE, maillage voisines < 200m
 - **Marche** : distance (toujours disponible)
@@ -348,8 +372,8 @@ Chaque table Bronze : `fetched_at TIMESTAMPTZ` + `raw_data JSONB` + colonnes ext
 | Table | Rôle |
 |-------|------|
 | `gold.traffic_features_live` | Features ML : `channel_id, computed_at, speed_kmh, vitesse_limite_kmh, lag_h1/h2/h3, delta_h1, rolling_mean_h1, sin_hour, cos_hour, sin_dow, cos_dow, temperature_2m, precipitation, is_vacances, is_ferie, lat, lon` |
-| `gold.dim_spatial_grid_mapping` | Capteurs → nœuds GNN (H3 res.13, cell_to_local_ij). ~1520 nœuds, PK = `properties_twgid` (Sprint 8 hotfix 5 : backfill lat/lon via h3-py 4.5) |
-| `gold.dim_gnn_adjacency` | Arêtes graphe (K=2 grid_disk, bidirectionnel + self-loops) |
+| `gold.dim_spatial_grid_mapping` | Capteurs → nœuds spatiaux (H3 res.13, cell_to_local_ij). ~1520 nœuds, PK = `properties_twgid` (Sprint 8 hotfix 5 : backfill lat/lon via h3-py 4.5) |
+| `gold.dim_spatial_adjacency` | Arêtes graphe (K=2 grid_disk, bidirectionnel + self-loops) — sert `gold.mv_congestion_propagation_pairs` (Axe 2) |
 | `gold.fact_traffic_series` | Séries temporelles normalisées (5 canaux) |
 | **`gold.trafic_predictions`** | Prédictions pré-calculées. Schéma v0.3.1 : `axis_key, horizon_h (1), calculated_at, speed_pred, etat_pred, color, vitesse_limite_kmh, label, model_version, lat, lon`. Alimentée toutes les 30 min par `dag_live_speed_retrain` (focus H+1h depuis Sprint VPS-6) |
 | `gold.predictions_vs_actuals` | Backtesting pour comparaison modèles |
@@ -405,7 +429,6 @@ Chaque table Bronze : `fetched_at TIMESTAMPTZ` + `raw_data JSONB` + colonnes ext
 */15  refresh_osm_traffic_costs (Sprint 18 — injecte vitesses capteurs dans osm.ways.cost, ~20s)
 :25  Retrain XGBoost trafic (legacy, 4 horizons, ~10 min)
 :50  Retrain Vélov (2 horizons : H+30min, H+1h, ~5 min)
-03h  Retrain GNN daily (lourd, GPU si dispo)
 04h  Data quality daily (6 checks) + bottleneck analysis
 06h  Drift monitoring Evidently
 1er du mois: refresh calendrier scolaire + jours fériés
@@ -471,7 +494,6 @@ Le widget `dashboard/components/widgets/pro_tcl/line_kpis.py` expose :
 
 | Composant | Repo source | Raison |
 |-----------|-------------|--------|
-| ST-GRU-GNN modèle + dataset | FinalProjet | Architecture validée, matrice adjacence H3 |
 | Pipeline Medallion psycopg2 | trafficlyon | Production-proven, pas de Polars dans Airflow |
 | Structure DAGs | trafficlyon | Le plus mature (10 DAGs testés) |
 | Dashboard 18+ pages | trafficlyon | Le plus complet |
@@ -500,6 +522,7 @@ Le widget `dashboard/components/widgets/pro_tcl/line_kpis.py` expose :
 | **Elu_2 économie hardcodée** (`5 + i`, `2.5 - i * 0.15`, `18 + i * 3`, `6 + i * 2`) | **VIRÉ Sprint 22++** (v0.12.1). Données désormais dérivées de `gold.mv_bus_traffic_spatial` (gain = `avg_delay_s/60*0.5`, cout = `f(diagnosis)`, ROI = formule unifiée, voyageurs = `n_obs × 36`). |
 | **`gold.infrastructure_bottlenecks` (JOIN global par heure)** | **VIRÉ Sprint 22++** (v0.12.1). Remplacé par `gold.mv_bus_traffic_spatial` (MV spatiale 0.001° ≈ 100 m, refresh CONCURRENTLY */15 min). |
 | **Dict coords hardcodé `bottleneck_map.py`** | **VIRÉ Sprint 22++** (v0.12.1). 10 noms de rues jamais matchés (`zone` = `"L66 ; 20h"`). Remplacé par lecture `b.get("lat"/"lon")` réelles depuis la MV spatiale. |
+| **ST-GRU-GNN (tandem GNN+XGBoost trafic)** | **VIRÉ Sprint 24+** (2026-06-30, code) puis nettoyage complet des mentions actives 2026-07-01. Modèle FinalProjet (`training/stgcn/`, `dags/ml/retrain_gnn.py`, `src/models/stgcn_wrapper.py`) conservé pour traçabilité RNCP dans `archive/legacy/gnn/`. XGBoost H+1h est l'unique modèle trafic en prod. `gold.dim_gnn_adjacency` renommée `gold.dim_spatial_adjacency` (toujours utilisée par Axe 2 propagation congestion, indépendante du GNN) — migration à appliquer. |
 | **`docs/DASHBOARD_PAGES.md` (pages obsolètes Favoris/Files/Pro_5_Export)** | **CORRIGÉ Sprint 22++** (v0.12.1). Pages remplacées par Usager_3/4/5 (MLOps citoyen). Pro_5_Export abandonné depuis Sprint 13+ — export via Elu_5_Rapport. |
 
 ---
@@ -550,7 +573,7 @@ make tls-status             # statut cert Let's Encrypt
 
 ### Branches dormantes (futur AWS/GCP, NE PAS MERGER)
 
-- `kubernetes` — Phase K8s complète (Kustomize + monitoring + GPU GNN). Cible : EKS / GKE futur.
+- `kubernetes` — Phase K8s complète (Kustomize + monitoring). Cible : EKS / GKE futur.
 - `cloud-demo` — Phase démo Jedha (Scaleway Kapsule éphémère). Cible : POC cloud public ponctuel.
 
 ---
@@ -587,12 +610,10 @@ lyonflow/
 │   │   └── tcl_lines.py        # NOUVEAU Sprint 8 : 10 lignes TCL emblématiques
 │   ├── ingestion/          # 8 collecteurs (DataCollector ABC)
 │   ├── transformation/     # feature engineering
-│   ├── models/             # GNN, XGBoost H+1h focus, delay predictor
+│   ├── models/             # XGBoost H+1h focus, delay predictor
 │   ├── routing/            # pathfinder_multimodal (Vélov smart + voiture Dijkstra)
 │   ├── monitoring/         # Evidently, drift
 │   └── api/                # FastAPI endpoints
-├── training/
-│   └── stgcn/              # GNN model, dataset, train, HPO
 ├── scripts/
 │   ├── sql/                # 20+ migrations (referentiel, vues matérialisées, audit)
 │   ├── maintenance/        # backfill scripts
@@ -608,6 +629,7 @@ lyonflow/
 │   └── fixtures/mock_data/     # NOUVEAU Sprint 8 : mocks déplacés ici
 ├── docs/
 │   ├── ADR/                # 4 ADRs (architecture, personas, docker, psycopg2)
+│   ├── RCA/                # Root Cause Analysis (post-mortems incidents)
 │   ├── ARCHITECTURE.md
 │   ├── API.md
 │   ├── DATA_GOVERNANCE.md
@@ -616,13 +638,13 @@ lyonflow/
 │   ├── MONITORING.md
 │   ├── VPS_HARDENING.md
 │   ├── RUNBOOK.md
-│   ├── PLAN_NO_MOCK_VPS.md
-│   ├── PROJECT_STATUS_AND_GOALS.md
 │   ├── REPO_STRUCTURE.md
 │   ├── GIT_STRUCTURE.md
 │   ├── CONTROLE_VPS_VS_CLOUD_DEMO.md
-│   ├── SPEC_OPTIMISATION_INTERDEPENDANCES.md  # Sprint 15+ : 7 axes optimisation
-│   └── SPEC_COMPARATEUR_MODES_USAGER.md       # Sprint 15+ : comparateur 3 modes
+│   ├── POSTGRES_DATABASE_REFERENCE.md   # référentiel DB introspecté (live)
+│   ├── POSTGRES_TUNING_PROD.md          # tuning Postgres, statut appliqué
+│   ├── AUDIT_AIRFLOW_POSTGRES_SPRINT24.md  # actionable, plan D partiel
+│   └── SPEC_OPTIMISATION_INTERDEPENDANCES.md  # actionable : axes 2/4/6/7 restants
 ├── SPRINT_*.md             # rapports de sprint (archivés — voir archive/sprints/)
 └── kubernetes/             # Phase 3 dormante
 ```
@@ -641,11 +663,6 @@ lyonflow/
 | `LYONFLOW_API_KEY` | oui | FastAPI auth |
 | `AIRFLOW_FERNET_KEY` | oui | Chiffrement Airflow |
 | `LYONFLOW_DEMO_MODE` | oui (Sprint 8) | **Doit être `0` en prod** (helper retourne toujours False) |
-| `SEQ_LEN` | non (120) | Longueur séquence GNN |
-| `HORIZONS` | non (6,12,36) | Horizons prédiction GNN |
-| `HIDDEN_CHANNELS` | non (128) | Dimension GRU/GCN |
-| `WEIGHT_JAM` | non (15) | Pénalité congestion (staircase loss) |
-| `WEIGHT_SLOW` | non (5) | Pénalité ralenti |
 | `LYON_DEFAULT_SPEED` | non (30.0) | Vitesse imputation fallback |
 | `LYON_LATITUDE` | non (45.7640) | Latitude centre Lyon (collecteurs Open-Meteo, chantiers) |
 | `LYON_LONGITUDE` | non (4.8357) | Longitude centre Lyon |
@@ -662,7 +679,7 @@ ruff format --check .
 
 # Type check (Sprint 15+ v0.7.1 : mypy clean, plus de --ignore-missing-imports CLI)
 # La config vit dans pyproject.toml [tool.mypy] + explicit_package_bases = true.
-mypy dags/ training/ src/
+mypy dags/ src/
 
 # Tests (Sprint 8+ : addopts inclut "-m not integration")
 pytest tests/ -v --tb=short

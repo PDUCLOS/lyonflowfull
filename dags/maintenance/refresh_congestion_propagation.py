@@ -14,7 +14,7 @@ Notes :
   (cree dans migration_024 v3).
 * En cas d'echec CONCURRENTLY, fallback REFRESH standard.
 * Schedule */30 min : la table des paires ne bouge que si le graphe
-  GNN change (très rare). Le widget calcule les CORR à la volée depuis
+  d'adjacence spatiale change (très rare). Le widget calcule les CORR à la volée depuis
   gold.traffic_features_live (rafraîchi toutes les 5 min côté
   transform_silver_to_gold), donc pas besoin d'un refresh plus rapide.
 * Logs structures pour monitoring Prometheus.
@@ -61,7 +61,9 @@ with DAG(
         "(propagation congestion, K=2 grid pairs, migration 024 v3)"
     ),
     default_args=default_args,
-    schedule_interval="*/30 * * * *",  # toutes les 30 min
+    # Décalé 10,40 (au lieu de */30 pile) — évite le thundering herd :00/:30
+    # (cf. docs/AUDIT_AIRFLOW_POSTGRES_SPRINT24.md item C1).
+    schedule_interval="10,40 * * * *",
     start_date=datetime(2026, 6, 20),
     catchup=False,
     max_active_runs=1,

@@ -1,9 +1,9 @@
 """Widget — Model Monitoring (registry MLflow, métriques, drift).
 
 Affiche :
-- Registry des modèles (XGBoost Speed, XGBoost Velov, GNN)
+- Registry des modèles (XGBoost Speed, XGBoost Velov)
 - Versions actives + staging
-- **Sprint 8** : Status du Model Registry (XGBoost vs GNN, toggle actif)
+- **Sprint 8** : Status du Model Registry
 - Métriques par modèle (MAE, RMSE, R²)
 - Historique entraînement (charts) — Sprint 9+ : MLflow runs history
 - Comparaison entraînement actuel vs précédent
@@ -193,11 +193,8 @@ def _render_model_registry_table(models: list[dict]) -> None:
 def render_model_registry_status() -> None:
     """Sprint 8 — Affiche le statut live du Model Registry.
 
-    Sprint 15+ (audit Pro TCL B-20) : le modèle GNN/STGCN est paused
-    (DAG ``retrain_gnn`` désactivé, modèle pas réentraîné). On ne
-    montre plus ses traces dans le dashboard pour éviter l'affichage
-    ``GNN H+60min dispo = ❌`` trompeur. Le code ModelRegistry reste
-    en place (rétro-compat) mais l'UI n'expose plus que XGBoost.
+    Sprint 24+ : le tandem GNN/STGCN est archivé (``archive/legacy/gnn/``).
+    XGBoost est l'unique modèle en production, seul exposé dans l'UI.
 
     Section ajoutée pour permettre à Patrice de visualiser en temps réel
     le statut du modèle XGBoost actif en prod.
@@ -206,10 +203,7 @@ def render_model_registry_status() -> None:
 
     # Import paresseux pour ne pas casser en cas de modèle manquant
     try:
-        from src.ml.model_registry import (
-            ModelRegistry,
-            is_xgboost_training_enabled,
-        )
+        from src.ml.model_registry import is_xgboost_training_enabled
     except ImportError as e:
         st.warning(f"Model Registry indispo : {e}")
         return
@@ -241,11 +235,20 @@ def render_model_registry_status() -> None:
             delta_color="normal" if is_active else "inverse",
         )
     with col2:
-        # Show 1 horizon representative
-        r60 = ModelRegistry.get(60)
+        # ModelRegistry.is_available() vérifie un fichier local
+        # (self.model_dir / "xgb_speed_h60.json") — le container streamlit
+        # n'a AUCUN volume models/ monté (cf. docker-compose.yml), donc ce
+        # check renvoie toujours False ici, indépendamment de l'état réel
+        # du modèle (qui tourne dans le container airflow). Faux ❌ trompeur,
+        # même symptôme que celui documenté pour le GNN plus haut.
+        # Fix : on vérifie plutôt la fraîcheur des prédictions en DB
+        # (gold.trafic_predictions, produites par dag_inference_xgboost).
+        from dashboard.components.data_cache import cached_predictions_vs_actuals
+
+        pred_df = cached_predictions_vs_actuals(limit=1)
         st.metric(
             "XGB H+60min dispo",
-            "✅" if r60.xgboost and r60.xgboost.is_available() else "❌",
+            "✅" if not pred_df.empty else "❌",
         )
 
     # Detail table
@@ -256,13 +259,13 @@ def render_model_registry_status() -> None:
     # (compat ModelRegistry) mais marqués "non entraînés".
     horizons = [60]
     for h in horizons:
-        reg = ModelRegistry.get(h)
-        s = reg.status()
+        # Même fix que ci-dessus : fraîcheur DB plutôt que fichier local
+        # (reg.status()["xgboost_available"] toujours False dans ce container).
         col1, col2 = st.columns([1, 3])
         with col1:
             st.markdown(f"**H+{h}min**")
         with col2:
-            color = COLORS["status_ok"] if s["xgboost_available"] else COLORS["text_disabled"]
+            color = COLORS["status_ok"] if not pred_df.empty else COLORS["text_disabled"]
             st.markdown(
                 f'<span style="color:{color};">●</span> XGBoost',
                 unsafe_allow_html=True,
@@ -276,9 +279,8 @@ def render_model_registry_status() -> None:
 def render_metrics_comparison() -> None:
     """Affiche les métriques du modèle XGBoost (focus H+1h).
 
-    Sprint 15+ (audit Pro TCL B-20) : le modèle GNN/STGCN est paused
-    et n'est plus affiché. Cette section montre les métriques du
-    champion XGBoost uniquement.
+    Sprint 24+ : le tandem GNN/STGCN est archivé. Cette section montre
+    les métriques du champion XGBoost uniquement.
     """
     st.markdown("##### 📊 Métriques XGBoost Speed H+60min")
 
@@ -340,8 +342,7 @@ def render_metrics_comparison() -> None:
 
     st.caption(
         "💡 Modèle focus H+1h, réentraîné nightly par "
-        "``dag_daily_speed_train``. Sprint 15+ : GNN/STGCN paused, "
-        "les traces ont été retirées du dashboard."
+        "``dag_daily_speed_train``."
     )
 
 
@@ -600,7 +601,7 @@ def render_velov_model_analysis() -> None:
             else:
                 st.caption("Colonnes confidence_* absentes — modèle sans CI.")
 
-    # Backtest MAE : retiré Sprint 24+ (table gold.predictions_vs_actuals archivée avec le GNN).
+    # Backtest MAE : retiré Sprint 24+ (table gold.predictions_vs_actuals archivée).
     # Le suivi MAE reste via MLflow Registry (section 1 de Pro_7).
     st.caption("Backtest détaillé : voir la section MLflow Model Registry ci-dessus (MAE/RMSE par run d'entraînement).")
 
@@ -700,7 +701,7 @@ def render_data_quality_panel() -> None:
 
 def render_model_monitoring_page() -> None:
     """Page complète Model Monitoring (point d'entrée)."""
-    # Sprint 8 — Status live du toggle XGBoost vs GNN (en haut)
+    # Sprint 8 — Status live du Model Registry (en haut)
     render_model_registry_status()
     st.markdown("---")
     render_model_registry()

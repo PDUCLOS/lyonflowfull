@@ -79,7 +79,9 @@ with DAG(
     ),
     default_args=default_args,
     start_date=datetime(2026, 6, 29),
-    schedule_interval="*/30 * * * *",
+    # Décalé 15,45 (au lieu de */30 pile) — évite le thundering herd :00/:30
+    # (cf. docs/AUDIT_AIRFLOW_POSTGRES_SPRINT24.md item C1).
+    schedule_interval="15,45 * * * *",
     catchup=False,
     max_active_runs=1,
     tags=["transform", "gold", "heavy"],

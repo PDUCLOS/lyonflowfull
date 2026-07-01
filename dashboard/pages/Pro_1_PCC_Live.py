@@ -48,7 +48,7 @@ with q1:
     st.markdown("##### 🗺️ NW — Carte live")
     map_choice = st.radio(
         "Carte",
-        ["🚗 Trafic live vs H+1h", "🚌 Bus GPS"],
+        ["🚗 Trafic — Live (temps réel) vs H+1h (prédit)", "🚌 Bus GPS"],
         horizontal=True,
         key="pro1_map_choice",
         label_visibility="collapsed",

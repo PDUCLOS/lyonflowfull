@@ -61,6 +61,7 @@ def refresh_sensor_saturation_dag() -> None:
             user=os.getenv("POSTGRES_USER", "lyonflow"),
             password=os.environ["POSTGRES_PASSWORD"],
             connect_timeout=30,
+            options="-c statement_timeout=240000",  # 240s < execution_timeout Airflow (5min) — sans ça, un timeout Airflow tue le worker mais pas la requête Postgres (I/O bloquant), qui continue à saturer sdb
         )
         try:
             with conn.cursor() as cur:

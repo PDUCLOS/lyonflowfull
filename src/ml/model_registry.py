@@ -4,7 +4,7 @@ Le projet a archivé le tandem GNN+XGBoost (Sprint 24+, 2026-06-30). Seul
 XGBoost reste en production :
 
 * ``XGBoostSpeedModel`` — prédiction vitesse trafic H+1h (focus principal)
-* ``XGBoostVelovModel`` — prédiction disponibilité Vélov H+30min / H+1h
+* ``XGBoostVelovModel`` — prédiction disponibilité Vélov H+1h
 
 Pour la traçabilité (RNCP 38777), l'ancien code GNN/STGCN est conservé
 dans ``archive/legacy/gnn/`` (training/stgcn/, src/models/stgcn_wrapper.py,

@@ -137,17 +137,7 @@ ignore = [
 "src/data/db_query.py" = ["N806", "RUF001", "RUF002", "RUF003"]
 "src/data/data_loader.py" = ["N806", "RUF001", "RUF002", "RUF003"]
 "src/data/mock/*.py" = ["RUF001", "RUF002", "RUF003"]
-"src/models/stgcn_wrapper.py" = ["N806"]
 "src/ingestion/trafic_grandlyon.py" = ["RUF002"]  # × dans docstring (format rapport)
-"training/**/*.py" = [
-    "N806",  # X_train/Y_train (math convention)
-    "N803",  # X, Y, dt en arg (math convention)
-    "N805",  # inner_self pour closures
-    "RUF001", "RUF002", "RUF003",  # emojis docstrings
-    "B905",  # zip strict (false positive avec tensors)
-    "E402",  # imports après docstrings
-]
-"dags/ml/retrain_gnn.py" = ["E402", "B904"]
 
 [tool.ruff.format]
 quote-style = "double"
@@ -165,7 +155,7 @@ warn_unused_ignores = true
 warn_redundant_casts = true
 no_implicit_optional = true
 check_untyped_defs = false
-# Sprint 15+ mypy-clean : training/ et src/ sont des packages déclarés via __init__.py,
+# Sprint 15+ mypy-clean : src/ est un package déclaré via __init__.py,
 # mais on garde explicit_package_bases par sécurité (mypy sait que chaque racine est un
 # package et ne tente plus de résoudre les fichiers en modules top-level).
 explicit_package_bases = true

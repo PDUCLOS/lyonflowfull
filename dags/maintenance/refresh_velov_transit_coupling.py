@@ -61,7 +61,9 @@ with DAG(
         "(couplage Velov x TC, z-score report modal, migration 023)"
     ),
     default_args=default_args,
-    schedule_interval="*/15 * * * *",  # toutes les 15 min
+    # Décalé 12,27,42,57 (au lieu de */15 pile) — évite le thundering herd
+    # :00/:15/:30/:45 (cf. docs/AUDIT_AIRFLOW_POSTGRES_SPRINT24.md item C1).
+    schedule_interval="12,27,42,57 * * * *",
     start_date=datetime(2026, 6, 20),
     catchup=False,
     max_active_runs=1,

@@ -20,7 +20,7 @@ archive/
 
 ## Contenu détaillé
 
-### `sprints/` (9 rapports)
+### `sprints/` (18 rapports/specs)
 
 | Fichier | Sujet |
 |---------|-------|
@@ -32,9 +32,18 @@ archive/
 | `SPRINT_VPS-6_REPORT.md` | Référentiel lieux (lieux_lyon/lieux_transports/lieux_calendrier) |
 | `SPRINT_VPS-8_REPORT.md` | Sprint 8 (zero mock + focus H+1h + backfill lat/lon) |
 | `SPRINT_9_OPTIMISATIONS.md` | Découplage training/inf + GNN données réelles + MinIO sdb2 |
-| `SPRINT_11_REPORT.md` | Sprint 11+ (libellés TCL lisibles + OOM-kill SIRI fix + reorg docs) — **dernier sprint** |
+| `SPRINT_11_REPORT.md` | Sprint 11+ (libellés TCL lisibles + OOM-kill SIRI fix + reorg docs) |
+| `SPEC_SPRINT_16.md` | Spec Sprint 16 — validation modèle + qualité données + durées réelles |
+| `SPEC_COMPARATEUR_MODES_USAGER.md` | Spec Sprint 15+ — comparateur 3 modes (implémenté) |
+| `SPEC_PGROUTING_INTEGRATION.md` | Spec Sprint 18 — pgRouting voiture sur OSM (implémenté, en prod) |
+| `SPEC_EVIDENTLY_CONFIGURATION.md` | Spec Sprint 16 Axe A — config Evidently/drift detection (implémenté) |
+| `MODIFICATIONS_IA_SPRINT22.md` | Résumé Sprint 22+ — optimisations UX/RAM (lazy loading, onglets) |
+| `SPEC_SPRINT_20_UX.md` | Spec Sprint 20 — amélioration UX dashboard (implémenté) |
+| `SPEC_SPRINT_21.md` | Spec Sprint 21 — quantile regression + sparkline + docs cleanup |
+| `SPRINT_21_REPORT.md` | Rapport Sprint 21 — livré v0.11.0 |
+| `SPEC_FIX_ELU2_BOTTLENECKS.md` | Spec Sprint 22++ — 9 bugs Elu_2 (implémenté, v0.12.1) |
 
-### `audits/` (12 rapports)
+### `audits/` (18 rapports)
 
 | Fichier | Sujet |
 |---------|-------|
@@ -50,8 +59,12 @@ archive/
 | `AUDIT_PIPELINE_2026-06-12.md` | Audit pipeline complet (mock résiduels, schéma v0.3.1) |
 | `AUDIT_PRO_TCL_FIXES.md` | Tracker corrections Pro TCL (8/14 faits, 6 cosmétiques restants) |
 | `AUDIT_USAGER_FIXES.md` | Tracker corrections Usager (11/16 faits, 5 cosmétiques restants) |
+| `RAPPORT_VPS_2026-06-22.md` | Rapport ops cleanup VPS (sda1 88%→47%, backup timer créé) |
+| `SPRINT_24_FIX_GOLD_STALE.md` | Incident gold stale (0 lignes TCL, carte indispo) — fix livré |
+| `AUDIT_DB_2026-06-30.md` | Audit DB (migrations, tuning, bloat, MV) — snapshot 2026-06-30 |
+| `AUDIT_PROJET_2026-06-30.md` | Audit projet (P0 dérive source↔runtime, réconcilié le jour même) |
 
-### `analysis/` (4 docs)
+### `analysis/` (6 docs)
 
 | Fichier | Sujet |
 |---------|-------|
@@ -59,12 +72,17 @@ archive/
 | `analysis_lyonflow.md` | Analyse repo `PDUCLOS/LyonFlow` (DAGs, ingestion, routing) |
 | `analysis_trafficlyon.md` | Analyse repo `PDUCLOS/lyontraffic` (Medallion, dashboard) |
 | `etude_marche_ui.md` | Étude de marché UI (3 personas, wireframes) |
+| `INVENTAIRE_WIDGETS_2026-06-23.md` | Inventaire exhaustif widgets Streamlit — snapshot 2026-06-23 |
+| `INVENTAIRE_WIDGETS_CALCULS_2026-06-23.md` | Inventaire widgets — code/logique/calculs — snapshot 2026-06-23 |
 
-### `misc/` (1 doc)
+### `misc/` (3 docs)
 
 | Fichier | Sujet |
 |---------|-------|
 | `B4_CANCELLED.md` | Bloc 4 Jedha annulé (détails décision) |
+| `TODO_2026-06-25.md` | Ancien TODO.md (P1/P2/P3 Sprint 20-22, tous DONE) — remplacé par CLAUDE.md §Décisions ouvertes |
+| `AUDIT_PIPELINE_DATA_2026-06-20.docx` | Audit pipeline data (Word, format legacy) — snapshot 2026-06-20 |
+| `deploy-sprint24.sh` | Script de déploiement ciblé Sprint 24 (one-off, déjà exécuté), référençait déjà `gnn_map.py` (mort) avant même le nettoyage GNN |
 
 ## Pourquoi ne pas supprimer ?
 
@@ -87,6 +105,9 @@ Les documents suivants restent à la racine ou dans `docs/` :
 - `CONTRIBUTING.md`, `SECURITY.md`, `LICENSE`, `NOTICE` — fichiers standard
 - `docs/ARCHITECTURE.md`, `API.md`, `DEPLOYMENT.md`, `RUNBOOK.md`, `MONITORING.md`,
   `VPS_HARDENING.md`, `DASHBOARD_PAGES.md`, `DATA_GOVERNANCE.md`,
-  `REPO_STRUCTURE.md`, `GIT_STRUCTURE.md`, `PROJECT_STATUS_AND_GOALS.md`,
-  `PLAN_NO_MOCK_VPS.md`, `CONTROLE_VPS_VS_CLOUD_DEMO.md`
+  `REPO_STRUCTURE.md`, `GIT_STRUCTURE.md`, `CONTROLE_VPS_VS_CLOUD_DEMO.md`,
+  `POSTGRES_DATABASE_REFERENCE.md`, `POSTGRES_TUNING_PROD.md`,
+  `AUDIT_AIRFLOW_POSTGRES_SPRINT24.md` (actionable — plan D pas complet),
+  `SPEC_OPTIMISATION_INTERDEPENDANCES.md` (actionable — axes 2/4/6/7 restants)
 - `docs/ADR/` — Architecture Decision Records (référencés depuis CLAUDE.md)
+- `docs/RCA/` — Root Cause Analysis (post-mortems incidents, historique vivant)

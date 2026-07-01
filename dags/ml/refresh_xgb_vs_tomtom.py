@@ -78,7 +78,9 @@ with DAG(
     dag_id=DAG_ID,
     default_args=DEFAULT_ARGS,
     description=("Sprint 16 Axe A — Refresh MV gold.mv_xgb_vs_tomtom (backtest XGBoost vs TomTom)"),
-    schedule_interval="*/30 * * * *",
+    # Décalé 5,35 (au lieu de */30 pile) — évite le thundering herd :00/:30
+    # (cf. docs/AUDIT_AIRFLOW_POSTGRES_SPRINT24.md item C1).
+    schedule_interval="5,35 * * * *",
     start_date=datetime(2026, 6, 20),
     catchup=False,
     max_active_runs=1,

@@ -103,7 +103,10 @@ services:
       resources:
         limits:
           cpus: "1.0"
-          memory: 2.5G
+          # 2.5G → 4G (2026-07-01) : shared_buffers=1GB + maintenance_work_mem=256MB
+          # + work_mem=32MB×N connexions approchaient déjà la limite 2.5G
+          # (94% mem usage observé) — cf. docs/POSTGRES_TUNING_PROD.md Option A.
+          memory: 4G
 
   # ---------------------------------------------------------------------------
   # Redis — SUPPRIMÉ Sprint 15+ (2026-06-19)

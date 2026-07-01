@@ -2,8 +2,8 @@
 
  pgRouting remplace NetworkX H3 pour le routing voiture.
 - `compute_itinerary` appelle `osm.route_car()` côté DB → tests marqués @pytest.mark.integration
-- `shortest_path` et `get_nearest_node` retirés (pgRouting fait tout côté SQL)
-- `build_routing_graph` et `get_node_speed` conservés pour le GNN
+- `shortest_path`, `get_nearest_node`, `build_routing_graph`, `get_node_speed` retirés
+  (pgRouting fait tout côté SQL, GNN archivé Sprint 24+)
 """
 
 from __future__ import annotations
@@ -25,34 +25,13 @@ def test_routing_module_importable():
         compute_itinerary,
         compute_route_pgrouting,
         get_nearest_osm_node,
-        get_node_speed,
     )
 
     assert callable(compute_itinerary)
     assert callable(compute_route_pgrouting)
     assert callable(get_nearest_osm_node)
-    assert callable(get_node_speed)
     assert Itinerary is not None
     assert ItinerarySegment is not None
-
-
-def test_build_routing_graph_for_gnn():
-    """build_routing_graph reste utilisable pour le GNN (H3 KNN legacy)."""
-    import os
-
-    from src.routing.graph import build_routing_graph
-
-    os.environ["APP_ENV"] = "development"
-
-    graph = build_routing_graph(use_cache=False)
-    assert graph is not None
-    assert graph.number_of_nodes() > 0, "Mock graphe doit avoir des nœuds"
-    assert graph.number_of_edges() > 0, "Mock graphe doit avoir des arêtes"
-
-    # Vérifier les attributs des nœuds (utilisés par le GNN)
-    for _node_id, data in graph.nodes(data=True):
-        assert "length_m" in data
-        assert "current_speed_kmh" in data
 
 
 # =============================================================================

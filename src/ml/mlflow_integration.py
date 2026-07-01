@@ -7,7 +7,7 @@
 * **Graceful degradation** : si MLflow n'est pas installé ou si le
   serveur est down, les fonctions retournent des no-ops (fallback
   stdout logging) au lieu de planter.
-* **Pattern unifié** pour les 2 modèles (XGBoost + GNN) : start_run,
+* **Pattern unifié** pour les modèles XGBoost : start_run,
   log_metrics, log_params, log_artifact, end_run.
 * **Helpers d'introspection** : list_registered_models(), get_latest_run(),
   compare_models() — consommés par le dashboard Model Monitoring.
@@ -45,7 +45,7 @@ Variables d'env :
 Note il n'y a **pas** de variable d'env globale pour
 l'experiment name. Chaque modèle spécifie le sien explicitement :
 * ``xgboost_speed`` — XGBoost Speed H+1h
-* ``xgboost_velov`` — XGBoost Vélov H+30min + H+1h
+* ``xgboost_velov`` — XGBoost Vélov H+1h
 
 L'ancien default global ``DEFAULT_EXPERIMENT = "lyonflow-traffic"`` a
 été supprimé (cf. note au-dessus de ``DEFAULT_TRACKING_URI``).

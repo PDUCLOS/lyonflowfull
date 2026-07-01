@@ -158,13 +158,13 @@ with stat_cols[1]:
 with stat_cols[2]:
     st.metric("Stations Vélov", f"{n_stations_velov}", delta="live DB")
 with stat_cols[3]:
-    st.metric("Prédictions/jour", "~26k", delta="capacité GNN + XGBoost")
+    st.metric("Prédictions/jour", "~26k", delta="capacité XGBoost")
 
 st.caption(
     "**Live (DB PostgreSQL Gold)** : Lignes TCL + Stations Vélov actuellement chargées — "
     "fail loud (`DashboardDataError`) si la base est indisponible. "
     "**Référence (Grand Lyon Open Data)** : ~1 100 capteurs trafic historiques, "
     "~118 lignes TCL, ~458 stations Vélov. "
-    "**Capacité ML** : ~26k prédictions/jour (GNN + XGBoost H+1h). "
+    "**Capacité ML** : ~26k prédictions/jour (XGBoost H+1h). "
     "Données temps réel mises à jour toutes les 5 min."
 )

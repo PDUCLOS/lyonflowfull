@@ -222,7 +222,7 @@ def render_bus_traffic_spatial(
     # Sprint 24+ (2026-06-29) — les colonnes PostgreSQL NUMERIC arrivent en
     # Decimal via psycopg2 → pandas infère dtype 'object'. nlargest()/tri/Plotly
     # échouent sur object ("cannot use method 'nlargest' with this dtype").
-    # Coercition explicite (même classe de bug que le fix gnn_map Sprint 23).
+    # Coercition explicite (même classe de bug déjà vue sur d'autres widgets NUMERIC).
     _num_cols = (
         "bus_delay_sec",
         "traffic_speed_kmh",

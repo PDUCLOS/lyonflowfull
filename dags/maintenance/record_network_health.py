@@ -47,10 +47,7 @@ def _record_health() -> int:
     Returns:
         1 si INSERT réussi, 0 si fonction SQL ne retourne rien (sources indispo).
     """
-    rows = execute_query(
-        "SELECT * FROM gold.fn_network_health_score()",
-        fetch=True,
-    )
+    rows = execute_query("SELECT * FROM gold.fn_network_health_score()")
     if not rows:
         logger.warning("gold.fn_network_health_score() ne retourne aucune ligne")
         return 0
@@ -70,7 +67,7 @@ def _record_health() -> int:
         available_sources.append("meteo")
 
     # INSERT idempotent : PK = recorded_at, ON CONFLICT DO NOTHING
-    # si 2 DAG runs在同一分钟内 (rare, mais safe).
+    # si 2 DAG runs tombent dans la même minute (rare, mais safe).
     execute_query(
         """
         INSERT INTO gold.network_health_history

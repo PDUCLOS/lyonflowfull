@@ -41,7 +41,6 @@ FILES = [
     "pro_tcl/bus_traffic_spatial.py",
     "pro_tcl/coherence_scatter.py",
     "pro_tcl/correlation_matrix.py",
-    "pro_tcl/gnn_map.py",
     "pro_tcl/line_comparison.py",
     "pro_tcl/line_kpis.py",
     "pro_tcl/line_selector.py",
