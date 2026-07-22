@@ -2,20 +2,14 @@
 # LyonFlow — dépendances Python (LOCAL DEV / CI / E2E)
 # =============================================================================
 # Sprint 15+ QW4 (2026-06-19) — agrégateur.
-# Pour usage local (développement, tests pytest, e2e) qui a besoin
-# de TOUTES les deps y compris torch (pour tester training/stgcn/).
-#
-# Pour les images Docker de production :
-#   - API + Streamlit → requirements-base.txt (PAS de torch)
-#   - Airflow         → requirements-airflow.txt + requirements-torch.txt
+# GNN/torch retiré 2026-07-22 : purgé du code actif Sprint 24+/2026-07-01
+# (archive/legacy/gnn/), plus aucun import torch dans dags/ ou src/.
 #
 # Usage :
 #   pip install -r requirements.txt
 #   pip install -r requirements-base.txt             # prod API/Streamlit
-#   pip install -r requirements-airflow.txt         # Airflow slim
-#   pip install -r requirements-base.txt -r requirements-torch.txt  # Airflow complet
+#   pip install -r requirements-airflow.txt         # Airflow
 #   pip install -r requirements-e2e.txt             # E2E (Playwright)
 # =============================================================================
 
 -r requirements-base.txt
--r requirements-torch.txt

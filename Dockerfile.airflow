@@ -11,10 +11,10 @@
 #
 # Sprint 15+ QW4 (2026-06-19) — torch et torch-geometric ajoutés via
 # requirements-torch.txt (training GNN dans retrain_gnn.py).
-#
-# Tailles observées :
-#   - Dockerfile.airflow SANS torch : ~2-3 GB
-#   - Dockerfile.airflow AVEC torch : ~6-8 GB (nécessaire pour GNN training)
+# Retiré 2026-07-22 : GNN purgé du code actif Sprint 24+/2026-07-01
+# (retrain_gnn.py archivé dans archive/legacy/gnn/, zéro import torch restant
+# dans dags/ ou src/) — requirements-torch.txt n'était plus que ~12 Go morts
+# par image, cause directe d'un échec de déploiement (disque plein sur sda1).
 #
 # IMPORTANT : l'image apache/airflow exige que pip soit exécuté en user
 # airflow (UID 50000) et REFUSE --user. On installe en USER airflow,
@@ -33,13 +33,10 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 
 # Etape 2 — pip install en USER airflow (méthode officielle Apache)
 # Pas de --user, pas de PIP_USER : le pip est exécuté dans le venv de l'image.
-# Sprint 15+ QW4 : requirements-torch.txt ajouté pour le training GNN.
 USER airflow
 COPY --chown=airflow:root requirements-airflow.txt /tmp/requirements-airflow.txt
-COPY --chown=airflow:root requirements-torch.txt /tmp/requirements-torch.txt
 RUN pip install --no-cache-dir -r /tmp/requirements-airflow.txt \
-    && pip install --no-cache-dir -r /tmp/requirements-torch.txt \
-    && rm /tmp/requirements-airflow.txt /tmp/requirements-torch.txt
+    && rm /tmp/requirements-airflow.txt
 
 # Etape 3 — code source minimal (dags, src, config)
 COPY --chown=airflow:root dags/ ${AIRFLOW_HOME}/dags/

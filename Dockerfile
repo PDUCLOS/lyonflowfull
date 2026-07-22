@@ -2,10 +2,8 @@
 # LyonFlowFull — Dockerfile (multi-service)
 # =============================================================================
 # Image de base commune pour : API, Streamlit
-# Sprint 15+ QW4 (2026-06-19) : passe à requirements-base.txt
-# (PAS de torch, ~12 GB gagnés par image)
 # L'image Airflow utilise son propre Dockerfile (Dockerfile.airflow) basé
-# sur apache/airflow:2.9.3 et tire requirements-torch.txt séparément.
+# sur apache/airflow:2.9.3.
 # =============================================================================
 
 FROM python:3.12-slim
@@ -39,9 +37,6 @@ RUN groupadd -r appuser && useradd -r -g appuser -u 1000 appuser
 WORKDIR /app
 
 # Install Python deps (cacheable layer)
-# Sprint 15+ QW4 : requirements-base.txt SANS torch (~12 GB gagnés).
-# Pour réintroduire torch localement (dev), utiliser requirements.txt
-# (agrégateur base + torch) à la place.
 COPY requirements-base.txt .
 RUN pip install --upgrade pip && \
     pip install -r requirements-base.txt

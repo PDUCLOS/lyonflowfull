@@ -1,19 +1,9 @@
 # =============================================================================
 # LyonFlow — dépendances de BASE (production : API + Streamlit)
 # =============================================================================
-# Sprint 15+ QW4 (2026-06-19) — torch et torch-geometric extraits dans
-# requirements-torch.txt pour réduire la taille des images API et Streamlit.
-#
-# torch n'est utilisé QUE par :
-#   - dags/ml/retrain_gnn.py (Airflow, training GNN)
-#   - training/stgcn/* (GNN training CLI)
-# L'API FastAPI ne sert que XGBoost (src/models/xgboost_*.py). Le dashboard
-# Streamlit a un fallback gracieux si torch manque (STGCNWrapper → None).
-#
-# Cette séparation permet :
-#   - Image API : ~14-19 GB → ~2-3 GB (-12 à -16 GB)
-#   - Image Streamlit : ~14-19 GB → ~3-4 GB
-#   - Image Airflow : inchangée (torch ajouté via requirements-torch.txt)
+# GNN/torch retiré 2026-07-22 : purgé du code actif Sprint 24+/2026-07-01
+# (archive/legacy/gnn/). L'API FastAPI et le dashboard Streamlit ne servent
+# que XGBoost (src/models/xgboost_*.py).
 # =============================================================================
 
 # Core
