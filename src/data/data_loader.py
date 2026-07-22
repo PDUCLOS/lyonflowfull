@@ -16,7 +16,7 @@ Pattern d'utilisation dans un widget::
             try:
                 data = load_traffic()
             except DashboardDataError as e:
-                st.error(f"⚠️ Données pipeline indisponibles : {e.source}")
+                st.error(f"Données pipeline indisponibles : {e.source}")
                 return
         # ... reste du widget inchangé
 
@@ -955,7 +955,7 @@ def load_transit_itinerary(origin: str, destination: str) -> dict | None:
     hashables).
 
     Args:
-        origin: label de lieu (peut être préfixé emoji, ex: ``"🏙 Villeurbanne"``).
+        origin: label de lieu (peut être préfixé emoji, ex: ``"Villeurbanne"``).
         destination: idem.
 
     Returns:

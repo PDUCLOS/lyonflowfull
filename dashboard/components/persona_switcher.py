@@ -94,14 +94,14 @@ def _render_cards(personas: list[dict], current: str) -> None:
                         </div>
                     </div>
                     <div class="lyf-sublabel" style="opacity:0.6;">
-                        {("🔒 Protégé" if p["auth_required"] else "🔓 Accès libre")}
-                        {"  •  ✅ Actif" if is_active else ""}
+                        {("Protégé" if p["auth_required"] else "Accès libre")}
+                        {"• Actif" if is_active else ""}
                     </div>
                 </div>
                 """,
                 unsafe_allow_html=True,
             )
-            btn_label = "✅ Actif" if is_active else "➡️ Adopter"
+            btn_label = "Actif" if is_active else "Adopter"
             if st.button(
                 btn_label,
                 key=f"switch_{p['id']}",
@@ -110,7 +110,7 @@ def _render_cards(personas: list[dict], current: str) -> None:
             ):
                 _route_after_switch(p["id"])
             if is_locked:
-                st.caption("⚠️ Mot de passe requis après adoption")
+                st.caption("Mot de passe requis après adoption")
 
 
 def _render_pills(personas: list[dict], current: str) -> None:

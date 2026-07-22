@@ -86,7 +86,7 @@ Tous les paramètres sont aux **défauts Ubuntu**, ce qui sous-exploite complèt
           memory: 4G           # 2.5 → 4 : shared_buffers 3GB + overhead
 ```
 
-⚠️ Le `cpus: "2.0"` n'est PAS demandé dans le diagnostic Patrice (focus = RAM), mais sans ça le `max_parallel_workers_per_gather=2` ne sert à rien (limité à 1 CPU). À confirmer avant d'appliquer.
+Le `cpus: "2.0"` n'est PAS demandé dans le diagnostic Patrice (focus = RAM), mais sans ça le `max_parallel_workers_per_gather=2` ne sert à rien (limité à 1 CPU). À confirmer avant d'appliquer.
 
 ---
 
@@ -135,7 +135,7 @@ ssh ubuntu@51.83.159.224 "cd /opt/lyonflow && \
 ssh ubuntu@51.83.159.224 "cd /opt/lyonflow && \
   for i in 1 2 3 4 5 6 7 8 9 10; do
     if docker exec lyonflow-postgres pg_isready -U lyonflow -d lyonflow >/dev/null 2>&1; then
-      echo \"✅ Postgres ready after \${i} attempts\"; break
+      echo \"Postgres ready after \${i} attempts\"; break
     fi; sleep 2
   done"
 

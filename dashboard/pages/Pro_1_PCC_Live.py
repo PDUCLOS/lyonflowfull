@@ -34,7 +34,7 @@ render_freshness_badge()
 # Pattern défensif : pm.is_widget_visible() pour chaque widget utilisé dans la page.
 # Câblage préparé — voir dashboard/components/colors.py et config/personas.yaml.
 
-st.title("📡 PCC Live — Réseau TCL")
+st.title("PCC Live — Réseau TCL")
 render_data_status_banner()
 
 # Ticker en haut
@@ -45,15 +45,15 @@ st.markdown("---")
 # 4 quadrants
 q1, q2 = st.columns(2)
 with q1:
-    st.markdown("##### 🗺️ NW — Carte live")
+    st.markdown("##### NW — Carte live")
     map_choice = st.radio(
         "Carte",
-        ["🚗 Trafic — Live (temps réel) vs H+1h (prédit)", "🚌 Bus GPS"],
+        ["Trafic — Live (temps réel) vs H+1h (prédit)", "Bus GPS"],
         horizontal=True,
         key="pro1_map_choice",
         label_visibility="collapsed",
     )
-    if map_choice == "🚌 Bus GPS":
+    if map_choice == "Bus GPS":
         render_network_map(height=320)
     else:
         render_traffic_map(
@@ -62,7 +62,7 @@ with q1:
             key_suffix="pro1",
         )
 with q2:
-    st.markdown("##### ⚠️ NE — Alertes live (détail)")
+    st.markdown("##### NE — Alertes live (détail)")
     from dashboard.components.colors import STATUS_COLORS
     from dashboard.components.data_cache import cached_recent_alerts
 
@@ -78,13 +78,13 @@ with q2:
                 f"""
                 <div class="lyonflow-card" style="border-left-color:{color};padding:0.6rem;">
                     <div style="font-weight:600;font-size:0.9rem;">
-                        🚦 [{line_ref}] {alert.get("title", "Alerte")}
+                        [{line_ref}] {alert.get("title", "Alerte")}
                     </div>
                     <div class="lyf-sublabel" style="opacity:0.7;margin-top:0.2rem;">
                         {alert.get("description", "")}
                     </div>
                     <div class="lyf-sublabel" style="color:var(--status-ok);margin-top:0.3rem;">
-                        💡 {alert.get("action", "—")}
+                        {alert.get("action", "—")}
                     </div>
                 </div>
                 """,
@@ -93,10 +93,10 @@ with q2:
 
 q3, q4 = st.columns(2)
 with q3:
-    st.markdown("##### 📊 SW — Heatmap OTP")
+    st.markdown("##### SW — Heatmap OTP")
     render_otp_heatmap(days=1, height=320, top_n=15, compact=True, show_line_selector=True, key_suffix="pro1")
 with q4:
-    st.markdown("##### 🎯 SE — Top bottlenecks")
+    st.markdown("##### SE — Top bottlenecks")
     from dashboard.components.data_cache import cached_bottlenecks_top
 
     top_bottlenecks = cached_bottlenecks_top()
@@ -124,7 +124,7 @@ with q4:
 st.markdown("---")
 
 # Ligne KPIs (toutes lignes)
-st.markdown("##### 📈 KPIs par ligne")
+st.markdown("##### KPIs par ligne")
 render_line_kpis()
 
 st.caption("PCC Live · Source : PostgreSQL Gold · ")

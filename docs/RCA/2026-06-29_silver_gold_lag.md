@@ -1,7 +1,7 @@
 # RCA — 2026-06-29 — gold.lag monotone croissant (cassé par timeout, pas 0-ligne)
 
-**Statut** : ✅ résolu (2 tampons temporaires en place)
-**Sévérité** : 🟠 haute (gold 58.6min et en hausse, toutes les prédictions trafic stale)
+**Statut** : résolu (2 tampons temporaires en place)
+**Sévérité** : haute (gold 58.6min et en hausse, toutes les prédictions trafic stale)
 **Détecté** : 2026-06-29 ~17:50 Paris (Patrice signale "rien ne bouge")
 **Résolu** : 2026-06-29 ~18:14 Paris
 
@@ -18,20 +18,20 @@ pendant les cycles à disque throttlé. C'était le bon diagnostic. Une seconde 
 
 | Layer | age_min (avant) | Verdict |
 |-------|-----------------|---------|
-| bronze | 1.9 → 3.7 | ✅ frais |
-| silver | 9.2 → 12.4 → 17.2 | ⚠️ lagged (transform_bronze_to_silver rame aussi) |
-| gold | 27.3 → 30.4 → 58.6 | 🔴 stale monotone croissant |
+| bronze | 1.9 → 3.7 | frais |
+| silver | 9.2 → 12.4 → 17.2 | lagged (transform_bronze_to_silver rame aussi) |
+| gold | 27.3 → 30.4 → 58.6 | stale monotone croissant |
 
 ## Diagnostic
 
-### Hypothèse 1 — Timeout Airflow (5 min) ✅ confirmé
+### Hypothèse 1 — Timeout Airflow (5 min) confirmé
 
 `task_instance` du 26-28 juin : 5+ runs `build_traffic_features` failed avec
 durée 329–1117 s (5.5–18.6 min) — toutes au-dessus du timeout 5 min. Le disque
 throttlé (sdb2 sur VPS, I/O saturation par refresh_heavy_mv + purges) étire
 le DELETE+INSERT au-delà du timeout, le task est tué.
 
-### Hypothèse 2 — Fenêtre fresh 15 min → 0 ligne ❌ écartée
+### Hypothèse 2 — Fenêtre fresh 15 min → 0 ligne écartée
 
 Présence de `refresh_mv_multimodal_grid` en cours dans `pg_stat_activity`
 multimodal dépend de `[traffic, velov, tcl_realtime]` avec trigger
@@ -58,7 +58,7 @@ succès 16:00 (290s) et 16:10 (182s) sous le 5min timeout.
 - [ ] (2) `src/transformation/silver_to_gold.py` ligne ~169 : `INTERVAL '30 minutes'` → `INTERVAL '15 minutes'`
 - [ ] (3) **PAS de revert** : `refresh_heavy_mv` reste **découplé** (`max_active_runs=1` séparé de `transform_silver_to_gold`). Le tuning fixera la root, pas le découplage.
 
-⚠️ Le découplage `refresh_heavy_mv` ↔ `transform_silver_to_gold` doit rester — c'est la bonne archi. Seul le tuning disque/SQL change.
+Le découplage `refresh_heavy_mv` ↔ `transform_silver_to_gold` doit rester — c'est la bonne archi. Seul le tuning disque/SQL change.
 
 ## Vrai root cause
 

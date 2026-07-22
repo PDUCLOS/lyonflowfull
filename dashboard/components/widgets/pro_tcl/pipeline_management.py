@@ -53,6 +53,24 @@ def _cached_dags() -> list[dict]:
 
 
 @st.cache_data(ttl=60, show_spinner=False)
+def _cached_n_alerts_24h() -> int:
+    """Nb alertes RGPD audit_log 24h. TTL 60s — était sans cache (audit perf 2026-07-03)."""
+    from src.data.db_query import _df_from_query
+
+    df_alerts = _df_from_query(
+        """
+        SELECT COUNT(*) AS n
+        FROM rgpd.audit_log
+        WHERE timestamp >= NOW() - INTERVAL '24 hours'
+          AND (action LIKE 'alert%%' OR severity = 'critical')
+        """
+    )
+    if df_alerts.empty:
+        return 0
+    return int(df_alerts.iloc[0].get("n") or 0)
+
+
+@st.cache_data(ttl=60, show_spinner=False)
 def _cached_freshness() -> list[dict]:
     """Fraîcheur live des sources Bronze. Fail loud si DB indispo."""
     from src.data.db_query import _is_db_available, get_bronze_source_counts
@@ -86,12 +104,12 @@ def _cached_freshness() -> list[dict]:
 def render_pipeline_status() -> None:
     with loading_wrapper("Chargement Pipeline status…", "⏳"):
         """Affiche le statut complet des pipelines."""
-        st.markdown("##### 📊 Statut global")
+        st.markdown("##### Statut global")
 
     if not is_airflow_available():
         show_error(
             "db_down",
-            "🔴 **Airflow REST API non joignable** — le statut DAGs est indisponible. "
+            "**Airflow REST API non joignable** — le statut DAGs est indisponible. "
             "Vérifiez que le service Airflow tourne et que "
             "`AIRFLOW_HOST`/`AIRFLOW_ADMIN_PASSWORD` sont corrects dans `.env`.",
         )
@@ -109,38 +127,26 @@ def render_pipeline_status() -> None:
 
     # Calcule n_alerts depuis rgpd.audit_log (action LIKE 'alert%' OR severity=critical)
     # sur les dernières 24h. Fallback mock si DB indispo.
-    n_alerts = 0
     try:
-        from src.data.db_query import _df_from_query
-
-        df_alerts = _df_from_query(
-            """
-            SELECT COUNT(*) AS n
-            FROM rgpd.audit_log
-            WHERE timestamp >= NOW() - INTERVAL '24 hours'
-              AND (action LIKE 'alert%%' OR severity = 'critical')
-            """
-        )
-        if not df_alerts.empty:
-            n_alerts = int(df_alerts.iloc[0].get("n") or 0)
+        n_alerts = _cached_n_alerts_24h()
     except Exception:
         # DB indispo — l'alerte est affichée par render_alerts_feed() (fail loud)
         n_alerts = 0
 
     with cols[0]:
-        st.metric("✅ DAGs OK", n_success, delta=f"{n_success}/{len(dags) or 1}")
+        st.metric("DAGs OK", n_success, delta=f"{n_success}/{len(dags) or 1}")
     with cols[1]:
-        st.metric("🔄 DAGs running", n_running)
+        st.metric("DAGs running", n_running)
     with cols[2]:
-        st.metric("❌ DAGs failed", n_failed, delta_color="inverse")
+        st.metric("DAGs failed", n_failed, delta_color="inverse")
     with cols[3]:
-        st.metric("🚨 Alertes 24h", n_alerts)
+        st.metric("Alertes 24h", n_alerts)
 
 
 def render_dag_list() -> None:
     with loading_wrapper("Chargement Dag list…", "⏳"):
         """Affiche la liste des DAGs avec leur état."""
-        st.markdown("##### 📋 Liste des DAGs")
+        st.markdown("##### Liste des DAGs")
 
     try:
         dags = _cached_dags()
@@ -182,8 +188,8 @@ def render_dag_list() -> None:
             st.caption(f"{dag.get('last_duration_s', 0)}s")
         with cols[4]:
             status = dag.get("last_status", "unknown")
-            color = {"success": "🟢", "running": "🔄", "failed": "🔴"}.get(status, "⚪")
-            st.markdown(f"{color} {status}")
+            status_label = {"success": "OK", "running": "En cours", "failed": "Alerte"}.get(status, "Inconnu")
+            st.markdown(status_label)
         with cols[5]:
             status = dag.get("last_status", "unknown")
             dag_id = dag["dag_id"]
@@ -193,38 +199,38 @@ def render_dag_list() -> None:
                 with col_a:
                     if st.button("⏹ Clear", key=f"clear_{dag_id}", use_container_width=True):
                         if clear_stuck_dag_run(dag_id, dag_run_id):
-                            st.success(f"✅ {dag_id} cleared")
+                            st.success(f"{dag_id} cleared")
                             st.cache_data.clear()
                         else:
                             st.error("Échec clear")
                 with col_b:
-                    if st.button("❌ Fail", key=f"fail_{dag_id}", use_container_width=True):
+                    if st.button("Fail", key=f"fail_{dag_id}", use_container_width=True):
                         if mark_dag_run_failed(dag_id, dag_run_id):
-                            st.success(f"✅ {dag_id} → failed")
+                            st.success(f"{dag_id} → failed")
                             st.cache_data.clear()
                         else:
                             st.error("Échec mark failed")
             elif status == "failed" and dag_run_id:
                 col_a, col_b = st.columns(2)
                 with col_a:
-                    if st.button("🔄 Clear", key=f"clear_{dag_id}", use_container_width=True):
+                    if st.button("Clear", key=f"clear_{dag_id}", use_container_width=True):
                         if clear_stuck_dag_run(dag_id, dag_run_id):
-                            st.success(f"✅ {dag_id} cleared → re-run")
+                            st.success(f"{dag_id} cleared → re-run")
                             st.cache_data.clear()
                         else:
                             st.error("Échec clear")
                 with col_b:
-                    if st.button("▶️ Trigger", key=f"trigger_{dag_id}", use_container_width=True):
+                    if st.button("Trigger", key=f"trigger_{dag_id}", use_container_width=True):
                         _trigger_dag(dag_id)
             else:
-                if st.button("▶️ Trigger", key=f"trigger_{dag_id}", use_container_width=True):
+                if st.button("Trigger", key=f"trigger_{dag_id}", use_container_width=True):
                     _trigger_dag(dag_id)
 
 
 def render_health_panel() -> None:
     with loading_wrapper("Chargement Health panel…", "⏳"):
         """Affiche les 6 health checks du module monitoring."""
-        st.markdown("##### 💓 Health checks (quotidien 04h15)")
+        st.markdown("##### Health checks (quotidien 04h15)")
 
     with st.spinner("Exécution des 6 health checks..."):
         try:
@@ -235,7 +241,7 @@ def render_health_panel() -> None:
         except Exception as e:
             show_error(
                 "db_down",
-                f"🔴 Health checks indisponibles ({e}). "
+                f"Health checks indisponibles ({e}). "
                 "Vérifier que PostgreSQL répond et que le DAG "
                 "data_quality_daily a tourné.",
             )
@@ -263,7 +269,7 @@ def render_health_panel() -> None:
                 "warning": COLORS["status_warning"],
                 "critical": COLORS["status_critical"],
             }.get(status, COLORS["text_muted"])
-            icon = {"ok": "✅", "warning": "⚠️", "critical": "🔴"}.get(status, "❓")
+            icon = {"ok": "OK", "warning": "Attention", "critical": "Alerte"}.get(status, "Inconnu")
             name = r.get("name", "—")
             # (audit Pro TCL B-09 + B-11) : ``details`` peut
             # contenir des messages d'erreur PostgreSQL bruts (ex: "to add
@@ -279,7 +285,7 @@ def render_health_panel() -> None:
                             border-radius:6px;padding:0.6rem;margin:0.3rem 0;">
                     <div class="lyf-sublabel" style="opacity:0.7;text-transform:uppercase;letter-spacing:0.5px;">{safe_name}</div>
                     <div style="font-size:1.1rem;font-weight:600;margin-top:0.2rem;">
-                        {icon} {status.upper()}
+                        {icon}
                     </div>
                     <div class="lyf-sublabel" style="opacity:0.7;margin-top:0.2rem;">
                         {safe_details}
@@ -293,7 +299,7 @@ def render_health_panel() -> None:
 def render_data_freshness() -> None:
     with loading_wrapper("Chargement Data freshness…", "⏳"):
         """Affiche la fraîcheur des données par source Bronze."""
-        st.markdown("##### 📡 Fraîcheur des données (Bronze)")
+        st.markdown("##### Fraîcheur des données (Bronze)")
 
     try:
         freshness = _cached_freshness()
@@ -335,7 +341,7 @@ def render_data_freshness() -> None:
         with cols[2]:
             st.caption(f"{s['n_records_24h']:,}")
         with cols[3]:
-            icon = "🟢" if s["status"] == "ok" else "🟡" if s["status"] == "stale" else "🔴"
+            icon = "OK" if s["status"] == "ok" else "Attention" if s["status"] == "stale" else "Alerte"
             st.markdown(icon)
 
 
@@ -346,7 +352,7 @@ def render_alerts_feed() -> None:
   (2026-06-17) — branché sur ``get_recent_alerts()``
     (rgpd.audit_log + chantiers). Plus de mock hardcodé.
     """
-    st.markdown("##### 🚨 Alertes récentes (24h)")
+    st.markdown("##### Alertes récentes (24h)")
 
     from dashboard.components.data_cache import cached_recent_alerts
 
@@ -362,25 +368,25 @@ def render_alerts_feed() -> None:
         # Affiche les alertes réelles par ordre antéchronologique
         for _, row in alerts.head(10).iterrows():
             severity = str(row.get("severity", "—") or "—")
-            icon = {"Critical": "🔴", "Warning": "🟡", "Info": "🔵"}.get(severity, "⚪")
+            icon = {"Critical": "Alerte", "Warning": "Attention", "Info": "Info"}.get(severity, "Inconnu")
             alert_time = row.get("alert_time", "—")
             title = str(row.get("title", "—") or "—")
             action = str(row.get("action", "") or "")
             line_ref = str(row.get("line_ref", "Toutes") or "Toutes")
             st.markdown(f"- {icon} **{alert_time}** — {title} `{line_ref}`{f' — _{action}_' if action else ''}")
 
-    with st.expander("📜 Historique alertes (7 derniers jours)", expanded=False):
+    with st.expander("Historique alertes (7 derniers jours)", expanded=False):
         try:
             history = cached_recent_alerts(hours=24 * 7, limit=50)
         except DashboardDataError as e:
-            st.caption(f"⚠️ Historique indisponible — {e}")
+            st.caption(f"Historique indisponible — {e}")
             return
         if history.empty:
             st.caption("Aucun historique d'alerte sur 7 jours.")
         else:
             for _, row in history.head(30).iterrows():
                 severity = str(row.get("severity", "—") or "—")
-                icon = {"Critical": "🔴", "Warning": "🟡", "Info": "🔵"}.get(severity, "⚪")
+                icon = {"Critical": "Alerte", "Warning": "Attention", "Info": "Info"}.get(severity, "Inconnu")
                 alert_time = row.get("alert_time", "—")
                 title = str(row.get("title", "—") or "—")
                 st.caption(f"• {icon} {alert_time} — {title}")
@@ -391,7 +397,7 @@ def _trigger_dag(dag_id: str) -> None:
     with st.spinner(f"Trigger {dag_id}..."):
         ok = trigger_dag(dag_id)
         if ok:
-            st.success(f"✅ {dag_id} déclenché — voir Airflow UI pour progression")
+            st.success(f"{dag_id} déclenché — voir Airflow UI pour progression")
             # Avant ce fix : pas de rerun → la liste DAGs restait stale jusqu'au prochain event user.
             st.cache_data.clear()
             st.rerun()

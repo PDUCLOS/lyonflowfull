@@ -31,7 +31,7 @@ valider qu'ils peuvent coexister sans collision et identifier les risques.
 
 ### 2.1 VPS vs Cloud-demo : isolation PHYSIQUE
 
-**État** : ✅ **isolation totale**
+**État** : **isolation totale**
 
 - **Réseau** : cloud-demo crée un **nouveau cluster Kapsule Scaleway** à chaque
   spin-up (`terraform apply`). Aucun peering réseau avec le VPS.
@@ -44,12 +44,12 @@ valider qu'ils peuvent coexister sans collision et identifier les risques.
   Kapsule. Aucun accès au PostgreSQL du VPS (`51.83.159.224:5432`).
 - **Stockage** : PVC Scaleway Block Storage, isolé du volume `postgres_data` du VPS.
 
-**Risque de contamination** : ✅ **nul** — un demo cloud-demo ne peut pas
+**Risque de contamination** : **nul** — un demo cloud-demo ne peut pas
 toucher au VPS. La base PostgreSQL du VPS est protégée.
 
 ### 2.2 VPS vs Kubernetes (base) : isolation LOGIQUE
 
-**État** : ⚠️ **à valider** avant déploiement K8s prod
+**État** : **à valider** avant déploiement K8s prod
 
 - **Réseau** : K8s utilise un namespace `lyonflow` isolé. NetworkPolicy à
   configurer (déjà prévue dans `kubernetes/base/`).
@@ -104,13 +104,13 @@ psql -h 51.83.159.224 -p 5432 -U lyonflow -d lyonflow
 
 | Risque | Sévérité | Mitigation |
 |--------|----------|------------|
-| **DB VPS saturée** (disk 100% mentionné dans audit) | 🔴 Critique | Backup offsite + monitoring disk > 85% (alert dans `rules/system.yml`) |
-| **Perte du `.env` VPS** (chmod 600) | 🟠 Majeure | Backup `.env` chiffré offsite + `.deploy.env` séparé |
-| **cloud-demo touche le DNS prod** | 🟡 Mineure | Hosts dédiés `*.demo.jedha.fr` (patch ingress), pas de wildcard `*.lyonflow.fr` |
-| **SealedSecret cloud-demo leak** dans git | 🟡 Mineure | `cloud-demo/.gitignore` exclut `.env` et `kubeconfig` |
-| **ML inference drift** (modèle périmé) | 🟡 Mineure | MLflow tracking + retrain XGBoost hourly :25 (déjà en place) |
-| **Cert TLS non renouvelé** | 🟠 Majeure | Alerte `TlsCertExpiringSoon` < 14j + certbot.timer systemd |
-| **DB down cascade** (autres alertes DB) | 🟢 Info | Inhibitions dans alertmanager.yml |
+| **DB VPS saturée** (disk 100% mentionné dans audit) | Critique | Backup offsite + monitoring disk > 85% (alert dans `rules/system.yml`) |
+| **Perte du `.env` VPS** (chmod 600) | Majeure | Backup `.env` chiffré offsite + `.deploy.env` séparé |
+| **cloud-demo touche le DNS prod** | Mineure | Hosts dédiés `*.demo.jedha.fr` (patch ingress), pas de wildcard `*.lyonflow.fr` |
+| **SealedSecret cloud-demo leak** dans git | Mineure | `cloud-demo/.gitignore` exclut `.env` et `kubeconfig` |
+| **ML inference drift** (modèle périmé) | Mineure | MLflow tracking + retrain XGBoost hourly :25 (déjà en place) |
+| **Cert TLS non renouvelé** | Majeure | Alerte `TlsCertExpiringSoon` < 14j + certbot.timer systemd |
+| **DB down cascade** (autres alertes DB) | Info | Inhibitions dans alertmanager.yml |
 
 ## 5. Checklist avant démo Jedha
 
@@ -183,9 +183,9 @@ cd /opt/lyonflow && ./scripts/restore.sh backups/lyonflow_LATEST
 
 | Contexte | Statut | Action |
 |----------|--------|--------|
-| VPS (prod actuelle) | ✅ **intact, isolé, backup quotidien** | Aucune action immédiate. Tag avant chaque deploy. |
-| Kubernetes (base) | ⚠️ **prêt pour staging** | Tester `migrate-vps.sh` + NetworkPolicy avant prod. |
-| Cloud-demo (Jedha) | ✅ **isolé du VPS par construction** | OK pour démo 2-4h. Tear-down obligatoire après. |
+| VPS (prod actuelle) | **intact, isolé, backup quotidien** | Aucune action immédiate. Tag avant chaque deploy. |
+| Kubernetes (base) | **prêt pour staging** | Tester `migrate-vps.sh` + NetworkPolicy avant prod. |
+| Cloud-demo (Jedha) | **isolé du VPS par construction** | OK pour démo 2-4h. Tear-down obligatoire après. |
 
 **Aucun risque de contamination entre vps et cloud-demo.** Le VPS peut
 continuer à tourner pendant les démos Jedha sans impact.

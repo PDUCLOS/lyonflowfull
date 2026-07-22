@@ -43,8 +43,8 @@ class TestConstants:
     def test_labels_contient_emoji(self) -> None:
         """Les labels doivent inclure un emoji pour l'affichage visuel.
 
-        Couvre à la fois le bloc U+2600 (Misc Symbols : ☀) et U+1F300+
-        (Misc Symbols and Pictographs : 🌧, 🔥, etc.).
+        Couvre à la fois le bloc U+2600 (Misc Symbols : ) et U+1F300+
+        (Misc Symbols and Pictographs : , , etc.).
         """
         for label in METEO_BAND_LABELS.values():
             assert any(ord(c) >= 0x2600 for c in label), f"label sans emoji: {label}"

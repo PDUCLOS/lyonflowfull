@@ -27,9 +27,9 @@ def render_map_painter(height: int = 400) -> dict:
     Returns:
         Dict avec 'selected_zone' (str ou None).
     """
-    st.markdown("##### ✏️ Simulateur d'aménagement")
+    st.markdown("##### Simulateur d'aménagement")
 
-    st.caption("🚧 sélection manuelle. component React custom deck.gl + MapboxDraw pour dessiner librement.")
+    st.caption("sélection manuelle. component React custom deck.gl + MapboxDraw pour dessiner librement.")
 
     try:
         import folium
@@ -74,15 +74,15 @@ def render_map_painter(height: int = 400) -> dict:
                     min_dist = d
                     selected_zone = zone
             if min_dist < 0.001:  # ~30m
-                st.success(f"📍 Zone sélectionnée : **{selected_zone}**")
+                st.success(f"Zone sélectionnée : **{selected_zone}**")
             else:
                 selected_zone = None
-                st.info("📍 Cliquez sur un point proche d'un bottleneck connu")
+                st.info("Cliquez sur un point proche d'un bottleneck connu")
 
         return {"selected_zone": selected_zone}
 
     except ImportError:
-        st.warning("⚠️ Folium non disponible — fallback selectbox")
+        st.warning("Folium non disponible — fallback selectbox")
         bottlenecks = cached_bottlenecks_top()
         zones = [b.get("zone", "—") for b in bottlenecks]
         if not zones:

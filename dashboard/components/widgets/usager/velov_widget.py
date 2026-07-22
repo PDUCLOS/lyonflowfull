@@ -19,6 +19,7 @@ from dashboard.components.data_cache import (
     cached_velov_stations,
 )
 from dashboard.components.loading_state import loading_wrapper
+from dashboard.components.velov_safety_banner import render_velov_safety_banner
 
 
 def _build_predictions_lookup(horizon_minutes: int) -> dict[str, int]:
@@ -52,6 +53,8 @@ def render_velov_widget(stations: list | None = None, max_stations: int = 3) -> 
         st.info("Aucune station Vélov disponible — vérifiez le pipeline.")
         return
 
+    render_velov_safety_banner()
+
     # (2026-06-12) — focus H+1h. Avant ) : H+30min.
     pred_60 = _build_predictions_lookup(60)
 
@@ -65,13 +68,13 @@ def render_velov_widget(stations: list | None = None, max_stations: int = 3) -> 
         # Couleur selon dispo
         if bikes == 0:
             color = COLORS["status_critical"]
-            status = "❌ Vide"
+            status = "Vide"
         elif bikes < 5:
             color = COLORS["status_warning"]
-            status = "⚠️ Faible"
+            status = "Faible"
         else:
             color = COLORS["status_ok"]
-            status = "✅ OK"
+            status = "OK"
 
         # Prédiction H+1h — delta et icône focus H+1h)
         if pred is not None:
@@ -95,7 +98,7 @@ def render_velov_widget(stations: list | None = None, max_stations: int = 3) -> 
                 <div class="lyonflow-card" style="border-left:4px solid {color};">
                     <div class="lyf-detail" style="font-weight:600;">{s.get("name", "—")}</div>
                     <div style="font-size:1.8rem;font-weight:700;margin:0.4rem 0;color:{color};">
-                        🚲 {bikes}
+                        {bikes}
                     </div>
                     <div class="lyf-sublabel" style="opacity:0.7;">
                         {stands} places libres · {status}

@@ -153,7 +153,7 @@ def _load_traffic_features_df(hours: int = 1) -> pd.DataFrame:
 
     rows = execute_query(
         """
-        SELECT channel_id, computed_at, speed_kmh, vitesse_limite_kmh,
+        SELECT channel_id, fetched_at, computed_at, speed_kmh, vitesse_limite_kmh,
                temperature_2m, precipitation
         FROM gold.traffic_features_live
         WHERE computed_at > NOW() - make_interval(hours => %s)

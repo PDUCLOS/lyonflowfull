@@ -18,7 +18,7 @@ def render_top_decisions(n: int = 5) -> None:
     Args:
         n: nombre de décisions à afficher.
     """
-    st.markdown(f"##### 🎯 Top {n} décisions à arbitrer")
+    st.markdown(f"##### Top {n} décisions à arbitrer")
 
     bottlenecks = cached_bottlenecks_top()
     for i, b in enumerate(bottlenecks[:n], 1):
@@ -45,13 +45,13 @@ def render_top_decisions(n: int = 5) -> None:
                             Lignes : {lignes} · {voyageurs:,} voyageurs/jour
                         </div>
                         <div style="font-size:0.9rem;margin-top:0.4rem;">
-                            💡 <b>{b.get("description", "—")}</b>
+                            <b>{b.get("description", "—")}</b>
                         </div>
                         <div class="lyf-detail" style="display:flex;gap:1.2rem;margin-top:0.5rem;">
-                            <span>⏱ <b>{gain} min</b> gagnées</span>
-                            <span>💰 <b>{cout} M€</b></span>
-                            <span>📅 <b>{delai} mois</b> travaux</span>
-                            <span style="color:var(--status-ok);">📈 ROI <b>{int(roi)} mois</b></span>
+                            <span><b>{gain} min</b> gagnées</span>
+                            <span><b>{cout} M€</b></span>
+                            <span><b>{delai} mois</b> travaux</span>
+                            <span style="color:var(--status-ok);">ROI <b>{int(roi)} mois</b></span>
                         </div>
                     </div>
                 </div>

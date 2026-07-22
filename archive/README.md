@@ -15,8 +15,28 @@ archive/
 ├── audits/       # Audits ponctuels (qualité, infra, sécurité, dashboards)
 ├── analysis/     # Analyses des 3 repos sources (pré-fusion, obsolète)
 ├── dags_disabled/# DAGs Airflow archivés (training/inf séparés, etc.)
+├── scripts/      # Scripts one-off (codemods, migrations ponctuelles) déjà appliqués
 └── misc/         # Documents divers annulés ou contextuels
 ```
+
+### `scripts/` (2026-07-03)
+
+Scripts one-off (codemods de refacto + 1 migration schema) déjà exécutés — le
+code qu'ils modifient est déjà dans `dashboard/`/`src/`, ils ne servent plus.
+Différents des migrations numérotées de `scripts/sql/` (celles-ci restent
+actives, gérées par `scripts/apply-migrations.sh`, ne pas y toucher).
+
+| Fichier | Sujet |
+|---------|-------|
+| `fix_pages_imports.py` / `fix_pages_imports_v2.py` | Codemod imports dashboard/pages |
+| `fix_freshness_badge_imports.py` | Codemod imports `freshness_badge` |
+| `migrate_error_display.py` | Codemod migration vers `error_display.py` |
+| `migrate_folium_to_a11y.py` | Codemod migration cartes Folium → wrapper a11y |
+| `migrate_font_size_to_lyf.py` | Codemod tailles police → thème LYF |
+| `migrate_freshness_badge.py` | Codemod intégration `freshness_badge` |
+| `migrate_loading_states.py` / `migrate_loading_states_v3.py` | Codemod `loading_wrapper` |
+| `migrate_plotly_to_a11y.py` | Codemod graphiques Plotly → wrapper a11y |
+| `migrate_realign_v0.3.1.sql` | Migration schema one-off v0.3.1 (hors pipeline `apply-migrations.sh`) |
 
 ## Contenu détaillé
 

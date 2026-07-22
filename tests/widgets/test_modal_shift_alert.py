@@ -47,9 +47,9 @@ class TestConstants:
             assert color.startswith("#") and len(color) == 7
             int(color[1:], 16)
 
-    def test_labels_contient_emoji(self) -> None:
+    def test_labels_non_vides(self) -> None:
         for label in ALERT_LEVEL_LABELS.values():
-            assert any(ord(c) >= 0x1F300 for c in label), f"label sans emoji: {label}"
+            assert label.strip(), "label vide"
 
 
 # -----------------------------------------------------------------------------
@@ -67,33 +67,33 @@ class TestFormatZScore:
         assert _format_z_score(float("nan")) == "—"
 
     def test_z_sous_seuil_rouge(self) -> None:
-        """z < -2 → 🔴 (anomalie confirmée)."""
+        """z < -2 → Alerte (anomalie confirmée)."""
         out = _format_z_score(-2.5)
-        assert "🔴" in out
+        assert "Alerte" in out
         assert "-2.50" in out
 
     def test_z_au_seuil_jaune(self) -> None:
-        """z == -2 (à la limite) → 🟡 (vigilance, pas anomalie)."""
+        """z == -2 (à la limite) → Attention (vigilance, pas anomalie)."""
         out = _format_z_score(-2.0)
-        assert "🟡" in out
+        assert "Attention" in out
         assert "-2.00" in out
 
     def test_z_negatif_jaune(self) -> None:
-        """-2 < z < 0 → 🟡 (vigilance, pas anomalie)."""
+        """-2 < z < 0 → Attention (vigilance, pas anomalie)."""
         out = _format_z_score(-0.5)
-        assert "🟡" in out
+        assert "Attention" in out
         assert "-0.50" in out
 
     def test_z_zero_vert(self) -> None:
-        """z = 0 → 🟢 +0.00 (baseline)."""
+        """z = 0 → OK +0.00 (baseline)."""
         out = _format_z_score(0.0)
-        assert "🟢" in out
+        assert "OK" in out
         assert "+0.00" in out
 
     def test_z_positif_vert(self) -> None:
-        """z > 0 → 🟢 +X.XX (plus de vélos que d'habitude, pas une alarme)."""
+        """z > 0 → OK +X.XX (plus de vélos que d'habitude, pas une alarme)."""
         out = _format_z_score(1.5)
-        assert "🟢" in out
+        assert "OK" in out
         assert "+1.50" in out
 
 

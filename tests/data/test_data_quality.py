@@ -46,7 +46,8 @@ def _make_clean_traffic(n: int = 200) -> pd.DataFrame:
     return pd.DataFrame(
         {
             "channel_id": [f"c{i % 10}" for i in range(n)],
-            "computed_at": pd.date_range("2026-06-21 10:00", periods=n, freq="3min"),
+            "fetched_at": pd.date_range("2026-06-21 10:00", periods=n, freq="3min"),
+            "computed_at": pd.Timestamp("2026-06-21 10:30:00"),
             "speed_kmh": np.random.uniform(20, 80, n),
             "vitesse_limite_kmh": [50] * n,
             "temperature_2m": np.random.uniform(5, 30, n),
@@ -397,7 +398,7 @@ class TestValidateTrafficFeatures:
         assert null_check.status == STATUS_CRITICAL
 
     def test_too_many_duplicates_critical(self) -> None:
-        """> 5% doublons (channel_id, computed_at) → critical."""
+        """> 5% doublons (channel_id, fetched_at) → critical."""
         df = _make_clean_traffic(n=200)
         # Inject 30 doublons
         df_dup = pd.concat([df, df.iloc[:30]], ignore_index=True)

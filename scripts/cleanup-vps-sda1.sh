@@ -42,8 +42,8 @@ docker exec lyonflow-minio ls /data
 
 echo ""
 echo "=== 7. Docker system prune (libère ~58 GB d'images inutilisées) ==="
-echo "    ⚠️  Les images lyonflow-airflow-* n'existent plus (rebuild en cours)"
-echo "    ⚠️  Les images lyonflow-api et lyonflow-streamlit seront supprimées"
+echo "Les images lyonflow-airflow-* n'existent plus (rebuild en cours)"
+echo "Les images lyonflow-api et lyonflow-streamlit seront supprimées"
 echo "        Il faudra 'make build' pour les reconstruire"
 docker system prune -af
 
@@ -62,4 +62,4 @@ echo "=== 11. Containers status ==="
 docker ps -a --format "table {{.Names}}\t{{.Status}}\t{{.Size}}"
 
 echo ""
-echo "✅ TERMINÉ. Tu devrais avoir ~70-80 GB de libre sur /"
+echo "TERMINÉ. Tu devrais avoir ~70-80 GB de libre sur /"

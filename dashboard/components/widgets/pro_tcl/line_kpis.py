@@ -154,11 +154,11 @@ def render_line_kpis(
         },
     )
 
-    st.caption(f"📊 {len(df)} lignes au total · affichage des {len(df_view)} premières après tri")
+    st.caption(f"{len(df)} lignes au total · affichage des {len(df_view)} premières après tri")
 
     # ---- Mode détails dépliables (optionnel) ----
     if show_details:
-        st.markdown("##### 🔍 Détails par ligne")
+        st.markdown("##### Détails par ligne")
         for _, row in df_view.iterrows():
             with st.expander(
                 f"**{row['line_label']}** — OTP {row['otp_pct']:.0f}% · retard {row['avg_delay_min']:.1f} min"

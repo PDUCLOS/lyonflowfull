@@ -30,10 +30,10 @@ check() {
     local result
     result=$(eval "$2" 2>&1)
     if [ $? -eq 0 ] && [ -n "$result" ]; then
-        echo -e "${GREEN}✓${NC} $label: $result"
+        echo -e "${GREEN}OK${NC} $label: $result"
         ((ok++))
     else
-        echo -e "${RED}✗${NC} $label: FAILED ($result)"
+        echo -e "${RED}FAIL${NC} $label: FAILED ($result)"
         ((fail++))
     fi
 }
@@ -43,10 +43,10 @@ check_warn() {
     local result
     result=$(eval "$2" 2>&1)
     if [ $? -eq 0 ] && [ -n "$result" ]; then
-        echo -e "${GREEN}✓${NC} $label: $result"
+        echo -e "${GREEN}OK${NC} $label: $result"
         ((ok++))
     else
-        echo -e "${YELLOW}⚠${NC} $label: $result"
+        echo -e "${YELLOW}WARN${NC} $label: $result"
         ((warn++))
     fi
 }
@@ -71,10 +71,10 @@ echo "--- Containers ---"
 for svc in postgres minio mlflow api streamlit airflow airflow-scheduler nginx grafana alertmanager; do
     status=$(docker ps --format '{{.Status}}' --filter "name=lyonflow-$svc" 2>/dev/null | head -1)
     if [ -n "$status" ]; then
-        echo -e "${GREEN}✓${NC} $svc: $status"
+        echo -e "${GREEN}OK${NC} $svc: $status"
         ((ok++))
     else
-        echo -e "${RED}✗${NC} $svc: NOT RUNNING"
+        echo -e "${RED}FAIL${NC} $svc: NOT RUNNING"
         ((fail++))
     fi
 done

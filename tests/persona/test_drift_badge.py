@@ -32,7 +32,7 @@ def test_drift_badge_classify_green_no_drift():
     """MAE < green + drift = 0 → vert, message 'Modèle stable'."""
     color, icon, msg = drift_status_badge._classify(mae_kmh=5.0, drift_share=0.0)
     assert color == "#4CAF50"
-    assert icon == "🟢"
+    assert icon == "OK"
     assert "stable" in msg.lower()
 
 
@@ -40,22 +40,22 @@ def test_drift_badge_classify_green_with_drift():
     """MAE < green mais drift > 0 → orange (warning)."""
     color, icon, _msg = drift_status_badge._classify(mae_kmh=5.0, drift_share=0.5)
     assert color == "#FF9800"
-    assert icon == "🟡"
+    assert icon == "Attention"
 
 
 def test_drift_badge_classify_yellow():
     """MAE entre green et yellow → orange + 'Attention'."""
     color, icon, msg = drift_status_badge._classify(mae_kmh=10.0, drift_share=None)
     assert color == "#FF9800"
-    assert icon == "🟡"
-    assert "attention" in msg.lower()
+    assert icon == "Attention"
+    assert "10.0 km/h" in msg
 
 
 def test_drift_badge_classify_red():
     """MAE >= yellow → rouge + 'Drift détecté'."""
     color, icon, msg = drift_status_badge._classify(mae_kmh=20.0, drift_share=0.8)
     assert color == "#F44336"
-    assert icon == "🔴"
+    assert icon == "Alerte"
     assert "drift" in msg.lower()
 
 

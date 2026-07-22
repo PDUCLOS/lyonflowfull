@@ -5,15 +5,50 @@
 #   docker compose -f docker-compose.yml -f docker-compose.monitoring.yml up -d
 #
 # Stack active :
+#   - prometheus (scrape + alerting rules)
 #   - alertmanager (Discord/Slack webhook)
-#   - grafana (dashboards provisionnés — affiche "no data" sans Prometheus)
+#   - grafana (dashboards provisionnés)
 #   - node-exporter (CPU, RAM, disk, load)
 #   - postgres-exporter (PG connections, locks, queries)
 #   - nginx-exporter (requests, 5xx, latency)
 #
+# Réactivé 2026-07-02 (Prometheus retiré Sprint 15+, exporters restés orphelins
+# sans lien réseau vers postgres/nginx/api — corrigé ici, cf. CLAUDE.md).
+#
 # =============================================================================
 
 services:
+
+  # ---------------------------------------------------------------------------
+  # Prometheus
+  # ---------------------------------------------------------------------------
+  prometheus:
+    image: prom/prometheus:v2.54.1
+    container_name: lyonflow-prometheus
+    restart: unless-stopped
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--storage.tsdb.retention.time=30d'
+      - '--storage.tsdb.retention.size=10GB'
+    volumes:
+      - ./monitoring/prometheus:/etc/prometheus:ro
+      - prometheus_data:/prometheus
+    ports:
+      - "127.0.0.1:9090:9090"
+    networks:
+      - default
+      - monitoring
+    depends_on:
+      - alertmanager
+      - node-exporter
+      - postgres-exporter
+      - nginx-exporter
+    deploy:
+      resources:
+        limits:
+          cpus: "0.3"
+          memory: 256M
 
   # ---------------------------------------------------------------------------
   # Alertmanager
@@ -61,9 +96,10 @@ services:
       - grafana_data:/var/lib/grafana
     ports:
       - "127.0.0.1:3000:3000"
-    # Sprint 15+ — dépendance prometheus virée. Grafana démarre standalone
-    # et affiche "no data" tant que la stack monitoring v2 n'est pas remise.
+    depends_on:
+      - prometheus
     networks:
+      - default
       - monitoring
     deploy:
       resources:
@@ -104,9 +140,8 @@ services:
       DATA_SOURCE_NAME: "postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}?sslmode=disable"
     ports:
       - "127.0.0.1:9187:9187"
-    # Sprint 15+ — dépendance prometheus virée. Exporter reste UP mais
-    # sans target Prometheus pour le scrape.
     networks:
+      - default
       - monitoring
     deploy:
       resources:
@@ -122,11 +157,12 @@ services:
     container_name: lyonflow-nginx-exporter
     restart: unless-stopped
     command:
-      - '--nginx.scrape-uri=http://nginx:9113/stub_status'
-    # Note : nécessite stub_status dans nginx.conf (ajouter location /stub_status { stub_status on; })
+      - '--nginx.scrape-uri=http://nginx:80/stub_status'
+    # stub_status exposé sur le port 80 (nginx.conf:124), pas 9113 (port de l'exporter lui-même)
     ports:
       - "127.0.0.1:9113:9113"
     networks:
+      - default
       - monitoring
     deploy:
       resources:
@@ -143,7 +179,7 @@ services:
 # Volumes
 # ---------------------------------------------------------------------------
 volumes:
-  # prometheus_data SUPPRIMÉ Sprint 15+ (avec le service prometheus)
+  prometheus_data:
   alertmanager_data:
   grafana_data:
 

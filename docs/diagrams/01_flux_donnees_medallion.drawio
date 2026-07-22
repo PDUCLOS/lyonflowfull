@@ -1,0 +1,153 @@
+<mxfile host="Electron" agent="claude-code">
+  <diagram id="flux-medallion" name="Flux données — Medallion + ML + Serving">
+    <mxGraphModel dx="1245" dy="684" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1600" pageHeight="2000" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="title" parent="1" style="text;html=1;fontSize=20;fontStyle=1;align=center;" value="LyonFlow — Flux de données (2026-07-02, v0.12.1)" vertex="1">
+          <mxGeometry height="30" width="1500" x="40" y="10" as="geometry" />
+        </mxCell>
+        <mxCell id="sources" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=12;" value="SOURCES OPEN DATA (8)&#xa;Grand Lyon boucles · TCL SIRI Lite · Vélo&#39;v GBFS · Open-Meteo (météo + AQ)&#xa;Chantiers · Vitesse limite ref · Pistes/GTFS · TomTom Traffic Flow" vertex="1">
+          <mxGeometry height="70" width="1360" x="120" y="60" as="geometry" />
+        </mxCell>
+        <mxCell id="bronze" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;fontSize=12;" value="BRONZE — ingestion brute (immutable)&#xa;bronze.trafic_boucles · tcl_vehicles · velov · meteo · air_quality · chantiers&#xa;vitesse_limite_ref · infra_ref · calendrier_scolaire · jours_feries&#xa;Fréquence : */5min (boucles/SIRI/Vélov) · 1h (météo/AQ) · */15min (TomTom) · 1x/jour ou semaine (réf)" vertex="1">
+          <mxGeometry height="80" width="1360" x="120" y="180" as="geometry" />
+        </mxCell>
+        <mxCell id="silver" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#666666;fontSize=12;" value="SILVER — nettoyage (DAG transform_bronze_to_silver, */5min)&#xa;silver.trafic_boucles_clean · tcl_vehicles_clean · velov_clean · meteo_hourly · chantiers_actifs&#xa;Dédup DISTINCT ON · parse SIRI · géo 4326+2154 · filtre capteurs sains" vertex="1">
+          <mxGeometry height="70" width="1360" x="120" y="300" as="geometry" />
+        </mxCell>
+        <mxCell id="gold_trafic" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=11;" value="GOLD — Trafic (DAG transform_silver_to_gold, */15min)&#xa;traffic_features_live · dim_spatial_grid_mapping · dim_spatial_adjacency&#xa;fact_traffic_series · trafic_predictions · predictions_vs_actuals" vertex="1">
+          <mxGeometry height="90" width="440" x="120" y="410" as="geometry" />
+        </mxCell>
+        <mxCell id="gold_bus" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=11;" value="GOLD — Bus&#xa;bus_delay_segments · mv_bus_traffic_spatial (spatial 0.001°)&#xa;mv_line_kpis_live · mv_otp_heatmap&#xa;(infrastructure_bottlenecks retiré Sprint 22++)" vertex="1">
+          <mxGeometry height="90" width="440" x="580" y="410" as="geometry" />
+        </mxCell>
+        <mxCell id="gold_velov" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=11;" value="GOLD — Vélov + Multimodal&#xa;velov_features · velov_predictions&#xa;mv_multimodal_grid (Axe 1, grille 0.01°)&#xa;mv_sensor_saturation · mv_congestion_propagation_pairs (Axe 2)" vertex="1">
+          <mxGeometry height="90" width="440" x="1040" y="410" as="geometry" />
+        </mxCell>
+        <mxCell id="osm" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=11;" value="OSM / pgRouting (schéma osm)&#xa;osm.ways (~101k arêtes) · ways_vertices_pgr (~87k)&#xa;refresh_osm_traffic_costs (*/15min) → injecte vitesses capteurs&#xa;osm.route_car() = pgr_dijkstra pour recommandation voiture" vertex="1">
+          <mxGeometry height="70" width="770" x="400" y="530" as="geometry" />
+        </mxCell>
+        <mxCell id="ml_trafic" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=11;" value="ML — XGBoost Speed H+1h&#xa;dag_live_speed_retrain / dag_inference_xgboost&#xa;Toutes les 30 min → INSERT gold.trafic_predictions" vertex="1">
+          <mxGeometry height="80" width="440" x="120" y="630" as="geometry" />
+        </mxCell>
+        <mxCell id="ml_velov" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=11;" value="ML — XGBoost Vélov H+1h&#xa;dag_inference_velov (miroir xgboost)&#xa;Retrain hourly :50 → INSERT gold.velov_predictions" vertex="1">
+          <mxGeometry height="80" width="440" x="580" y="630" as="geometry" />
+        </mxCell>
+        <mxCell id="ml_drift" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=11;" value="Monitoring — Drift &amp; Registry&#xa;MLflow 2.12 (6 modèles, Production stage)&#xa;refresh_xgb_vs_tomtom + daily_drift_report (Evidently, 06h)" vertex="1">
+          <mxGeometry height="80" width="440" x="1040" y="630" as="geometry" />
+        </mxCell>
+        <mxCell id="api" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=11;" value="FastAPI (port 8000)&#xa;/health · /api/v1/predict/* · /recommend&#xa;/bottlenecks · /rgpd/* · X-API-Key" vertex="1">
+          <mxGeometry height="80" width="440" x="120" y="750" as="geometry" />
+        </mxCell>
+        <mxCell id="dash" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=11;" value="Streamlit Dashboard (port 8501)&#xa;18 pages × 3 personas (Usager/Pro TCL/Élu)&#xa;59 widgets, zéro mock (LYONFLOW_DEMO_MODE=0)" vertex="1">
+          <mxGeometry height="80" width="440" x="580" y="750" as="geometry" />
+        </mxCell>
+        <mxCell id="safety" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontSize=11;" value="Sécurité Vélov (2026-07-05, migration_045)&#xa;bronze.vigilance_meteo (NOUVEAU, */6h, API Opendatasoft sans clé) + silver.air_quality_clean (NOUVEAU)&#xa;→ gold.v_velov_safety_advisory → weather_widget/velov_trip/velov_widget (avertit sans bloquer)" vertex="1">
+          <mxGeometry height="60" width="1360" x="120" y="1030" as="geometry" />
+        </mxCell>
+        <mxCell id="mon" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;dashed=1;fontSize=11;" value="Monitoring stack&#xa;Prometheus ABSENT (intentionnel)&#xa;Grafana/Alertmanager tournent mais sans data" vertex="1">
+          <mxGeometry height="80" width="440" x="1040" y="750" as="geometry" />
+        </mxCell>
+        <mxCell id="iD3HUW9IFC8d6fNhLGpc-4" edge="1" parent="1" source="nginx" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" target="users" value="">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="nginx" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#666666;fontSize=12;fontStyle=1;" value="Nginx 1.27 reverse proxy — seul point public (80/443)&#xa;https://51.83.159.224" vertex="1">
+          <mxGeometry height="60" width="440" x="580" y="870" as="geometry" />
+        </mxCell>
+        <mxCell id="iD3HUW9IFC8d6fNhLGpc-3" edge="1" parent="1" source="users" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" target="nginx" value="">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="users" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;fontSize=12;" value="Utilisateurs (Usager / Pro TCL / Élu)" vertex="1">
+          <mxGeometry height="50" width="440" x="580" y="960" as="geometry" />
+        </mxCell>
+        <mxCell id="e1" edge="1" parent="1" source="sources" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;" target="bronze">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e2" edge="1" parent="1" source="bronze" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;" target="silver">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e3a" edge="1" parent="1" source="silver" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;" target="gold_trafic">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e3b" edge="1" parent="1" source="silver" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;" target="gold_bus">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e3c" edge="1" parent="1" source="silver" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;" target="gold_velov">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e4" edge="1" parent="1" source="gold_trafic" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;" target="osm">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e5a" edge="1" parent="1" source="gold_trafic" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;" target="ml_trafic">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e5b" edge="1" parent="1" source="gold_velov" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;exitX=0.5;exitY=1;exitDx=0;exitDy=0;" target="ml_velov">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="1260" y="610" />
+              <mxPoint x="800" y="610" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="e5c" edge="1" parent="1" source="ml_trafic" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;" target="ml_drift">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="340" y="730" />
+              <mxPoint x="1260" y="730" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="e6a" edge="1" parent="1" source="ml_trafic" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;" target="api">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e6b" edge="1" parent="1" source="ml_velov" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;" target="dash">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e6c" edge="1" parent="1" source="ml_drift" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;" target="mon">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e7a" edge="1" parent="1" source="api" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;" target="nginx">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="340" y="840" />
+              <mxPoint x="800" y="840" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="e7b" edge="1" parent="1" source="dash" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;" target="nginx">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e8" edge="1" parent="1" source="nginx" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;" target="users">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e9a" edge="1" parent="1" source="bronze" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;dashed=1;entryX=1;entryY=0.5;entryDx=0;entryDy=0;" target="safety">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="1500" y="220" />
+              <mxPoint x="1500" y="1060" />
+            </Array>
+            <mxPoint x="1500" y="260" as="sourcePoint" />
+            <mxPoint x="1500" y="1030" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="e9b" edge="1" parent="1" source="silver" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;dashed=1;exitX=0;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" target="safety">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="90" y="335" />
+              <mxPoint x="90" y="1060" />
+            </Array>
+            <mxPoint x="90" y="329" as="sourcePoint" />
+            <mxPoint x="90" y="1050" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="e9c" edge="1" parent="1" source="safety" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;dashed=1;entryX=1;entryY=0.5;entryDx=0;entryDy=0;exitX=0.671;exitY=0.075;exitDx=0;exitDy=0;exitPerimeter=0;" target="dash">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="1040" y="1030" as="sourcePoint" />
+            <mxPoint x="1040" y="830" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

@@ -74,6 +74,6 @@ def deferred_render(
         # Délimiteur visuel pour bien voir la zone lazy
         st.markdown("---")
         render_fn(*args, **kwargs)
-        if st.button(f"🙈 {show_label}", key=hide_key):
+        if st.button(f"{show_label}", key=hide_key):
             st.session_state[state_key] = False
             st.rerun()

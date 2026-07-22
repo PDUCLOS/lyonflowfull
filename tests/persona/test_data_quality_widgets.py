@@ -33,8 +33,8 @@ def test_data_quality_badge_classify_all_healthy():
 
     color, icon, msg = data_quality_badge._classify(n_healthy=8, n_dead=0, n_stale=0, score=94.0)
     assert color == "#4CAF50"
-    assert icon == "🟢"
-    assert "OK" in msg
+    assert icon == "OK"
+    assert "à jour" in msg
 
 
 def test_data_quality_badge_classify_dead():
@@ -42,7 +42,7 @@ def test_data_quality_badge_classify_dead():
 
     color, icon, msg = data_quality_badge._classify(n_healthy=6, n_dead=1, n_stale=0, score=61.0)
     assert color == "#F44336"
-    assert icon == "🔴"
+    assert icon == "Alerte"
     assert "panne" in msg.lower()
 
 
@@ -51,7 +51,7 @@ def test_data_quality_badge_classify_stale():
 
     color, icon, msg = data_quality_badge._classify(n_healthy=7, n_dead=0, n_stale=1, score=82.0)
     assert color == "#FF9800"
-    assert icon == "🟡"
+    assert icon == "Attention"
     assert "stale" in msg.lower()
 
 

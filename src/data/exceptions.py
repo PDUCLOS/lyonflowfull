@@ -18,7 +18,7 @@ class DashboardDataError(Exception):
     """Levée quand une source de données (DB, Airflow, MLflow) est indisponible.
 
     Le widget appelant doit intercepter cette exception et afficher un message
-    d'erreur explicite à l'utilisateur (ex. ``st.error("⚠️ Données du pipeline
+    d'erreur explicite à l'utilisateur (ex. ``st.error("Données du pipeline
     indisponibles — vérifier Airflow et PostgreSQL")``).
 
     Attributes:

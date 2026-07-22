@@ -100,6 +100,9 @@ site/
 .mavis/
 .claude/
 
+# Mémoire projet Claude (notes internes, pas destinées au repo public)
+CLAUDE.md
+
 # TLS certs (generated, never committed)
 nginx/certs/*.pem
 .opencode/
@@ -115,3 +118,11 @@ docs/AUDIT_*.docx
 
 # Soutenance (slides HTML, pas du code)
 presentation.html
+
+# Scripts scratch/debug ponctuels (vérifications ad-hoc pendant une session,
+# jamais destinés à être rejoués ou committés — cf. archive/scripts/ pour
+# les codemods one-off qui, eux, ont une valeur de traçabilité).
+scripts/scratch_*
+scripts/*_scratch.*
+scripts/sql/scratch_*
+scripts/sql/check_*.sql

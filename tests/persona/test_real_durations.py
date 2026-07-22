@@ -59,5 +59,5 @@ def test_mode_comparison_source_badge_logic():
         src = f.read()
     assert '"computed"' in src or "'computed'" in src
     assert '"estimated"' in src or "'estimated'" in src
-    assert "✅ Durée calculée" in src
-    assert "⏱️ Estimé" in src
+    assert "Durée calculée" in src
+    assert "Estimé" in src

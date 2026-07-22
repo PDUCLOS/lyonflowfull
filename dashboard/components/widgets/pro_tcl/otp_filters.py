@@ -11,7 +11,7 @@ def render_otp_filters() -> dict:
     Returns:
         Dict avec clés : period, day_type, weather, start_date, end_date
     """
-    st.markdown("##### 🔍 Filtres")
+    st.markdown("##### Filtres")
 
     col1, col2, col3 = st.columns(3)
     with col1:
@@ -30,8 +30,8 @@ def render_otp_filters() -> dict:
     with col3:
         weather = st.multiselect(
             "Météo",
-            ["☀️ Beau", "☁️ Couvert", "🌧 Pluie", "❄️ Neige"],
-            default=["☀️ Beau", "☁️ Couvert", "🌧 Pluie"],
+            ["Beau", "Couvert", "Pluie", "Neige"],
+            default=["Beau", "Couvert", "Pluie"],
             key="otp_filter_weather",
         )
 

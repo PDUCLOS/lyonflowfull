@@ -7,8 +7,8 @@ Ce dossier contient les **units systemd versionnés** pour LyonFlow,
 
 | Fichier | État VPS | Description |
 |---------|----------|-------------|
-| `lyonflow-backup.service` | ✅ Installé | One-shot : exécute `scripts/backup-offsite.sh` |
-| `lyonflow-backup.timer` | ✅ Installé (actif) | Quotidien 03:00 UTC ± 15min random |
+| `lyonflow-backup.service` | Installé | One-shot : exécute `scripts/backup-offsite.sh` |
+| `lyonflow-backup.timer` | Installé (actif) | Quotidien 03:00 UTC ± 15min random |
 
 ## Installation
 

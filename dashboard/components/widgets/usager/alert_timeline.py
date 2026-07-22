@@ -19,7 +19,7 @@ def render_alert_timeline(alerts: list) -> None:
         st.info("Aucune alerte active.")
         return
 
-    st.markdown("##### 🕐 Frise temporelle")
+    st.markdown("##### Frise temporelle")
 
     # Trier par timestamp desc
     sorted_alerts = sorted(alerts, key=lambda a: a.get("timestamp", ""), reverse=True)

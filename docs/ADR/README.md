@@ -4,10 +4,10 @@ Liste des Architecture Decision Records du projet LyonFlow.
 
 | N° | Titre | Statut | Date |
 |----|-------|--------|------|
-| 0001 | [Architecture Medallion (Bronze/Silver/Gold)](0001-architecture-medallion.md) | ✅ Accepté | 2026-06-06 |
-| 0002 | [3 personas en 1 dashboard](0002-3-personas-1-dashboard.md) | ✅ Accepté | 2026-06-06 |
-| 0003 | [Docker Compose avant Kubernetes](0003-docker-compose-pas-k8s.md) | ✅ Accepté | 2026-06-06 |
-| 0004 | [psycopg2 pur (pas de Polars) dans Airflow](0004-psycopg2-pur-pas-polars.md) | ✅ Accepté | 2026-06-06 |
+| 0001 | [Architecture Medallion (Bronze/Silver/Gold)](0001-architecture-medallion.md) | Accepté | 2026-06-06 |
+| 0002 | [3 personas en 1 dashboard](0002-3-personas-1-dashboard.md) | Accepté | 2026-06-06 |
+| 0003 | [Docker Compose avant Kubernetes](0003-docker-compose-pas-k8s.md) | Accepté | 2026-06-06 |
+| 0004 | [psycopg2 pur (pas de Polars) dans Airflow](0004-psycopg2-pur-pas-polars.md) | Accepté | 2026-06-06 |
 
 ## Convention de nommage
 

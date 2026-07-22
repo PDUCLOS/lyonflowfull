@@ -20,10 +20,10 @@ check() {
     local result
     result=$(eval "$2" 2>&1)
     if [ -z "$result" ]; then
-        printf "${GREEN}✓${NC} %s\n" "$label"
+        printf "${GREEN}OK${NC} %s\n" "$label"
         ((ok++))
     else
-        printf "${RED}✗${NC} %s\n" "$label"
+        printf "${RED}FAIL${NC} %s\n" "$label"
         echo "$result" | head -10 | sed 's/^/    /'
         ((fail++))
     fi
@@ -34,10 +34,10 @@ check_warn() {
     local result
     result=$(eval "$2" 2>&1)
     if [ -z "$result" ]; then
-        printf "${GREEN}✓${NC} %s\n" "$label"
+        printf "${GREEN}OK${NC} %s\n" "$label"
         ((ok++))
     else
-        printf "${YELLOW}⚠${NC} %s\n" "$label"
+        printf "${YELLOW}WARN${NC} %s\n" "$label"
         echo "$result" | head -5 | sed 's/^/    /'
         ((warn++))
     fi
@@ -84,10 +84,10 @@ for page in dashboard/pages/{Pro,Elu,Usager}_*.py dashboard/pages/9_RGPD_Conform
     fi
 done
 if [ -z "$PAGES_WITHOUT_REFRESH" ]; then
-    printf "${GREEN}✓${NC} All pages have setup_auto_refresh()\n"
+    printf "${GREEN}OK${NC} All pages have setup_auto_refresh()\n"
     ((ok++))
 else
-    printf "${RED}✗${NC} Pages missing setup_auto_refresh():\n"
+    printf "${RED}FAIL${NC} Pages missing setup_auto_refresh():\n"
     echo -e "$PAGES_WITHOUT_REFRESH"
     ((fail++))
 fi

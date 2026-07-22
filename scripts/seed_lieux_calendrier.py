@@ -132,7 +132,7 @@ def main() -> None:
             return
 
         n_upserted, _ = upsert_cadence(conn, rows, dry_run=False)
-        logger.info("✅ %d lignes upsertées dans referentiel.lieux_calendrier", n_upserted)
+        logger.info("%d lignes upsertées dans referentiel.lieux_calendrier", n_upserted)
 
         # Vérif post-seed
         with conn.cursor() as cur:

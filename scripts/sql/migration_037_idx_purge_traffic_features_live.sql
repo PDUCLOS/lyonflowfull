@@ -22,7 +22,7 @@
 --
 -- IDEMPOTENT : CREATE INDEX IF NOT EXISTS + ANALYZE.
 --
--- ⚠️  APPLIQUER AVANT le premier déploiement de la tâche purge_old_traffic_features
+-- APPLIQUER AVANT le premier déploiement de la tâche purge_old_traffic_features
 --     (sinon le 1er DELETE sera un seq scan bloquant).
 -- =============================================================================
 

@@ -22,6 +22,7 @@ from dashboard.components.a11y import st_folium_with_alt
 from dashboard.components.colors import COLORS
 from dashboard.components.error_display import show_error
 from dashboard.components.loading_state import loading_wrapper
+from dashboard.components.velov_safety_banner import render_velov_safety_banner
 from src.data.exceptions import DashboardDataError
 from src.routing.pathfinder_multimodal import (
     VelovItinerary,
@@ -77,7 +78,7 @@ def render_velov_trip(
         if not origin_coords or not dest_coords:
             show_error(
                 "geocoding_fail",
-                f"❌ Adresses non résolues. Origin={origin!r} → {origin_coords}, Dest={destination!r} → {dest_coords}",
+                f"Adresses non résolues. Origin={origin!r} → {origin_coords}, Dest={destination!r} → {dest_coords}",
             )
             return
 
@@ -85,7 +86,7 @@ def render_velov_trip(
         dest_lon, dest_lat = dest_coords
 
         # Calcul du trajet Vélov
-        with st.spinner("🚲 Recherche stations Vélov + calcul trajet…"):
+        with st.spinner("Recherche stations Vélov + calcul trajet…"):
             try:
                 itin = plan_velov_trip(
                     origin_lat=origin_lat,
@@ -104,11 +105,12 @@ def render_velov_trip(
 
         if not itin.segments:
             st.warning(
-                "⚠️ Aucune station Vélov disponible à proximité. "
+                "Aucune station Vélov disponible à proximité. "
                 "Vérifiez que silver.velov_clean est alimentée (DAG collect_bronze)."
             )
             return
 
+        render_velov_safety_banner()
         _render_velov_summary(itin)
         # (2026-06-19) — Cards stations proéminentes (départ + arrivée)
         # avec vélos/docks/méca-élec/statut coloré/distance à pied.
@@ -148,27 +150,22 @@ def _render_velov_summary(itin: VelovItinerary) -> None:
     col1, col2, col3, col4 = st.columns(4)
     with col1:
         st.metric(
-            "🕐 Durée totale",
+            "Durée totale",
             f"{itin.total_duration_min:.1f} min",
         )
     with col2:
-        st.metric("📏 Distance", f"{itin.total_distance_m / 1000:.2f} km")
+        st.metric("Distance", f"{itin.total_distance_m / 1000:.2f} km")
     with col3:
         # Vitesse moyenne pondérée sur le segment Vélov
         cycle_seg = next((s for s in itin.segments if s.mode == "cycle"), None)
         if cycle_seg and cycle_seg.duration_min > 0:
             avg_kmh = cycle_seg.distance_m / 1000.0 / cycle_seg.duration_min * 60
-            st.metric("🚲 Vélov moyen", f"{avg_kmh:.1f} km/h")
+            st.metric("Vélov moyen", f"{avg_kmh:.1f} km/h")
         else:
-            st.metric("🚲 Vélov moyen", "—")
+            st.metric("Vélov moyen", "—")
     with col4:
-        status = "✅ Faisable" if itin.feasible else "⚠️ À vérifier"
-        st.metric("📊 Statut", status)
-
-    # Alertes spécifiques
-    for seg in itin.segments:
-        if "⚠️" in seg.notes:
-            st.warning(f"⚠️ {seg.from_label} → {seg.to_label} : {seg.notes}")
+        status = "Faisable" if itin.feasible else "À vérifier"
+        st.metric("Statut", status)
 
 
 def _render_station_cards(itin: VelovItinerary) -> None:
@@ -192,12 +189,12 @@ def _render_station_cards(itin: VelovItinerary) -> None:
     if cycle_seg is None:
         return
 
-    st.markdown("#### 🚲 Bornes Vélov utilisées")
+    st.markdown("#### Bornes Vélov utilisées")
 
     col1, col2 = st.columns(2)
     with col1:
         _render_single_station_card(
-            role="🟢 DÉPART",
+            role="DÉPART",
             station_label=cycle_seg.from_label,
             n_bikes=cycle_seg.n_bikes_depart,
             n_docks=None,  # pas dans le segment walk actuel
@@ -208,7 +205,7 @@ def _render_station_cards(itin: VelovItinerary) -> None:
         )
     with col2:
         _render_single_station_card(
-            role="🔴 ARRIVÉE",
+            role="ARRIVÉE",
             station_label=cycle_seg.to_label,
             n_bikes=None,  # pas dans le segment destination actuel
             n_docks=cycle_seg.n_docks_arrive,
@@ -232,19 +229,19 @@ def _render_single_station_card(
     """Une card station (Sprint 14) — vélos, docks, statut coloré, marche.
 
     Statut couleur :
-    - 🔴 VIDE / PLEINE (rouge) si vélos == 0 ou docks == 0
-    - 🟠 FAIBLE (orange) si vélos < 5 ou docks < 5
-    - 🟢 OK (vert) sinon (≥5 vélos ET ≥5 docks)
+    - VIDE / PLEINE (rouge) si vélos == 0 ou docks == 0
+    - FAIBLE (orange) si vélos < 5 ou docks < 5
+    - OK (vert) sinon (≥5 vélos ET ≥5 docks)
     """
     # Couleur + label statut
     if n_bikes == 0:
-        color, status_label = "#F44336", "🔴 VIDE"
+        color, status_label = "#F44336", "VIDE"
     elif n_docks == 0:
-        color, status_label = "#F44336", "🔴 PLEINE"
+        color, status_label = "#F44336", "PLEINE"
     elif (n_bikes is not None and n_bikes < 5) or (n_docks is not None and n_docks < 5):
-        color, status_label = "#FF9800", "🟠 FAIBLE"
+        color, status_label = "#FF9800", "FAIBLE"
     else:
-        color, status_label = "#4CAF50", "🟢 OK"
+        color, status_label = "#4CAF50", "OK"
 
     # Détail méca/élec si GBFS le fournit
     mech_elec_html = ""
@@ -254,7 +251,7 @@ def _render_single_station_card(
         mech_elec_html = (
             '<div class="lyf-sublabel" style="opacity:0.65;margin-top:0.3rem;'
             'line-height:1.4;">'
-            f"├── 🔧 {m} mécaniques<br/>└── ⚡ {e} électriques"
+            f"├── {m} mécaniques<br/>└── {e} électriques"
             "</div>"
         )
 
@@ -269,15 +266,15 @@ def _render_single_station_card(
                 <span class="lyf-sublabel" style="font-weight:700;color:{color};">{status_label}</span>
             </div>
             <div style="font-size:1rem;font-weight:700;margin:0.5rem 0 0.3rem 0;">
-                🚲 {station_label}
+                {station_label}
             </div>
             <div style="display:flex;gap:1rem;align-items:baseline;">
-                <div style="font-size:1.1rem;font-weight:700;color:{color};">🚲 {bikes_str}</div>
-                <div class="lyf-detail" style="opacity:0.85;">🅿️ {docks_str}</div>
+                <div style="font-size:1.1rem;font-weight:700;color:{color};">{bikes_str}</div>
+                <div class="lyf-detail" style="opacity:0.85;">{docks_str}</div>
             </div>
             {mech_elec_html}
             <div class="lyf-sublabel" style="opacity:0.7;margin-top:0.5rem;border-top:1px solid rgba(255,255,255,0.1);padding-top:0.4rem;">
-                📍 {int(walk_distance_m)}m à pied (~{walk_duration_min:.0f} min)
+                {int(walk_distance_m)}m à pied (~{walk_duration_min:.0f} min)
             </div>
         </div>
         """
@@ -294,7 +291,7 @@ def _render_velov_map(
     try:
         import folium
     except ImportError:
-        st.warning("⚠️ folium/streamlit-folium non disponible — affichage liste uniquement")
+        st.warning("folium/streamlit-folium non disponible — affichage liste uniquement")
         return
 
     # Centre sur le milieu de l'itinéraire
@@ -311,14 +308,14 @@ def _render_velov_map(
     # Marker origine
     folium.Marker(
         [origin_coords[1], origin_coords[0]],
-        popup=f"🟢 <b>{itin.origin_label}</b><br/>Point de départ",
+        popup=f"<b>{itin.origin_label}</b><br/>Point de départ",
         icon=folium.Icon(color="green", icon="play"),
     ).add_to(m)
 
     # Marker destination
     folium.Marker(
         [dest_coords[1], dest_coords[0]],
-        popup=f"🔴 <b>{itin.destination_label}</b><br/>Point d'arrivée",
+        popup=f"<b>{itin.destination_label}</b><br/>Point d'arrivée",
         icon=folium.Icon(color="red", icon="stop"),
     ).add_to(m)
 
@@ -354,10 +351,10 @@ def _render_velov_map(
         ):
             if seg.n_bikes_depart is not None or seg.n_docks_arrive is not None:
                 popup = (
-                    f"🚲 <b>{seg.to_label if seg.mode == 'walk' else seg.from_label}</b><br/>"
-                    + (f"🚴 Vélos dispo : {seg.n_bikes_depart}<br/>" if seg.n_bikes_depart is not None else "")
-                    + (f"🅿️ Docks libres : {seg.n_docks_arrive}<br/>" if seg.n_docks_arrive is not None else "")
-                    + f"📏 {seg.distance_m:.0f} m · 🕐 {seg.duration_min} min"
+                    f"<b>{seg.to_label if seg.mode == 'walk' else seg.from_label}</b><br/>"
+                    + (f"Vélos dispo : {seg.n_bikes_depart}<br/>" if seg.n_bikes_depart is not None else "")
+                    + (f"Docks libres : {seg.n_docks_arrive}<br/>" if seg.n_docks_arrive is not None else "")
+                    + f"{seg.distance_m:.0f} m · {seg.duration_min} min"
                 )
                 if seg.mode == "walk":
                     s_lat, s_lon = seg.to_lat, seg.to_lon
@@ -374,20 +371,20 @@ def _render_velov_map(
 
 def _render_velov_segments(itin: VelovItinerary) -> None:
     """Cards détaillées des 3 segments."""
-    with st.expander(f"🛣️ Détail des {len(itin.segments)} segments", expanded=False):
+    with st.expander(f"Détail des {len(itin.segments)} segments", expanded=False):
         for i, seg in enumerate(itin.segments, 1):
             mode_label = {
-                "walk": "🚶 Marche",
-                "cycle": "🚲 Vélov",
-                "destination": "🚶 Marche",
+                "walk": "Marche",
+                "cycle": "Vélov",
+                "destination": "Marche",
             }.get(seg.mode, seg.mode)
             color = _MODE_COLOR.get(seg.mode, "#666")
 
             extras = ""
             if seg.n_bikes_depart is not None:
-                extras += f" · 🚴 {seg.n_bikes_depart} vélos"
+                extras += f" · {seg.n_bikes_depart} vélos"
             if seg.n_docks_arrive is not None:
-                extras += f" · 🅿️ {seg.n_docks_arrive} docks"
+                extras += f" · {seg.n_docks_arrive} docks"
 
             st.markdown(
                 f"""
@@ -402,7 +399,7 @@ def _render_velov_segments(itin: VelovItinerary) -> None:
                             {mode_label} : {seg.from_label} → {seg.to_label}
                         </div>
                         <div style="font-size:0.8rem;opacity:0.7;">
-                            📏 {seg.distance_m:.0f} m · 🕐 {seg.duration_min} min{extras}
+                            {seg.distance_m:.0f} m · {seg.duration_min} min{extras}
                         </div>
                         {f'<div class="lyf-sublabel" style="opacity:0.6;font-style:italic;">{seg.notes}</div>' if seg.notes else ""}
                     </div>
@@ -424,7 +421,7 @@ def _render_alternatives_card(
     """
     if not alternatives:
         return
-    st.markdown(f"##### 🔄 Alternatives à la borne {role} ({len(alternatives)})")
+    st.markdown(f"##### Alternatives à la borne {role} ({len(alternatives)})")
     st.caption(
         f"Marche à pied entre bornes voisines — la borne #1 est {'VIDE' if role == 'origin' else 'PLEINE'}"
         if (role == "origin" and any(a.get("status") == "VIDE" for a in alternatives))
@@ -451,16 +448,16 @@ def _render_alternatives_card(
                 f"""
                 <div class="lyonflow-card" style="border-left:4px solid {color};">
                     <div class="lyf-detail" style="font-weight:600;">
-                        🚲 {alt["velov_name"]}
+                        {alt["velov_name"]}
                     </div>
                     <div class="lyf-sublabel" style="opacity:0.7;margin-top:0.2rem;">
-                        {status} · 📏 {int(alt.get("distance_m", 0))}m · 🚶 {walk_min}min
+                        {status} · {int(alt.get("distance_m", 0))}m · {walk_min}min
                     </div>
                     <div style="font-size:1.2rem;font-weight:700;margin:0.3rem 0;color:{color};">
-                        🚴 {bikes} vélos
+                        {bikes} vélos
                     </div>
                     <div class="lyf-sublabel" style="opacity:0.7;">
-                        🅿️ {docks} docks
+                        {docks} docks
                     </div>
                 </div>
                 """
@@ -520,9 +517,9 @@ def _render_neighbors_legend(
     """Mini-caption : nombre de voisines à < 200m pour chaque borne."""
     parts = []
     if origin_neighbors:
-        parts.append(f"🚲 Borne départ : {len(origin_neighbors)} voisine(s) à < 200m (maillage actif)")
+        parts.append(f"Borne départ : {len(origin_neighbors)} voisine(s) à < 200m (maillage actif)")
     if dest_neighbors:
-        parts.append(f"🚲 Borne arrivée : {len(dest_neighbors)} voisine(s) à < 200m (maillage actif)")
+        parts.append(f"Borne arrivée : {len(dest_neighbors)} voisine(s) à < 200m (maillage actif)")
     if parts:
         st.caption(" · ".join(parts))
 
@@ -530,23 +527,23 @@ def _render_neighbors_legend(
 def _segment_popup_html(seg: VelovSegment) -> str:
     """HTML du popup Folium pour un segment."""
     mode_label = {
-        "walk": "🚶 Marche",
-        "cycle": "🚲 Vélov",
-        "destination": "🚶 Marche",
+        "walk": "Marche",
+        "cycle": "Vélov",
+        "destination": "Marche",
     }.get(seg.mode, seg.mode)
     html = f"<b>{mode_label}</b><br/>{seg.from_label} → {seg.to_label}<br/>"
-    html += f"📏 {seg.distance_m:.0f} m<br/>🕐 {seg.duration_min} min"
+    html += f"{seg.distance_m:.0f} m<br/>{seg.duration_min} min"
     if seg.n_bikes_depart is not None:
-        html += f"<br/>🚴 {seg.n_bikes_depart} vélos dispo"
+        html += f"<br/>{seg.n_bikes_depart} vélos dispo"
     if seg.n_docks_arrive is not None:
-        html += f"<br/>🅿️ {seg.n_docks_arrive} docks libres"
+        html += f"<br/>{seg.n_docks_arrive} docks libres"
     return html
 
 
 def _resolve_lieu(text: str) -> tuple[float, float] | None:
     """Résout un nom de lieu → (lon, lat) depuis ``referentiel.lieux_lyon``.
 
-    Robuste aux labels préfixés par emoji (ex: ``"🌳 Parc de la Tête d'Or, Lyon"``
+    Robuste aux labels préfixés par emoji (ex: ``"Parc de la Tête d'Or, Lyon"``
     retourné par ``search_bar.render_search_bar()``). L'emoji et l'espace
     initial sont strippés avant la query SQL.
     """
@@ -558,7 +555,7 @@ def _resolve_lieu(text: str) -> tuple[float, float] | None:
 
     if not text:
         return None
-    # Strip emoji préfixe (search_bar préfixe avec "🏙 Villeurbanne", etc.)
+    # Strip emoji préfixe (search_bar préfixe avec "Villeurbanne", etc.)
     # Les emojis sont en dehors du BMP, on strip le 1er "mot" s'il est <= 3 chars
     # et ne contient que des non-ASCII.
     cleaned = text.strip()

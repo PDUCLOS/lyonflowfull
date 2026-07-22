@@ -17,6 +17,7 @@ from dashboard.components.colors import COLORS
 from dashboard.components.data_cache import cached_weather_hourly
 from dashboard.components.error_display import show_error
 from dashboard.components.loading_state import loading_wrapper
+from dashboard.components.velov_safety_banner import get_velov_safety_severity
 from src.data.exceptions import DashboardDataError
 
 
@@ -49,10 +50,10 @@ def render_weather_widget(weather: dict | None = None) -> None:
             }
         # (2026-06-12) — viré le fallback MOCK_WEATHER.
         else:
-            st.warning("⚠️ Météo indisponible — silver.meteo_hourly est vide.")
+            st.warning("Météo indisponible — silver.meteo_hourly est vide.")
             return
 
-    icon = str(weather.get("condition_icon", "☀️"))
+    icon = str(weather.get("condition_icon", ""))
     cond = str(weather.get("condition", ""))
     # arrondi 1 décimale pour éviter les artefacts float32
     # ('16.700000762939453' → '16.7').
@@ -63,14 +64,33 @@ def render_weather_widget(weather: dict | None = None) -> None:
     # Score vélo basé sur pluie et vent
     cycling_score = weather.get("cycling_score", 1.0)
     if rain > 0.5 or wind > 35:
-        cycling_advice = "❌ Vélov déconseillé"
-        cycling_color = COLORS["status_critical"]
+        weather_severity = 2
     elif rain > 0.1 or wind > 25:
-        cycling_advice = "⚠️ Vélov possible mais humide"
+        weather_severity = 1
+    else:
+        weather_severity = 0
+
+    # Conseil sécurité pollution/canicule (migration_045, 2026-07-05) — on
+    # n'invente jamais un "ok" si la donnée est indisponible (fail-loud) :
+    # "unknown" est traité comme neutre (severity 0), pas comme un risque.
+    health_severity, advisory = get_velov_safety_severity()
+    health_status = advisory.get("status", "unknown")
+    health_reason = advisory.get("reason")
+
+    severity = max(weather_severity, health_severity)
+    if severity == 2:
+        cycling_advice = "Vélov déconseillé"
+        cycling_color = COLORS["status_critical"]
+    elif severity == 1:
+        cycling_advice = "Vélov possible mais prudence"
         cycling_color = COLORS["status_warning"]
     else:
-        cycling_advice = "✅ Vélov recommandé"
+        cycling_advice = "Vélov recommandé"
         cycling_color = COLORS["status_ok"]
+
+    detail_line = f"Pluie {rain}mm/h · Vent {wind} km/h"
+    if health_severity > 0 and health_reason:
+        detail_line += f" · {health_reason}"
 
     st.markdown(
         f"""
@@ -79,7 +99,7 @@ def render_weather_widget(weather: dict | None = None) -> None:
             <div style="flex:1;">
                 <div class="lyf-value" style="font-weight:600;">{temp}°C · {cond}</div>
                 <div class="lyf-detail" style="opacity:0.7;">
-                    Pluie {rain}mm/h · Vent {wind} km/h
+                    {detail_line}
                 </div>
             </div>
             <div style="text-align:right;color:{cycling_color};font-size:0.9rem;font-weight:600;">
@@ -89,6 +109,14 @@ def render_weather_widget(weather: dict | None = None) -> None:
         """,
         unsafe_allow_html=True,
     )
+
+    if health_severity > 0 and health_reason:
+        if health_status == "severe":
+            st.error(
+                f"{health_reason} — l'État déconseille le sport en extérieur. Privilégiez le TC ou la marche courte."
+            )
+        else:
+            st.warning(f"{health_reason} — évitez l'effort prolongé à vélo, préférez le TC si possible.")
 
     # Prévisions 3 prochaines heures
     next_3h = list(weather.get("next_3h", []))

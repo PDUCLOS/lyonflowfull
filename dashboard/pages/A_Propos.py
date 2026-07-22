@@ -22,7 +22,7 @@ render_sidebar_navigation()
 setup_auto_refresh()
 render_freshness_badge()
 
-st.title("ℹ️ À propos de LyonFlow")
+st.title("À propos de LyonFlow")
 render_data_status_banner()
 
 st.markdown(
@@ -46,9 +46,9 @@ st.markdown(
 
     ### Les 3 personas
 
-    - **🌱 Usager** — vue simplifiée, recherche trajet, alertes
-    - **🎛 Pro TCL** — control room, OTP, corrélation bus/trafic
-    - **🏛 Élu** — synthèse exécutive, bottlenecks prioritaires, PDF
+    - **Usager** — vue simplifiée, recherche trajet, alertes
+    - **Pro TCL** — control room, OTP, corrélation bus/trafic
+    - **Élu** — synthèse exécutive, bottlenecks prioritaires, PDF
 
     ### Auteur
 

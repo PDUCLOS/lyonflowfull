@@ -41,7 +41,7 @@ if [ ! -e "${BACKUP_PATH}" ]; then
     exit 1
 fi
 
-echo "⚠️  ATTENTION : ce script va ÉCRASER la base de données actuelle."
+echo "ATTENTION : ce script va ÉCRASER la base de données actuelle."
 echo "Backup à restaurer : ${BACKUP_PATH}"
 read -p "Confirmez avec 'yes' (ou 'no' pour annuler) : " confirm
 if [ "${confirm}" != "yes" ]; then

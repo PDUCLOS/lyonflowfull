@@ -36,10 +36,10 @@ _DIAGNOSIS_COLORS = {
 }
 
 _DIAGNOSIS_LABELS = {
-    "healthy": "🟢 Réseau fluide",
-    "stressed": "🟡 Réseau sous tension",
-    "degraded": "🟠 Réseau dégradé",
-    "critical": "🔴 Réseau critique",
+    "healthy": "Réseau fluide",
+    "stressed": "Réseau sous tension",
+    "degraded": "Réseau dégradé",
+    "critical": "Réseau critique",
 }
 
 
@@ -178,7 +178,7 @@ def _render_subgauges(
             plotly_with_alt(fig, use_container_width=True)
             st.caption(sublabel)
             if not available:
-                st.caption("⚠️ Source indisponible (poids redistribué)")
+                st.caption("Source indisponible (poids redistribué)")
 
 
 def render_network_health_gauge() -> None:
@@ -188,12 +188,12 @@ def render_network_health_gauge() -> None:
     Fail loud via DashboardDataError si DB indispo OU fonction SQL
     migration 019 non appliquée. Le widget affiche alors ``st.error``.
     """
-    st.markdown("##### 💚 Santé du réseau — temps réel")
+    st.markdown("##### Santé du réseau — temps réel")
 
     try:
         df = cached_network_health_score()
     except DashboardDataError as e:
-        show_error("db_down", f"⚠️ Score santé réseau indisponible : {e}")
+        show_error("db_down", f"Score santé réseau indisponible : {e}")
         return
 
     if df.empty:
@@ -250,7 +250,7 @@ def render_network_health_gauge() -> None:
         unavailable.append("Météo")
     if unavailable:
         st.info(
-            f"ℹ️ Sources temporairement indisponibles ({', '.join(unavailable)}) "
+            f"Sources temporairement indisponibles ({', '.join(unavailable)}) "
             f"— leurs poids ont été redistribués sur les autres composantes."
         )
 
@@ -258,10 +258,10 @@ def render_network_health_gauge() -> None:
     # Lit les 96 derniers snapshots (24h × 4/h) et affiche une mini-tendance.
     # Si la table est vide (< 24h de données après déploiement du DAG), la
     # sparkline affiche "Historique bientôt disponible".
+    from dashboard.components.data_cache import cached_network_health_history
     from dashboard.components.sparkline import render_sparkline
-    from src.data.network_health_history import get_network_health_history
 
-    history = get_network_health_history(hours=24)
+    history = cached_network_health_history(hours=24)
     if history:
         timestamps = [row["recorded_at"] for row in history]
         scores = [float(row["score"]) for row in history]
@@ -273,6 +273,6 @@ def render_network_health_gauge() -> None:
         )
     else:
         st.caption(
-            "📈 Sparkline 24h — l'historique s'affichera après 24h de collecte "
+            "Sparkline 24h — l'historique s'affichera après 24h de collecte "
             "(DAG `record_network_health` */15 min, table `gold.network_health_history`)."
         )

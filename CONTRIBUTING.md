@@ -1,6 +1,6 @@
 # Contributing à LyonFlow
 
-Merci de votre intérêt pour contribuer à LyonFlow ! 🎉
+Merci de votre intérêt pour contribuer à LyonFlow !
 
 ## Code de conduite
 

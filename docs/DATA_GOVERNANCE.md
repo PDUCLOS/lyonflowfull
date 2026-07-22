@@ -14,20 +14,20 @@ Les seules données potentiellement identifiantes :
 
 ### Article 5 — Minimisation
 
-✅ LyonFlow ne collecte **que** des données open data publiques.
+LyonFlow ne collecte **que** des données open data publiques.
 Les comptes Pro TCL / Élu sont strictement techniques (auth requise).
 
 ### Article 6 — Licéité du traitement
 
-✅ Base légale : **intérêt légitime** (service public mobilité).
-✅ Pas de traitement commercial, publicitaire, ou de profilage.
+Base légale : **intérêt légitime** (service public mobilité).
+Pas de traitement commercial, publicitaire, ou de profilage.
 
 ### Article 7 — Consentement
 
-✅ Endpoint `POST /api/v1/rgpd/request` pour demandes utilisateur
+Endpoint `POST /api/v1/rgpd/request` pour demandes utilisateur
 (rgpd.data_subject_requests table)
-✅ Table `rgpd.user_consents` pour tracer consentement explicite si besoin
-✅ Aucun cookie de tracking (Streamlit cookies techniques uniquement)
+Table `rgpd.user_consents` pour tracer consentement explicite si besoin
+Aucun cookie de tracking (Streamlit cookies techniques uniquement)
 
 ### Article 15 — Droit d'accès
 
@@ -80,12 +80,12 @@ LIMIT 100;
 
 ### Article 32 — Sécurité
 
-✅ Mots de passe hashés bcrypt
-✅ SQL paramétré (pas d'injection)
-✅ HTTPS recommandé (Let's Encrypt)
-✅ Containers non-root (USER appuser)
-✅ Audit log immutable
-✅ Rétention configurable (purge Bronze 7-45j)
+Mots de passe hashés bcrypt
+SQL paramétré (pas d'injection)
+HTTPS recommandé (Let's Encrypt)
+Containers non-root (USER appuser)
+Audit log immutable
+Rétention configurable (purge Bronze 7-45j)
 
 ## Anonymisation
 

@@ -107,11 +107,11 @@ def render_source_health_monitor() -> None:
             health_df = cached_source_health()
             completeness_df = cached_data_completeness()
         except DashboardDataError as e:
-            show_error("db_down", f"⚠️ Source health indisponible : {e}")
+            show_error("db_down", f"Source health indisponible : {e}")
             return
 
         if health_df.empty:
-            st.info("ℹ️ Aucune donnée de santé source (DB vide ?).")
+            st.info("Aucune donnée de santé source (DB vide ?).")
             return
 
         # ── 1. Score global + jauge ────────────────────────────────────────────
@@ -129,10 +129,10 @@ def render_source_health_monitor() -> None:
                 <div class="lyonflow-card" style="padding:0.8rem;">
                     <div class="lyf-sublabel">Statut par source (8 sources Bronze + 1 Gold)</div>
                     <div style="font-size:1.4rem;margin-top:0.4rem;">
-                        🟢 <b>{n_healthy}</b> healthy
-                        &nbsp; 🟡 <b>{n_delayed}</b> delayed
-                        &nbsp; 🟠 <b>{n_stale}</b> stale
-                        &nbsp; 🔴 <b>{n_dead}</b> dead
+                        <b>{n_healthy}</b> healthy
+                        &nbsp; <b>{n_delayed}</b> delayed
+                        &nbsp; <b>{n_stale}</b> stale
+                        &nbsp; <b>{n_dead}</b> dead
                     </div>
                 </div>
                 """,
@@ -142,7 +142,7 @@ def render_source_health_monitor() -> None:
         st.markdown("---")
 
         # ── 2. Grille source × statut ──────────────────────────────────────────
-        st.markdown("##### 📊 Santé par source (triée par score asc)")
+        st.markdown("##### Santé par source (triée par score asc)")
         # Renommage pour affichage
         display = health_df.rename(
             columns={
@@ -157,20 +157,20 @@ def render_source_health_monitor() -> None:
         ).copy()
         # Pastille de couleur via emoji (Streamlit ne supporte pas la couleur HTML dans dataframe)
         status_emoji = {
-            "healthy": "🟢",
-            "delayed": "🟡",
-            "stale": "🟠",
-            "dead": "🔴",
+            "healthy": "OK",
+            "delayed": "Attention",
+            "stale": "Attention",
+            "dead": "Alerte",
         }
-        display["Statut"] = display["Statut"].map(lambda s: f"{status_emoji.get(s, '⚪')} {s}")
+        display["Statut"] = display["Statut"].map(lambda s: f"{status_emoji.get(s, 'Inconnu')} {s}")
         st.dataframe(display, use_container_width=True, hide_index=True)
 
         st.markdown("---")
 
         # ── 3. Complétude Silver (24h) ────────────────────────────────────────
-        st.markdown("##### 🧪 Complétude Silver (24h glissantes)")
+        st.markdown("##### Complétude Silver (24h glissantes)")
         if completeness_df.empty:
-            st.info("ℹ️ Aucune donnée de complétude Silver (24h).")
+            st.info("Aucune donnée de complétude Silver (24h).")
             return
 
         cols = st.columns(len(completeness_df))

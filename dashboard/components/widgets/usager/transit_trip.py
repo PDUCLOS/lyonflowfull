@@ -51,7 +51,7 @@ def render_transit_trip(origin: str, destination: str) -> dict | None:
         "source": "computed"}`` pour intégration au comparateur multimodal
         d'Usager_1. None si l'itinéraire n'a pas pu être calculé.
     """
-    with st.spinner("🚌 Recherche itinéraire transport en commun…"):
+    with st.spinner("Recherche itinéraire transport en commun…"):
         try:
             itin = cached_transit_itinerary(origin=origin, destination=destination)
         except DashboardDataError as e:
@@ -60,7 +60,7 @@ def render_transit_trip(origin: str, destination: str) -> dict | None:
 
     if itin is None:
         st.warning(
-            f"⚠️ Impossible de calculer un itinéraire TC entre "
+            f"Impossible de calculer un itinéraire TC entre "
             f"**{origin}** et **{destination}**. "
             f"Vérifiez que les lieux sont dans le référentiel (21 lieux emblématiques)."
         )
@@ -70,12 +70,12 @@ def render_transit_trip(origin: str, destination: str) -> dict | None:
     if not segments:
         # Aucun trajet trouvé : afficher les diagnostics
         st.warning(
-            f"⚠️ Aucun itinéraire TC trouvé entre "
+            f"Aucun itinéraire TC trouvé entre "
             f"**{itin.get('origin_label', origin)}** et "
             f"**{itin.get('destination_label', destination)}**."
         )
         for diag in itin.get("diagnostics", []):
-            st.caption(f"ℹ️ {diag}")
+            st.caption(f"{diag}")
         return None
 
     _render_transit_banner(itin)
@@ -98,20 +98,20 @@ def _render_transit_banner(itin: dict) -> None:
     """Bandeau itinéraire O → D avec pastille 'Direct' / '1 correspondance'."""
     n_transfers = int(itin.get("n_transfers", 0))
     if n_transfers == 0:
-        mode_label = "✅ Direct"
+        mode_label = "Direct"
         mode_color = "#4CAF50"
     else:
         hub = itin.get("transfer_hub") or "?"
-        mode_label = f"🔄 1 correspondance · {hub}"
+        mode_label = f"1 correspondance · {hub}"
         mode_color = "#FF9800"
 
     st.markdown(
         f"""
         <div class="lyf-label" style="background:var(--bg-card);padding:0.8rem 1rem;border-radius:6px;border-left:4px solid #4CAF50;display:flex;align-items:center;gap:0.6rem;margin-bottom:1rem;flex-wrap:wrap;">
-            <span class="lyf-sublabel" style="background:#4CAF50;color:white;padding:0.2rem 0.6rem;border-radius:12px;font-weight:600;">🚌 DÉPART</span>
+            <span class="lyf-sublabel" style="background:#4CAF50;color:white;padding:0.2rem 0.6rem;border-radius:12px;font-weight:600;">DÉPART</span>
             <span style="font-weight:600;">{itin["origin_label"]}</span>
             <span style="opacity:0.4;margin:0 0.5rem;">→</span>
-            <span class="lyf-sublabel" style="background:#F44336;color:white;padding:0.2rem 0.6rem;border-radius:12px;font-weight:600;">🔴 ARRIVÉE</span>
+            <span class="lyf-sublabel" style="background:#F44336;color:white;padding:0.2rem 0.6rem;border-radius:12px;font-weight:600;">ARRIVÉE</span>
             <span style="font-weight:600;">{itin["destination_label"]}</span>
             <span class="lyf-sublabel" style="margin-left:auto;background:{mode_color};color:white;padding:0.2rem 0.6rem;border-radius:12px;font-weight:600;">{mode_label}</span>
         </div>
@@ -124,30 +124,30 @@ def _render_transit_kpis(itin: dict) -> None:
     """4 colonnes métriques : durée, marche, correspondances, retard."""
     col1, col2, col3, col4 = st.columns(4)
     with col1:
-        st.metric("🕐 Durée totale", f"~{itin['total_duration_min']:.0f} min")
+        st.metric("Durée totale", f"~{itin['total_duration_min']:.0f} min")
     with col2:
-        st.metric("🚶 Marche totale", f"{int(itin.get('total_walk_m', 0))} m")
+        st.metric("Marche totale", f"{int(itin.get('total_walk_m', 0))} m")
     with col3:
         n_t = int(itin.get("n_transfers", 0))
         st.metric(
-            "🔄 Correspondances",
-            "✅ Direct" if n_t == 0 else f"{n_t} · {itin.get('transfer_hub', '?')}",
+            "Correspondances",
+            "Direct" if n_t == 0 else f"{n_t} · {itin.get('transfer_hub', '?')}",
         )
     with col4:
         delay = float(itin.get("total_delay_min", 0.0))
         st.metric(
-            "⚠️ Retard cumulé",
-            f"+{delay:.1f} min" if delay > 0 else "✅ Aucun",
+            "Retard cumulé",
+            f"+{delay:.1f} min" if delay > 0 else "Aucun",
         )
     # Confiance globale (ligne discrète)
     conf = float(itin.get("confidence", 0.0))
-    st.caption(f"📊 Confiance globale : {int(conf * 100)}% (basée sur le nombre d'observations des cadences)")
+    st.caption(f"Confiance globale : {int(conf * 100)}% (basée sur le nombre d'observations des cadences)")
 
 
 def _render_transit_segments(itin: dict) -> None:
     """Cards détaillées par segment TC."""
     segments = itin.get("segments", [])
-    st.markdown(f"##### 🛣️ Détail des {len(segments)} segment{'s' if len(segments) > 1 else ''}")
+    st.markdown(f"##### Détail des {len(segments)} segment{'s' if len(segments) > 1 else ''}")
 
     for i, seg in enumerate(segments, 1):
         color = _MODE_COLOR.get(seg.get("line_mode", ""), "#666")
@@ -160,14 +160,14 @@ def _render_transit_segments(itin: dict) -> None:
         if seg.get("distance_walk_to_m", 0) > 0:
             st.markdown(
                 f"<div style='font-size:0.85rem;opacity:0.75;padding:0.2rem 0 0.2rem 2rem;'>"
-                f"🚶 {walk_to_min:.0f} min à pied → arrêt "
+                f"{walk_to_min:.0f} min à pied → arrêt "
                 f"<b>{seg.get('stop_origin', '?')}</b> "
                 f"({seg['distance_walk_to_m']}m)</div>",
                 unsafe_allow_html=True,
             )
 
         # Carte segment
-        delay_html = f" · ⚠️ Retard moyen : +{delay_min:.1f} min" if delay_min > 0 else " · ✅ Pas de retard notable"
+        delay_html = f"· Retard moyen : +{delay_min:.1f} min" if delay_min > 0 else "· Pas de retard notable"
         st.markdown(
             f"""
             <div style="display:flex;align-items:center;gap:0.8rem;
@@ -193,7 +193,7 @@ def _render_transit_segments(itin: dict) -> None:
                         ⏱ Fréquence : ~{seg.get("cadence_min", 0):.0f} min
                         · ⏳ Attente : ~{seg.get("wait_estimate_min", 0):.0f} min
                         {delay_html}
-                        · 📊 Confiance : {confidence_pct}%
+                        · Confiance : {confidence_pct}%
                     </div>
                 </div>
             </div>
@@ -208,7 +208,7 @@ def _render_transit_segments(itin: dict) -> None:
             st.markdown(
                 f"<div style='text-align:center;font-size:0.85rem;"
                 f"opacity:0.75;padding:0.4rem 0;'>"
-                f"⬇ Correspondance à <b>{itin.get('transfer_hub', '?')}</b> "
+                f"Correspondance à <b>{itin.get('transfer_hub', '?')}</b> "
                 f"~3 min (marche inter-arrêts) — "
                 f"<span style='color:{next_color};font-weight:600;'>"
                 f"{next_seg.get('line_label', '?')}</span></div>",
@@ -219,7 +219,7 @@ def _render_transit_segments(itin: dict) -> None:
         if i == len(segments) and seg.get("distance_walk_from_m", 0) > 0:
             st.markdown(
                 f"<div style='font-size:0.85rem;opacity:0.75;padding:0.2rem 0 0.2rem 2rem;'>"
-                f"🚶 {walk_from_min:.0f} min à pied → destination "
+                f"{walk_from_min:.0f} min à pied → destination "
                 f"({seg['distance_walk_from_m']}m)</div>",
                 unsafe_allow_html=True,
             )
@@ -228,7 +228,7 @@ def _render_transit_segments(itin: dict) -> None:
 def _render_transit_disclaimer() -> None:
     """Disclaimer permanent (fréquences estimées, pas horaires exacts GTFS)."""
     st.info(
-        "ℹ️ **Fréquences estimées** à partir des cadences observées. "
+        "**Fréquences estimées** à partir des cadences observées. "
         "Pas d'horaires exacts (données GTFS non encore ingérées — Phase 2). "
         "Retards = moyenne sur 7 jours glissants à cette tranche horaire. "
         "**Limites Phase 1** : 21 lieux du référentiel, 1 correspondance maximum."

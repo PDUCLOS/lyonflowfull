@@ -89,19 +89,19 @@ def render_bottleneck_map(height: int = 500) -> None:
 
         if n_rendered == 0:
             st.warning(
-                f"⚠️ {len(bottlenecks)} bottleneck(s) trouvé(s) mais aucun "
+                f"{len(bottlenecks)} bottleneck(s) trouvé(s) mais aucun "
                 f"n'a de coordonnées GPS exploitables. Vérifier la migration "
                 f"018 (gold.mv_bus_traffic_spatial)."
             )
 
         # Légende diagnostic (Bug 4)
-        st.caption("🟥 Infra (travaux) · 🟧 Opérationnel (réglage) · 🟩 Voie bus OK · ⚪ Sous surveillance")
+        st.caption("Infra (travaux) · Opérationnel (réglage) · Voie bus OK · Sous surveillance")
 
         st_folium_with_alt(m, width=None, height=height, returned_objects=[])
 
     except ImportError:
         # Fallback : tableau simple
-        st.warning("⚠️ Folium non disponible — affichage liste")
+        st.warning("Folium non disponible — affichage liste")
         for b in bottlenecks:
             st.markdown(
                 f"**#{b.get('rank')} {b.get('zone')}** "

@@ -127,9 +127,9 @@ dashboard/
     ├── Accueil.py
     ├── Usager_1_Mon_Trajet.py
     ├── Usager_2_Alertes.py
-    ├── Usager_3_Notre_Modele.py         # Sprint 22+ — MLOps citoyen 🤖
-    ├── Usager_4_Sources_Donnees.py      # Sprint 22+ — MLOps citoyen 🌐
-    ├── Usager_5_Statut_Service.py       # Sprint 22+ — MLOps citoyen 🩺
+    ├── Usager_3_Notre_Modele.py # Sprint 22+ — MLOps citoyen
+    ├── Usager_4_Sources_Donnees.py # Sprint 22+ — MLOps citoyen
+    ├── Usager_5_Statut_Service.py # Sprint 22+ — MLOps citoyen
     ├── Pro_1_PCC_Live.py
     ├── Pro_2_Heatmap_OTP.py
     ├── Pro_3_Correlation.py

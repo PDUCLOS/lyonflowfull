@@ -137,13 +137,13 @@ def _popup_html(row: pd.Series) -> str:
         f"font-weight:600;'>Score {score:.1f}/10 · {diagnosis_label}</div>"
         f"<hr style='margin:0.4rem 0;'>"
         f"<div style='font-size:0.85rem;'>"
-        f"<b>🚗 Trafic</b> : {avg_speed:.0f} km/h ({pct_cong:.0f}% congestion, "
+        f"<b>Trafic</b> : {avg_speed:.0f} km/h ({pct_cong:.0f}% congestion, "
         f"{n_sensors} capteur{'s' if n_sensors > 1 else ''})<br/>"
-        f"<b>🚌 TCL</b> : retard {avg_delay:.0f}s ({pct_del:.0f}% en retard, "
+        f"<b>TCL</b> : retard {avg_delay:.0f}s ({pct_del:.0f}% en retard, "
         f"{n_veh} véhicule{'s' if n_veh > 1 else ''})<br/>"
-        f"<b>🚲 Vélov</b> : {bikes} vélos / {docks} docks "
+        f"<b>Vélov</b> : {bikes} vélos / {docks} docks "
         f"({n_st} station{'s' if n_st > 1 else ''})<br/>"
-        f"<b>🌤 Météo</b> : {temp_str}, pluie {rain_str}"
+        f"<b>Météo</b> : {temp_str}, pluie {rain_str}"
         f"</div></div>"
     )
 

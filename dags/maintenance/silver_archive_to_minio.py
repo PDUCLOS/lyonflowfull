@@ -28,11 +28,16 @@ from pathlib import Path
 
 import boto3
 import pandas as pd
+import psycopg2.extras
+import pyarrow as pa
+import pyarrow.parquet as pq
 from airflow import DAG
 from airflow.operators.python import PythonOperator
 
 from src.config import get_settings
 from src.db.connection import execute_query, raw_connection
+
+ARCHIVE_CHUNK_SIZE = 50_000
 
 logger = logging.getLogger(__name__)
 
@@ -98,25 +103,41 @@ def _archive_one_table(table: str, cutoff: datetime) -> dict:
     n_rows = int(stats[0]["n_rows"])
     logger.info("silver.%s — %s rows to archive (size: %s)", table, n_rows, stats[0]["total_size"])
 
-    # 2) Export en Parquet via psycopg2 + pandas
-    #    Note: on chunk par 50k rows pour éviter OOM sur gros volumes.
+    # 2) Export en Parquet via curseur serveur psycopg2, par chunks de
+    #    ARCHIVE_CHUNK_SIZE lignes (ParquetWriter en écriture incrémentale).
+    #    Un seul execute_query().fetchall() sur 1.5M lignes tuait le worker
+    #    (OOM cgroup, ~6.6 Go RSS) — le chunking annoncé n'était en fait
+    #    jamais implémenté (bug trouvé 2026-07-06).
     LOCAL_STAGING.mkdir(parents=True, exist_ok=True)
     local_path = LOCAL_STAGING / f"{table}_{cutoff.strftime('%Y%m%d')}.parquet"
 
-    # Lecture via execute_query (psycopg2 RealDictCursor, déjà utilisé
-    # partout dans le projet) puis conversion en DataFrame pandas.
-    # Ancien code : polars.read_database_uri(engine="adbc") — abandonné
-    # car polars pas dans requirements-airflow.txt et complexifie
-    # l'engine ADBC. Sprint P2-ter (2026-06-16) — voir aussi
-    # commit c892ac6 (cryptography<43) qui a révélé la dette polars.
-    rows = execute_query(
-        f"SELECT * FROM silver.{table} WHERE transformed_at < %s ORDER BY transformed_at",
-        (cutoff,),
-    )
-    df = pd.DataFrame(rows)
-    df.to_parquet(local_path, compression="snappy")
+    writer: pq.ParquetWriter | None = None
+    rows_written = 0
+    with raw_connection() as conn, conn.cursor(
+        name="silver_archive_cursor", cursor_factory=psycopg2.extras.RealDictCursor
+    ) as cur:
+        cur.itersize = ARCHIVE_CHUNK_SIZE
+        cur.execute(
+            f"SELECT * FROM silver.{table} WHERE transformed_at < %s ORDER BY transformed_at",
+            (cutoff,),
+        )
+        try:
+            while True:
+                chunk = cur.fetchmany(ARCHIVE_CHUNK_SIZE)
+                if not chunk:
+                    break
+                chunk_table = pa.Table.from_pandas(pd.DataFrame(chunk), preserve_index=False)
+                if writer is None:
+                    writer = pq.ParquetWriter(local_path, chunk_table.schema, compression="snappy")
+                writer.write_table(chunk_table)
+                rows_written += len(chunk)
+                logger.info("  chunk écrit : %d lignes (total %d/%d)", len(chunk), rows_written, n_rows)
+        finally:
+            if writer is not None:
+                writer.close()
+
     bytes_parquet = local_path.stat().st_size
-    logger.info("Wrote %s (%.1f MB) — %d rows", local_path, bytes_parquet / 1e6, len(df))
+    logger.info("Wrote %s (%.1f MB) — %d rows", local_path, bytes_parquet / 1e6, rows_written)
 
     # 3) Push vers MinIO
     s3 = _get_s3_client()

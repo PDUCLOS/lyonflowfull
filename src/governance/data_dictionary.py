@@ -119,7 +119,7 @@ def export_table_schema_documentation() -> str:
             lines.append("| Column | Type | PII | Source | Description |")
             lines.append("|--------|------|-----|--------|-------------|")
         pii = r["pii_level"] or "none"
-        pii_emoji = {"high": "🔴", "medium": "🟠", "low": "🟡", "none": "🟢"}.get(pii, "—")
+        pii_emoji = {"high": "Alerte", "medium": "Attention", "low": "Attention", "none": "OK"}.get(pii, "—")
         lines.append(
             f"| `{r['column_name']}` | {r['data_type']} | {pii_emoji} {pii} | "
             f"{r['source'] or '—'} | {r['description'] or '—'} |"

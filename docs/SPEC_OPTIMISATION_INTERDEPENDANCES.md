@@ -31,27 +31,27 @@
 
 | Capacité | Fichier/table | Statut |
 |----------|---------------|--------|
-| **Bottleneck bus × trafic** | `gold.infrastructure_bottlenecks` + `silver_to_gold.py:_BOTTLENECK_SQL` | ✅ Fonctionne, mais JOIN par heure globale (pas spatial) |
-| **Corrélation bus × trafic** | `widgets/pro_tcl/correlation_matrix.py` | ✅ Matrice 2×2 (bus_state × traffic_state → 4 diagnostics) |
-| **Cohérence TomTom ↔ GL** | `gold.v_coherence_tomtom_vs_grandlyon` + `coherence_scatter.py` | ✅ Sprint 13+ — JOIN spatial PostGIS ST_DWithin 200m |
-| **Capteurs HS** | `gold.v_tomtom_gl_drift` | ✅ Détecteur auto (≥60% drift 24h) |
-| **GNN spatial** | `training/stgcn/` — ST-GRU-GNN ~1520 nœuds H3 | ✅ Propagation spatiale congestion, mais pas exploité pour interdépendances |
-| **XGBoost H+1h** | `dag_inference_xgboost` — 11 features | ✅ Prédiction vitesse avec météo+vacances |
-| **Vélov prédiction** | XGBoost H+30min + H+1h | ✅ Par station, pas de lien avec TC/trafic |
-| **Bus delay segments** | `gold.bus_delay_segments` | ✅ Retard agrégé par ligne/heure/jour |
-| **KPIs par ligne TCL** | `gold.mv_line_kpis_live` + `gold.mv_otp_heatmap` | ✅ Sprint 7 — OTP et heatmap |
+| **Bottleneck bus × trafic** | `gold.infrastructure_bottlenecks` + `silver_to_gold.py:_BOTTLENECK_SQL` | Fonctionne, mais JOIN par heure globale (pas spatial) |
+| **Corrélation bus × trafic** | `widgets/pro_tcl/correlation_matrix.py` | Matrice 2×2 (bus_state × traffic_state → 4 diagnostics) |
+| **Cohérence TomTom ↔ GL** | `gold.v_coherence_tomtom_vs_grandlyon` + `coherence_scatter.py` | Sprint 13+ — JOIN spatial PostGIS ST_DWithin 200m |
+| **Capteurs HS** | `gold.v_tomtom_gl_drift` | Détecteur auto (≥60% drift 24h) |
+| **GNN spatial** | `training/stgcn/` — ST-GRU-GNN ~1520 nœuds H3 | Propagation spatiale congestion, mais pas exploité pour interdépendances |
+| **XGBoost H+1h** | `dag_inference_xgboost` — 11 features | Prédiction vitesse avec météo+vacances |
+| **Vélov prédiction** | XGBoost H+30min + H+1h | Par station, pas de lien avec TC/trafic |
+| **Bus delay segments** | `gold.bus_delay_segments` | Retard agrégé par ligne/heure/jour |
+| **KPIs par ligne TCL** | `gold.mv_line_kpis_live` + `gold.mv_otp_heatmap` | Sprint 7 — OTP et heatmap |
 
 ### 1.2. Ce qui manque (lacunes identifiées)
 
 | Lacune | Impact | Priorité |
 |--------|--------|----------|
-| **Pas de vue multimodale unifiée** | On ne peut pas voir simultanément trafic + TC + vélov sur une même grille spatiale. Chaque source est silotée. | 🔴 Haute |
-| **Bottleneck pas spatialisé** | `_BOTTLENECK_SQL` JOIN bus × trafic par HEURE globale, pas par ZONE. Un retard bus à Gerland est corrélé au trafic global Lyon, pas au trafic local Gerland. | 🔴 Haute |
-| **Pas de propagation temporelle** | On sait qu'un segment est congestionné, mais on ne détecte pas la propagation (segment A congestionné → segment B congestionné 5 min plus tard). | 🟠 Moyenne |
-| **Pas de couplage Vélov ↔ TC** | Quand le métro A est en panne, les stations Vélov Part-Dieu se vident. Ce report modal n'est pas détecté. | 🟠 Moyenne |
-| **Pas de score de santé global** | Pas de KPI unique "le réseau Lyon va bien/mal" qui agrège toutes les sources. | 🟡 Enrichissement |
-| **Qualité données non automatisée** | Pas de validation systématique des données brutes avant feature engineering (plages valides, taux de null, doublons). | 🟠 Moyenne |
-| **Météo pas croisée avec l'analyse** | La météo est une feature ML mais n'est pas utilisée dans l'analyse d'interdépendances (ex: pluie → +X% retard bus ET -Y% disponibilité vélov). | 🟡 Enrichissement |
+| **Pas de vue multimodale unifiée** | On ne peut pas voir simultanément trafic + TC + vélov sur une même grille spatiale. Chaque source est silotée. | Haute |
+| **Bottleneck pas spatialisé** | `_BOTTLENECK_SQL` JOIN bus × trafic par HEURE globale, pas par ZONE. Un retard bus à Gerland est corrélé au trafic global Lyon, pas au trafic local Gerland. | Haute |
+| **Pas de propagation temporelle** | On sait qu'un segment est congestionné, mais on ne détecte pas la propagation (segment A congestionné → segment B congestionné 5 min plus tard). | Moyenne |
+| **Pas de couplage Vélov ↔ TC** | Quand le métro A est en panne, les stations Vélov Part-Dieu se vident. Ce report modal n'est pas détecté. | Moyenne |
+| **Pas de score de santé global** | Pas de KPI unique "le réseau Lyon va bien/mal" qui agrège toutes les sources. | Enrichissement |
+| **Qualité données non automatisée** | Pas de validation systématique des données brutes avant feature engineering (plages valides, taux de null, doublons). | Moyenne |
+| **Météo pas croisée avec l'analyse** | La météo est une feature ML mais n'est pas utilisée dans l'analyse d'interdépendances (ex: pluie → +X% retard bus ET -Y% disponibilité vélov). | Enrichissement |
 
 ---
 
@@ -688,10 +688,10 @@ Tableau / bar chart montrant l'impact de chaque condition météo sur chaque mod
 ┌─────────────┬───────────────┬──────────────┬──────────────┐
 │ Météo       │ Trafic Δ      │ TC retard Δ  │ Vélov Δ      │
 ├─────────────┼───────────────┼──────────────┼──────────────┤
-│ 🌧 Forte    │ -12 km/h      │ +45 sec      │ -8 vélos     │
-│ 🌦 Légère   │ -5 km/h       │ +15 sec      │ -4 vélos     │
-│ ❄ Gel       │ -8 km/h       │ +25 sec      │ -12 vélos    │
-│ ☀ Beau      │ baseline      │ baseline     │ baseline     │
+│ Forte │ -12 km/h │ +45 sec │ -8 vélos │
+│ Légère │ -5 km/h │ +15 sec │ -4 vélos │
+│ Gel │ -8 km/h │ +25 sec │ -12 vélos │
+│ Beau │ baseline │ baseline │ baseline │
 └─────────────┴───────────────┴──────────────┴──────────────┘
 ```
 

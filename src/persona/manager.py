@@ -141,7 +141,7 @@ class PersonaManager:
         access = self.config.get("access", {})
         if access.get("auth_required", False) and not self.is_authenticated:
             st.error(
-                f"🔒 Accès restreint — Persona **{self.config.get('label', self.persona_id)}** "
+                f"Accès restreint — Persona **{self.config.get('label', self.persona_id)}** "
                 f"protégé par mot de passe. Sélectionne ce persona depuis l'accueil."
             )
             st.stop()

@@ -100,10 +100,10 @@ def render_itinerary_result(
 
     if not origin_coords:
         sample = ", ".join(_sample_addresses(5))
-        show_error("geocoding_fail", f"❌ Adresse d'origine non reconnue : '{origin}'. Essayez : {sample}...")
+        show_error("geocoding_fail", f"Adresse d'origine non reconnue : '{origin}'. Essayez : {sample}...")
         return None
     if not dest_coords:
-        show_error("geocoding_fail", f"❌ Adresse de destination non reconnue : '{destination}'.")
+        show_error("geocoding_fail", f"Adresse de destination non reconnue : '{destination}'.")
         return None
 
     from dashboard.components.loading_state import empty_state, loading_wrapper
@@ -141,7 +141,7 @@ def render_itinerary_result(
     if len(alternatives) > 1:
         options = [f"Itinéraire {i + 1} — {_fmt_route_label(it)}" for i, it in enumerate(alternatives)]
         chosen_idx = st.radio(
-            "🛣️ Choisis ton itinéraire",
+            "Choisis ton itinéraire",
             options=range(len(alternatives)),
             format_func=lambda i: options[i],
             index=0,
@@ -192,13 +192,13 @@ def _render_summary(itinerary: Itinerary) -> None:
     """Affiche le résumé (durée, distance, vitesse moyenne, confiance)."""
     col1, col2, col3, col4 = st.columns(4)
     with col1:
-        st.metric("🕐 Durée totale", f"{itinerary.total_duration_min:.1f} min")
+        st.metric("Durée totale", f"{itinerary.total_duration_min:.1f} min")
     with col2:
-        st.metric("📏 Distance", f"{itinerary.total_length_m / 1000:.2f} km")
+        st.metric("Distance", f"{itinerary.total_length_m / 1000:.2f} km")
     with col3:
-        st.metric("🚗 Vitesse moyenne", f"{itinerary.average_speed_kmh:.1f} km/h")
+        st.metric("Vitesse moyenne", f"{itinerary.average_speed_kmh:.1f} km/h")
     with col4:
-        st.metric("🎯 Confiance", f"{int(itinerary.confidence * 100)}%")
+        st.metric("Confiance", f"{int(itinerary.confidence * 100)}%")
 
 
 def _render_map(
@@ -228,12 +228,12 @@ def _render_map(
 
         folium.Marker(
             [o_lat, o_lon],
-            popup="🟢 Départ",
+            popup="Départ",
             icon=folium.Icon(color="green", icon="play"),
         ).add_to(m)
         folium.Marker(
             [d_lat, d_lon],
-            popup="🔴 Arrivée",
+            popup="Arrivée",
             icon=folium.Icon(color="red", icon="stop"),
         ).add_to(m)
 
@@ -253,9 +253,9 @@ def _render_map(
                     [seg.end_lat, seg.end_lon],
                 ]
 
-            popup = f"🚗 <b>{seg.speed_kmh:.0f} km/h</b><br>📏 {seg.length_m:.0f} m · 🕐 {seg.duration_s:.0f}s"
+            popup = f"<b>{seg.speed_kmh:.0f} km/h</b><br>{seg.length_m:.0f} m · {seg.duration_s:.0f}s"
             if seg.channel_id:
-                popup += f"<br>🛣️ {seg.channel_id}"
+                popup += f"<br>{seg.channel_id}"
 
             folium.PolyLine(
                 locations=locations,
@@ -284,17 +284,15 @@ def _render_map(
 
         st_folium_with_alt(m, width=None, height=400, returned_objects=[])
 
-        st.markdown(
-            "**Légende trafic** : 🟢 Fluide (>40 km/h) · 🟡 Modéré (25-40) · 🟠 Dense (15-25) · 🔴 Bloqué (<15)"
-        )
+        st.markdown("**Légende trafic** : Fluide (>40 km/h) · Modéré (25-40) · Dense (15-25) · Bloqué (<15)")
 
     except ImportError:
-        st.warning("⚠️ folium non disponible — affichage liste uniquement")
+        st.warning("folium non disponible — affichage liste uniquement")
 
 
 def _render_segments(itinerary: Itinerary) -> None:
     """Affiche la liste détaillée des segments."""
-    with st.expander(f"🛣️ Détail des {len(itinerary.segments)} segments", expanded=False):
+    with st.expander(f"Détail des {len(itinerary.segments)} segments", expanded=False):
         for i, seg in enumerate(itinerary.segments, 1):
             color = _speed_to_color(seg.speed_kmh)
             road_label = seg.channel_id or "Voie sans nom"
@@ -309,7 +307,7 @@ def _render_segments(itinerary: Itinerary) -> None:
                     <div style="flex:1;">
                         <div style="font-weight:600;font-size:0.9rem;">{road_label}</div>
                         <div style="font-size:0.8rem;opacity:0.7;">
-                            📏 {seg.length_m:.0f} m · 🚗 {seg.speed_kmh:.0f} km/h · 🕐 {seg.duration_s / 60:.1f} min
+                            {seg.length_m:.0f} m · {seg.speed_kmh:.0f} km/h · {seg.duration_s / 60:.1f} min
                         </div>
                     </div>
                 </div>

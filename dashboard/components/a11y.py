@@ -55,7 +55,7 @@ def folium_with_alt(map_, alt_text: str, height: int = 500, **kwargs) -> None:
     )
 
 
-def data_table_expander(df: pd.DataFrame, label: str = "📋 Données du graphique") -> None:
+def data_table_expander(df: pd.DataFrame, label: str = "Données du graphique") -> None:
     """Ajoute un expander avec le DataFrame pour accessibilité.
 
     Bénéfice double :

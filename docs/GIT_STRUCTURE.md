@@ -29,10 +29,10 @@ projet + une branche fixe d'archive VPS.
 
 | Branche | Phase | Statut | Cible deploiement |
 |---------|-------|--------|-------------------|
-| `main` | Phase 1 + fixes | ✅ active | reference + dev |
-| `vps` | Phase 1 frozen | ✅ archive | VPS actuel (51.83.159.224) |
-| `kubernetes` | Phase 2 | ✅ manifests prets | Cluster K8s production |
-| `cloud-demo` | Phase 3 | ✅ overlay pret | Scaleway Kapsule ephemere |
+| `main` | Phase 1 + fixes | active | reference + dev |
+| `vps` | Phase 1 frozen | archive | VPS actuel (51.83.159.224) |
+| `kubernetes` | Phase 2 | manifests prets | Cluster K8s production |
+| `cloud-demo` | Phase 3 | overlay pret | Scaleway Kapsule ephemere |
 
 ## Conventions
 

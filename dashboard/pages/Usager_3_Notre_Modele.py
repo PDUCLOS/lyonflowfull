@@ -35,22 +35,22 @@ logger = logging.getLogger(__name__)
 # Mapping code interne -> libellé citoyen + icône
 _MODEL_BLURB = {
     "intro": (
-        "🤖 **Comment on prédit le trafic à 1 heure ?**\n\n"
+        "**Comment on prédit le trafic à 1 heure ?**\n\n"
         "Notre modèle apprend en continu à partir de :\n"
-        "- 🚗 **Boucles de comptage** Grand Lyon (~1 200 capteurs sur la voirie)\n"
-        "- 🕐 **L'heure, le jour**, les vacances scolaires et jours fériés\n"
-        "- 🌦️ **La météo** (température, pluie)\n"
-        "- 📈 **Les vitesses des dernières heures** (tendances récentes)\n\n"
+        "- **Boucles de comptage** Grand Lyon (~1 200 capteurs sur la voirie)\n"
+        "- **L'heure, le jour**, les vacances scolaires et jours fériés\n"
+        "- **La météo** (température, pluie)\n"
+        "- **Les vitesses des dernières heures** (tendances récentes)\n\n"
         "Toutes les 30 min, il met à jour sa prédiction pour l'heure suivante. "
         "C'est ce qui te permet de voir un temps de trajet ajusté dans "
         "**Mon trajet** au lieu d'une simple moyenne."
     ),
     "scope": (
-        "🎯 **Ce que le modèle fait bien** : anticiper la tendance générale "
+        "**Ce que le modèle fait bien** : anticiper la tendance générale "
         "(ça va se charger ou ça va se fluidifier) sur les 60 prochaines minutes.\n\n"
-        "⚠️ **Ce qu'il ne peut pas deviner** : un accident, une manifestation, "
+        "**Ce qu'il ne peut pas deviner** : un accident, une manifestation, "
         "une route coupée. Dans ces cas, la prédiction reste sur la tendance "
-        "habituelle — les alertes temps réel de la page **🔔 Alertes** "
+        "habituelle — les alertes temps réel de la page **Alertes** "
         "viennent compléter."
     ),
 }
@@ -147,10 +147,10 @@ def _quality_card(score_accurate_pct: float | None, mae_kmh: float | None) -> tu
     if score_accurate_pct is None or mae_kmh is None:
         return ("Pas encore de données", "⏳", COLORS["text_muted"])
     if score_accurate_pct >= 0.75 and mae_kmh <= 5.0:
-        return ("Très fiable", "🟢", COLORS["status_ok"])
+        return ("Très fiable", "OK", COLORS["status_ok"])
     if score_accurate_pct >= 0.60 and mae_kmh <= 8.0:
-        return ("Fiable", "🟡", COLORS["status_warning"])
-    return ("Prudence sur les détails", "🟠", COLORS["status_warning"])
+        return ("Fiable", "Attention", COLORS["status_warning"])
+    return ("Prudence sur les détails", "Attention", COLORS["status_warning"])
 
 
 # =============================================================================
@@ -168,7 +168,7 @@ render_sidebar_navigation()
 setup_auto_refresh()
 render_freshness_badge()
 
-st.title("🤖 Notre modèle")
+st.title("Notre modèle")
 render_data_status_banner()
 
 st.caption(
@@ -178,13 +178,13 @@ st.caption(
 # ── 1. Bloc pédagogique ─────────────────────────────────────────────────────
 with st.container():
     st.markdown(_MODEL_BLURB["intro"])
-    with st.expander("👍 Voir ce que le modèle sait bien faire (et moins bien)", expanded=False):
+    with st.expander("Voir ce que le modèle sait bien faire (et moins bien)", expanded=False):
         st.markdown(_MODEL_BLURB["scope"])
 
 st.markdown("---")
 
 # ── 2. Précision réelle 7 derniers jours ────────────────────────────────────
-st.markdown("##### 🎯 Précision sur les 7 derniers jours")
+st.markdown("##### Précision sur les 7 derniers jours")
 
 with loading_wrapper("Chargement de la précision…", "🎯"):
     mae_df = cached_xgb_accuracy_summary(hours=168)
@@ -192,7 +192,7 @@ with loading_wrapper("Chargement de la précision…", "🎯"):
 
 if mae_df.empty:
     st.info(
-        "🌱 Pas encore 7 jours d'historique de production (le modèle a été "
+        "Pas encore 7 jours d'historique de production (le modèle a été "
         "mis en service récemment). Les chiffres apparaîtront au bout de "
         "quelques jours."
     )
@@ -235,22 +235,22 @@ else:
     # 4 KPI cards simples
     k1, k2, k3, k4 = st.columns(4)
     k1.metric(
-        "🎯 Précises (±5 km/h)",
+        "Précises (±5 km/h)",
         _humanize_pct(pct_accurate),
         help="Prédictions dont l'erreur absolue est inférieure à 5 km/h.",
     )
     k2.metric(
-        "🟡 Approximatives",
+        "Approximatives",
         _humanize_pct(pct_acceptable),
         help="Prédictions dont l'erreur est entre 5 et 10 km/h.",
     )
     k3.metric(
-        "🟠 Imprécises (>10 km/h)",
+        "Imprécises (>10 km/h)",
         _humanize_pct(pct_poor),
         help="Prédictions dont l'erreur dépasse 10 km/h (souvent incident exceptionnel).",
     )
     k4.metric(
-        "📏 Erreur moyenne",
+        "Erreur moyenne",
         f"{mae_global:.1f} km/h",
         help="Moyenne de l'erreur absolue sur 7 jours. Plus c'est bas, plus c'est précis.",
     )
@@ -276,18 +276,18 @@ st.markdown("---")
 
 # ── 3. Limites assumées ──────────────────────────────────────────────────────
 with st.container():
-    st.markdown("##### 🧭 Ce qu'il faut garder en tête")
+    st.markdown("##### Ce qu'il faut garder en tête")
     st.markdown(
         """
-- ⏱️ **Horizon 1 heure** : on prédit l'état du trafic dans 60 minutes,
+- **Horizon 1 heure** : on prédit l'état du trafic dans 60 minutes,
   pas dans 3 heures. Au-delà, la précision baisse naturellement.
-- 🌧️ **Météo extrême** : les fortes pluies ou le brouillard dense peuvent
+- **Météo extrême** : les fortes pluies ou le brouillard dense peuvent
   dégrader la précision (le modèle connaît la pluie, mais l'ampleur du
   trafic qui en résulte varie).
-- 🚧 **Événements imprévus** : accident, manifestation, route coupée —
+- **Événements imprévus** : accident, manifestation, route coupée —
   le modèle suit la tendance habituelle. C'est pour ça que la page
-  **🔔 Alertes** existe : elle te prévient en cas d'incident détecté.
-- 📍 **Précision géographique** : les grands axes (périphérique, quais)
+  **Alertes** existe : elle te prévient en cas d'incident détecté.
+- **Précision géographique** : les grands axes (périphérique, quais)
   sont très bien couverts. Les petites rues peuvent avoir plus de variance.
         """,
     )

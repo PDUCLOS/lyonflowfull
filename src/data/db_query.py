@@ -1294,15 +1294,20 @@ def get_traffic_live_vs_predicted(limit: int = 2000) -> pd.DataFrame:
     - ratio_now : speed_now / vitesse_limite (0→1+, saturation relative)
     - ratio_pred : speed_pred_1h / vitesse_limite
     - delta_kmh : speed_pred_1h - speed_now (>0 = amélioration prévue)
+
+    Exclut les capteurs `stuck` (vitesse figée 24h, `gold.mv_sensor_saturation`,
+    migration 034) — un capteur en panne fige la carte sur une valeur fausse.
     """
     query = """
         WITH live AS (
-            SELECT DISTINCT ON (channel_id)
-                channel_id, speed_kmh, vitesse_limite_kmh,
-                lat, lon, computed_at
-            FROM gold.traffic_features_live
-            WHERE computed_at >= NOW() - INTERVAL '10 minutes'
-            ORDER BY channel_id, computed_at DESC
+            SELECT DISTINCT ON (t.channel_id)
+                t.channel_id, t.speed_kmh, t.vitesse_limite_kmh,
+                t.lat, t.lon, t.computed_at
+            FROM gold.traffic_features_live t
+            JOIN gold.mv_sensor_saturation s ON s.channel_id = t.channel_id
+            WHERE t.computed_at >= NOW() - INTERVAL '10 minutes'
+              AND s.status = 'ok'
+            ORDER BY t.channel_id, t.computed_at DESC
         ),
         pred AS (
             SELECT DISTINCT ON (axis_key)
@@ -1772,6 +1777,50 @@ def get_sensor_saturation() -> pd.DataFrame:
         ORDER BY status, sat_now_pct DESC NULLS LAST
     """
     return _df_from_query(query)
+
+
+def get_velov_safety_advisory() -> dict:
+    """Conseil sécurité Vélov (pollution + canicule) — migration_045 (2026-07-05).
+
+    Lit ``gold.v_velov_safety_advisory`` (JOIN dernier ``silver.air_quality_clean``
+    + dernière vigilance canicule ``bronze.vigilance_meteo`` dept 69). Sert
+    ``weather_widget``, ``velov_trip``, ``velov_widget`` (persona Usager) : ne
+    bloque pas le mode Vélov mais affiche un avertissement quand le sport en
+    extérieur est déconseillé (pollution dégradée ou vigilance canicule).
+
+    Returns:
+        Dict avec ``european_aqi`` (int|None), ``couleur_canicule``
+        (str|None), ``status`` (``ok``|``warning``|``severe``|``unknown``),
+        ``reason`` (str|None, message humain), ``aqi_measured_at``,
+        ``vigilance_bulletin_at``. La vue renvoie toujours exactement 1 ligne
+        (statut ``unknown`` si aucune des deux sources n'a de donnée récente).
+
+    Note:
+        N'échoue jamais bruyamment — une panne DB sur ce conseil sécurité
+        ne doit pas faire planter la page Vélov. Contrairement aux helpers
+        ``_df_from_query``, on catch ici explicitement (pas de DataFrame
+        vide à retourner) pour dégrader vers un statut neutre "unknown".
+    """
+    fallback = {
+        "european_aqi": None,
+        "couleur_canicule": None,
+        "status": "unknown",
+        "reason": None,
+        "aqi_measured_at": None,
+        "vigilance_bulletin_at": None,
+    }
+    try:
+        rows = execute_query("""
+            SELECT european_aqi, couleur_canicule, status, reason,
+                   aqi_measured_at, vigilance_bulletin_at
+            FROM gold.v_velov_safety_advisory
+        """)
+    except Exception as e:  # pragma: no cover — fallback path
+        logger.warning("get_velov_safety_advisory: requête échouée, fallback unknown: %s", e)
+        return fallback
+    if not rows:
+        return fallback
+    return dict(rows[0])
 
 
 def get_latest_drift_report() -> dict | None:

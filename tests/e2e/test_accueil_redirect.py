@@ -8,7 +8,7 @@ def test_accueil_redirect_if_persona_set(page: Page, streamlit_server: str):
     page.goto(streamlit_server)
 
     # Select "Usager" which is free access
-    page.get_by_role("button", name="➡️ Adopter").first.click()
+    page.get_by_role("button", name="Adopter").first.click()
 
     # Wait for the redirect to the Mon Trajet page
     expect(page.get_by_text("Mon trajet")).to_be_visible()

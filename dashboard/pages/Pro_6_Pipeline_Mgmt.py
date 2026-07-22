@@ -26,7 +26,7 @@ render_sidebar_navigation()
 setup_auto_refresh()
 render_freshness_badge()
 
-st.title("🔧 Pipeline Management")
+st.title("Pipeline Management")
 render_data_status_banner()
 
 st.caption(

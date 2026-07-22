@@ -39,7 +39,7 @@ def test_transit_segment_creation_basic():
     seg = TransitSegment(
         line_ref="M_A",
         line_mode="metro",
-        line_label="🚇 Métro A",
+        line_label="Métro A",
         stop_origin="Laurent Bonnevay",
         stop_dest="Confluence",
         distance_walk_to_m=400,
@@ -52,7 +52,7 @@ def test_transit_segment_creation_basic():
     )
     assert seg.line_ref == "M_A"
     assert seg.line_mode == "metro"
-    assert seg.line_label == "🚇 Métro A"
+    assert seg.line_label == "Métro A"
     assert seg.distance_walk_to_m == 400
     assert seg.cadence_min == 4.0
     assert seg.confidence == 0.85
@@ -79,7 +79,7 @@ def test_transit_itinerary_direct_feasible_true():
     seg = TransitSegment(
         line_ref="T_1",
         line_mode="tram",
-        line_label="🚊 Tram 1",
+        line_label="Tram 1",
         stop_origin="X",
         stop_dest="Y",
         distance_walk_to_m=100,
@@ -114,7 +114,7 @@ def test_transit_itinerary_transfer_feasible_true():
     seg1 = TransitSegment(
         line_ref="C_3",
         line_mode="bus",
-        line_label="🚌 Bus 3",
+        line_label="Bus 3",
         stop_origin="A",
         stop_dest="Part-Dieu",
         distance_walk_to_m=50,
@@ -128,7 +128,7 @@ def test_transit_itinerary_transfer_feasible_true():
     seg2 = TransitSegment(
         line_ref="M_B",
         line_mode="metro",
-        line_label="🚇 Métro B",
+        line_label="Métro B",
         stop_origin="Part-Dieu",
         stop_dest="B",
         distance_walk_to_m=100,
@@ -172,16 +172,16 @@ def test_transit_itinerary_diagnostics_default_empty():
 @pytest.mark.parametrize(
     ("line_ref", "line_mode", "expected"),
     [
-        ("M_A", "metro", "🚇 Métro A"),
-        ("M_B", "metro", "🚇 Métro B"),
-        ("M_D", "metro", "🚇 Métro D"),
-        ("T_1", "tram", "🚊 Tram 1"),
-        ("T_2", "tram", "🚊 Tram 2"),
-        ("T_4", "tram", "🚊 Tram 4"),
-        ("C_3", "bus", "🚌 Bus 3"),
-        ("C_13", "bus", "🚌 Bus 13"),
-        ("F_1", "funicular", "🚞 Funiculaire 1"),
-        ("F_2", "funicular", "🚞 Funiculaire 2"),
+        ("M_A", "metro", "Métro A"),
+        ("M_B", "metro", "Métro B"),
+        ("M_D", "metro", "Métro D"),
+        ("T_1", "tram", "Tram 1"),
+        ("T_2", "tram", "Tram 2"),
+        ("T_4", "tram", "Tram 4"),
+        ("C_3", "bus", "Bus 3"),
+        ("C_13", "bus", "Bus 13"),
+        ("F_1", "funicular", "Funiculaire 1"),
+        ("F_2", "funicular", "Funiculaire 2"),
     ],
 )
 def test_transit_line_label_format(line_ref, line_mode, expected):
@@ -356,7 +356,7 @@ def test_plan_transit_trip_direct_villeurbanne_confluence():
     assert itin.transfer_hub is None
     assert itin.segments[0].line_ref == "M_A"
     assert itin.segments[0].line_mode == "metro"
-    assert itin.segments[0].line_label == "🚇 Métro A"
+    assert itin.segments[0].line_label == "Métro A"
     assert itin.segments[0].cadence_min > 0, "Cadence M_A doit être renseignée"
     assert itin.segments[0].duration_estimate_min > 0
     assert itin.total_walk_m == 400 + 80  # 480m (Villeurbanne→arrêt + arrêt→Confluence)

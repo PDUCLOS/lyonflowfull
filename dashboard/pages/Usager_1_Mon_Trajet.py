@@ -60,7 +60,7 @@ def _render_transit_trip_for_user(origin: str, destination: str) -> None:
         if tc_result:
             st.session_state["trip_tc"] = tc_result
     except DashboardDataError as e:
-        st.error(f"⚠️ {e}")
+        st.error(f"{e}")
 
 
 apply_persona_guard(expected_persona="usager")
@@ -69,7 +69,7 @@ render_sidebar_navigation()
 setup_auto_refresh()
 render_freshness_badge()
 
-st.title("🧭 Mon trajet")
+st.title("Mon trajet")
 render_data_status_banner()
 
 # ── Recherche ────────────────────────────────────────────────────────────────
@@ -81,7 +81,7 @@ st.markdown("---")
 col_btn = st.columns([1, 2, 1])
 with col_btn[1]:
     search_clicked = st.button(
-        "🔍 Trouver mon trajet",
+        "Trouver mon trajet",
         type="primary",
         use_container_width=True,
     )
@@ -104,7 +104,7 @@ if st.session_state.get("results_loaded"):
     has_velov = any("Vélov" in m for m in modes)
     has_voiture = any("Voiture" in m for m in modes)
     # (2026-06-19) — Transport en commun : nouveau mode unifié
-    # Métro + Tram + Bus fusionnés en "🚌 Transport en commun".
+    # Métro + Tram + Bus fusionnés en "Transport en commun".
     has_tc = any("Transport en commun" in m for m in modes)
 
     origin_coords = _resolve_lieu(search["origin"])
@@ -201,7 +201,7 @@ if st.session_state.get("results_loaded"):
                 }
         if results:
             st.markdown("---")
-            st.markdown("### ⚖️ Comparaison des modes")
+            st.markdown("### Comparaison des modes")
             render_mode_comparison(
                 results=results,
                 critere=search.get("critere", "temps"),
@@ -209,7 +209,7 @@ if st.session_state.get("results_loaded"):
                 destination=search["destination"],
             )
             # Summary cards (1 par mode actif)
-            st.markdown("#### 📊 Détail par mode")
+            st.markdown("#### Détail par mode")
             n_modes = len(results)
             cols = st.columns(min(n_modes, 3))
             for col, (key, r) in zip(cols, results.items()):
@@ -222,7 +222,7 @@ if st.session_state.get("results_loaded"):
                     )
 
     # ── Contexte : météo (toujours) + Vélov destination (si mode actif) ──
-    st.markdown("##### 🌤 Conditions actuelles")
+    st.markdown("##### Conditions actuelles")
     if has_velov:
         ctx1, ctx2 = st.columns(2)
         with ctx1:
@@ -236,12 +236,12 @@ if st.session_state.get("results_loaded"):
                         k=3,
                     )
                     if stations_dest:
-                        st.caption(f"🚲 Stations Vélov proches de **{search['destination']}** :")
+                        st.caption(f"Stations Vélov proches de **{search['destination']}** :")
                         render_velov_widget(stations=stations_dest, max_stations=3)
                     else:
                         st.info(f"Aucune station Vélov proche de {search['destination']}.")
                 except DashboardDataError as e:
-                    st.error(f"⚠️ {e}")
+                    st.error(f"{e}")
             else:
                 render_velov_widget(max_stations=3)
     else:
@@ -261,10 +261,10 @@ if st.session_state.get("results_loaded"):
 
     # ── Trafic routier (si Voiture sélectionné) ──────────────────────────
     if has_voiture:
-        st.markdown("##### 🚦 État du trafic routier")
+        st.markdown("##### État du trafic routier")
         render_traffic_widget()
 
-        with st.expander("🗺️ Carte du trafic — H+1h", expanded=False):
+        with st.expander("Carte du trafic — H+1h", expanded=False):
             render_traffic_map_compact(height=320, horizon_minutes=60, key_suffix="usager")
 
     # ── Trajet Vélov (si Vélov sélectionné) ──────────────────────────────
@@ -273,7 +273,7 @@ if st.session_state.get("results_loaded"):
     # caché dans un panneau replié). Aligne l'UX sur la voiture (l.325).
     if has_velov:
         st.markdown("---")
-        with st.expander("🚲 Trajet Vélov + marche", expanded=True):
+        with st.expander("Trajet Vélov + marche", expanded=True):
             if origin_coords and dest_coords:
                 try:
                     # Axe C — Stocke la durée réelle dans session_state.
@@ -286,7 +286,7 @@ if st.session_state.get("results_loaded"):
                     if velov_result:
                         st.session_state["trip_velov"] = velov_result
                 except DashboardDataError as e:
-                    st.error(f"⚠️ {e}")
+                    st.error(f"{e}")
             else:
                 st.warning(
                     f"Impossible de résoudre les coordonnées GPS : "
@@ -297,17 +297,17 @@ if st.session_state.get("results_loaded"):
     # ── Itinéraire voiture (si Voiture sélectionné) ──────────────────────
     if has_voiture:
         st.markdown("---")
-        st.markdown("### 🛣️ Itinéraire voiture")
+        st.markdown("### Itinéraire voiture")
 
         itin_col1, itin_col2 = st.columns([3, 1])
         with itin_col1:
             st.markdown(
                 f"""
                 <div class="lyf-label" style="background:var(--bg-card);padding:0.8rem 1rem;border-radius:6px;border-left:4px solid #4CAF50;display:flex;align-items:center;gap:0.6rem;">
-                    <span class="lyf-sublabel" style="background:#4CAF50;color:white;padding:0.2rem 0.6rem;border-radius:12px;font-weight:600;">🟢 DÉPART</span>
+                    <span class="lyf-sublabel" style="background:#4CAF50;color:white;padding:0.2rem 0.6rem;border-radius:12px;font-weight:600;">DÉPART</span>
                     <span style="font-weight:600;">{search["origin"]}</span>
                     <span style="opacity:0.4;margin:0 0.5rem;">→</span>
-                    <span class="lyf-sublabel" style="background:#F44336;color:white;padding:0.2rem 0.6rem;border-radius:12px;font-weight:600;">🔴 ARRIVÉE</span>
+                    <span class="lyf-sublabel" style="background:#F44336;color:white;padding:0.2rem 0.6rem;border-radius:12px;font-weight:600;">ARRIVÉE</span>
                     <span style="font-weight:600;">{search["destination"]}</span>
                 </div>
                 """,
@@ -315,7 +315,7 @@ if st.session_state.get("results_loaded"):
             )
 
         if st.button(
-            "🚗 Calculer l'itinéraire",
+            "Calculer l'itinéraire",
             type="primary",
             use_container_width=True,
             key="itin_calc_btn",
@@ -339,13 +339,13 @@ if st.session_state.get("results_loaded"):
     if has_velov:
         st.markdown("---")
 
-        with st.expander("🗺️ Couverture Vélov des lieux emblématiques", expanded=False):
+        with st.expander("Couverture Vélov des lieux emblématiques", expanded=False):
             try:
                 render_lieux_velov_map(height=400)
             except DashboardDataError as e:
-                st.error(f"⚠️ {e}")
+                st.error(f"{e}")
 
-        with st.expander("🚲 Toutes les stations Vélo'v", expanded=False):
+        with st.expander("Toutes les stations Vélo'v", expanded=False):
             render_velov_map_compact(height=320, key_suffix="usager")
 
     st.markdown("---")

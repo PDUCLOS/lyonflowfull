@@ -111,7 +111,7 @@ def require_password() -> None:
     icon = pconf.get("icon", "🔒")
 
     if is_authenticated():
-        st.success(f"✅ Connecté en tant que **{icon} {label}**")
+        st.success(f"Connecté en tant que **{icon} {label}**")
         if st.button("Se déconnecter"):
             logout()
             st.rerun()
@@ -121,13 +121,13 @@ def require_password() -> None:
     expected = _get_expected_password(persona_id)
     if expected is None:
         st.error(
-            f"⚠️ Auth requise pour **{label}** mais la variable d'environnement "
+            f"Auth requise pour **{label}** mais la variable d'environnement "
             f"`{pconf.get('access', {}).get('password_env')}` n'est pas définie "
             f"côté serveur. Contacte l'admin."
         )
         return
 
-    st.info(f"🔐 **{label}** est un espace protégé. Saisis le mot de passe.")
+    st.info(f"**{label}** est un espace protégé. Saisis le mot de passe.")
     # démo : on affiche le mdp par défaut dans une info box
     # (à retirer en prod).
     with st.expander("Information Aide démo (mots de passe par défaut)"):

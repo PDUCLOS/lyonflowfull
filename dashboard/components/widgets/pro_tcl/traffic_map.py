@@ -123,11 +123,11 @@ def _freshness_line(df: pd.DataFrame, ts_col: str = "live_at") -> None:
         latest = latest.replace(tzinfo=ZoneInfo("UTC"))
     age_s = (now - latest).total_seconds()
     if age_s < 300:
-        st.caption(f"🟢 Live — dernière mesure il y a {int(age_s // 60)} min")
+        st.caption(f"Live — dernière mesure il y a {int(age_s // 60)} min")
     elif age_s < 1800:
-        st.caption(f"🟡 Récent — dernière mesure il y a {int(age_s // 60)} min")
+        st.caption(f"Récent — dernière mesure il y a {int(age_s // 60)} min")
     else:
-        st.caption(f"🔴 Ancien — dernière mesure il y a {age_s / 3600:.1f}h — vérifier DAGs")
+        st.caption(f"Ancien — dernière mesure il y a {age_s / 3600:.1f}h — vérifier DAGs")
 
 
 # ---------------------------------------------------------------------------
@@ -243,7 +243,7 @@ def _render_pydeck_predictions(df: pd.DataFrame, height: int, zoom: float = 11.0
 
 
 def _legend_ratio() -> None:
-    st.markdown("**Légende** (% de la vitesse limite) : 🟢 >75% · 🟡 50-75% · 🟠 30-50% · 🔴 <30%")
+    st.markdown("**Légende** (% de la vitesse limite) : >75% · 50-75% · 30-50% · <30%")
 
 
 def _stats_bar(df: pd.DataFrame) -> None:
@@ -311,7 +311,7 @@ def render_traffic_map_compact(
 
         df = _load_live_vs_predicted(limit=1500)
         if df is None:
-            st.caption("🟡 Carte trafic indisponible (aucune donnée capteur)")
+            st.caption("Carte trafic indisponible (aucune donnée capteur)")
             return
 
         _freshness_line(df)

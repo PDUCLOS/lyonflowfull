@@ -99,24 +99,27 @@ def render_search_bar() -> dict[str, typing.Any]:
         )
 
         with st.container(border=True):
-            st.markdown("#### 🗺️ Où allez-vous ?")
+            st.markdown("#### Où allez-vous ?")
+
+            default_origin_idx = next((i for i, a in enumerate(addr_options) if "Villeurbanne" in a), 0)
+            default_dest_idx = next(
+                (i for i, a in enumerate(addr_options) if "Part-Dieu" in a), min(1, len(addr_options) - 1)
+            )
 
             col1, col2 = st.columns(2)
             with col1:
                 origin = st.selectbox(
-                    "🟢 Point de départ",
+                    "Point de départ",
                     options=addr_options,
-                    index=addr_options.index("🏙 Villeurbanne") if "🏙 Villeurbanne" in addr_options else 0,
+                    index=default_origin_idx,
                     key="search_origin",
                     help="Tapez pour rechercher une adresse",
                 )
             with col2:
                 destination = st.selectbox(
-                    "🔴 Destination",
+                    "Destination",
                     options=addr_options,
-                    index=addr_options.index("🚉 Part-Dieu")
-                    if "🚉 Part-Dieu" in addr_options
-                    else min(1, len(addr_options) - 1),
+                    index=default_dest_idx,
                     key="search_destination",
                     help="Tapez pour rechercher une adresse",
                 )
@@ -128,12 +131,12 @@ def render_search_bar() -> dict[str, typing.Any]:
             with col_time:
                 departure_mode = st.radio(
                     "Quand ?",
-                    ["🚶 Partir maintenant", "⏰ Arriver à l'heure"],
+                    ["Partir maintenant", "Arriver à l'heure"],
                     horizontal=True,
                     key="search_dep_mode",
                 )
                 departure_time = None
-                if departure_mode == "⏰ Arriver à l'heure":
+                if departure_mode == "Arriver à l'heure":
                     departure_time = st.time_input("Heure prévue", key="search_dep_time")
 
             with col_modes:
@@ -142,15 +145,15 @@ def render_search_bar() -> dict[str, typing.Any]:
                 #   l'usager choisit 1 mode à la fois, et ne peut pas le
                 #   désélectionner (clic sur l'option active = no-op, cf. doc
                 #   Streamlit). Garantit que ``selected_mode`` est toujours set.
-                # - Default = ``"🚌 Transport en commun"`` (mode principal usager).
+                # - Default = ``"Transport en commun"`` (mode principal usager).
                 # - Retour wrappé en liste d'1 élément pour rétro-compat avec
                 #   ``has_velov/has_voiture/has_tc`` dans Usager_1_Mon_Trajet.py:74-79.
                 # - (2026-06-19) : fusion TC + suppression Marche.
                 selected_mode = st.segmented_control(
                     "Modes de transport autorisés",
-                    options=["🚌 Transport en commun", "🚲 Vélov", "🚗 Voiture"],
+                    options=["Transport en commun", "Vélov", "Voiture"],
                     selection_mode="single",
-                    default="🚌 Transport en commun",
+                    default="Transport en commun",
                     key="search_modes",
                     width="stretch",
                     required=True,
@@ -158,9 +161,9 @@ def render_search_bar() -> dict[str, typing.Any]:
                 )
                 # Hint contextuel + rétro-compat ``modes`` (list[str]) pour le code aval.
                 _mode_hints = {
-                    "🚌 Transport en commun": "Métro · Tram · Bus (GTFS TCL temps réel)",
-                    "🚲 Vélov": "Vélos en libre-service + marche d'accès",
-                    "🚗 Voiture": "Itinéraire routier avec trafic H+1h",
+                    "Transport en commun": "Métro · Tram · Bus (GTFS TCL temps réel)",
+                    "Vélov": "Vélos en libre-service + marche d'accès",
+                    "Voiture": "Itinéraire routier avec trafic H+1h",
                 }
                 st.markdown(
                     f'<div class="mode-hint">{_mode_hints[selected_mode]}</div>',
@@ -173,13 +176,13 @@ def render_search_bar() -> dict[str, typing.Any]:
                 # Sert au scoring composite du comparateur Phase 2 (cf. eco_calculator).
                 critere_label = st.radio(
                     "Optimiser pour",
-                    ["⏱️ Temps", "💰 Coût"],
+                    ["Temps", "Coût"],
                     horizontal=True,
                     key="search_critere",
                     index=0,
                     help="Critère de tri pour le comparateur multi-modes (Phase 2)",
                 )
-                critere = "temps" if critere_label.startswith("⏱") else "cout"
+                critere = "temps" if critere_label.startswith("Temps") else "cout"
 
         return {
             "origin": origin,

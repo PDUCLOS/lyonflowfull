@@ -30,7 +30,7 @@ render_sidebar_navigation()
 setup_auto_refresh()
 render_freshness_badge()
 
-st.title("🔒 RGPD & Conformité")
+st.title("RGPD & Conformité")
 render_data_status_banner()
 
 st.markdown(

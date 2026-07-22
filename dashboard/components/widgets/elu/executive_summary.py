@@ -26,16 +26,16 @@ def render_executive_summary() -> None:
         bn_delta = kpis.get("bottlenecks_actifs", {}).get("delta_ytd", 0)
 
         if pm_delta > 0 and bn_delta < 0:
-            tendance = "🟢 <b>AMÉLIORATION</b>"
+            tendance = "<b>AMÉLIORATION</b>"
             tendance_text = (
                 "La politique de mobilité porte ses fruits : la part modale TC progresse, "
                 "le nombre de bottlenecks diminue, et la satisfaction usager reste stable."
             )
         elif pm_delta < 0 or ponc_delta < -1:
-            tendance = "🔴 <b>DÉGRADATION</b>"
+            tendance = "<b>DÉGRADATION</b>"
             tendance_text = "La situation se dégrade sur plusieurs axes. Action corrective prioritaire recommandée."
         else:
-            tendance = "🟡 <b>STABLE</b>"
+            tendance = "<b>STABLE</b>"
             tendance_text = "La situation est globalement stable, mais les marges de progression demeurent importantes."
 
         st.markdown(

@@ -102,7 +102,7 @@ def render_html_template(sections: dict[str, Any], template_name: str = "synthes
 
     bottlenecks = sections.get("bottlenecks", [])
     if bottlenecks:
-        extra_content += '<div class="section"><h2>🎯 Top bottlenecks prioritaires</h2>'
+        extra_content += '<div class="section"><h2>Top bottlenecks prioritaires</h2>'
         for b in bottlenecks[:5]:
             extra_content += f"""
             <div class="bottleneck-row">
@@ -122,7 +122,7 @@ def render_html_template(sections: dict[str, Any], template_name: str = "synthes
 
     decisions = sections.get("decisions", [])
     if decisions:
-        extra_content += '<div class="section"><h2>🎯 Décisions à arbitrer ce trimestre</h2><ol>'
+        extra_content += '<div class="section"><h2>Décisions à arbitrer ce trimestre</h2><ol>'
         for d in decisions:
             extra_content += f"<li>{d}</li>"
         extra_content += "</ol></div>"

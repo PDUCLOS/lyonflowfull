@@ -108,11 +108,11 @@ def check_critical_dags() -> dict[str, dict[str, Any]]:
         anomalies.append(f"DAGs désactivés (is_active=False): {inactive}")
 
     if anomalies:
-        msg = "🚨 Pipeline critique en panne ! " + " | ".join(anomalies)
+        msg = "Pipeline critique en panne ! " + " | ".join(anomalies)
         logger.error(msg)
         raise AirflowException(msg)
 
-    logger.info("✅ Tous les %d DAGs critiques OK (actifs, non pausés)", len(CRITICAL_DAGS))
+    logger.info("Tous les %d DAGs critiques OK (actifs, non pausés)", len(CRITICAL_DAGS))
     return state_map
 
 
@@ -141,11 +141,11 @@ def check_gold_freshness() -> dict[str, str]:
         logger.info("  %s: %s", table, status)
 
     if anomalies:
-        msg = "🚨 Tables Gold critiques stale ! " + " | ".join(anomalies)
+        msg = "Tables Gold critiques stale ! " + " | ".join(anomalies)
         logger.error(msg)
         raise AirflowException(msg)
 
-    logger.info("✅ Toutes les %d tables Gold critiques sont fresh", len(FRESHNESS_CHECKS))
+    logger.info("Toutes les %d tables Gold critiques sont fresh", len(FRESHNESS_CHECKS))
     return results
 
 

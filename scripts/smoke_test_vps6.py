@@ -33,7 +33,7 @@ def main() -> int:
     for lieu in lieux[:3]:
         print(f"  - {lieu['name']} ({lieu['lat']}, {lieu['lon']}) [{lieu['type']}]")
     if len(lieux) < 21:
-        print(f"  ⚠️  Attendu: 21 lieux, trouvé: {len(lieux)}")
+        print(f"Attendu: 21 lieux, trouvé: {len(lieux)}")
         return 1
 
     # 2. Pathfinding Vélov (Part-Dieu → Tête d'Or)
@@ -75,7 +75,7 @@ def main() -> int:
     print(f"  Segments : {len(car.get('segments', []))}")
 
     print("\n" + "=" * 60)
-    print("✅ Smoke test OK — Sprint VPS-6 déployé et opérationnel")
+    print("Smoke test OK — Sprint VPS-6 déployé et opérationnel")
     print("=" * 60)
     return 0
 

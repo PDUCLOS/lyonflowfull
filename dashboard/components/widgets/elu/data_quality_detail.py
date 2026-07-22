@@ -49,9 +49,9 @@ STATUS_COLORS: Final[dict[str, str]] = {
 }
 
 STATUS_ICONS: Final[dict[str, str]] = {
-    "ok": "🟢",
-    "warning": "🟡",
-    "critical": "🔴",
+    "ok": "OK",
+    "warning": "Attention",
+    "critical": "Alerte",
 }
 
 # Mapping table_name → libellé FR court
@@ -114,7 +114,7 @@ def _render_kpi_banner(latest_df: pd.DataFrame) -> None:
                             border-radius:6px;padding:0.8rem;margin:0.4rem 0;">
                     <div class="lyf-detail" style="opacity:0.8;">{label}</div>
                     <div style="font-size:1.4rem;font-weight:700;margin:0.2rem 0;">
-                        {icon} {status.upper()}
+                        {icon}
                     </div>
                     <div class="lyf-sublabel" style="opacity:0.6;">
                         {n_ok}/{n_total} checks OK · {last_str}
@@ -201,7 +201,7 @@ def render_data_quality_detail() -> None:
     try:
         df = cached_quality_report(limit=200)
     except DashboardDataError as e:
-        show_error("db_down", f"⚠️ Data quality log indisponible : {e}")
+        show_error("db_down", f"Data quality log indisponible : {e}")
         return
 
     if df.empty:
@@ -214,7 +214,7 @@ def render_data_quality_detail() -> None:
         )
         return
 
-    st.markdown("##### 🔍 Détail qualité des données (data bounds)")
+    st.markdown("##### Détail qualité des données (data bounds)")
     st.caption(
         "Drill-down des checks qualité exécutés par "
         "`src.transformation.data_quality` (3 validators). "

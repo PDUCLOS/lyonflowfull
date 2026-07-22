@@ -20,6 +20,7 @@ from __future__ import annotations
 
 import html
 
+import pandas as pd
 import streamlit as st
 
 from dashboard.components.a11y import plotly_with_alt
@@ -28,9 +29,30 @@ from dashboard.components.error_display import show_error
 from dashboard.components.plotly_theme import LYF_TEMPLATE
 
 
+@st.cache_data(ttl=300, show_spinner=False)
+def _cached_training_history():
+    """Historique MLflow runs (7j). TTL 300s — retrain horaire au mieux,
+    était sans cache, requêtée à chaque rerun/auto-refresh (audit perf 2026-07-03).
+    """
+    from src.data.db_query import _df_from_query  # type: ignore
+
+    return _df_from_query(
+        """
+        SELECT
+            DATE_TRUNC('day', start_time) AS day,
+            run_name,
+            metrics_mae_speed_h1 AS mae_speed,
+            metrics_mae_velov_h1 AS mae_velov
+        FROM mlflow.runs_history
+        WHERE start_time >= NOW() - INTERVAL '7 days'
+        ORDER BY start_time ASC
+        """
+    )
+
+
 def render_model_registry() -> None:
     """Affiche la liste des modèles dans le registry."""
-    st.markdown("##### 📚 Model Registry")
+    st.markdown("##### Model Registry")
 
     from dashboard.components.data_cache import (
         cached_mlflow_experiment_summary,
@@ -66,11 +88,11 @@ def render_model_registry() -> None:
     # Bandeau source (transparence MLflow)
     if summary.get("available"):
         st.success(
-            f"🟢 **MLflow live** · {summary.get('run_count', 0)} runs · {len(summary.get('model_names', []))} modèles"
+            f"**MLflow live** · {summary.get('run_count', 0)} runs · {len(summary.get('model_names', []))} modèles"
         )
     else:
         st.warning(
-            "🟡 **MLflow non accessible** — aucun modèle à afficher. "
+            "**MLflow non accessible** — aucun modèle à afficher. "
             "Pour activer en prod : démarrer le service `mlflow` (docker compose) "
             "et recharger cette page."
         )
@@ -85,31 +107,31 @@ def render_model_registry() -> None:
 
     # Sprint 10+ : drift réel depuis gold.model_drift_reports (PAS mock)
     # Lecture du dernier rapport de drift persisté par build_xgb_training_set.
-    from src.data.db_query import get_latest_drift_report
+    from dashboard.components.data_cache import cached_latest_drift_report
 
-    latest_drift = get_latest_drift_report()
+    latest_drift = cached_latest_drift_report()
     if latest_drift:
         n_drift = 1 if latest_drift.get("dataset_drift") else 0
         drift_share_pct = float(latest_drift.get("drift_share", 0.0)) * 100
-        drift_status = "🔴 DRIFT" if latest_drift.get("dataset_drift") else "🟢 OK"
+        drift_status = "DRIFT" if latest_drift.get("dataset_drift") else "OK"
     else:
         n_drift = 0
         drift_share_pct = 0.0
-        drift_status = "⚪ Pas de rapport"
+        drift_status = "Pas de rapport"
 
     cols = st.columns(4)
     with cols[0]:
-        st.metric("🟢 Production", prod)
+        st.metric("Production", prod)
     with cols[1]:
-        st.metric("🟡 Staging", staging)
+        st.metric("Staging", staging)
     with cols[2]:
         st.metric("Total modèles", len(models))
     with cols[3]:
-        st.metric(f"🚨 Drift {drift_status}", f"{drift_share_pct:.0f}%", delta_color="inverse")
+        st.metric(f"Drift {drift_status}", f"{drift_share_pct:.0f}%", delta_color="inverse")
 
     # Détail drift (Sprint 10+ — affiche le dernier rapport PSI)
     if latest_drift:
-        with st.expander("📊 Dernier rapport de drift (PSI)", expanded=False):
+        with st.expander("Dernier rapport de drift (PSI)", expanded=False):
             st.markdown(
                 f"- **Dataset drift** : `{latest_drift.get('dataset_drift')}`\n"
                 f"- **Drift share** : `{drift_share_pct:.1f}%`\n"
@@ -124,7 +146,7 @@ def render_model_registry() -> None:
                 for col, stats in report["per_column"].items():
                     psi = stats.get("psi", 0)
                     status = stats.get("status", "?")
-                    icon = {"stable": "🟢", "moderate": "🟡", "significant": "🔴"}.get(status, "⚪")
+                    icon = {"stable": "OK", "moderate": "Attention", "significant": "Alerte"}.get(status, "Inconnu")
                     st.markdown(f"- {icon} **{col}** : PSI = {psi:.3f} ({status})")
 
     # Tableau (Sprint 9+ — utilise la variable `models` lue depuis MLflow live)
@@ -186,8 +208,8 @@ def _render_model_registry_table(models: list[dict]) -> None:
             st.markdown(f"{samples:,}")
         with cols[6]:
             drift = m.get("drift_status", "ok")
-            drift_emoji = {"ok": "✅", "warning": "⚠️", "critical": "🚨"}.get(drift, "—")
-            st.markdown(f"{drift_emoji} {drift}")
+            drift_label = {"ok": "OK", "warning": "Attention", "critical": "Alerte"}.get(drift, "—")
+            st.markdown(drift_label)
 
 
 def render_model_registry_status() -> None:
@@ -199,7 +221,7 @@ def render_model_registry_status() -> None:
     Section ajoutée pour permettre à Patrice de visualiser en temps réel
     le statut du modèle XGBoost actif en prod.
     """
-    st.markdown("##### 🎛️ Model Registry Status (live)")
+    st.markdown("##### Model Registry Status (live)")
 
     # Import paresseux pour ne pas casser en cas de modèle manquant
     try:
@@ -213,10 +235,10 @@ def render_model_registry_status() -> None:
     is_active = is_xgboost_training_enabled()
     if is_active:
         badge_color = COLORS["status_ok"]
-        badge_text = "🟢 XGBOOST ACTIF (prod)"
+        badge_text = "XGBOOST ACTIF (prod)"
     else:
         badge_color = COLORS["status_critical"]
-        badge_text = "🔴 XGBOOST PAUSED — vérifier DAG ``dag_daily_speed_train``"
+        badge_text = "XGBOOST PAUSED — vérifier DAG ``dag_daily_speed_train``"
 
     st.markdown(
         f'<div style="background:{badge_color};color:white;padding:0.5rem 1rem;'
@@ -239,7 +261,7 @@ def render_model_registry_status() -> None:
         # (self.model_dir / "xgb_speed_h60.json") — le container streamlit
         # n'a AUCUN volume models/ monté (cf. docker-compose.yml), donc ce
         # check renvoie toujours False ici, indépendamment de l'état réel
-        # du modèle (qui tourne dans le container airflow). Faux ❌ trompeur,
+        # du modèle (qui tourne dans le container airflow). Faux trompeur,
         # même symptôme que celui documenté pour le GNN plus haut.
         # Fix : on vérifie plutôt la fraîcheur des prédictions en DB
         # (gold.trafic_predictions, produites par dag_inference_xgboost).
@@ -248,7 +270,7 @@ def render_model_registry_status() -> None:
         pred_df = cached_predictions_vs_actuals(limit=1)
         st.metric(
             "XGB H+60min dispo",
-            "✅" if not pred_df.empty else "❌",
+            "Oui" if not pred_df.empty else "Non",
         )
 
     # Detail table
@@ -282,7 +304,7 @@ def render_metrics_comparison() -> None:
     Sprint 24+ : le tandem GNN/STGCN est archivé. Cette section montre
     les métriques du champion XGBoost uniquement.
     """
-    st.markdown("##### 📊 Métriques XGBoost Speed H+60min")
+    st.markdown("##### Métriques XGBoost Speed H+60min")
 
     from dashboard.components.data_cache import cached_mlflow_models
     from src.data.exceptions import DashboardDataError
@@ -293,7 +315,7 @@ def render_metrics_comparison() -> None:
         show_error("db_down", str(e))
         return
     except Exception as e:
-        show_error("db_down", f"🔴 MLflow a échoué — métriques modèles indisponibles ({e}).")
+        show_error("db_down", f"MLflow a échoué — métriques modèles indisponibles ({e}).")
         return
 
     if not models:
@@ -340,10 +362,7 @@ def render_metrics_comparison() -> None:
         st.metric("R²", f"{_r2(xgb_h60):.3f}")
         st.metric("Features", _features(xgb_h60))
 
-    st.caption(
-        "💡 Modèle focus H+1h, réentraîné nightly par "
-        "``dag_daily_speed_train``."
-    )
+    st.caption("Modèle focus H+1h, réentraîné nightly par ``dag_daily_speed_train``.")
 
 
 def render_training_history() -> None:
@@ -353,26 +372,13 @@ def render_training_history() -> None:
     Lit MLflow runs history (DAG ``retrain_xgboost`` + ``retrain_velov``).
     Branchement Sprint 10+ — fallback explicite en attendant.
     """
-    st.markdown("##### 📈 Historique entraînement (7 derniers jours)")
+    st.markdown("##### Historique entraînement (7 derniers jours)")
 
     # Sprint 9+ — placeholder explicite. Branchement MLflow runs history
     # prévu Sprint 10+ (nécessite ``mlflow.search_runs()`` côté widget).
     # Plus de données hardcodées : la règle "zéro mock" prime.
     try:
-        from src.data.db_query import _df_from_query  # type: ignore
-
-        history = _df_from_query(
-            """
-            SELECT
-                DATE_TRUNC('day', start_time) AS day,
-                run_name,
-                metrics_mae_speed_h1 AS mae_speed,
-                metrics_mae_velov_h1 AS mae_velov
-            FROM mlflow.runs_history
-            WHERE start_time >= NOW() - INTERVAL '7 days'
-            ORDER BY start_time ASC
-            """
-        )
+        history = _cached_training_history()
         if history.empty:
             st.info(
                 "Historique entraînement vide — branche Sprint 10+. "
@@ -430,11 +436,11 @@ def render_drift_panel() -> None:
     (table ``gold.model_drift_reports``, persistée par
     ``build_xgb_training_set``). Plus de mock ``drifts = [...]``.
     """
-    st.markdown("##### 🌊 Drift Detection")
+    st.markdown("##### Drift Detection")
 
-    from src.data.db_query import get_latest_drift_report
+    from dashboard.components.data_cache import cached_latest_drift_report
 
-    report = get_latest_drift_report()
+    report = cached_latest_drift_report()
     if not report:
         st.info(
             "Aucun rapport de drift disponible. "
@@ -451,7 +457,7 @@ def render_drift_panel() -> None:
         "warning": COLORS["status_warning"],
         "critical": COLORS["status_critical"],
     }.get(status, COLORS["text_muted"])
-    icon = {"ok": "🟢", "warning": "🟡", "critical": "🔴"}.get(status, "⚪")
+    icon = {"ok": "OK", "warning": "Attention", "critical": "Alerte"}.get(status, "Inconnu")
 
     # Sprint 15+ (audit Pro TCL B-15) : ``report.get(..., "—")`` retourne
     # ``"—"`` SEULEMENT si la clé est absente. Si la clé existe avec
@@ -474,7 +480,7 @@ def render_drift_panel() -> None:
             except (TypeError, ValueError):
                 psi = 0.0
             col_status = stats.get("status", "?")
-            col_icon = {"stable": "🟢", "moderate": "🟡", "significant": "🔴"}.get(col_status, "⚪")
+            col_icon = {"stable": "OK", "moderate": "Attention", "significant": "Alerte"}.get(col_status, "Inconnu")
             # Sprint 15+ (audit Pro TCL B-08) : escape nom de colonne et
             # status pour éviter que des caractères spéciaux (`<`, `>`, `&`)
             # ne cassent le parsing HTML de Streamlit.
@@ -534,7 +540,7 @@ def render_velov_model_analysis() -> None:
     * Confidence interval moyen (largeur)
     * Backtest MAE si ``gold.predictions_vs_actuals`` contient des vélov rows.
     """
-    st.markdown("##### 🚲 Analyse modèle Vélo'v (XGBoost) — H+1h")
+    st.markdown("##### Analyse modèle Vélo'v (XGBoost) — H+1h")
     try:
         from dashboard.components.data_cache import cached_velov_predictions
         from src.data.db_query import get_velov_stations_geo
@@ -606,96 +612,108 @@ def render_velov_model_analysis() -> None:
     st.caption("Backtest détaillé : voir la section MLflow Model Registry ci-dessus (MAE/RMSE par run d'entraînement).")
 
 
+_DATA_QUALITY_TABLES = [
+    ("silver", "trafic_boucles_clean", "measurement_time", "5 min"),
+    ("silver", "velov_clean", "measurement_time", "5 min"),
+    ("silver", "tcl_vehicles_clean", "measurement_time", "5 min"),
+    ("silver", "meteo_hourly", "measurement_time", "1h"),
+    ("gold", "traffic_features_live", "computed_at", "5 min"),
+    ("gold", "trafic_predictions", "calculated_at", "1h"),
+    ("gold", "velov_features", "measurement_time", "5 min"),
+    ("gold", "velov_predictions", "prediction_timestamp", "1h"),
+    ("gold", "bus_delay_segments", "date", "1j"),
+]
+# Migration 044-adjacent fix (2026-07-03) : 3 colonnes n'existaient pas
+# (tcl_vehicles_clean.recorded_at, traffic_features_live.measurement_time,
+# bus_delay_segments.computed_at) — chaque appel échouait silencieusement
+# dans le except ci-dessous depuis la création du panel. Colonnes vérifiées
+# contre le schéma live VPS (information_schema.columns).
+
+
+@st.cache_data(ttl=60, show_spinner=False)
+def _cached_data_quality_rows() -> list[dict]:
+    """Freshness + volume par table Gold/Silver, 1 round trip.
+
+    Avant : 9 requêtes séquentielles, chacune un ``COUNT(*)`` sans borne —
+    scan complet pour les tables multi-millions de lignes (silver.trafic_
+    boucles_clean, gold.traffic_features_live). Rejoué à chaque rerun/
+    auto-refresh (30s, Pro TCL), sans cache. Fix (audit perf 2026-07-03) :
+    - 1 seule requête (UNION ALL) au lieu de 9 round trips.
+    - ``pg_class.reltuples`` (estimation catalogue, instantané) au lieu de
+      ``COUNT(*)`` exact (scan complet) — acceptable pour un panel de
+      supervision, pas une facturation.
+    - ``MAX(ts_col)`` reste un scan mais via l'index existant sur chaque
+      colonne temporelle (backward index scan, O(log n)).
+    - Wrappé ``@st.cache_data`` (TTL 60s) — les tables les plus fraîches
+      sont alimentées toutes les 5 min, largement au-dessus du TTL.
+    """
+    from psycopg2 import sql
+
+    from src.data.db_query import _df_from_query  # type: ignore
+
+    branches = []
+    for schema, table, ts_col, _expected in _DATA_QUALITY_TABLES:
+        branches.append(
+            sql.SQL(
+                "SELECT {label} AS tbl, "
+                "(SELECT reltuples::bigint FROM pg_class "
+                " WHERE oid = {regclass}::regclass) AS n_rows, "
+                "(SELECT MAX({ts_col}) FROM {schema}.{table}) AS last_ts"
+            ).format(
+                label=sql.Literal(f"{schema}.{table}"),
+                regclass=sql.Literal(f"{schema}.{table}"),
+                ts_col=sql.Identifier(ts_col),
+                schema=sql.Identifier(schema),
+                table=sql.Identifier(table),
+            )
+        )
+    query = sql.SQL(" UNION ALL ").join(branches)
+    df = _df_from_query(query)
+    return df.to_dict(orient="records")
+
+
 def render_data_quality_panel() -> None:
     """Sprint 10 — Panel data quality style Elementary.
 
     Lit health checks + freshness pour chaque table Gold/Silver clé.
     """
-    st.markdown("##### 🩺 Data Quality — freshness + volume (Elementary-style)")
-    try:
-        from psycopg2 import sql
+    st.markdown("##### Data Quality — freshness + volume (Elementary-style)")
+    expected_by_tbl = {f"{schema}.{table}": expected for schema, table, _ts, expected in _DATA_QUALITY_TABLES}
 
-        from src.data.db_query import _df_from_query  # type: ignore
+    try:
+        by_tbl = {r["tbl"]: r for r in _cached_data_quality_rows()}
     except Exception as e:
-        st.caption(f"Imports indisponibles : {e}")
+        st.caption(f"Data quality panel indisponible : {e}")
         return
 
-    tables = [
-        ("silver", "trafic_boucles_clean", "measurement_time", "5 min"),
-        ("silver", "velov_clean", "measurement_time", "5 min"),
-        ("silver", "tcl_vehicles_clean", "recorded_at", "5 min"),
-        ("silver", "meteo_hourly", "measurement_time", "1h"),
-        ("gold", "traffic_features_live", "measurement_time", "5 min"),
-        ("gold", "trafic_predictions", "calculated_at", "1h"),
-        ("gold", "velov_features", "measurement_time", "5 min"),
-        ("gold", "velov_predictions", "prediction_timestamp", "1h"),
-        ("gold", "bus_delay_segments", "computed_at", "1h"),
-    ]
-
     rows = []
-    for schema, table, ts_col, expected in tables:
-        try:
-            # psycopg2.sql.Identifier pour identifier (schema/table/colonne) — SQL injection-proof.
-            # ts_col est hardcodé dans la liste ci-dessus, mais on utilise Identifier par cohérence
-            # avec la règle "SQL paramétré partout" du AGENTS.md.
-            query = sql.SQL(
-                """
-                SELECT COUNT(*) AS n_rows,
-                       MAX({ts_col}) AS last_ts,
-                       NOW() - MAX({ts_col}) AS lag
-                FROM {schema}.{table}
-                """
-            ).format(
-                ts_col=sql.Identifier(ts_col),
-                schema=sql.Identifier(schema),
-                table=sql.Identifier(table),
-            )
-            df = _df_from_query(query)
-            if df.empty:
-                rows.append(
-                    {
-                        "Table": f"{schema}.{table}",
-                        "Rows": 0,
-                        "Last": "—",
-                        "Lag": "—",
-                        "Expected": expected,
-                        "Status": "🔴",
-                    }
-                )
-                continue
-            r = df.iloc[0]
-            n_rows = int(r.get("n_rows") or 0)
-            last_ts = r.get("last_ts")
-            lag = r.get("lag")
-            lag_str = str(lag).split(".")[0] if lag is not None else "—"
-            status = "🟢" if n_rows > 0 and last_ts is not None else "🔴"
-            rows.append(
-                {
-                    "Table": f"{schema}.{table}",
-                    "Rows": f"{n_rows:,}",
-                    "Last": str(last_ts)[:16] if last_ts else "—",
-                    "Lag": lag_str,
-                    "Expected": expected,
-                    "Status": status,
-                }
-            )
-        except Exception as e:
-            rows.append(
-                {
-                    "Table": f"{schema}.{table}",
-                    "Rows": "—",
-                    "Last": "—",
-                    "Lag": "—",
-                    "Expected": expected,
-                    "Status": f"⚠️ {str(e)[:40]}",
-                }
-            )
+    for schema, table, _ts_col, expected in _DATA_QUALITY_TABLES:
+        tbl = f"{schema}.{table}"
+        r = by_tbl.get(tbl)
+        if r is None:
+            rows.append({"Table": tbl, "Rows": "—", "Last": "—", "Lag": "—", "Expected": expected, "Status": "no data"})
+            continue
+        n_rows = int(r.get("n_rows") or 0)
+        last_ts = r.get("last_ts")
+        lag = (pd.Timestamp.now(tz="UTC") - pd.Timestamp(last_ts, tz="UTC")) if last_ts is not None else None
+        lag_str = str(lag).split(".")[0] if lag is not None else "—"
+        status = "OK" if n_rows > 0 and last_ts is not None else "Alerte"
+        rows.append(
+            {
+                "Table": tbl,
+                "Rows": f"~{n_rows:,}" if n_rows > 0 else "0",
+                "Last": str(last_ts)[:16] if last_ts else "—",
+                "Lag": lag_str,
+                "Expected": expected_by_tbl.get(tbl, expected),
+                "Status": status,
+            }
+        )
 
     st.dataframe(rows, use_container_width=True, hide_index=True)
     st.caption(
-        "🟢 = données présentes · 🔴 = table vide · ⚠️ = erreur SQL. "
-        "Lag = ⌚ écart entre NOW() et dernière insertion. "
-        "Source : queries directes sur PostgreSQL Gold/Silver."
+        "OK = données présentes · Alerte = table vide · no data = erreur SQL. "
+        "Rows = estimation catalogue (``pg_class.reltuples``, pas un COUNT(*) exact). "
+        "Lag = écart entre maintenant et dernière insertion."
     )
 
 

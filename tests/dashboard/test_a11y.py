@@ -63,10 +63,10 @@ class TestDataTableExpander:
         assert "label" in params
 
     def test_label_default(self) -> None:
-        """Label par défaut contient l'emoji 📋."""
+        """Label par défaut non vide."""
         sig = inspect.signature(data_table_expander)
         default = sig.parameters["label"].default
-        assert "📋" in default
+        assert default.strip()
 
     def test_accepte_pandas_dataframe(self) -> None:
         """La fonction ne raise pas avec un DataFrame vide."""

@@ -13,12 +13,10 @@ global:
     env: production
 
 # Load alerting rules
-# Sprint 8+4 (2026-06-12) — Règles désactivées temporairement : database.yml
-# utilise des fonctions Go templates (label_value, humanizeBytes) non
-# supportées en Prometheus v2.54 sans template global. Le scraping
-# continue normalement, seules les alertes sont en pause.
-# rule_files:
-#  - "rules/*.yml"
+# Réactivé 2026-07-02 : templates invalides (label_value, humanizeBytes) de
+# rules/database.yml corrigés — Prometheus v2.54 charge les 3 fichiers.
+rule_files:
+  - "rules/*.yml"
 
 # Alertmanager
 alerting:
@@ -78,24 +76,16 @@ scrape_configs:
           component: api
           persona: all
 
-  # ---------------------------------------------------------------------------
-  # Airflow metrics (via airflow-exporter or statsd)
-  # ---------------------------------------------------------------------------
-  - job_name: airflow
-    metrics_path: /admin/metrics
-    static_configs:
-      - targets: ["airflow-webserver:8080"]
-        labels:
-          component: orchestration
+  # Airflow metrics — DÉSACTIVÉ : pas d'exporter statsd/prometheus installé
+  # côté Airflow (aucun package requirements-base.txt), target 404 sinon.
+  # - job_name: airflow
+  #   metrics_path: /admin/metrics
+  #   static_configs:
+  #     - targets: ["airflow-webserver:8080"]
+  #       labels:
+  #         component: orchestration
 
-  # ---------------------------------------------------------------------------
-  # Redis exporter
-  # ---------------------------------------------------------------------------
-  - job_name: redis
-    static_configs:
-      - targets: ["redis-exporter:9121"]
-        labels:
-          component: cache
+  # Redis exporter — SUPPRIMÉ Sprint 15+ (Redis viré du projet, exporter orphelin)
 
   # ---------------------------------------------------------------------------
   # MinIO cluster metrics (optionnel — desactive par defaut, MINIO_ENABLED=false)

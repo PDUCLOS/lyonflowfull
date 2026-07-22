@@ -4,7 +4,7 @@
 -- Sprint 24+ (2026-06-29) — Nettoyage des index jamais scannés (idx_scan=0)
 -- détectés par pg-audit §5.
 --
--- ⚠️ STATUT : STUB — NE PAS APPLIQUER TEL QUEL.
+-- STATUT : STUB — NE PAS APPLIQUER TEL QUEL.
 --
 -- GARDE-FOUS (audit Patrice 2026-06-29) :
 --   1. stats_reset récent (< quelques jours) → idx_scan=0 = faux positif.
@@ -26,20 +26,20 @@
 -- IF EXISTS pour idempotence (re-run safe).
 -- =============================================================================
 
--- 🔴 CANDIDATS FORTS (> 100 MB, jamais scannés) — re-mesure post-Sprint 24
+-- CANDIDATS FORTS (> 100 MB, jamais scannés) — re-mesure post-Sprint 24
 --DROP INDEX CONCURRENTLY IF EXISTS gold.idx_gold_traffic_ml;            -- 585 MB
 --DROP INDEX CONCURRENTLY IF EXISTS silver.idx_silver_velov_station_time; -- 499 MB
 --DROP INDEX CONCURRENTLY IF EXISTS gold.idx_gold_traffic_channel;        -- 224 MB
 --DROP INDEX CONCURRENTLY IF EXISTS silver.idx_silver_tcl_line_time;      -- 132 MB
 
--- 🟡 CANDIDATS MOYENS (50-100 MB) — vérifier qu'aucune query ne les utilise
+-- CANDIDATS MOYENS (50-100 MB) — vérifier qu'aucune query ne les utilise
 --DROP INDEX CONCURRENTLY IF EXISTS bronze.uq_trafic_boucles_nodup;       -- 53 MB
 --DROP INDEX CONCURRENTLY IF EXISTS silver.uq_silver_trafic_vitesse_propre_twgid_ts; -- 47 MB
 --DROP INDEX CONCURRENTLY IF EXISTS silver.idx_silver_trafic_vitesse_propre_twgid_ts; -- 47 MB
 --DROP INDEX CONCURRENTLY IF EXISTS bronze.idx_trafic_boucles_geom_2154;  -- 46 MB
 --DROP INDEX CONCURRENTLY IF EXISTS bronze.idx_trafic_boucles_geom_4326;  -- 46 MB
 
--- 🟢 PETITS CANDIDATS (< 50 MB) — gain marginal, à grouper si on drop les gros
+-- PETITS CANDIDATS (< 50 MB) — gain marginal, à grouper si on drop les gros
 --DROP INDEX CONCURRENTLY IF EXISTS bronze.idx_pvotrafic_code;            -- 41 MB
 --DROP INDEX CONCURRENTLY IF EXISTS bronze.uq_pvotrafic_code_collected;   -- 41 MB
 --DROP INDEX CONCURRENTLY IF EXISTS gold.idx_gold_velov_features_station; -- 38 MB
@@ -47,7 +47,7 @@
 --DROP INDEX CONCURRENTLY IF EXISTS gold.idx_trafic_predictions_horizon_recent; -- 37 MB
 --DROP INDEX CONCURRENTLY IF EXISTS gold.idx_mv_fact_traffic_pivot_ts_node; -- 35 MB
 
--- ⛔ NE JAMAIS DROP (false positive probable : checks d'unicité INSERT)
+-- NE JAMAIS DROP (false positive probable : checks d'unicité INSERT)
 -- gold.traffic_features_live_pkey (103 MB)
 -- silver.velov_clean_pkey (438 MB)
 -- silver.tcl_vehicles_clean_pkey (134 MB)

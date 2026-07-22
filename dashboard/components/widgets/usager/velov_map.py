@@ -78,7 +78,7 @@ def render_velov_map_compact(*, height: int = 280, key_suffix: str = "") -> None
         """Version compacte (Usager) — Maintenant uniquement, pas de selectbox."""
         df = _load_stations_with_predictions()
         if df.empty:
-            st.caption("🟡 Carte Vélo'v indisponible (pas de stations en Silver)")
+            st.caption("Carte Vélo'v indisponible (pas de stations en Silver)")
             return
 
     df["bikes_display"] = df["bikes_available"].fillna(0).astype(int)
@@ -102,9 +102,7 @@ def render_velov_map_compact(*, height: int = 280, key_suffix: str = "") -> None
             map_style="https://basemaps.cartocdn.com/gl/positron-gl-style/style.json",
             tooltip={
                 "html": (
-                    "<b>{station_name}</b><br/>"
-                    "🚲 {bikes_available} · 🅿️ {docks_available}<br/>"
-                    "🔮 H+1h: {predicted_bikes_h1}"
+                    "<b>{station_name}</b><br/>{bikes_available} · {docks_available}<br/>H+1h: {predicted_bikes_h1}"
                 ),
                 "style": {
                     "backgroundColor": COLORS["bg_card"],
@@ -121,4 +119,4 @@ def render_velov_map_compact(*, height: int = 280, key_suffix: str = "") -> None
             use_container_width=True,
             hide_index=True,
         )
-    st.caption("🔴 vide · 🟠 <5 · 🟡 <10 · 🟢 ≥10 · Tooltip = prédiction H+1h")
+    st.caption("vide · <5 · <10 · ≥10 · Tooltip = prédiction H+1h")

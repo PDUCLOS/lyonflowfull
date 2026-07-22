@@ -100,6 +100,16 @@ def cached_xgb_accuracy_summary(hours: int = 168) -> pd.DataFrame:
 
 
 @st.cache_data(ttl=TTL_SLOW, show_spinner=False)
+def cached_latest_drift_report() -> dict | None:
+    """Dernier rapport de drift (gold.model_drift_reports). TTL 300s —
+
+    recalculé 1x/jour (06h, cf. CLAUDE.md), pas besoin de re-requêter à
+    chaque rerun (était sans cache, cf. audit perf 2026-07-03).
+    """
+    return dbq.get_latest_drift_report()
+
+
+@st.cache_data(ttl=TTL_SLOW, show_spinner=False)
 def cached_predictions_vs_actuals(limit: int = 200) -> pd.DataFrame:
     """Échantillon récent de prédictions XGBoost H+1h.
 
@@ -338,6 +348,19 @@ def cached_network_health_score() -> pd.DataFrame:
     return dl.load_network_health_score()
 
 
+@st.cache_data(ttl=TTL_FAST, show_spinner=False)
+def cached_network_health_history(hours: int = 24) -> list[dict]:
+    """Historique du score santé réseau (sparkline 24h). TTL 60s.
+
+    Table alimentée toutes les 15 min — pas besoin de re-requêter à
+    chaque rerun/auto-refresh (était le seul appel DB du widget Élu
+    sans wrapper cache, cf. audit perf 2026-07-03).
+    """
+    from src.data.network_health_history import get_network_health_history
+
+    return get_network_health_history(hours=hours)
+
+
 # =============================================================================
 # Transport en commun (2026-06-19)
 # =============================================================================
@@ -455,6 +478,12 @@ def cached_source_health() -> pd.DataFrame:
 def cached_data_completeness() -> pd.DataFrame:
     """Complétude colonnes critiques Silver (24h glissantes)."""
     return dbq.get_data_completeness()
+
+
+@st.cache_data(ttl=TTL_FAST, show_spinner=False)
+def cached_velov_safety_advisory() -> dict:
+    """Conseil sécurité Vélov (pollution + canicule) — migration_045 (2026-07-05)."""
+    return dbq.get_velov_safety_advisory()
 
 
 # Axe 7 — Météo impact (migration 022)

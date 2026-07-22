@@ -10,11 +10,11 @@ ensuite avec la MAE 24h depuis ``gold.v_xgb_accuracy_summary`` (migration
 020) pour un diagnostic plus précis.
 
 Affiche une ligne HTML :
-- 🟢 Modèle stable — MAE 7.2 km/h, 0 feature en drift
-- 🟡 Attention — MAE 12.4 km/h, 1 feature en drift
-- 🔴 Drift détecté — MAE 18.1 km/h, retrain recommandé
+- Modèle stable — MAE 7.2 km/h, 0 feature en drift
+- Attention — MAE 12.4 km/h, 1 feature en drift
+- Drift détecté — MAE 18.1 km/h, retrain recommandé
 
-Coût : 🟢 léger (1 requête scalaire). Pas besoin de button-gate.
+Coût : léger (1 requête scalaire). Pas besoin de button-gate.
 """
 
 from __future__ import annotations
@@ -23,10 +23,9 @@ import json
 
 import streamlit as st
 
-from dashboard.components.data_cache import cached_xgb_accuracy_summary
+from dashboard.components.data_cache import cached_latest_drift_report, cached_xgb_accuracy_summary
 from dashboard.components.error_display import show_error
 from dashboard.components.loading_state import loading_wrapper
-from src.data.db_query import get_latest_drift_report
 from src.data.exceptions import DashboardDataError
 
 # Seuils MAE pour le badge (km/h)
@@ -86,36 +85,35 @@ def _classify(
         Tuple (color, icon, message).
     """
     if mae_kmh is None and drift_diag is None:
-        return ("#9E9E9E", "⚪", "Données MAE indisponibles")
+        return ("#9E9E9E", "Inconnu", "Données MAE indisponibles")
 
     # Priorité au diagnostic différentiel PSI (plus précis)
     if drift_diag is not None and drift_diag[0] != "ok":
         status, msg = drift_diag
         if status == "critical":
-            return ("#F44336", "🔴", msg)
-        return ("#FF9800", "🟡", msg)
+            return ("#F44336", "Alerte", msg)
+        return ("#FF9800", "Attention", msg)
 
     # Fallback classification MAE + drift_share (avant PSI)
     if mae_kmh is None:
-        return ("#9E9E9E", "⚪", "Données MAE indisponibles")
+        return ("#9E9E9E", "Inconnu", "Données MAE indisponibles")
 
     if mae_kmh < MAE_GREEN:
         if drift_share and drift_share > 0.0:
-            return ("#FF9800", "🟡", f"MAE {mae_kmh:.1f} km/h, {drift_share * 100:.0f}% features en drift")
-        return ("#4CAF50", "🟢", f"Modèle stable — MAE {mae_kmh:.1f} km/h")
+            return ("#FF9800", "Attention", f"MAE {mae_kmh:.1f} km/h, {drift_share * 100:.0f}% features en drift")
+        return ("#4CAF50", "OK", f"Modèle stable — MAE {mae_kmh:.1f} km/h")
     if mae_kmh < MAE_YELLOW:
         return (
             "#FF9800",
-            "🟡",
-            f"Attention — MAE {mae_kmh:.1f} km/h"
-            + (f", {drift_share * 100:.0f}% features en drift" if drift_share else ""),
+            "Attention",
+            f"MAE {mae_kmh:.1f} km/h" + (f", {drift_share * 100:.0f}% features en drift" if drift_share else ""),
         )
-    return ("#F44336", "🔴", f"Drift détecté — MAE {mae_kmh:.1f} km/h, retrain recommandé")
+    return ("#F44336", "Alerte", f"Drift détecté — MAE {mae_kmh:.1f} km/h, retrain recommandé")
 
 
 def render_drift_status_badge() -> None:
     """Affiche le bandeau de statut drift + MAE dans Elu_1_Synthese."""
-    with st.popover("ℹ️ Qu'est-ce que le PSI ?"):
+    with st.popover("Qu'est-ce que le PSI ?"):
         st.markdown(
             "Le **PSI (Population Stability Index)** compare la distribution "
             "des features entre 2 périodes (J-14→J-7 vs J-7→J). "
@@ -126,9 +124,9 @@ def render_drift_status_badge() -> None:
         # Lecture des 2 sources
         try:
             summary = cached_xgb_accuracy_summary(hours=24)
-            drift = get_latest_drift_report()
+            drift = cached_latest_drift_report()
         except DashboardDataError as e:
-            show_error("db_down", f"⚠️ Drift status indisponible : {e}")
+            show_error("db_down", f"Drift status indisponible : {e}")
             return
 
         # MAE 24h

@@ -28,7 +28,7 @@ render_sidebar_navigation()
 setup_auto_refresh()
 render_freshness_badge()
 
-st.title("✏️ Simulateur d'aménagement")
+st.title("Simulateur d'aménagement")
 render_data_status_banner()
 
 st.caption(

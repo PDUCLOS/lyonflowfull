@@ -11,7 +11,7 @@ def render_impact_projection(zone: str | None = None) -> None:
     Args:
         zone: nom de la zone (optionnel).
     """
-    st.markdown("##### 🔮 Projection d'impact")
+    st.markdown("##### Projection d'impact")
 
     if not zone:
         st.info("Sélectionnez une zone sur la carte pour voir la projection.")
@@ -19,7 +19,7 @@ def render_impact_projection(zone: str | None = None) -> None:
 
     # Modèle simplifié XGBoost
     st.warning(
-        "⚠️ **Estimation générique** — ces valeurs (-12% VP, +18% bus, +45% vélo, -23% CO₂) "
+        "**Estimation générique** — ces valeurs (-12% VP, +18% bus, +45% vélo, -23% CO₂) "
         "ne sont PAS calculées pour la zone sélectionnée. En attente d'un modèle ML (XGBoost) "
         "affiné par zone."
     )

@@ -89,22 +89,29 @@ def _etat_for_speed(speed_kmh: float, limit_kmh: float) -> str:
 
 
 def _load_axes() -> list[dict]:
-    """Charge les axes (= channels avec données Gold récentes).
+    """Charge les axes (= channels avec données Gold récentes et capteur sain).
 
       On itère sur les channel_id distincts de traffic_features_live
     (cf. note dans le code legacy — le mapping axis_key ↔
       node_idx reste à réconcilier côté gold.dim_spatial_grid_mapping).
+
+    Exclut les capteurs `stuck` (même vitesse figée 24h, cf.
+    `gold.mv_sensor_saturation`, migration 034) — sans ce filtre le modèle
+    reçoit des lags constants et prédit quasi la même valeur pour tous ces
+    canaux (trouvé 2026-07-01 : ~10 axes bloqués à 18 km/h, MAE live gonflée).
     """
     rows = execute_query("""
-        SELECT DISTINCT ON (channel_id)
-            channel_id,
-            vitesse_limite_kmh,
-            lat,
-            lon
-        FROM gold.traffic_features_live
-        WHERE computed_at > NOW() - INTERVAL '2 hours'
-          AND speed_kmh IS NOT NULL
-        ORDER BY channel_id, computed_at DESC
+        SELECT DISTINCT ON (t.channel_id)
+            t.channel_id,
+            t.vitesse_limite_kmh,
+            t.lat,
+            t.lon
+        FROM gold.traffic_features_live t
+        JOIN gold.mv_sensor_saturation s ON s.channel_id = t.channel_id
+        WHERE t.computed_at > NOW() - INTERVAL '2 hours'
+          AND t.speed_kmh IS NOT NULL
+          AND s.status = 'ok'
+        ORDER BY t.channel_id, t.computed_at DESC
     """)
     return rows
 

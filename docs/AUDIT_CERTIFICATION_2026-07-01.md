@@ -16,18 +16,18 @@
 
 | Domaine | Statut | Détail |
 |---|---|---|
-| Tests | ✅ | 600 passés, 1 skip (DB indispo en local), 0 échec |
-| Lint | ✅ | `ruff check .` — 0 erreur |
-| Containers VPS | ✅ | 10/10 healthy |
-| DAGs Airflow | ✅ | 25/27 actifs, 2 pausés intentionnellement (documentés §4) |
-| Pipeline trafic (XGBoost) | ✅ | Entraînement + inférence + persistance vérifiés bout-en-bout |
-| Pipeline Vélov (XGBoost) | ✅ | **Corrigé aujourd'hui** — aucune prédiction n'était jamais persistée |
-| MLflow Model Registry | ✅ | **Corrigé aujourd'hui** — 6 modèles versionnés, stage Production |
-| Drift monitoring (Evidently) | ✅ | **Réactivé aujourd'hui** — mort depuis 25 jours |
-| Bloat DB | ✅ | 2 tables critiques VACUUM FULL (osm.ways 1.4GB→39MB, meteo_hourly) |
-| Disque VPS | ✅ | sda1 67% (33G libres), sdb 66% (33G libres) |
-| Qualité données (lat/lon) | ✅ | **Corrigé aujourd'hui** — 1543 lignes NULL → 0 |
-| Sparkline santé réseau (Élu) | ✅ | **Corrigé aujourd'hui** — table vide depuis toujours (bug code) |
+| Tests | | 600 passés, 1 skip (DB indispo en local), 0 échec |
+| Lint | | `ruff check .` — 0 erreur |
+| Containers VPS | | 10/10 healthy |
+| DAGs Airflow | | 25/27 actifs, 2 pausés intentionnellement (documentés §4) |
+| Pipeline trafic (XGBoost) | | Entraînement + inférence + persistance vérifiés bout-en-bout |
+| Pipeline Vélov (XGBoost) | | **Corrigé aujourd'hui** — aucune prédiction n'était jamais persistée |
+| MLflow Model Registry | | **Corrigé aujourd'hui** — 6 modèles versionnés, stage Production |
+| Drift monitoring (Evidently) | | **Réactivé aujourd'hui** — mort depuis 25 jours |
+| Bloat DB | | 2 tables critiques VACUUM FULL (osm.ways 1.4GB→39MB, meteo_hourly) |
+| Disque VPS | | sda1 67% (33G libres), sdb 66% (33G libres) |
+| Qualité données (lat/lon) | | **Corrigé aujourd'hui** — 1543 lignes NULL → 0 |
+| Sparkline santé réseau (Élu) | | **Corrigé aujourd'hui** — table vide depuis toujours (bug code) |
 
 ---
 
@@ -70,7 +70,7 @@ plutôt que supprimée. Zéro perte de fonctionnalité.
 |---|---|---|---|
 | Crash carte trafic | `TypeError: Expected numeric dtype` | Colonnes NUMERIC psycopg2 (Decimal) non coercées avant `.round()` | Helper `_coerce_numeric_columns` |
 | Crash pages Usager 3/5 | `ImportError: cached_predictions_vs_actuals` | Fonction jamais implémentée après l'archivage GNN d'une table dont elle dépendait | Fonction ajoutée, lit `gold.trafic_predictions` |
-| Badge "XGB H+60min dispo" toujours ❌ | Faux négatif permanent | Check fichier local (`.json`) sur un container sans volume modèles monté, extension réelle `.pkl` de toute façon | Check fraîcheur DB à la place |
+| Badge "XGB H+60min dispo" toujours | Faux négatif permanent | Check fichier local (`.json`) sur un container sans volume modèles monté, extension réelle `.pkl` de toute façon | Check fraîcheur DB à la place |
 | **Prédictions trafic timestampées +2h dans le futur** | `calculated_at` > `now()` de ~2h | `datetime.now()` naïf (heure locale CEST) au lieu de `datetime.now(UTC)` | `dag_inference_xgboost.py` corrigé |
 | **0 prédiction Vélov jamais persistée** | `gold.velov_predictions` vide depuis toujours | Aucun DAG d'inférence n'existait — seul l'entraînement tournait | **Nouveau DAG** `dag_inference_velov.py` créé |
 | MLflow Model Registry "vide" vu du dashboard | `list_registered_models()` retournait `[]` | Client `mlflow` 3.14.0 (dashboard/API) incompatible avec serveur 2.12.1 (2.x) | `mlflow<2.16` + `setuptools<81` épinglés, images rebuild |
@@ -189,8 +189,8 @@ referentiel/archive/public) · **150+ tables/vues**.
 | Item | Statut | Impact |
 |---|---|---|
 | `infrastructure_bottlenecks` — retrait complet (C2 étapes 3-5) | ⏸ Reporté | Cosmétique / dette technique, aucun bug utilisateur |
-| `silver.trafic_vitesse_propre` archivage | 🔄 Lancé, tournera cette nuit | Libérera ~25 Go à terme |
-| `rclone` backup offsite (destination OAuth) | 🔴 Pending | Backup local fonctionne, offsite pas configuré |
+| `silver.trafic_vitesse_propre` archivage | Lancé, tournera cette nuit | Libérera ~25 Go à terme |
+| `rclone` backup offsite (destination OAuth) | Pending | Backup local fonctionne, offsite pas configuré |
 | Rien commité sur git | — | Décision utilisateur en attente |
 
 ---

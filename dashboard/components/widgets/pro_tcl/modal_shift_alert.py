@@ -42,9 +42,9 @@ from src.data.exceptions import DashboardDataError
 
 # Libellés FR pour les alertes (cohérent avec le reste du dashboard)
 ALERT_LEVEL_LABELS = {
-    "critical": "🔴 Critique",
-    "warning": "🟠 Vigilance",
-    "ok": "🟢 OK",
+    "critical": "Critique",
+    "warning": "Vigilance",
+    "ok": "OK",
 }
 
 # Couleurs par alert level (cohérent avec couleurs bottlenecks carte Folium)
@@ -63,10 +63,10 @@ def _format_z_score(val: float | None) -> str:
     if pd.isna(val):
         return "—"
     if val < ANOMALY_Z_THRESHOLD:
-        return f"🔴 {val:.2f}"
+        return f"Alerte {val:.2f}"
     if val < 0:
-        return f"🟡 {val:.2f}"
-    return f"🟢 +{val:.2f}"
+        return f"Attention {val:.2f}"
+    return f"OK +{val:.2f}"
 
 
 def _count_anomalies(df: pd.DataFrame) -> int:
@@ -100,25 +100,25 @@ def _render_kpi_banner(df: pd.DataFrame, summary_df: pd.DataFrame) -> None:
 
     with col1:
         st.metric(
-            "🚲 Stations Vélov en alarme",
+            "Stations Vélov en alarme",
             value=n_anomalies,
             help="Stations avec z_score < -2 (vidange anormale)",
         )
     with col2:
         st.metric(
-            "🔴 Lignes TC critiques",
+            "Lignes TC critiques",
             value=n_critical,
             help="Lignes avec >= 3 stations Vélov en alarme",
         )
     with col3:
         st.metric(
-            "🟠 Lignes TC en vigilance",
+            "Lignes TC en vigilance",
             value=n_warning,
             help="Lignes avec 1-2 stations en alarme",
         )
     with col4:
         st.metric(
-            "📊 Couverture",
+            "Couverture",
             value=f"{n_stations_total} stations / {n_lines_total} lignes",
             help="Stations Vélov < 300m d'une zone TC, lignes TC distinctes",
         )
@@ -188,7 +188,7 @@ def _render_lines_chart(summary_df: pd.DataFrame) -> None:
 
 
 def render_modal_shift_alert() -> None:
-    with st.popover("ℹ️ Qu'est-ce que le z-score ?"):
+    with st.popover("Qu'est-ce que le z-score ?"):
         st.markdown(
             "Le **z-score** mesure combien la valeur actuelle s'écarte de la "
             "moyenne horaire 7j. Un z-score < -2 signifie que la station a "

@@ -39,13 +39,13 @@ def render_traffic_widget(traffic: dict | None = None) -> None:
     data_age = traffic.get("data_age_seconds", -1)
     freshness = traffic.get("freshness_status", "unknown")
     if data_age >= 0 and freshness == "live":
-        st.caption(f"🟢 Live · dernière mesure il y a {data_age // 60} min")
+        st.caption(f"Live · dernière mesure il y a {data_age // 60} min")
     elif data_age >= 0 and freshness == "stale":
-        st.caption(f"🟡 Stale · dernière mesure il y a {data_age // 60} min")
+        st.caption(f"Stale · dernière mesure il y a {data_age // 60} min")
     elif data_age >= 0 and freshness == "stuck":
-        st.caption(f"🔴 Figé · dernière mesure il y a {data_age // 3600:.1f}h — vérifier DAG")
+        st.caption(f"Figé · dernière mesure il y a {data_age // 3600:.1f}h — vérifier DAG")
     else:
-        st.caption("⚪ Fraîcheur inconnue — DB n'a pas remonté d'âge")
+        st.caption("Fraîcheur inconnue — DB n'a pas remonté d'âge")
 
     col1, col2, col3 = st.columns(3)
     with col1:
@@ -66,7 +66,7 @@ def render_traffic_widget(traffic: dict | None = None) -> None:
         st.metric("Bouchons actifs", n_bottlenecks)
 
     # Prédictions focus H+1h, les autres horizons masqués)
-    st.markdown("##### 🔮 Prédiction H+1h")
+    st.markdown("##### Prédiction H+1h")
     preds = traffic.get("predictions", {})
     p = preds.get("h_plus_1h", {})
     if p:
@@ -81,12 +81,12 @@ def render_traffic_widget(traffic: dict | None = None) -> None:
             unsafe_allow_html=True,
         )
     else:
-        st.info("🔮 Pas de prédiction H+1h disponible (DB vide ou DAG en retard).")
+        st.info("Pas de prédiction H+1h disponible (DB vide ou DAG en retard).")
 
     # Top bouchons
     main_jams = traffic.get("main_jams", [])
     if main_jams:
-        with st.expander(f"🚧 Top {len(main_jams)} bouchons", expanded=False):
+        with st.expander(f"Top {len(main_jams)} bouchons", expanded=False):
             for jam in main_jams:
                 sev = jam.get("severity", "low")
                 color = {

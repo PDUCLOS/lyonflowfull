@@ -28,7 +28,7 @@ et ce projet adhère au [Semantic Versioning](https://semver.org/lang/fr/).
   `Usager_3_Notre_Modele.py` / `Usager_5_Statut_Service.py` (page crash prod).
   `gold.predictions_vs_actuals` archivée Sprint 24+ sans mise à jour de ces
   2 pages (ajoutées après, Sprint 22+). Fix : lit `gold.trafic_predictions`.
-- `model_monitoring.py` : badge "XGB H+60min dispo" toujours ❌ (check fichier
+- `model_monitoring.py` : badge "XGB H+60min dispo" toujours (check fichier
   local `/app/models/xgb_speed_h60.json` inexistant, container streamlit sans
   volume `models/`). Fix : check fraîcheur `gold.trafic_predictions`.
 - `refresh_osm_traffic_costs.py`, `refresh_sensor_saturation.py` :
@@ -92,7 +92,7 @@ Spec complète : `docs/SPEC_FIX_ELU2_BOTTLENECKS.md` (491 lignes).
 synthétiques (formules linéaires de l'index `i` de boucle), une carte vide
 (dict coords hardcodé jamais matché), et jetait le seul signal réel (diagnosis).
 
-### Bugs critiques (🔴)
+### Bugs critiques ()
 
 - **Bug 1** — `gain_min`, `cout_M_euros`, `roi_mois`, `delai_mois` hardcodés
   (`5 + i`, `2.5 - i * 0.15`, `18 + i * 3`, `6 + i * 2`). Fix : dérivés de
@@ -102,7 +102,7 @@ synthétiques (formules linéaires de l'index `i` de boucle), une carte vide
   mais `zone = clean_line_label(segment_id)` = `"L66 ; 20h"`, jamais matché.
   Fix : suppression du dict, lecture `b.get("lat"/"lon")` réelles depuis la MV.
 
-### Bugs majeurs (🟠)
+### Bugs majeurs ()
 
 - **Bug 3/9** — JOIN global par heure (moyenne tout Lyon) au lieu de JOIN
   spatial 0.001° par zone. Fix : `get_bottlenecks_summary` lit désormais
@@ -114,7 +114,7 @@ synthétiques (formules linéaires de l'index `i` de boucle), une carte vide
   estimation `voyageurs_jour = n_obs × 36` (1 obs ≈ 1 bus × ~80 passagers
   × ~45% occupation SYTRAL) — affichage "(estimé)" dans les widgets.
 
-### Bugs moyens (🟡)
+### Bugs moyens ()
 
 - **Bug 6** — `lat/lon` calculés par `HASHTEXT(line_ref)` (coords déterministes
   mais fausses). Auto-résolu par Bug 3 (MV spatiale fournit vraies coords).
@@ -140,9 +140,9 @@ synthétiques (formules linéaires de l'index `i` de boucle), une carte vide
 
 ### Vérifications
 
-- ✅ `pytest tests/ -q` : **658 verts**, 9 skipped (DB/ML indispo local), 0 régression
-- ✅ `ruff check .` : clean
-- ✅ `ruff format --check .` : clean
+- `pytest tests/ -q` : **658 verts**, 9 skipped (DB/ML indispo local), 0 régression
+- `ruff check .` : clean
+- `ruff format --check .` : clean
 
 ---
 
@@ -158,9 +158,9 @@ en **langage grand public** (cf. `theme.show_technical: false`) :
 
 | Icône | Page | Contenu |
 |---|---|---|
-| 🤖 | `Usager_3_Notre_Modele.py` | Comment on prédit (langage citoyen) + précision 7j : donut accuracy_band, courbe MAE, qualité globale 🟢/🟡/🟠 |
-| 🌐 | `Usager_4_Sources_Donnees.py` | 8 sources Bronze + Silver + Gold expliquées (qui fournit, à quoi ça sert, fréquence), score santé 0-100, fraîcheur |
-| 🩺 | `Usager_5_Statut_Service.py` | 4 voyants synthétiques (Données / Modèle / Service / Alertes) + 5 derniers incidents + encart pédagogique |
+| | `Usager_3_Notre_Modele.py` | Comment on prédit (langage citoyen) + précision 7j : donut accuracy_band, courbe MAE, qualité globale //|
+| | `Usager_4_Sources_Donnees.py` | 8 sources Bronze + Silver + Gold expliquées (qui fournit, à quoi ça sert, fréquence), score santé 0-100, fraîcheur |
+| | `Usager_5_Statut_Service.py` | 4 voyants synthétiques (Données / Modèle / Service / Alertes) + 5 derniers incidents + encart pédagogique |
 
 ### Choix design
 
@@ -178,13 +178,13 @@ en **langage grand public** (cf. `theme.show_technical: false`) :
 | `dashboard/pages/Usager_3_Notre_Modele.py` | **NOUVEAU** (303 lignes) |
 | `dashboard/pages/Usager_4_Sources_Donnees.py` | **NOUVEAU** (350 lignes) |
 | `dashboard/pages/Usager_5_Statut_Service.py` | **NOUVEAU** (315 lignes) |
-| `config/personas.yaml` | +3 entrées sous groupe `MLOps` (⚙️) |
+| `config/personas.yaml` | +3 entrées sous groupe `MLOps` () |
 
 ### Vérifications
 
-- ✅ `pytest tests/` : 650 verts (0 régression vs 615 Sprint 21)
-- ✅ `ruff check` + `ruff format` : clean
-- ✅ Navigation YAML parsable : `get_navigation("usager")` retourne 5 entrées
+- `pytest tests/` : 650 verts (0 régression vs 615 Sprint 21)
+- `ruff check` + `ruff format` : clean
+- Navigation YAML parsable : `get_navigation("usager")` retourne 5 entrées
   (2 Mobilité + 3 MLOps)
 
 ---
@@ -336,7 +336,7 @@ pour ajouter une couche de rigueur statistique à la direction de
 propagation détectée par simple CORR cross-laggée. **Boucle la spec
 interdépendances multimodales (7/7 axes + Granger niveau 2)**.
 
-### 🆕 Granger causality (Axe 2 niveau 2 — spec §3.3)
+### Granger causality (Axe 2 niveau 2 — spec §3.3)
 
 `statsmodels.tsa.stattools.grangercausalitytests` est plus RIGOUREUX que
 la simple CORR cross-laggée parce qu'il teste si INCLURE les valeurs
@@ -356,7 +356,7 @@ et B→A) et on garde la direction avec la p-value la plus faible.
 - **Widget `propagation_map.py` enrichi** :
   - **KPI banner** : nouvelle 4ème card "Granger significatif"
     (p<0.05 sur N testées).
-  - **Popup Folium** : section "🔬 Granger (causalité)" avec
+  - **Popup Folium** : section "Granger (causalité)" avec
     direction + p-value + statut significatif (vert/rouge).
   - **Tableau top 20** : nouvelle colonne "Granger p-val (direction)".
   - **Carte Folium AntPath** : pulse_color jaune (#FFEB3B) pour les
@@ -402,7 +402,7 @@ Livraison de **3 axes** du `docs/SPEC_OPTIMISATION_INTERDEPENDANCES.md`
 réseau). Sprint 17 boucle la spec sauf Axe 6 (qualité données, futur) et
 Axe 2 niveau Granger (futur, hors scope).
 
-### 🆕 Axe 7 — Météo comme variable d'interaction
+### Axe 7 — Météo comme variable d'interaction
 
 Impact de la météo sur les 3 modes (trafic, TCL, Vélov) par bandes × mode,
 avec delta vs "beau temps".
@@ -418,7 +418,7 @@ avec delta vs "beau temps".
 - **DAG** `refresh_meteo_impact.py` (04h30 quotidien) : REFRESH MV
   CONCURRENTLY.
 
-### 🆕 Axe 4 — Vélov ↔ TC report modal (z-score vélos dispos)
+### Axe 4 — Vélov ↔ TC report modal (z-score vélos dispos)
 
 Détection d'incident TC par report modal Vélov : si ≥ 3 stations Vélov
 proches d'une même ligne TC sont simultanément en alarme (z-score vélos
@@ -442,7 +442,7 @@ dispos < -2) → probable incident TC en cours.
 - **DAG** `refresh_velov_transit_coupling.py` (*/15 min) : REFRESH
   MV CONCURRENTLY (cadence rapide, détection incident temps réel).
 
-### 🆕 Axe 6 — Qualité des données (port LyonTraffic, data bounds)
+### Axe 6 — Qualité des données (port LyonTraffic, data bounds)
 
 Validation des valeurs Gold/Silver dans des plages physiquement
 plausibles (Sprint 17 Axe 6, port du module `data_quality` de
@@ -505,7 +505,7 @@ plausibles (Sprint 17 Axe 6, port du module `data_quality` de
   - `TestRunAllValidations` : 3 reports / empty warnings / shared config.
   - `TestEmptyReport` : empty df → warning (1 check failed).
 
-### 🆕 Axe 2 — Propagation de congestion (CORR cross-laggée Python)
+### Axe 2 — Propagation de congestion (CORR cross-laggée Python)
 
 Carte Folium animée (AntPath) montrant comment la congestion se propage
 entre capteurs routiers adjacents, avec calcul de **corrélation croisée
@@ -545,7 +545,7 @@ laggée** pour détecter la direction de propagation.
   MV CONCURRENTLY (la MV change peu, le widget calcule les CORR
   à la volée).
 
-### 🔧 Compromis spec documentés (à valider au retour)
+### Compromis spec documentés (à valider au retour)
 
 Sprint 17 fait **2 compromis perf vs spec** documentés en commentaire
 dans les migrations 023 et 024 :
@@ -562,7 +562,7 @@ dans les migrations 023 et 024 :
    vectorisé (~5s pour 5k paires). Phase 2 spec §3.3 (Granger
    statsmodels) reste hors scope Sprint 17.
 
-### 📊 Bilan Sprint 17
+### Bilan Sprint 17
 
 | Métrique | Avant (0.8.0) | Après (0.9.0) |
 |----------|---------------|---------------|
@@ -572,7 +572,7 @@ dans les migrations 023 et 024 :
 | DAGs | 15 | **17** (+3 refresh Axe 2/4/7) |
 | Tests | ~325 | **~440** (+37 data quality) |
 
-### 🐛 Fixes VPS durant Sprint 17
+### Fixes VPS durant Sprint 17
 
 - **Worker Airflow débloqué** : `pg_terminate_backend` sur PID 1315609
   (idle in transaction depuis 2h+). Pipeline Bronze→Silver a
@@ -580,7 +580,7 @@ dans les migrations 023 et 024 :
 - **Toutes les migrations Sprint 17** validées en conditions réelles
   sur le VPS.
 
-### 🚀 Déploiement Sprint 17 sur VPS
+### Déploiement Sprint 17 sur VPS
 
 - **Migrations SQL** : 022, 023 (×4 commits), 024 (×3 commits) appliquées.
 - **DAGs** : `refresh_meteo_impact` (04h30), `refresh_velov_transit_coupling`
@@ -593,7 +593,7 @@ Sprint le plus ambitieux du projet : 3 axes, ~3 jours, 4 nouveaux widgets,
 2 nouveaux DAGs, 2 migrations SQL, 18 nouveaux tests. Boucle MLOps complète
 maintenant fermée (train → infer → **validate vs oracle externe**).
 
-### 🆕 Backtest Engine (Axe A — TomTom Niveau 2)
+### Backtest Engine (Axe A — TomTom Niveau 2)
 
 Validation XGBoost H+1h contre TomTom Traffic Flow (GPS flottes = oracle
 externe). C'est la fin de la boucle MLOps ouverte en Sprint 8+.
@@ -616,7 +616,7 @@ externe). C'est la fin de la boucle MLOps ouverte en Sprint 8+.
 - **Upgrade** ``check_drift_evidently()`` : passe du placeholder "count
   reports" à lecture du dernier rapport + classification (ok/warning/critical).
 
-### 🆕 Data Quality (Axe B — Monitoring multi-source)
+### Data Quality (Axe B — Monitoring multi-source)
 
 Passage du monitoring basique (6 checks quotidiens mono-table) à un
 **monitoring par source temps réel** avec score de qualité agrégé.
@@ -632,7 +632,7 @@ Passage du monitoring basique (6 checks quotidiens mono-table) à un
 - **Upgrade** ``check_all_sources()`` : remplace les 6 checks mono-table
   (legacy ``ALL_CHECKS_LEGACY`` conservé pour transition).
 
-### 🆕 Durées réelles (Axe C — Comparateur multimodal)
+### Durées réelles (Axe C — Comparateur multimodal)
 
 Remplace les vitesses moyennes hardcodées (Vélov 12, TC 18, Voiture 25 km/h)
 par les durées réellement calculées par chaque widget trajet.
@@ -642,10 +642,10 @@ par les durées réellement calculées par chaque widget trajet.
 - **Usager_1** : ``session_state["trip_<key>"]`` pour chaque mode + passage
   des durées réelles à ``render_mode_comparison()`` (fallback estimation
   si pas encore calculé).
-- **mode_comparison** : badge "✅ Durée calculée" (vert) ou "⏱️ Estimé"
+- **mode_comparison** : badge "Durée calculée" (vert) ou "Estimé"
   (orange) selon ``result.source``.
 
-### 🔧 Refacto : PSI primary + Evidently v0.7 optional (post-Sprint 16)
+### Refacto : PSI primary + Evidently v0.7 optional (post-Sprint 16)
 
 Suite du diagnostic complet dans ``docs/SPEC_EVIDENTLY_CONFIGURATION.md``
 (855 lignes).
@@ -669,13 +669,13 @@ Suite du diagnostic complet dans ``docs/SPEC_EVIDENTLY_CONFIGURATION.md``
     (PEP 508 ``; extra == "drift-reports"``).
   - ``tests/monitoring/test_evidently_configuration.py`` (24 tests).
 
-### 🐛 Bug fix migration 021 (post-Sprint 16)
+### Bug fix migration 021 (post-Sprint 16)
 
 - ``silver.trafic_boucles_clean`` a une colonne ``geom`` (et ``geom_2154``
   PostGIS), pas ``geom_wgs84``. La migration 021 plantait au déploiement.
   Fix appliqué + redéployé.
 
-### 📊 Bilan Sprint 16
+### Bilan Sprint 16
 
 | Métrique | Avant (0.7.1) | Après (0.8.0) |
 |----------|---------------|---------------|
@@ -687,7 +687,7 @@ Suite du diagnostic complet dans ``docs/SPEC_EVIDENTLY_CONFIGURATION.md``
 | Drift detection | placeholder | **Evidently DataDriftPreset + PSI quotidien** |
 | Durées comparateur | estimées | **calculées** (+ fallback estimé) |
 
-### 🚀 Déploiement Sprint 16 sur VPS
+### Déploiement Sprint 16 sur VPS
 
 - **Migrations SQL** : 020 + 021 appliquées manuellement (script apply
   à venir — voir TODO).
@@ -708,7 +708,7 @@ de logique métier.
 - Solution : `__init__.py` dans `training/` et `training/stgcn/` (+ cohérence
   Python avec `src/__init__.py` et `src/data/__init__.py`).
 - `pyproject.toml [tool.mypy]` : `explicit_package_bases = true` (sécurité).
-  ⚠️ NE PAS ajouter `mypy_path = "src"` : crée conflit `ingestion` vs
+  NE PAS ajouter `mypy_path = "src"` : crée conflit `ingestion` vs
   `src.ingestion`.
 
 **42 erreurs mypy corrigées en 6 catégories** :
@@ -824,7 +824,7 @@ avec recommandation selon critère choisi (temps ou coût).
 - **Widget `dashboard/components/widgets/usager/mode_summary.py`** :
   enrichissement Phase 1 — KPI cards (temps, coût, CO2) sous l'itinéraire
   du mode sélectionné.
-- **Câblage search_bar** : radio "Optimiser pour" (⏱️ Temps / 💰 Coût)
+- **Câblage search_bar** : radio "Optimiser pour" (Temps / Coût)
   dans `dashboard/components/widgets/usager/search_bar.py`. Clé
   `critere` ajoutée au dict retourné (consommée par les 2 widgets).
 - **Spec de référence** : `docs/SPEC_OPTIMISATION_INTERDEPENDANCES.md`
@@ -947,8 +947,8 @@ un composant tombe).
     par palier (vert > 75, jaune 50-75, orange 25-50, rouge < 25)
   - 4 sous-jauges (Trafic / TCL / Vélov / Météo) avec valeur courante
     + couleur proportionnelle au seuil
-  - Bannière diagnostic ("🟢 Réseau fluide" / "🟡 Sous tension" /
-    "🟠 Dégradé" / "🔴 Critique") avec timestamp
+  - Bannière diagnostic ("Réseau fluide" / "Sous tension" /
+    "Dégradé" / "Critique") avec timestamp
   - Bandeau "Sources indisponibles" listant les composantes down
     + explication de la redistribution des poids
   - Fail loud via DashboardDataError → `st.error(...)`
@@ -1095,8 +1095,8 @@ Sprints 8+ à 11+ — cette release finit le ménage.
 ### Résumé trackers
 | Tracker | Items | Statut |
 |---------|-------|--------|
-| `AUDIT_PRO_TCL_FIXES.md` | 14 | ✅ 100% résolus (Sprints 8+ à 11+ + cette release) |
-| `AUDIT_USAGER_FIXES.md` | 16 | ✅ 100% résolus (Sprints 8+ à 11+ + cette release) |
+| `AUDIT_PRO_TCL_FIXES.md` | 14 | 100% résolus (Sprints 8+ à 11+ + cette release) |
+| `AUDIT_USAGER_FIXES.md` | 16 | 100% résolus (Sprints 8+ à 11+ + cette release) |
 
 **Tests** : 198 verts, 0 régression. Ruff clean sur les fichiers touchés.
 

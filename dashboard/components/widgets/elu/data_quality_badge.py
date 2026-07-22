@@ -3,11 +3,11 @@
  Axe B (2026-06-20) — Bandeau compact qui résume la santé
 multi-source. Lit ``gold.v_source_health`` (migration 021) et affiche
 un badge 1 ligne :
-- 🟢 Données OK — 8/8 sources actives, score 94/100
-- 🟡 1 source retardée — air_quality stale (2h), score 82/100
-- 🔴 Source en panne — tomtom_traffic dead (6h), score 61/100
+- Données OK — 8/8 sources actives, score 94/100
+- 1 source retardée — air_quality stale (2h), score 82/100
+- Source en panne — tomtom_traffic dead (6h), score 61/100
 
-Coût : 🟢 léger (1 requête). Pas besoin de button-gate.
+Coût : léger (1 requête). Pas besoin de button-gate.
 """
 
 from __future__ import annotations
@@ -27,12 +27,12 @@ def _classify(n_healthy: int, n_dead: int, n_stale: int, score: float) -> tuple[
         Tuple (color, icon, message).
     """
     if n_dead > 0:
-        return ("#F44336", "🔴", f"Source en panne — {n_dead} morte(s), score {score:.0f}/100")
+        return ("#F44336", "Alerte", f"Source en panne — {n_dead} morte(s), score {score:.0f}/100")
     if n_stale > 0:
-        return ("#FF9800", "🟡", f"{n_stale} source(s) stale — score {score:.0f}/100")
+        return ("#FF9800", "Attention", f"{n_stale} source(s) stale — score {score:.0f}/100")
     if score >= 70:
-        return ("#4CAF50", "🟢", f"Données OK — {n_healthy} sources actives, score {score:.0f}/100")
-    return ("#9E9E9E", "⚪", f"Score {score:.0f}/100")
+        return ("#4CAF50", "OK", f"Données à jour — {n_healthy} sources actives, score {score:.0f}/100")
+    return ("#9E9E9E", "Inconnu", f"Score {score:.0f}/100")
 
 
 def _global_score(df) -> float:
@@ -63,11 +63,11 @@ def render_data_quality_badge() -> None:
         try:
             df = cached_source_health()
         except DashboardDataError as e:
-            show_error("db_down", f"⚠️ Data quality indisponible : {e}")
+            show_error("db_down", f"Data quality indisponible : {e}")
             return
 
         if df.empty:
-            st.info("ℹ️ Données de santé source indisponibles.")
+            st.info("Données de santé source indisponibles.")
             return
 
         n_healthy = int((df["status"] == "healthy").sum())

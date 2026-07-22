@@ -47,12 +47,12 @@ if amgt:
     avant = amgt.get("avant", {})
     apres = amgt.get("apres", {})
 
-    st.markdown(f"##### 📋 {nom} ({annee}) — Coût : {cout} M€")
+    st.markdown(f"##### {nom} ({annee}) — Coût : {cout} M€")
 
     st.markdown("---")
 
     # AVANT
-    st.markdown("##### 🔴 AVANT aménagement")
+    st.markdown("##### AVANT aménagement")
     if avant:
         # Adapter le nb de colonnes au nb de clés (sinon clés 5+ silencieusement perdues)
         keys = list(avant.keys())
@@ -62,7 +62,7 @@ if amgt:
                 v = avant.get(k, "—")
                 # Exclure bool (sous-classe de int → serait formaté comme un nombre)
                 if isinstance(v, bool):
-                    v_str = "✅" if v else "❌"
+                    v_str = "Oui" if v else "Non"
                 elif isinstance(v, (int, float)):
                     v_str = f"{v:,}" if isinstance(v, int) and not isinstance(v, bool) and v > 1000 else f"{v}"
                 else:
@@ -83,7 +83,7 @@ if amgt:
     st.markdown("---")
 
     # APRÈS
-    st.markdown("##### 🟢 APRÈS aménagement")
+    st.markdown("##### APRÈS aménagement")
     if apres:
         keys = list(apres.keys())
         cols = st.columns(len(keys))
@@ -91,7 +91,7 @@ if amgt:
             with col:
                 v = apres.get(k, "—")
                 if isinstance(v, bool):
-                    v_str = "✅" if v else "❌"
+                    v_str = "Oui" if v else "Non"
                 elif isinstance(v, (int, float)):
                     v_str = f"{v:,}" if isinstance(v, int) and not isinstance(v, bool) and v > 1000 else f"{v}"
                 else:
@@ -113,7 +113,7 @@ if amgt:
 
     # Delta
     if avant and apres:
-        st.markdown("##### 📈 Delta (delta_kpis)")
+        st.markdown("##### Delta (delta_kpis)")
         render_delta_kpis(avant, apres)
 
 st.caption("LyonFlow · Avant/Après · Données ouvertes Grand Lyon + Open data")

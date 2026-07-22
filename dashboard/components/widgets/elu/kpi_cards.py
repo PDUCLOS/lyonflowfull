@@ -58,7 +58,7 @@ def render_kpi_cards() -> None:
                 delta_str = "—"
 
             if isinstance(current, bool):
-                value_str = "✅" if current else "❌"
+                value_str = "Oui" if current else "Non"
             elif isinstance(current, int) and current > 1000:
                 value_str = f"{current:,}"
             elif isinstance(current, float):

@@ -125,13 +125,13 @@ def render_sidebar_navigation() -> None:
         common = get_common_pages()
         if common:
             st.markdown("---")
-            st.markdown("**🛠️ COMMUN**")
+            st.markdown("**COMMUN**")
             for entry in common:
                 _render_nav_entry(entry)
 
         # 4. Footer & Quitter
         st.markdown("---")
-        if st.button("🚪 Quitter (retour à l'accueil)", use_container_width=True, type="secondary"):
+        if st.button("Quitter (retour à l'accueil)", use_container_width=True, type="secondary"):
             # (2026-06-19) — fix bug "Changer de profil ne
             # ramène pas à l'accueil". Avant : ``clear_current_persona_auth``
             # ne clearait que l'auth (mot de passe), laissant le

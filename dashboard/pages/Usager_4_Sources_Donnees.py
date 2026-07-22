@@ -129,10 +129,10 @@ _SOURCE_BLURB: dict[str, dict[str, str]] = {
 
 
 _STATUS_EMOJI = {
-    "healthy": "🟢",
-    "delayed": "🟡",
-    "stale": "🟠",
-    "dead": "🔴",
+    "healthy": "OK",
+    "delayed": "Attention",
+    "stale": "Attention",
+    "dead": "Alerte",
 }
 
 
@@ -186,7 +186,7 @@ render_sidebar_navigation()
 setup_auto_refresh()
 render_freshness_badge()
 
-st.title("🌐 D'où viennent nos données")
+st.title("D'où viennent nos données")
 render_data_status_banner()
 
 st.caption(
@@ -233,10 +233,10 @@ else:
 
     # 3 KPI cards simples
     k1, k2, k3 = st.columns(3)
-    k1.metric("🟢 À jour", n_healthy, help="Sources dont la dernière donnée date de moins de 1.5× leur intervalle.")
-    k2.metric("🟡 En retard", n_delayed, help="Données un peu anciennes mais encore exploitables.")
+    k1.metric("À jour", n_healthy, help="Sources dont la dernière donnée date de moins de 1.5× leur intervalle.")
+    k2.metric("En retard", n_delayed, help="Données un peu anciennes mais encore exploitables.")
     k3.metric(
-        "🔴 Indisponibles",
+        "Indisponibles",
         n_dead,
         help="Pas de donnée depuis longtemps : prédictions moins fiables sur ces dimensions.",
     )
@@ -244,7 +244,7 @@ else:
 st.markdown("---")
 
 # ── 2. Détail par source ─────────────────────────────────────────────────────
-st.markdown("##### 📋 Détail par source de données")
+st.markdown("##### Détail par source de données")
 
 if df.empty:
     st.info("Aucun détail disponible pour le moment.")
@@ -268,7 +268,7 @@ else:
         last_update = row.get("last_update")
 
         s_color = _score_color(score)
-        s_emoji = _STATUS_EMOJI.get(status, "⚪")
+        s_emoji = _STATUS_EMOJI.get(status, "Inconnu")
 
         # Convertit last_update timestamp si dispo
         last_str = ""
@@ -301,7 +301,7 @@ else:
                             {who}
                         </div>
                         <div style="opacity:0.7;font-size:0.82rem;margin-top:0.15rem;">
-                            💡 {use} · 🔄 {freq}
+                            {use} · {freq}
                         </div>
                     </div>
                     <div style="text-align:right;min-width:140px;">
@@ -322,22 +322,22 @@ else:
 st.markdown("---")
 
 # ── 3. Légende ──────────────────────────────────────────────────────────────
-with st.expander("🤔 Comment on mesure la santé d'une source ?", expanded=False):
+with st.expander("Comment on mesure la santé d'une source ?", expanded=False):
     st.markdown(
         """
 Chaque source a un **intervalle de mise à jour attendu** (5 min, 1 h, 1 jour…).
 On compare l'âge réel de la dernière donnée avec cet intervalle :
 
-- **🟢 À jour (healthy)** : la donnée a moins de 1.5× l'intervalle attendu
-- **🟡 En retard (delayed)** : entre 1.5× et 3× l'intervalle
-- **🟠 Stale** : entre 3× et 6× l'intervalle
-- **🔴 Morte (dead)** : plus de 6× l'intervalle, ou aucune donnée
+- **À jour (healthy)** : la donnée a moins de 1.5× l'intervalle attendu
+- **En retard (delayed)** : entre 1.5× et 3× l'intervalle
+- **Stale** : entre 3× et 6× l'intervalle
+- **Morte (dead)** : plus de 6× l'intervalle, ou aucune donnée
 
 Le **score 0-100** combine la fraîcheur avec le volume reçu sur la dernière
 heure. Plus le score est haut, plus la source est fiable pour la prédiction.
 
-👉 Quand une source est dégradée, le modèle s'appuie davantage sur les
-autres sources et un warning apparaît sur la page **🩺 Statut du service**.
+Quand une source est dégradée, le modèle s'appuie davantage sur les
+autres sources et un warning apparaît sur la page **Statut du service**.
         """,
     )
 

@@ -296,30 +296,43 @@ def plan_velov_trip(
     # le top 3 bornes scorées (distance + vélos/docks dispo) en 1 seule
     # query via la vue referentiel.v_lieux_velov_smart. Si la borne #1
     # est VIDE ou PLEINE, on bascule automatiquement sur #2 ou #3.
-    from src.data.db_query import get_smart_velov_for_lieu
+    #
+    # Sprint 24++ (2026-07-03) : batching des 2 lookups (origine + dest)
+    # en 1 round-trip chacun au lieu de 2 séquentiels (get_smart_velov_for_lieux
+    # existait déjà mais n'était jamais appelé — TODO Sprint 9 jamais fait).
+    from src.data.db_query import execute_query, get_smart_velov_for_lieux
 
     # Approximation : on snap les coords GPS vers le lieu le plus
     # proche du référentiel (dans un rayon 5km), pour bénéficier du
     # scoring. Si hors périmètre, fallback sur haversine direct.
-    def _nearest_lieu_id(lat: float, lon: float) -> int | None:
-        from src.data.db_query import execute_query
-
-        rows = execute_query(
-            """
-            SELECT lieu_id FROM referentiel.lieux_lyon
+    lieu_rows = execute_query(
+        """
+        (
+            SELECT 'origin' AS role, lieu_id
+            FROM referentiel.lieux_lyon
             WHERE is_active = TRUE
             ORDER BY referentiel.haversine_m(lat, lon, %s, %s) ASC
             LIMIT 1
-            """,
-            (lat, lon),
         )
-        return int(rows[0]["lieu_id"]) if rows else None
+        UNION ALL
+        (
+            SELECT 'dest' AS role, lieu_id
+            FROM referentiel.lieux_lyon
+            WHERE is_active = TRUE
+            ORDER BY referentiel.haversine_m(lat, lon, %s, %s) ASC
+            LIMIT 1
+        )
+        """,
+        (origin_lat, origin_lon, dest_lat, dest_lon),
+    )
+    lieu_by_role = {r["role"]: int(r["lieu_id"]) for r in lieu_rows}
+    origin_lieu_id = lieu_by_role.get("origin")
+    dest_lieu_id = lieu_by_role.get("dest")
 
-    origin_lieu_id = _nearest_lieu_id(origin_lat, origin_lon)
-    dest_lieu_id = _nearest_lieu_id(dest_lat, dest_lon)
-
-    origin_candidates = get_smart_velov_for_lieu(origin_lieu_id, k=3) if origin_lieu_id else []
-    dest_candidates = get_smart_velov_for_lieu(dest_lieu_id, k=3) if dest_lieu_id else []
+    lieu_ids = [lid for lid in (origin_lieu_id, dest_lieu_id) if lid]
+    candidates_by_lieu = get_smart_velov_for_lieux(lieu_ids, k=3) if lieu_ids else {}
+    origin_candidates = candidates_by_lieu.get(origin_lieu_id, []) if origin_lieu_id else []
+    dest_candidates = candidates_by_lieu.get(dest_lieu_id, []) if dest_lieu_id else []
 
     # Si pas de lieu proche, fallback sur haversine direct
     if not origin_candidates:
@@ -405,7 +418,7 @@ def plan_velov_trip(
     diagnostics = []
     if origin_station.get("status") == "VIDE":
         diagnostics.append(
-            f"⚠️ Borne de départ {origin_station.get('velov_name')} est VIDE. "
+            f"Borne de départ {origin_station.get('velov_name')} est VIDE. "
             f"Alternatives à pied : "
             + ", ".join(
                 f"{a.get('velov_name')} ({int(a.get('distance_m', 0))}m, {a.get('num_bikes_available')} vélos)"
@@ -415,7 +428,7 @@ def plan_velov_trip(
         )
     if origin_station.get("status") == "PLEINE":
         diagnostics.append(
-            f"⚠️ Borne de départ {origin_station.get('velov_name')} est PLEINE. "
+            f"Borne de départ {origin_station.get('velov_name')} est PLEINE. "
             f"Alternatives à pied : "
             + ", ".join(
                 f"{a.get('velov_name')} ({int(a.get('distance_m', 0))}m, {a.get('num_docks_available')} docks)"
@@ -425,7 +438,7 @@ def plan_velov_trip(
         )
     if dest_station.get("status") == "VIDE":
         diagnostics.append(
-            f"⚠️ Borne d'arrivée {dest_station.get('velov_name')} est VIDE (pas de vélos dispo). "
+            f"Borne d'arrivée {dest_station.get('velov_name')} est VIDE (pas de vélos dispo). "
             f"Alternatives à pied : "
             + ", ".join(
                 f"{a.get('velov_name')} ({int(a.get('distance_m', 0))}m, {a.get('num_bikes_available')} vélos)"
@@ -435,7 +448,7 @@ def plan_velov_trip(
         )
     if dest_station.get("status") == "PLEINE":
         diagnostics.append(
-            f"⚠️ Borne d'arrivée {dest_station.get('velov_name')} est PLEINE (pas de dock dispo). "
+            f"Borne d'arrivée {dest_station.get('velov_name')} est PLEINE (pas de dock dispo). "
             f"Alternatives à pied : "
             + ", ".join(
                 f"{a.get('velov_name')} ({int(a.get('distance_m', 0))}m, {a.get('num_docks_available')} docks)"
@@ -444,9 +457,9 @@ def plan_velov_trip(
             )
         )
     if not origin_alts and origin_station.get("status") in ("VIDE", "PLEINE"):
-        diagnostics.append("⚠️ Aucune borne alternative dans un rayon 1.5 km. Considérer bus/métro.")
+        diagnostics.append("Aucune borne alternative dans un rayon 1.5 km. Considérer bus/métro.")
     if not dest_alts and dest_station.get("status") in ("VIDE", "PLEINE"):
-        diagnostics.append("⚠️ Aucune borne alternative dans un rayon 1.5 km. Considérer bus/métro.")
+        diagnostics.append("Aucune borne alternative dans un rayon 1.5 km. Considérer bus/métro.")
 
     # Segment 1 : marche origine → Vélov
     walk_to = origin_station.get("distance_m", 0.0)
@@ -463,7 +476,7 @@ def plan_velov_trip(
         n_bikes_depart=origin_station.get("num_bikes_available"),
         notes="Marche vers la station Vélov"
         if walk_to <= MAX_WALK_TO_STATION_M
-        else f"⚠️ Marche longue ({int(walk_to)}m) — considérer bus/métro",
+        else f"Marche longue ({int(walk_to)}m) — considérer bus/métro",
     )
 
     # Segment 2 : Vélov entre les 2 stations
@@ -511,7 +524,7 @@ def plan_velov_trip(
         n_docks_arrive=dest_station.get("num_docks_available"),
         notes="Marche vers la destination"
         if walk_from <= MAX_WALK_TO_STATION_M
-        else f"⚠️ Marche longue ({int(walk_from)}m)",
+        else f"Marche longue ({int(walk_from)}m)",
     )
 
     total_dist = walk_to + cycle_dist_m + walk_from
@@ -647,7 +660,7 @@ class TransitSegment:
 
     line_ref: str
     line_mode: str  # metro|tram|bus|funicular
-    line_label: str  # ex: "🚇 Métro A"
+    line_label: str  # ex: "Métro A"
     stop_origin: str  # ex: "Laurent Bonnevay"
     stop_dest: str  # ex: "Confluence"
     distance_walk_to_m: int  # marche lieu → arrêt départ
@@ -693,10 +706,10 @@ _TRANSIT_SPEED_KMH_DEFAULT = 18.0
 
 # Libellé emoji par mode (utilisé pour affichage segment.line_label).
 _TRANSIT_MODE_LABEL: dict[str, str] = {
-    "metro": "🚇 Métro",
-    "tram": "🚊 Tram",
-    "bus": "🚌 Bus",
-    "funicular": "🚞 Funiculaire",
+    "metro": "Métro",
+    "tram": "Tram",
+    "bus": "Bus",
+    "funicular": "Funiculaire",
 }
 
 # Pénalité forfaitaire pour 1 correspondance (marche inter-arrêts + attente).
@@ -707,10 +720,10 @@ def _transit_line_label(line_ref: str, line_mode: str) -> str:
     """Construit un libellé lisible pour une ligne TC.
 
     Exemples :
-        ('M_A', 'metro')     → '🚇 Métro A'
-        ('T_1', 'tram')      → '🚊 Tram 1'
-        ('C_3', 'bus')       → '🚌 Bus 3'
-        ('F_2', 'funicular') → '🚞 Funiculaire 2'
+        ('M_A', 'metro')     → 'Métro A'
+        ('T_1', 'tram')      → 'Tram 1'
+        ('C_3', 'bus')       → 'Bus 3'
+        ('F_2', 'funicular') → 'Funiculaire 2'
     """
     prefix = _TRANSIT_MODE_LABEL.get(line_mode, line_mode.capitalize())
     if "_" in line_ref:
@@ -722,7 +735,7 @@ def _transit_line_label(line_ref: str, line_mode: str) -> str:
 def _resolve_transit_lieu(text: str) -> tuple[int, str, float, float] | None:
     """Résout un label de lieu (avec emoji optionnel) → (lieu_id, name, lon, lat).
 
-    Robuste aux emojis préfixes (ex: ``"🏙 Villeurbanne"``) — même logique
+    Robuste aux emojis préfixes (ex: ``"Villeurbanne"``) — même logique
     que ``velov_trip._resolve_lieu`` mais retourne aussi l'ID.
 
     Returns:
@@ -1017,13 +1030,25 @@ def plan_transit_trip(
         )
 
     # 2. Correspondance via hub
-    all_lieux_rows = execute_query("SELECT lieu_id, name FROM referentiel.lieux_lyon WHERE is_active = TRUE")
+    #
+    # Sprint 24++ (2026-07-03) : batching. Avant, 2 round trips DB par hub
+    # candidat (get_lieux_transports + hub_geo), soit jusqu'à 42 pour 21
+    # lieux actifs. Maintenant : 1 query pour tous les lieux (lon/lat inclus)
+    # + 1 query pour toutes les dessertes (get_lieux_transports() sans
+    # filtre), groupées en dict Python. Tables petites (21 lieux, 56
+    # dessertes) donc le gain est le nombre de round trips, pas le volume.
+    all_lieux_rows = execute_query("SELECT lieu_id, name, lon, lat FROM referentiel.lieux_lyon WHERE is_active = TRUE")
+    all_transports = get_lieux_transports()
+    transports_by_lieu: dict[int, list[dict]] = {}
+    for item in all_transports:
+        transports_by_lieu.setdefault(int(item["lieu_id"]), []).append(item)
+
     best_itin: TransitItinerary | None = None
     for hub_row in all_lieux_rows:
         hub_id = int(hub_row["lieu_id"])
         if hub_id in (origin_id, dest_id):
             continue
-        hub_lines = get_lieux_transports(lieu_id=hub_id)
+        hub_lines = transports_by_lieu.get(hub_id, [])
         if not hub_lines:
             continue
         hub_by_line = {item["line_ref"]: item for item in hub_lines}
@@ -1040,13 +1065,7 @@ def plan_transit_trip(
             match_d,
             key=lambda lr: hub_by_line[lr]["rank"] + dest_by_line[lr]["rank"],
         )
-        hub_geo = execute_query(
-            "SELECT lon, lat FROM referentiel.lieux_lyon WHERE lieu_id = %s",
-            (hub_id,),
-        )
-        if not hub_geo:
-            continue
-        hub_lon, hub_lat = float(hub_geo[0]["lon"]), float(hub_geo[0]["lat"])
+        hub_lon, hub_lat = float(hub_row["lon"]), float(hub_row["lat"])
 
         seg1_dist = _haversine_m(origin_lat, origin_lon, hub_lat, hub_lon)
         seg2_dist = _haversine_m(hub_lat, hub_lon, dest_lat, dest_lon)

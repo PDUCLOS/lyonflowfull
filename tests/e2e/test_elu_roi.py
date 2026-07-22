@@ -8,7 +8,7 @@ def test_elu_roi(page: Page, streamlit_server: str):
     page.goto(streamlit_server)
 
     # Wait for app load
-    expect(page.get_by_role("button", name="➡️ Adopter").first).to_be_visible()
+    expect(page.get_by_role("button", name="Adopter").first).to_be_visible()
 
     # Switch to Elu in the sidebar (3rd option)
     combobox = page.locator("[data-testid='stSidebar']").get_by_role("combobox")

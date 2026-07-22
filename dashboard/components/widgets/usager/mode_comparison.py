@@ -1,7 +1,7 @@
 """Widget — Comparateur 3 modes + recommandation (Phase 2 ).
 
 Affiche côte à côte les 3 modes (TC / voiture / Vélov) avec :
-- Une **winner card** mise en avant (bordure colorée + badge 🏆 RECOMMANDÉ)
+- Une **winner card** mise en avant (bordure colorée + badge RECOMMANDÉ)
 - 2 cards alternatives plus sobres
 - Un insight contextuel ("Vélov économise Xg CO2 vs voiture")
 
@@ -74,13 +74,13 @@ def render_mode_comparison(
             st.markdown(
                 f"""
                 <div class="lyf-label" style="background:var(--bg-card);padding:0.7rem 1rem;border-radius:8px;border-left:4px solid {_WINNER_ACCENT};display:flex;align-items:center;gap:0.6rem;margin-bottom:1rem;flex-wrap:wrap;">
-                    <span class="lyf-sublabel" style="background:#4CAF50;color:white;padding:0.2rem 0.6rem;border-radius:12px;font-weight:600;">🟢 DÉPART</span>
+                    <span class="lyf-sublabel" style="background:#4CAF50;color:white;padding:0.2rem 0.6rem;border-radius:12px;font-weight:600;">DÉPART</span>
                     <span style="font-weight:600;">{origin}</span>
                     <span style="opacity:0.4;margin:0 0.5rem;">→</span>
-                    <span class="lyf-sublabel" style="background:#F44336;color:white;padding:0.2rem 0.6rem;border-radius:12px;font-weight:600;">🔴 ARRIVÉE</span>
+                    <span class="lyf-sublabel" style="background:#F44336;color:white;padding:0.2rem 0.6rem;border-radius:12px;font-weight:600;">ARRIVÉE</span>
                     <span style="font-weight:600;">{destination}</span>
                     <span style="margin-left:auto;opacity:0.7;font-size:0.8rem;">
-                        Critère : <b>{"⏱️ Temps" if critere == "temps" else "💰 Coût"}</b>
+                        Critère : <b>{"Temps" if critere == "temps" else "Coût"}</b>
                     </span>
                 </div>
                 """,
@@ -118,7 +118,7 @@ def render_mode_comparison(
 
         # Explication textuelle
         if recommendation.get("explanation"):
-            st.caption(f"💡 {recommendation['explanation']}")
+            st.caption(f"{recommendation['explanation']}")
 
         return selected_mode
 
@@ -152,7 +152,7 @@ def _render_mode_card(
                     {icon} {label}
                 </div>
                 <div class="lyf-detail" style="opacity:0.6;margin-top:0.4rem;">
-                    ⚠️ Indisponible pour ce trajet
+                    Indisponible pour ce trajet
                 </div>
                 <div class="lyf-sublabel" style="opacity:0.5;margin-top:0.3rem;font-style:italic;">
                     Source: {result.get("source", "?") if result else "aucune"}
@@ -174,7 +174,7 @@ def _render_mode_card(
     winner_badge = (
         f'<span class="lyf-sublabel" style="background:{_WINNER_ACCENT};color:white;padding:0.25rem 0.7rem;'
         f'border-radius:12px;font-weight:700;letter-spacing:0.5px;">'
-        f"🏆 RECOMMANDÉ</span>"
+        f"RECOMMANDÉ</span>"
         if is_winner
         else ""
     )
@@ -188,23 +188,23 @@ def _render_mode_card(
     source = result.get("source", "estimated")
     if source == "computed":
         source_badge = (
-            '<div class="lyf-sublabel" style="color:#4CAF50;font-weight:600;margin-top:0.3rem;">✅ Durée calculée</div>'
+            '<div class="lyf-sublabel" style="color:#4CAF50;font-weight:600;margin-top:0.3rem;">Durée calculée</div>'
         )
     else:
         source_badge = (
             '<div class="lyf-sublabel" style="color:#FF9800;font-weight:600;'
-            'margin-top:0.3rem;">⏱️ Estimé (cliquez "Voir détail" pour la durée réelle)</div>'
+            'margin-top:0.3rem;">Estimé (cliquez "Voir détail" pour la durée réelle)</div>'
         )
 
     calories_html = (
-        f'<div class="lyf-detail" style="opacity:0.85;margin-top:0.3rem;">🔥 {calories} kcal</div>'
+        f'<div class="lyf-detail" style="opacity:0.85;margin-top:0.3rem;">{calories} kcal</div>'
         if mode_key == "velov"
         else ""
     )
 
     congested_html = (
         f'<div class="lyf-sublabel" style="color:{_WINNER_ACCENT};font-weight:600;margin-top:0.3rem;">'
-        f"⚠️ Trafic congestionné</div>"
+        f"Trafic congestionné</div>"
         if mode_key == "voiture" and impact.get("is_congested")
         else ""
     )
@@ -226,9 +226,9 @@ def _render_mode_card(
             </div>
             {source_badge}
             <div class="lyf-detail" style="display:flex;gap:1rem;flex-wrap:wrap;opacity:0.9;">
-                <span>💰 {cost:.2f} €</span>
-                <span>🌿 {int(co2)} g CO2</span>
-                <span>📏 {distance:.2f} km</span>
+                <span>{cost:.2f} €</span>
+                <span>{int(co2)} g CO2</span>
+                <span>{distance:.2f} km</span>
             </div>
             {calories_html}
             {congested_html}
@@ -241,7 +241,7 @@ def _render_mode_card(
     )
 
     # Bouton "Voir détail" — retourne mode_key si cliqué, None sinon
-    btn_label = "👁️ Voir le détail"
+    btn_label = "Voir le détail"
     if st.button(
         btn_label,
         key=f"see_detail_{mode_key}",
@@ -272,13 +272,13 @@ def _render_insight(results: dict[str, dict], winner: str) -> None:
             mode_label = _MODE_META.get(winner, {}).get("label", winner)
             voiture_label = _MODE_META.get("voiture", {}).get("label", "voiture")
             insights.append(
-                f"🌿 **{mode_label}** économise **{int(saved_co2)} g de CO2** vs **{voiture_label}** sur ce trajet."
+                f"**{mode_label}** économise **{int(saved_co2)} g de CO2** vs **{voiture_label}** sur ce trajet."
             )
 
     # Bonus calories Vélov
     if winner == "velov" and velov_impact.get("calories_kcal", 0) > 0:
         kcal = int(velov_impact["calories_kcal"])
-        insights.append(f"🔥 **{kcal} kcal** brûlées en pédalant (≈ {kcal // 50} min de marche rapide).")
+        insights.append(f"**{kcal} kcal** brûlées en pédalant (≈ {kcal // 50} min de marche rapide).")
 
     if insights:
         for ins in insights:
@@ -331,6 +331,6 @@ def _compute_recommendation(results: dict[str, dict], critere: str) -> dict:
         winner = "tc"  # fallback par défaut
 
     mode_label = _MODE_META.get(winner, {}).get("label", winner)
-    explanation = f"🏆 **{mode_label}** recommandé selon le critère {'⏱️ temps' if critere == 'temps' else '💰 coût'}."
+    explanation = f"**{mode_label}** recommandé selon le critère {'temps' if critere == 'temps' else 'coût'}."
 
     return {"winner": winner, "scores": scores, "explanation": explanation}

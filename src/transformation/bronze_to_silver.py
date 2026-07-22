@@ -35,6 +35,7 @@ def transform_to_silver(source: str, dry_run: bool = False) -> int:
 
     Args:
         source: 'trafic_boucles' | 'velov' | 'tcl_vehicles' | 'meteo' | 'chantiers'
+            | 'air_quality'
         dry_run: si True, ne fait que logger ce qui serait fait.
 
     Returns:
@@ -46,6 +47,7 @@ def transform_to_silver(source: str, dry_run: bool = False) -> int:
         "tcl_vehicles": _transform_tcl_vehicles,
         "meteo": _transform_meteo,
         "chantiers": _transform_chantiers,
+        "air_quality": _transform_air_quality,
     }
     fn = transformers.get(source)
     if not fn:
@@ -480,6 +482,69 @@ def _transform_meteo() -> int:
         if batch:
             psycopg2.extras.execute_batch(cur, _sql, batch, page_size=500)
         logger.info("Silver meteo: %d rows inserted/updated", len(batch))
+        return len(batch)
+
+
+def _transform_air_quality() -> int:
+    """Bronze.air_quality → silver.air_quality_clean (migration_045, 2026-07-05).
+
+    Même pattern que ``_transform_meteo`` : bronze.air_quality stocke une
+    réponse Open-Meteo Air Quality brute (JSON `hourly` avec des listes
+    parallèles), silver.air_quality_clean éclate ça en une ligne par heure.
+    Alimente ``gold.v_velov_safety_advisory`` (conseil sécurité Vélov).
+    """
+    with raw_connection() as conn, conn.cursor() as cur:
+        cur.execute("""
+                SELECT id, fetched_at, raw_data
+                FROM bronze.air_quality
+                ORDER BY fetched_at DESC
+                LIMIT 200
+            """)
+        rows = cur.fetchall()
+
+        _sql = """
+            INSERT INTO silver.air_quality_clean
+                (measurement_time, european_aqi, pm10, pm2_5,
+                 nitrogen_dioxide, ozone, carbon_monoxide, fetched_at)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, NOW())
+            ON CONFLICT (measurement_time) DO UPDATE
+            SET european_aqi     = EXCLUDED.european_aqi,
+                pm10             = EXCLUDED.pm10,
+                pm2_5            = EXCLUDED.pm2_5,
+                nitrogen_dioxide = EXCLUDED.nitrogen_dioxide,
+                ozone            = EXCLUDED.ozone,
+                carbon_monoxide  = EXCLUDED.carbon_monoxide,
+                fetched_at       = NOW()
+        """
+        batch: list[tuple] = []
+        for _id, _fetched_at, raw_data in rows:
+            if not isinstance(raw_data, dict):
+                continue
+            hourly = raw_data.get("hourly", {})
+            times = hourly.get("time", [])
+            aqis = hourly.get("european_aqi", [])
+            pm10s = hourly.get("pm10", [])
+            pm25s = hourly.get("pm2_5", [])
+            no2s = hourly.get("nitrogen_dioxide", [])
+            o3s = hourly.get("ozone", [])
+            cos = hourly.get("carbon_monoxide", [])
+
+            for i, t in enumerate(times):
+                batch.append(
+                    (
+                        t,
+                        aqis[i] if i < len(aqis) else None,
+                        pm10s[i] if i < len(pm10s) else None,
+                        pm25s[i] if i < len(pm25s) else None,
+                        no2s[i] if i < len(no2s) else None,
+                        o3s[i] if i < len(o3s) else None,
+                        cos[i] if i < len(cos) else None,
+                    )
+                )
+
+        if batch:
+            psycopg2.extras.execute_batch(cur, _sql, batch, page_size=500)
+        logger.info("Silver air_quality: %d rows inserted/updated", len(batch))
         return len(batch)
 
 

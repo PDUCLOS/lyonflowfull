@@ -42,7 +42,7 @@ ENCRYPTED="${COMPRESSED}.gpg"
 # Sanity checks
 # -----------------------------------------------------------------------------
 if [ -z "${GDRIVE_BACKUP_DEST:-}" ] && [ -z "${OFFSITE_SSH:-}" ]; then
-    echo "❌ ERREUR : pas de destination offsite definie."
+    echo "ERREUR : pas de destination offsite definie."
     echo "   Regle : JAMAIS de backup persistant sur le VPS (full 100%)."
     echo "   Options :"
     echo "     1. Google Drive : GDRIVE_BACKUP_DEST=backups/lyonflow"
@@ -56,7 +56,7 @@ fi
 # -----------------------------------------------------------------------------
 DISK_USAGE=$(df -h / | tail -1 | awk '{print $5}' | tr -d '%')
 if [ "$DISK_USAGE" -gt 90 ]; then
-    echo "⚠️  VPS disk a ${DISK_USAGE}% (regle : on ne devrait pas en etre la)"
+    echo "VPS disk a ${DISK_USAGE}% (regle : on ne devrait pas en etre la)"
     echo "   Mais le backup stream ne touche pas le disque, on continue."
 fi
 
@@ -67,7 +67,7 @@ echo "==[ 1/4 Stream pg_dump depuis Docker ]=="
 if command -v docker &>/dev/null && docker ps --format '{{.Names}}' 2>/dev/null | grep -q 'lyonflow-postgres'; then
     PG_DUMP_CMD="docker exec lyonflow-postgres pg_dump -U ${POSTGRES_USER:-lyonflow} -d ${POSTGRES_DB:-lyonflow} -Fc"
 else
-    echo "❌ Container lyonflow-postgres pas accessible"
+    echo "Container lyonflow-postgres pas accessible"
     exit 1
 fi
 
@@ -81,7 +81,7 @@ if command -v gpg &>/dev/null; then
     GPG_CMD="gpg --batch --yes --compress-algo=zlib --encrypt --recipient $GPG_RECIPIENT"
     FINAL_NAME="$ENCRYPTED"
 else
-    echo "⚠️  gpg non installe, backup non chiffre (OK si offsite = serveur prive)"
+    echo "gpg non installe, backup non chiffre (OK si offsite = serveur prive)"
     GPG_CMD="cat"
     FINAL_NAME="$COMPRESSED"
 fi
@@ -95,7 +95,7 @@ START_TIME=$(date +%s)
 if [ -n "${GDRIVE_BACKUP_DEST:-}" ]; then
     # Mode Google Drive via rclone
     if ! command -v rclone &>/dev/null; then
-        echo "❌ rclone non installe. Installation one-time :"
+        echo "rclone non installe. Installation one-time :"
         echo "   curl https://rclone.org/install.sh | sudo bash"
         echo "   rclone config  # setup Google Drive OAuth"
         exit 1
@@ -113,7 +113,7 @@ DURATION=$((END_TIME - START_TIME))
 SIZE_HUMAN=$(du -h /opt/lyonflow/data 2>/dev/null | tail -1 | awk '{print $1}' || echo "?")
 
 echo
-echo "✅ Backup termine en ${DURATION}s"
+echo "Backup termine en ${DURATION}s"
 echo "   Destination : $DEST_LOG"
 echo "   DB source   : ${POSTGRES_USER:-lyonflow}@lyonflow (taille ~18 GB)"
 echo "   Methode     : stream pipe (RIEN ecrit sur VPS)"

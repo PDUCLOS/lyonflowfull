@@ -19,7 +19,7 @@ indisponible (PostgreSQL, Airflow, MLflow) lève `DashboardDataError`
 
 ---
 
-## 🚦 Pages Communes (Accessibles à tous)
+## Pages Communes (Accessibles à tous)
 
 ### `Accueil.py`
 **Logique :** Point d'entrée principal (Onboarding).
@@ -37,7 +37,7 @@ indisponible (PostgreSQL, Airflow, MLflow) lève `DashboardDataError`
 
 ---
 
-## 🧭 Persona "Usager" (Grand public)
+## Persona "Usager" (Grand public)
 Interface orientée "B2C", gratuite et sans mot de passe, axée sur le confort de voyage.
 
 ### `Usager_1_Mon_Trajet.py`
@@ -55,7 +55,7 @@ Interface orientée "B2C", gratuite et sans mot de passe, axée sur le confort d
 ### `Usager_3_Notre_Modele.py`  *(Sprint 22+)*
 **Logique :** Transparence sur la prédiction en langage citoyen.
 - Bloc pédagogique "Comment on prédit le trafic à 1h ?" (XGBoost H+1h, features utilisées, scope du modèle).
-- Précision 7 derniers jours : donut accuracy_band (accurate ±5 km/h / acceptable 5-10 / poor >10), courbe MAE horaire, qualité globale 🟢/🟡/🟠 dérivée de `gold.v_xgb_accuracy_summary`.
+- Précision 7 derniers jours : donut accuracy_band (accurate ±5 km/h / acceptable 5-10 / poor >10), courbe MAE horaire, qualité globale //dérivée de `gold.v_xgb_accuracy_summary`.
 - Encart "Ce qu'il faut garder en tête" : horizon 1h, météo extrême, événements imprévus.
 - Aucune mention DAGs/MLflow (cf. `theme.show_technical: false` du persona).
 
@@ -68,13 +68,13 @@ Interface orientée "B2C", gratuite et sans mot de passe, axée sur le confort d
 
 ### `Usager_5_Statut_Service.py`  *(Sprint 22+)*
 **Logique :** Tableau de bord citoyen "tout roule ou pas ?" en 30s.
-- 4 voyants synthétiques : 🟢 Données / 🟢 Modèle / 🟢 Service / 🟢 Alertes (réévalués à chaque refresh).
+- 4 voyants synthétiques : Données / Modèle / Service / Alertes (réévalués à chaque refresh).
 - Top 5 derniers incidents détectés (`cached_recent_alerts` 24h).
 - Encart "Qu'est-ce qui peut affecter la fiabilité ?" (météo extrême, travaux non programmés, pics exceptionnels, panne source).
 
 ---
 
-## 🔧 Persona "Pro TCL" (Exploitant réseau)
+## Persona "Pro TCL" (Exploitant réseau)
 Interface "B2B" protégée par mot de passe, axée sur la gestion du réseau, la corrélation trafic/bus et le MLOps.
 
 ### `Pro_1_PCC_Live.py`
@@ -111,7 +111,7 @@ Interface "B2B" protégée par mot de passe, axée sur la gestion du réseau, la
 
 ---
 
-## 🏛️ Persona "Élu" (Décideur politique)
+## Persona "Élu" (Décideur politique)
 Interface stratégique, protégée par mot de passe, axée sur l'aide à la décision pour de gros investissements (aménagements urbains).
 
 ### `Elu_1_Synthese.py`

@@ -16,9 +16,9 @@ from __future__ import annotations
 # Seuils utilisés à la fois par ``load_traffic()`` (data_loader.py) pour
 # calculer ``freshness_status`` et par ``render_traffic_widget()`` pour
 # afficher le bandeau adaptatif. Ces valeurs doivent rester synchronisées.
-FRESHNESS_LIVE_MAX_S: int = 300  # < 5 min  → 🟢 Donnée en direct (Live)
-FRESHNESS_STALE_MAX_S: int = 1800  # < 30 min → 🟡 Donnée obsolète (Stale)
-# > FRESHNESS_STALE_MAX_S              → 🔴 Donnée bloquée (Stuck)
+FRESHNESS_LIVE_MAX_S: int = 300  # < 5 min → Donnée en direct (Live)
+FRESHNESS_STALE_MAX_S: int = 1800  # < 30 min → Donnée obsolète (Stale)
+# > FRESHNESS_STALE_MAX_S → Donnée bloquée (Stuck)
 
 
 # =============================================================================

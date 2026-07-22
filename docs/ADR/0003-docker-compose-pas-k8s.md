@@ -6,7 +6,7 @@ Accepté (2026-06-06)
 ## Contexte
 Le projet doit tourner sur 1 VPS unique. 3 options :
 1. Bare metal (systemd services)
-2. **Docker Compose** ✅
+2. **Docker Compose**
 3. Kubernetes (k3s ou managé)
 
 ## Décision

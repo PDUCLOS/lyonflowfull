@@ -35,7 +35,7 @@ def render_alert_card(alert: dict) -> None:
             <div style="margin-top:0.7rem;padding:0.55rem 0.8rem;background:{color}22;
                         border-left:3px solid {color};border-radius:6px;
                         font-size:0.86rem;">
-                💡 <b>Action :</b> {alert.get("action", "")}
+                <b>Action :</b> {alert.get("action", "")}
             </div>
         </div>
         """,

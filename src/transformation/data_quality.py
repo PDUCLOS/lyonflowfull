@@ -384,7 +384,7 @@ def validate_traffic_features(
     * Plage temperature_2m [-20, 45] (si colonne présente)
     * Plage precipitation [0, 100] (si colonne présente)
     * Null ratio sur speed_kmh < 30%
-    * Doublons sur (channel_id, computed_at) < 5%
+    * Doublons sur (channel_id, fetched_at) < 5%
     * Volume ≥ 100 rows
 
     Args:
@@ -403,7 +403,7 @@ def validate_traffic_features(
     details: list[CheckDetail] = [
         _check_range(df, "speed_kmh", config.speed_min_kmh, config.speed_max_kmh),
         _check_null_ratio(df, "speed_kmh", config.max_null_ratio),
-        _check_duplicate_ratio(df, ["channel_id", "computed_at"], config.max_duplicate_ratio),
+        _check_duplicate_ratio(df, ["channel_id", "fetched_at"], config.max_duplicate_ratio),
         _check_min_rows(df, config.min_rows),
     ]
     # Météo (colonnes optionnelles — pas critique si absentes)

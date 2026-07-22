@@ -77,14 +77,14 @@ def test_format_z_score_thresholds() -> None:
     )
 
     # < -2 (alarme) : rouge
-    assert _format_z_score(-3.5).startswith("🔴")
-    assert _format_z_score(-2.5).startswith("🔴")
+    assert _format_z_score(-3.5).startswith("Alerte")
+    assert _format_z_score(-2.5).startswith("Alerte")
     # < 0 (sous baseline, mais pas alarme) : jaune
-    assert _format_z_score(-1.0).startswith("🟡")
-    assert _format_z_score(-0.01).startswith("🟡")
+    assert _format_z_score(-1.0).startswith("Attention")
+    assert _format_z_score(-0.01).startswith("Attention")
     # >= 0 (au-dessus baseline) : vert
-    assert _format_z_score(0.0).startswith("🟢")
-    assert _format_z_score(2.5).startswith("🟢")
+    assert _format_z_score(0.0).startswith("OK")
+    assert _format_z_score(2.5).startswith("OK")
     # None / NaN : —
     assert _format_z_score(None) == "—"  # type: ignore[arg-type]
     assert _format_z_score(float("nan")) == "—"

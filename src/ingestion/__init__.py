@@ -16,6 +16,7 @@ from src.ingestion.tcl_siri_lite import TclSiriLite
 from src.ingestion.tomtom_traffic import TomTomTrafficFlow
 from src.ingestion.trafic_grandlyon import TraficGrandLyon
 from src.ingestion.velov import VelovCollector
+from src.ingestion.vigilance_meteo import VigilanceMeteo
 
 # Liste des collecteurs à fréquence d'exécution rapide/temps-réel
 REALTIME_COLLECTORS: list[type[DataCollector]] = [
@@ -30,6 +31,10 @@ REALTIME_COLLECTORS: list[type[DataCollector]] = [
     # save_lyon_tiles_to_bronze(). Le DAG collect_tomtom_traffic s'exécute
     # désormais toutes les 15 minutes sur 12 tuiles de Lyon.
     TomTomTrafficFlow,
+    # (2026-07-05) — VigilanceMeteo. Vigilance canicule dept 69 (Rhône),
+    # API publique Opendatasoft sans clé. DAG collect_vigilance_meteo */6h.
+    # Alimente gold.v_velov_safety_advisory (conseil sécurité Vélov).
+    VigilanceMeteo,
 ]
 
 # Liste des collecteurs à fréquence mensuelle/annuelle
@@ -58,4 +63,5 @@ __all__ = [
     "TomTomTrafficFlow",
     "TraficGrandLyon",
     "VelovCollector",
+    "VigilanceMeteo",
 ]

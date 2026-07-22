@@ -228,10 +228,10 @@ docker compose -f docker-compose.monitoring.yml restart prometheus grafana alert
 ## Maintenance planifiée
 
 ### Daily
-- ✅ Airflow tourne (10 DAGs schedulés : 8 Bronze + 1 cron backfill + 1 TomTom no-op)
-- ✅ Backups Bronze/Postgres tournent (offsite via `scripts/backup-offsite.sh`)
-- ✅ Health checks OK : `./scripts/healthcheck-vps.sh` 20/20
-- ✅ Backfill lat/lon tourne toutes les 5 min (Sprint 8+)
+- Airflow tourne (10 DAGs schedulés : 8 Bronze + 1 cron backfill + 1 TomTom no-op)
+- Backups Bronze/Postgres tournent (offsite via `scripts/backup-offsite.sh`)
+- Health checks OK : `./scripts/healthcheck-vps.sh` 20/20
+- Backfill lat/lon tourne toutes les 5 min (Sprint 8+)
 
 ### Weekly
 - [ ] Vérifier métriques modèles (MAE/R²) via MLflow
@@ -256,7 +256,7 @@ docker compose -f docker-compose.monitoring.yml restart prometheus grafana alert
 
 ## Diagnostic Sprint VPS-8 (fail loud)
 
-### Widget affiche `⚠️ Données pipeline indisponibles`
+### Widget affiche `Données pipeline indisponibles`
 
 **Symptôme** : un ou plusieurs widgets Streamlit affichent un `st.error` rouge avec un message contenant `DashboardDataError` ou `[postgresql]` / `[airflow]` / `[mlflow]`.
 

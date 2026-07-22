@@ -9,7 +9,7 @@ from dashboard.components.colors import COLORS
 
 def render_news_section() -> None:
     """Affiche le bloc 'À annoncer' avec suggestions pour le conseil municipal."""
-    st.markdown("##### 📰 À annoncer au prochain conseil municipal")
+    st.markdown("##### À annoncer au prochain conseil municipal")
 
     announcements = [
         {

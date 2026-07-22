@@ -18,10 +18,10 @@ from dashboard.components.loading_state import loading_wrapper
 
 # Couleur + emoji par diagnostic (Bug 4 fix)
 _DIAGNOSIS_DISPLAY = {
-    "infra": ("🔴", "Infrastructure", COLORS["status_critical"]),
-    "operations": ("🟠", "Opérationnel", COLORS["status_warning"]),
-    "bus_lane_ok": ("🟢", "Voie bus OK", COLORS["status_ok"]),
-    "ok": ("⚪", "OK", COLORS["text_muted"]),
+    "infra": ("Alerte", "Infrastructure", COLORS["status_critical"]),
+    "operations": ("Attention", "Opérationnel", COLORS["status_warning"]),
+    "bus_lane_ok": ("OK", "Voie bus OK", COLORS["status_ok"]),
+    "ok": ("Inconnu", "OK", COLORS["text_muted"]),
 }
 
 
@@ -54,18 +54,18 @@ def render_bottleneck_ranking(top_n: int | None = None) -> None:
         roi = b.get("roi_mois", 0) or 0
         delai = b.get("delai_mois", 0) or 0
         diagnosis = b.get("diagnosis", "ok")
-        diag_emoji, diag_label, diag_color = _format_diagnostic(diagnosis)
+        _, diag_label, diag_color = _format_diagnostic(diagnosis)
 
         # Couleur selon ROI (Bug 7 : maintenant cohérent avec le calculateur)
         if roi <= 12:
             roi_color = COLORS["status_ok"]
-            roi_emoji = "🟢"
+            roi_emoji = "OK"
         elif roi <= 24:
             roi_color = COLORS["status_warning"]
-            roi_emoji = "🟡"
+            roi_emoji = "Attention"
         else:
             roi_color = COLORS["status_critical"]
-            roi_emoji = "🔴"
+            roi_emoji = "Alerte"
 
         # Format cout en M€ (avant : "{cout} M€" brut → "1500000 M€" si DB renvoie euros)
         cout_str = f"{cout:.1f} M€" if cout < 1000 else f"{cout / 1_000_000:.1f} M€"
@@ -88,7 +88,7 @@ def render_bottleneck_ranking(top_n: int | None = None) -> None:
                     </div>
                     <div style="text-align:center;">
                         <div class="lyf-detail" style="opacity:0.6;">Diagnostic</div>
-                        <div style="font-weight:600;color:{diag_color};">{diag_emoji} {diag_label}</div>
+                        <div style="font-weight:600;color:{diag_color};">{diag_label}</div>
                     </div>
                     <div style="text-align:center;">
                         <div class="lyf-detail" style="opacity:0.6;">Voyageurs/j</div>

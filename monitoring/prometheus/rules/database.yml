@@ -18,7 +18,7 @@ groups:
           component: database
         annotations:
           summary: "DB connections > 85%"
-          description: "{{ $value | humanizePercentage }} des connexions utilisées ({{ with query (printf \"pg_stat_activity_count = %d\" $value) }}{{ . | first | label_value }}{{ end }})."
+          description: "{{ $value | humanizePercentage }} des connexions utilisées (seuil 85%)."
 
       # DB down
       - alert: DatabaseDown
@@ -81,4 +81,4 @@ groups:
           component: database
         annotations:
           summary: "WAL PostgreSQL > 10GB"
-          description: "WAL accumulé = {{ $value | humanizeBytes }}. Backup/réplication en retard."
+          description: "WAL accumulé = {{ $value | humanize1024 }}B. Backup/réplication en retard."

@@ -28,7 +28,7 @@ render_sidebar_navigation()
 setup_auto_refresh()
 render_freshness_badge()
 
-st.title("📊 Heatmap OTP — Ponctualité par ligne × heure")
+st.title("Heatmap OTP — Ponctualité par ligne × heure")
 render_data_status_banner()
 
 # Filtres
@@ -59,7 +59,7 @@ render_otp_heatmap(days=days, height=600 if show_all else 500, top_n=top_n)
 st.markdown("---")
 
 # Comparaison
-st.markdown("##### 🔄 Comparaison lignes")
+st.markdown("##### Comparaison lignes")
 render_line_comparison()
 
 st.caption("Heatmap OTP · Source : SIRI Lite + GTFS planifié")

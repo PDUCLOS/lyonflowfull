@@ -29,7 +29,7 @@ render_sidebar_navigation()
 setup_auto_refresh()
 render_freshness_badge()
 
-st.title("🔔 Mes alertes")
+st.title("Mes alertes")
 render_data_status_banner()
 
 # Charge live (DB Gold uniquement, fail loud via DashboardDataError)
@@ -52,7 +52,7 @@ with cols[2]:
 st.markdown("---")
 
 # Alertes en cartes
-st.markdown("##### 📋 Liste des alertes")
+st.markdown("##### Liste des alertes")
 if not alerts_list:
     st.info("Aucune alerte active sur les 6 dernières heures.")
 else:
@@ -66,13 +66,13 @@ else:
 st.markdown("---")
 
 # Frise temporelle
-st.markdown("##### 🕐 Frise chronologique")
+st.markdown("##### Frise chronologique")
 render_alert_timeline(alerts_list)
 
 st.markdown("---")
 
 # Réglages
-with st.expander("⚙️ Réglages des alertes", expanded=False):
+with st.expander("Réglages des alertes", expanded=False):
     render_alert_settings()
 
 st.caption("LyonFlow · Alertes mises à jour toutes les 5 min")

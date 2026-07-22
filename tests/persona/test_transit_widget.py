@@ -86,9 +86,9 @@ def test_search_bar_segmented_control_has_3_modes_no_marche():
     segmented_content = m.group(1)
 
     # 3 modes présents dans la liste du segmented control
-    assert '"🚌 Transport en commun"' in segmented_content
-    assert '"🚲 Vélov"' in segmented_content
-    assert '"🚗 Voiture"' in segmented_content
+    assert '"Transport en commun"' in segmented_content
+    assert '"Vélov"' in segmented_content
+    assert '"Voiture"' in segmented_content
 
     # Marche ABSENT dans la liste
     assert "Marche" not in segmented_content, "Mode Marche doit avoir été retiré de la liste (Sprint 14)"
@@ -101,9 +101,9 @@ def test_search_bar_default_is_tc():
     )
     source = search_bar_path.read_text(encoding="utf-8")
 
-    # default doit être "🚌 Transport en commun"
-    m = re.search(r"default\s*=\s*['\"]🚌\s*Transport en commun['\"]", source)
-    assert m is not None, "Default du segmented control doit être '🚌 Transport en commun'"
+    # default doit être "Transport en commun"
+    m = re.search(r"default\s*=\s*['\"]\s*Transport en commun['\"]", source)
+    assert m is not None, "Default du segmented control doit être 'Transport en commun'"
 
 
 def test_search_bar_returns_modes_in_dict():

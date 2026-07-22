@@ -103,22 +103,22 @@ def main(argv: list[str]) -> int:
     for arg in argv:
         root = Path(arg)
         if not root.exists():
-            print(f"❌ Path not found: {root}")
+            print(f"Path not found: {root}")
             continue
         results = scan_dir(root)
         for path, findings in results.items():
             for pattern_name, line_no, snippet in findings:
-                print(f"🚨 {pattern_name} in {path}:{line_no}")
+                print(f"{pattern_name} in {path}:{line_no}")
                 print(f"   {snippet}")
                 total_findings += 1
     if total_findings > 0:
-        print(f"\n❌ {total_findings} secret(s) détecté(s) — commit bloqué.")
+        print(f"\n{total_findings} secret(s) détecté(s) — commit bloqué.")
         print("   Solutions :")
         print("   1. Déplace le secret dans .env (gitignored)")
         print("   2. Ajoute un faux positif dans _ALLOWED_FP ci-dessous")
         print("   3. Si c'est un test, préfixe la variable par 'test_'")
         return 1
-    print("✅ Aucun secret détecté.")
+    print("Aucun secret détecté.")
     return 0
 
 

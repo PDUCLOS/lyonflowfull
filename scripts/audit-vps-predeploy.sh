@@ -26,15 +26,15 @@ set -euo pipefail
 
 # Sanity check : variables requises
 if [ -z "${VPS_HOST:-}" ] || [ -z "${VPS_SSH_KEY:-}" ]; then
-    echo "❌ VPS_HOST et VPS_SSH_KEY doivent etre definies."
+    echo "VPS_HOST et VPS_SSH_KEY doivent etre definies."
     echo "   source .deploy.env avant de lancer ce script."
     exit 1
 fi
 
 SSH="ssh -i $VPS_SSH_KEY $VPS_HOST"
 echo "================================================================="
-echo " AUDIT VPS PRE-DEPLOY — $(date -u +%Y-%m-%dT%H:%M:%SZ)"
-echo " Cible : $VPS_HOST"
+echo "AUDIT VPS PRE-DEPLOY — $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+echo "Cible : $VPS_HOST"
 echo "================================================================="
 echo
 
@@ -67,7 +67,7 @@ echo
 # -----------------------------------------------------------------------------
 echo "===[ 3/5 DBs PostgreSQL ]==="
 $SSH 'docker exec lyonflow-postgres psql -U lyonflow -l 2>&1' || {
-    echo "⚠️  Echec. Verifier que le container tourne :"
+    echo "Echec. Verifier que le container tourne :"
     $SSH 'docker ps | grep postgres'
     exit 1
 }
@@ -78,7 +78,7 @@ echo
 # -----------------------------------------------------------------------------
 echo "===[ 4/5 Tables bronze/silver/gold (n_live_tup) ]==="
 $SSH 'docker exec lyonflow-postgres psql -U lyonflow -d lyonflow -c "SELECT schemaname, tablename, n_live_tup FROM pg_stat_user_tables WHERE schemaname IN ('"'"'bronze'"'"', '"'"'silver'"'"', '"'"'gold'"'"') ORDER BY schemaname, n_live_tup DESC"' || {
-    echo "⚠️  Si la DB s'appelle 'trafficlyon' (legacy), remplacer lyonflow par trafficlyon"
+    echo "Si la DB s'appelle 'trafficlyon' (legacy), remplacer lyonflow par trafficlyon"
 }
 echo
 
@@ -91,14 +91,14 @@ echo
 echo "===[ 5/5 Verification dernier backup OFFSITE ]==="
 if [ -n "${GDRIVE_BACKUP_DEST:-}" ]; then
     $SSH "rclone lsl gdrive:${GDRIVE_BACKUP_DEST}/ 2>/dev/null | sort -k2 -r | head -3" || {
-        echo "⚠️  rclone lsl a echoue. Verifier config rclone sur VPS."
+        echo "rclone lsl a echoue. Verifier config rclone sur VPS."
     }
 elif [ -n "${OFFSITE_SSH:-}" ]; then
     $SSH "ssh ${OFFSITE_SSH} 'ls -lt ~/ 2>/dev/null | head -5'" || {
-        echo "⚠️  ssh vers ${OFFSITE_SSH} a echoue."
+        echo "ssh vers ${OFFSITE_SSH} a echoue."
     }
 else
-    echo "⚠️  Pas de destination offsite definie (.deploy.env)."
+    echo "Pas de destination offsite definie (.deploy.env)."
     echo "   backup-offsite.sh a refuse de tourner — investiguer."
 fi
 echo
@@ -107,7 +107,7 @@ echo
 # RESUME
 # -----------------------------------------------------------------------------
 echo "================================================================="
-echo " RESUME AUDIT"
+echo "RESUME AUDIT"
 echo "================================================================="
 echo "Backup PostgreSQL       : OFFSITE (gdrive ou ssh) - aucun fichier local"
 echo "Snapshot volume Docker  : SUPPRIME (incompatible regle OFFSITE)"

@@ -29,7 +29,7 @@ class TestClassify:
         """Au moins 1 source dead → rouge, message 'Source en panne'."""
         color, icon, msg = _classify(n_healthy=7, n_dead=1, n_stale=0, score=85.0)
         assert color == "#F44336"
-        assert icon == "🔴"
+        assert icon == "Alerte"
         assert "Source en panne" in msg
         assert "1 morte" in msg
         assert "85" in msg
@@ -38,13 +38,13 @@ class TestClassify:
         """Si dead ET stale → dead prend priorité (rouge)."""
         color, icon, _ = _classify(n_healthy=6, n_dead=1, n_stale=2, score=80.0)
         assert color == "#F44336"
-        assert icon == "🔴"
+        assert icon == "Alerte"
 
     def test_n_stale_positive_sans_dead_retourne_orange(self) -> None:
         """Stale sans dead → orange."""
         color, icon, msg = _classify(n_healthy=7, n_dead=0, n_stale=1, score=82.0)
         assert color == "#FF9800"
-        assert icon == "🟡"
+        assert icon == "Attention"
         assert "1 source(s) stale" in msg
         assert "82" in msg
 
@@ -52,8 +52,8 @@ class TestClassify:
         """Score >= 70, tout healthy → vert, 'Données OK'."""
         color, icon, msg = _classify(n_healthy=8, n_dead=0, n_stale=0, score=94.0)
         assert color == "#4CAF50"
-        assert icon == "🟢"
-        assert "Données OK" in msg
+        assert icon == "OK"
+        assert "Données à jour" in msg
         assert "8 sources actives" in msg
         assert "94" in msg
 
@@ -61,20 +61,20 @@ class TestClassify:
         """Score < 70, pas de dead/stale → gris (fallback)."""
         color, icon, msg = _classify(n_healthy=8, n_dead=0, n_stale=0, score=50.0)
         assert color == "#9E9E9E"
-        assert icon == "⚪"
+        assert icon == "Inconnu"
         assert "50" in msg
 
     def test_score_a_la_limite_70(self) -> None:
         """Score exactement 70 → vert (>= 70, pas strict)."""
         color, icon, _ = _classify(n_healthy=8, n_dead=0, n_stale=0, score=70.0)
         assert color == "#4CAF50"
-        assert icon == "🟢"
+        assert icon == "OK"
 
     def test_n_stale_priorite_sur_score_bas(self) -> None:
         """Stale > 0 prend priorité même si score < 70 (orange, pas gris)."""
         color, icon, _ = _classify(n_healthy=7, n_dead=0, n_stale=1, score=50.0)
         assert color == "#FF9800"
-        assert icon == "🟡"
+        assert icon == "Attention"
 
 
 # -----------------------------------------------------------------------------

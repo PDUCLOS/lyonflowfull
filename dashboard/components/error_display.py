@@ -1,6 +1,6 @@
 """Affichage des erreurs adapté au persona — Axe D.
 
-Le pattern actuel ``st.error(f"⚠️ {e}")`` expose le message technique brut
+Le pattern actuel ``st.error(f"{e}")`` expose le message technique brut
 de l'exception (ex: ``[gold.trafic_predictions] Données pipeline indisponibles
 — PostgreSQL ne répond pas. Vérifier POSTGRES_HOST/PORT/PASSWORD et
 docker compose up postgres``) à l'usager final, qui ne sait pas ce qu'est
@@ -80,5 +80,5 @@ def show_error(error_type: str, detail: str = "") -> None:
 
     st.error(msg)
     if persona == "pro_tcl" and detail:
-        with st.expander("🔧 Détail technique"):
+        with st.expander("Détail technique"):
             st.code(detail)

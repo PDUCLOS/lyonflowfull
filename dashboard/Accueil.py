@@ -63,7 +63,7 @@ st.markdown(
     </style>
     <div style="text-align:center;padding:3rem 0 2rem 0;">
         <div class="animated-title">
-            🚦 LyonFlow
+            LyonFlow
         </div>
         <div class="subtitle">
             La plateforme MLOps qui prédit le trafic et les retards bus sur la Métropole de Lyon
@@ -93,7 +93,7 @@ if has_explicit_persona:
 
     # Check auth before redirecting
     if auth_required and not is_authenticated():
-        st.markdown("### 🔐 Authentification requise")
+        st.markdown("### Authentification requise")
         st.caption(
             f"Le profil **{persona_config.get('icon', '')} {persona_config.get('label', persona_id)}** "
             f"est protégé. Saisis le mot de passe fourni par l'administrateur."
@@ -113,7 +113,7 @@ if has_explicit_persona:
 # -----------------------------------------------------------------------------
 # Qui es-tu ? (Onboarding / Premier accès)
 # -----------------------------------------------------------------------------
-st.markdown("### 👋 Bienvenue sur LyonFlow")
+st.markdown("### Bienvenue sur LyonFlow")
 st.caption("Choisis ton profil pour voir la version de l'application adaptée à ton usage.")
 
 render_persona_switcher(layout="cards")
@@ -126,7 +126,7 @@ st.markdown("---")
 # zéro mock depuis , 2026-06-12). Distinguer explicitement les
 # métriques LIVE (lues en DB PostgreSQL Gold, fail loud si indispo) des
 # métriques de RÉFÉRENCE (chiffres Grand Lyon Open Data / capacité ML).
-st.markdown("##### 📊 Lyon en ce moment — données live + références Grand Lyon")
+st.markdown("##### Lyon en ce moment — données live + références Grand Lyon")
 
 stat_cols = st.columns(4)
 
@@ -143,13 +143,13 @@ try:
     n_lines_raw = cached_tcl_lines()
     n_lines = len(n_lines_raw) if n_lines_raw else 0
 except DashboardDataError as e:
-    st.error(f"⚠️ Lignes TCL : {e}")
+    st.error(f"Lignes TCL : {e}")
 
 try:
     n_stations_velov_raw = cached_velov_stations()
     n_stations_velov = len(n_stations_velov_raw) if n_stations_velov_raw else 0
 except DashboardDataError as e:
-    st.error(f"⚠️ Stations Vélov : {e}")
+    st.error(f"Stations Vélov : {e}")
 
 with stat_cols[0]:
     st.metric("Capteurs trafic", "1 100", delta="référence Grand Lyon")

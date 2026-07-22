@@ -57,7 +57,7 @@ def render_freshness_badge() -> None:
     st.markdown(
         f"""
         <div class="lyf-freshness-badge">
-            🔄 Prochaine MAJ dans <strong>{next_refresh}s</strong>
+            Prochaine MAJ dans <strong>{next_refresh}s</strong>
             · Intervalle : {interval}s
         </div>
         """,

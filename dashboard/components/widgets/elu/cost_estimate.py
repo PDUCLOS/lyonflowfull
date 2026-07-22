@@ -11,7 +11,7 @@ def render_cost_estimate(zone: str | None = None) -> None:
     Args:
         zone: nom de la zone (optionnel).
     """
-    st.markdown("##### 💰 Estimation coût")
+    st.markdown("##### Estimation coût")
 
     if not zone:
         st.info("Sélectionnez une zone pour voir l'estimation.")
@@ -44,7 +44,7 @@ def render_cost_estimate(zone: str | None = None) -> None:
     is_forfait = "Pôle" in type_amenagement or "carrefour" in type_amenagement.lower()
     cout_unitaire = cout_par_m.get(type_amenagement)
     if cout_unitaire is None:
-        st.warning(f"⚠️ Type d'aménagement inconnu : « {type_amenagement} ». Coût par défaut appliqué (500€/m).")
+        st.warning(f"Type d'aménagement inconnu : « {type_amenagement} ». Coût par défaut appliqué (500€/m).")
         cout_unitaire = 500
 
     if is_forfait:

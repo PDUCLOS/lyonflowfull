@@ -212,7 +212,7 @@ def _accuracy_distribution(pairs: pd.DataFrame) -> go.Figure:
 
 
 def render_backtest_dashboard(hours_pairs: int = 24, hours_summary: int = 168) -> None:
-    with st.popover("ℹ️ MAE vs MAPE ?"):
+    with st.popover("MAE vs MAPE ?"):
         st.markdown(
             "Le **MAE (Mean Absolute Error)** mesure l'erreur moyenne en km/h "
             "entre les prédictions XGBoost et l'oracle TomTom. Le **MAPE** "
@@ -230,12 +230,12 @@ def render_backtest_dashboard(hours_pairs: int = 24, hours_summary: int = 168) -
         pairs = cached_xgb_vs_tomtom(hours=hours_pairs, limit=500)
         summary = cached_xgb_accuracy_summary(hours=hours_summary)
     except DashboardDataError as e:
-        show_error("db_down", f"⚠️ Backtest indisponible : {e}")
+        show_error("db_down", f"Backtest indisponible : {e}")
         return
 
     if pairs.empty:
         st.info(
-            f"ℹ️ Aucune paire (XGBoost, TomTom) sur les dernières {hours_pairs}h. "
+            f"Aucune paire (XGBoost, TomTom) sur les dernières {hours_pairs}h. "
             "Vérifie que le DAG ``refresh_xgb_vs_tomtom`` tourne et que TomTom "
             "collecte bien (cf. ``gold.v_tomtom_traffic_live``)."
         )
@@ -300,7 +300,7 @@ def render_backtest_dashboard(hours_pairs: int = 24, hours_summary: int = 168) -
     with col_pie:
         plotly_with_alt(_accuracy_distribution(pairs), use_container_width=True)
     with col_table:
-        st.markdown("##### 🔻 Top 10 pires prédictions")
+        st.markdown("##### Top 10 pires prédictions")
         top10 = pairs.nlargest(10, "error_abs_kmh")[
             ["axis_key", "xgb_speed_kmh", "tomtom_speed_kmh", "error_abs_kmh", "accuracy_band", "calculated_at"]
         ].rename(

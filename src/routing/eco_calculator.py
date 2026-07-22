@@ -316,15 +316,15 @@ def _build_explanation(
 
     if critere == "temps":
         if duration_w <= 0:
-            return f"🏆 Mode recommandé : {mode_label[winner]} (durée indisponible)."
+            return f"Mode recommandé : {mode_label[winner]} (durée indisponible)."
         return (
-            f"🏆 Mode le plus rapide : **{mode_label[winner]}** "
+            f"Mode le plus rapide : **{mode_label[winner]}** "
             f"(~{duration_w:.0f} min, {cost_w:.2f} €, {int(co2_w)} g CO2)."
         )
 
     # critere == "cout"
     return (
-        f"🏆 Meilleur rapport temps/coût : **{mode_label[winner]}** "
+        f"Meilleur rapport temps/coût : **{mode_label[winner]}** "
         f"(score composite {scores[winner]:.1f}, "
         f"~{duration_w:.0f} min, {cost_w:.2f} €)."
     )

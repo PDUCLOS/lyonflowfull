@@ -60,9 +60,9 @@ done
 # --- Fonctions utilitaires ---
 
 log()  { echo -e "$@"; }
-ok()   { log "${C_GREEN}✅${C_RESET} $*"; }
-warn() { log "${C_YELLOW}⚠${C_RESET}  $*"; }
-err()  { log "${C_RED}❌${C_RESET} $*"; }
+ok()   { log "${C_GREEN}${C_RESET} $*"; }
+warn() { log "${C_YELLOW}${C_RESET} $*"; }
+err()  { log "${C_RED}${C_RESET} $*"; }
 info() { log "${C_BLUE}ℹ${C_RESET}  $*"; }
 
 die() { err "$*"; exit 1; }
@@ -210,7 +210,7 @@ list_migrations() {
 
 do_status() {
     log ""
-    log "${C_BLUE}📋 Migration status for ${POSTGRES_USER}@${POSTGRES_DB}:${C_RESET}"
+    log "${C_BLUE}Migration status for ${POSTGRES_USER}@${POSTGRES_DB}:${C_RESET}"
     log ""
 
     local counts_applied=0 counts_pending=0 counts_failed=0
@@ -228,15 +228,15 @@ do_status() {
         fname=$(basename "$file")
         if is_applied "$v"; then
             applied_at=$(psql_query "SELECT to_char(applied_at, 'YYYY-MM-DD HH24:MI') FROM public.schema_migrations WHERE version=$v" 2>/dev/null || echo "?")
-            printf "  ✅  %03d  %-50s (applied %s)\n" "$v" "$fname" "$applied_at"
+            printf "%03d %-50s (applied %s)\n" "$v" "$fname" "$applied_at"
             counts_applied=$((counts_applied + 1))
         else
             prev_status=$(psql_query "SELECT status FROM public.schema_migrations WHERE version=$v" 2>/dev/null || echo "")
             if [[ "${prev_status}" == "failed" ]]; then
-                printf "  ❌  %03d  %-50s (FAILED — re-run with --force %d)\n" "$v" "$fname" "$v"
+                printf "%03d %-50s (FAILED — re-run with --force %d)\n" "$v" "$fname" "$v"
                 counts_failed=$((counts_failed + 1))
             else
-                printf "  🔜  %03d  %-50s (pending)\n" "$v" "$fname"
+                printf "%03d %-50s (pending)\n" "$v" "$fname"
                 counts_pending=$((counts_pending + 1))
             fi
         fi
@@ -280,12 +280,12 @@ do_apply() {
 
         # Dry-run
         if [[ "${DRY_RUN}" == "true" ]]; then
-            log "${C_BLUE}🔜 Would apply${C_RESET}: $fname (version $v)"
+            log "${C_BLUE}Would apply${C_RESET}: $fname (version $v)"
             continue
         fi
 
         # Appliquer
-        info "🔄 Applying $fname..."
+        info "Applying $fname..."
         start_t=$(date +%s)
         if psql_exec < "$file" >/dev/null 2>&1; then
             record_migration "$v" "$fname" "$checksum" "applied"
@@ -306,14 +306,14 @@ do_apply() {
     if [[ "${DRY_RUN}" == "true" ]]; then
         log "${C_BLUE}ℹ Dry-run complete.${C_RESET}"
     else
-        log "${C_GREEN}✅ Done${C_RESET}: ${C_GREEN}${n_applied} applied${C_RESET}, ${C_GRAY}${n_skipped} skipped${C_RESET}, ${C_RED}${n_failed} failed${C_RESET}"
+        log "${C_GREEN}Done${C_RESET}: ${C_GREEN}${n_applied} applied${C_RESET}, ${C_GRAY}${n_skipped} skipped${C_RESET}, ${C_RED}${n_failed} failed${C_RESET}"
     fi
 }
 
 # --- Main ---
 
 main() {
-    log "${C_BLUE}🔧 LyonFlow — SQL Migration Runner${C_RESET}"
+    log "${C_BLUE}LyonFlow — SQL Migration Runner${C_RESET}"
     log "  Target: $( [[ "${DIRECT}" == "true" ]] && echo "${POSTGRES_HOST}:5432" || echo "${DOCKER_CONTAINER}" ) / ${POSTGRES_DB}"
     log "  Migrations dir: ${MIGRATIONS_DIR}"
 

@@ -4,9 +4,9 @@
 
 | Version | Supportée        |
 |---------|------------------|
-| 0.11.x  | ✅ Active        |
-| 0.10.x  | ⚠️ Maintenance   |
-| < 0.10  | ❌ EOL           |
+| 0.11.x | Active |
+| 0.10.x | Maintenance |
+| < 0.10 | EOL |
 
 ## Signaler une vulnérabilité
 

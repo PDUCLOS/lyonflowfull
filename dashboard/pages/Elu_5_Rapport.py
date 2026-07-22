@@ -29,7 +29,7 @@ render_sidebar_navigation()
 setup_auto_refresh()
 render_freshness_badge()
 
-st.title("📄 Rapport Conseil Municipal")
+st.title("Rapport Conseil Municipal")
 render_data_status_banner()
 
 st.caption("Génération de rapports PDF pour présentation au conseil municipal.")
@@ -47,7 +47,7 @@ slides = render_slide_builder()
 st.markdown("---")
 
 # Options avancées
-with st.expander("🔧 Options avancées", expanded=False):
+with st.expander("Options avancées", expanded=False):
     # IMPORTANT: assigner les retours des checkboxes (sinon StreamlitAPIException)
     # + propager dans sections (sinon options cosmétiques, choix jetés)
     include_methodo = st.checkbox("Inclure méthodologie complète", value=True, key="pdf_opt_methodo")
@@ -60,7 +60,7 @@ st.markdown("---")
 # Génération — sources live via data_loader fail loud si DB indispo)
 kpis_dict = cached_elu_kpis_dict()
 bottlenecks_top = cached_bottlenecks_top()
-st.markdown("##### 📥 Génération")
+st.markdown("##### Génération")
 sections = {
     "title": f"{template['name']} — Métropole de Lyon",
     "kpis": [

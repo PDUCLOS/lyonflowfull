@@ -10,13 +10,13 @@ des modèles ML du projet LyonFlow.
 | `dag_daily_speed_train` | `0 3 * * *` (03h00 daily) | Entraînement quotidien XGBoost Speed | `xgboost_speed_h60` |
 | `dag_inference_xgboost` | `*/15 * * * *` | Inférence pure (pas de fit) | `xgboost_speed_h60` |
 | `build_xgb_training_set` | `30 2 * * *` (02h30 daily) | Matérialise `gold.xgb_training_set` | upstream training |
-| `retrain_xgboost_speed` | `25 * * * *` (hourly :25) | Retrain XGBoost Speed — **🟡 voir TODO ci-dessous** | `xgboost_speed_h5/h60/h180/h360` |
+| `retrain_xgboost_speed` | `25 * * * *` (hourly :25) | Retrain XGBoost Speed — **voir TODO ci-dessous** | `xgboost_speed_h5/h60/h180/h360` |
 | `retrain_xgboost_velov` | `50 * * * *` (hourly :50) | Retrain XGBoost Vélov (2 horizons) | `xgboost_velov_h30`, `xgboost_velov_h60` |
 | `retrain_gnn` | `0 3 * * *` | Train ST-GCN GNN — toggle `LYONFLOW_STGCN_TRAINING` | (PyTorch state_dict) |
 | `daily_drift_report` | `30 5 * * *` (05h30 daily) | Drift Evidently quotidien | Tous |
 | `refresh_xgb_vs_tomtom` | `*/30 * * * *` | Backtest XGBoost vs TomTom | `xgboost_speed_h60` vs TomTom |
 
-> **🟡 TODO Sprint 22+ — Incohérence H+1h strict** : `retrain_xgboost_speed`
+> **TODO Sprint 22+ — Incohérence H+1h strict** : `retrain_xgboost_speed`
 > tourne encore hourly avec **4 horizons** (5min, 1h, 3h, 6h) — en
 > contradiction avec la règle projet (Sprint VPS-6 : focus H+1h strict).
 > Le DAG `dag_daily_speed_train` (1×/jour 03h00) le remplace fonctionnellement

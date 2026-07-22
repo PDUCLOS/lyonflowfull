@@ -21,7 +21,7 @@ DB_NAME="${POSTGRES_DB:-lyonflow}"
 DB_USER="${POSTGRES_USER:?POSTGRES_USER requis}"
 
 if [ ! -f "$MAPCONFIG" ]; then
-    echo "❌ mapconfig.xml introuvable : $MAPCONFIG"
+    echo "mapconfig.xml introuvable : $MAPCONFIG"
     exit 1
 fi
 

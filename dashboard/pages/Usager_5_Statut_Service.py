@@ -87,10 +87,10 @@ def _kpi_alerts() -> dict:
 def _status_pill(label: str, score: float) -> tuple[str, str]:
     """Traduit un score 0-100 en (emoji, label) citoyen."""
     if score >= 80:
-        return "🟢", label.format(status="Opérationnel")
+        return "OK", label.format(status="Opérationnel")
     if score >= 50:
-        return "🟡", label.format(status="Dégradé")
-    return "🔴", label.format(status="Perturbé")
+        return "Attention", label.format(status="Dégradé")
+    return "Alerte", label.format(status="Perturbé")
 
 
 def _gauge_card(emoji: str, title: str, value: str, subtitle: str, color: str) -> str:
@@ -124,7 +124,7 @@ render_sidebar_navigation()
 setup_auto_refresh()
 render_freshness_badge()
 
-st.title("🩺 Santé du service en direct")
+st.title("Santé du service en direct")
 render_data_status_banner()
 
 st.caption(
@@ -149,7 +149,7 @@ if k_data:
         COLORS["status_ok"] if score >= 80 else (COLORS["status_warning"] if score >= 50 else COLORS["status_critical"])
     )
 else:
-    data_value = "⚪ Indéterminé"
+    data_value = "Indéterminé"
     data_sub = "Source de données momentanément indisponible"
     data_color = COLORS["text_muted"]
 
@@ -158,29 +158,29 @@ if k_model:
     pct = k_model["pct_accurate"]
     mae = k_model["mae_kmh"]
     if pct >= 0.75 and mae <= 5.0:
-        pill, status = "🟢", "Très fiable"
+        pill, status = "OK", "Très fiable"
         color = COLORS["status_ok"]
     elif pct >= 0.60 and mae <= 8.0:
-        pill, status = "🟡", "Fiable"
+        pill, status = "Attention", "Fiable"
         color = COLORS["status_warning"]
     else:
-        pill, status = "🟠", "Prudence"
+        pill, status = "Attention", "Prudence"
         color = COLORS["status_warning"]
     model_value = f"{pill} {status}"
     model_sub = f"{pct * 100:.0f}% précises (±5 km/h) · erreur moy. {mae:.1f} km/h"
 else:
-    model_value = "⚪ Indéterminé"
+    model_value = "Indéterminé"
     model_sub = "Pas encore 7 jours d'historique de production"
     color = COLORS["text_muted"]
 model_color = color
 
 # --- Service (prédictions)
 if k_pred:
-    pill, status = "🟢", "En ligne"
+    pill, status = "OK", "En ligne"
     serv_color = COLORS["status_ok"]
     serv_sub = f"{k_pred['n_rows']} prédictions récentes (échantillon)"
 else:
-    pill, status = "🟡", "À surveiller"
+    pill, status = "Attention", "À surveiller"
     serv_color = COLORS["status_warning"]
     serv_sub = "Pas de prédiction récente trouvée"
 serv_value = f"{pill} {status}"
@@ -190,15 +190,15 @@ serv_color = serv_color
 n_alerts = k_alerts["n_total"]
 n_critical = k_alerts["n_critical"]
 if n_critical == 0 and n_alerts <= 3:
-    pill, status = "🟢", "Tout roule"
+    pill, status = "OK", "Tout roule"
     alert_color = COLORS["status_ok"]
     alert_sub = f"{n_alerts} alerte(s) info sur les 6 dernières heures"
 elif n_critical <= 1:
-    pill, status = "🟡", "Quelques incidents"
+    pill, status = "Attention", "Quelques incidents"
     alert_color = COLORS["status_warning"]
     alert_sub = f"{n_critical} critique · {n_alerts - n_critical} info sur 6h"
 else:
-    pill, status = "🔴", "Plusieurs incidents"
+    pill, status = "Alerte", "Plusieurs incidents"
     alert_color = COLORS["status_critical"]
     alert_sub = f"{n_critical} critiques · {n_alerts - n_critical} info sur 6h"
 alert_value = f"{pill} {status}"
@@ -229,26 +229,26 @@ with col4:
 st.markdown("---")
 
 # ── 2. Incidents récents (résumé des alertes) ──────────────────────────────
-st.markdown("##### 🚨 Derniers incidents détectés")
+st.markdown("##### Derniers incidents détectés")
 
 with loading_wrapper("Chargement des alertes…", "🚨"):
     alerts_df = cached_recent_alerts(hours=24, limit=10)
 
 if alerts_df.empty:
-    st.success("✅ Aucun incident détecté sur les dernières 24 heures.")
+    st.success("Aucun incident détecté sur les dernières 24 heures.")
 else:
     # Limite à 5 alertes max pour ne pas noyer l'usager
     top = alerts_df.head(5)
     for _, row in top.iterrows():
         severity = str(row.get("severity", "info"))
         if severity == "critical":
-            icon = "🔴"
+            icon = "Alerte"
             color = COLORS["status_critical"]
         elif severity == "warning":
-            icon = "🟠"
+            icon = "Attention"
             color = COLORS["status_warning"]
         else:
-            icon = "🟡"
+            icon = "Attention"
             color = COLORS["status_info"]
 
         title = str(row.get("title") or row.get("description") or "Alerte")
@@ -266,7 +266,7 @@ else:
                 </div>
                 <div style="margin-top:0.2rem;font-size:0.95rem;">{title}</div>
                 <div style="opacity:0.7;font-size:0.82rem;margin-top:0.2rem;">
-                    💡 {action}
+                    {action}
                 </div>
             </div>
             """,
@@ -274,33 +274,33 @@ else:
         )
 
     if len(alerts_df) > 5:
-        st.caption(f"+ {len(alerts_df) - 5} autres alertes — voir la page 🔔 Alertes")
+        st.caption(f"+ {len(alerts_df) - 5} autres alertes — voir la page Alertes")
 
 st.markdown("---")
 
 # ── 3. Ce qui peut affecter la fiabilité ─────────────────────────────────────
 with st.container():
-    st.markdown("##### 🤔 Qu'est-ce qui peut affecter la fiabilité ?")
+    st.markdown("##### Qu'est-ce qui peut affecter la fiabilité ?")
     st.markdown(
         """
-- 🌦️ **Conditions météo extrêmes** (forte pluie, neige, brouillard dense) :
+- **Conditions météo extrêmes** (forte pluie, neige, brouillard dense) :
   le modèle connaît la pluie mais ne peut pas deviner l'ampleur de la réaction
   des automobilistes.
-- 🚧 **Travaux non programmés** : si une voirie est coupée sans signalement
+- **Travaux non programmés** : si une voirie est coupée sans signalement
   dans l'open data Grand Lyon, le modèle suit la tendance habituelle.
-- 🚗 **Pics exceptionnels** (événements sportifs, salons, grèves) : le
+- **Pics exceptionnels** (événements sportifs, salons, grèves) : le
   modèle apprend en continu mais un événement rare peut dégrader la précision
   ponctuellement.
-- 📡 **Panne d'une source** : si une source Bronze est indisponible, le
+- **Panne d'une source** : si une source Bronze est indisponible, le
   modèle compense avec les autres sources. La page
-  **🌐 Sources de données** te dit lesquelles sont à jour.
-- 🕐 **Nuit et week-end** : la précision peut être légèrement différente
+  **Sources de données** te dit lesquelles sont à jour.
+- **Nuit et week-end** : la précision peut être légèrement différente
   car les patterns historiques sont moins denses (moins de données
   d'entraînement à ces heures).
 
-👉 **Conseil pratique** : si tu vois un voyant 🟠 ou 🔴 sur cette page,
+**Conseil pratique** : si tu vois un voyant Attention ou Alerte sur cette page,
 compte ~5-10% de marge d'erreur supplémentaire sur les temps de trajet
-estimés dans **🧭 Mon trajet**.
+estimés dans **Mon trajet**.
         """,
     )
 

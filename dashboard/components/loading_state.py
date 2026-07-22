@@ -131,4 +131,4 @@ def data_error_to_message(e: Exception) -> str:
     """
     src = getattr(e, "source", None) or "source inconnue"
     detail = getattr(e, "detail", None) or str(e)
-    return f"🔴 **{src}** — {detail}"
+    return f"**{src}** — {detail}"

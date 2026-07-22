@@ -35,7 +35,7 @@ render_sidebar_navigation()
 setup_auto_refresh()
 render_freshness_badge()
 
-st.title("🎯 Bottlenecks prioritaires — Investissements")
+st.title("Bottlenecks prioritaires — Investissements")
 render_data_status_banner()
 
 st.caption(
@@ -47,13 +47,13 @@ st.caption(
 st.markdown("---")
 
 # Carte
-st.markdown("##### 🗺️ Carte des 10 bottlenecks")
+st.markdown("##### Carte des 10 bottlenecks")
 render_bottleneck_map(height=400)
 
 st.markdown("---")
 
 # Tableau ranké
-st.markdown("##### 📊 Classement par diagnostic + ROI")
+st.markdown("##### Classement par diagnostic + ROI")
 render_bottleneck_ranking()
 
 st.markdown("---")

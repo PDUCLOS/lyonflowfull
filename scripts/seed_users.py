@@ -28,7 +28,7 @@ from src.db import execute_query  # noqa: E402
 def seed_user(persona_id: str, username: str, password: str) -> bool:
     """Crée ou met à jour un utilisateur avec mot de passe bcrypt."""
     if not password:
-        print(f"⚠️  Pas de mot de passe pour {username}, skip")
+        print(f"Pas de mot de passe pour {username}, skip")
         return False
 
     password_hash = bcrypt.hashpw(password.encode("utf-8"), bcrypt.gensalt()).decode()
@@ -42,10 +42,10 @@ def seed_user(persona_id: str, username: str, password: str) -> bool:
     """
     try:
         execute_query(query, (persona_id, username, password_hash))
-        print(f"✅ {persona_id:10} → {username}")
+        print(f"{persona_id:10} → {username}")
         return True
     except Exception as e:
-        print(f"❌ Erreur seed {username}: {e}")
+        print(f"Erreur seed {username}: {e}")
         return False
 
 
@@ -66,7 +66,7 @@ def main():
     if admin_password:
         seed_user("admin", admin_username, admin_password)
 
-    print("✅ Seed users terminé")
+    print("Seed users terminé")
 
 
 if __name__ == "__main__":

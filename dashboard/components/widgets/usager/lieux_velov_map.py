@@ -70,7 +70,7 @@ def render_lieux_velov_map(
     try:
         import folium
     except ImportError:
-        st.warning("⚠️ folium non disponible — affichage liste uniquement")
+        st.warning("folium non disponible — affichage liste uniquement")
         _render_lieux_velov_list(lieux_with_velov)
         return
 
@@ -112,7 +112,7 @@ def render_lieux_velov_map(
                 folium.Marker(
                     [borne_lat, borne_lon],
                     popup=folium.Popup(_borne_popup_html(lieu, b), max_width=300),
-                    tooltip=f"🚲 {b.get('velov_name', '?')}",
+                    tooltip=f"{b.get('velov_name', '?')}",
                     icon=folium.Icon(color="green", icon="bicycle", prefix="fa"),
                 ).add_to(m)
 
@@ -127,10 +127,10 @@ def _lieu_popup_html(lieu: dict) -> str:
         bornes_html += (
             f"<div style='margin-top:0.3rem;padding-left:0.5rem;"
             f"border-left:3px solid {color};'>"
-            f"🚲 <b>{b['velov_name']}</b><br/>"
-            f"📏 {int(b['distance_m'])}m · "
-            f"🚴 {b['num_bikes_available']} vélos · "
-            f"🅿️ {b['num_docks_available']} docks"
+            f"<b>{b['velov_name']}</b><br/>"
+            f"{int(b['distance_m'])}m · "
+            f"{b['num_bikes_available']} vélos · "
+            f"{b['num_docks_available']} docks"
             f"</div>"
         )
     return f"""
@@ -153,16 +153,16 @@ def _borne_popup_html(lieu: dict, b: dict) -> str:
     return f"""
     <div style='font-family:sans-serif;'>
         <div style='font-size:0.85rem;font-weight:600;'>
-            🚲 {b["velov_name"]}
+            {b["velov_name"]}
         </div>
         <div class="lyf-sublabel" style='opacity:0.7;margin-top:0.2rem;'>
             Relié à <b>{lieu["lieu_name"]}</b>
         </div>
         <div style='margin-top:0.4rem;font-size:0.85rem;'>
-            📏 <b>{int(b["distance_m"])}m</b> · 🚶 {walk_min} min à pied
+            <b>{int(b["distance_m"])}m</b> · {walk_min} min à pied
         </div>
         <div style='margin-top:0.4rem;'>
-            🚴 {b["num_bikes_available"]} vélos dispo · 🅿️ {b["num_docks_available"]} docks
+            {b["num_bikes_available"]} vélos dispo · {b["num_docks_available"]} docks
         </div>
     </div>
     """

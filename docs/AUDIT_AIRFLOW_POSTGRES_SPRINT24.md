@@ -29,7 +29,7 @@ gold **sans rétention**. Classées par ROI ci-dessous.
 
 ## B. PostgreSQL — le point
 
-### B1. 🔴 Postgres bridé à 2,5 Go / 1 CPU avec config par défaut
+### B1. Postgres bridé à 2,5 Go / 1 CPU avec config par défaut
 `docker-compose.yml` (service `postgres`)
 
 ```yaml
@@ -59,7 +59,7 @@ random_page_cost = 1.1     # SSD (défaut 4.0 = pénalise l'index scan)
 + relever `memory: 2.5G → 4G` dans le compose. Gain attendu : refresh MV **2-5×**
 plus rapides, sans toucher au SQL.
 
-### B2. 🔴 Tables gold sans rétention → croissance non bornée
+### B2. Tables gold sans rétention → croissance non bornée
 `dags/maintenance/maintenance.py`
 
 `PURGE_WHITELIST` ne contient **que du `bronze.*`** (rétention 7 j). **Aucune purge
@@ -74,7 +74,7 @@ jours` des MV scanne de lignes, plus le refresh est lent — jusqu'au timeout.
 au DAG `purge_bronze`, ou un DAG dédié. Combiné à la fenêtre MV 48 h (migration
 036), les scans gold restent petits et constants dans le temps.
 
-### B3. 🟡 Confirmer bloat / cache / index inutilisés
+### B3. Confirmer bloat / cache / index inutilisés
 À objectiver avec `scripts/pg-audit.sh` :
 
 * **§3 dead tuples** : tables à fort churn (`trafic_predictions` TRUNCATE+INSERT
@@ -88,7 +88,7 @@ au DAG `purge_bronze`, ou un DAG dédié. Combiné à la fenêtre MV 48 h (migra
 
 ## C. Airflow — optimisations DAGs
 
-### C1. 🟠 Thundering herd à :00 et :30
+### C1. Thundering herd à :00 et :30
 26 DAGs, schedules non décalés. À **:00** et **:30** se déclenchent simultanément :
 
 | Minute | DAGs concurrents |
@@ -103,7 +103,7 @@ contention, lock waits, et c'est exactement quand les refresh lourds rament.
 `refresh_heavy_mv` → `15,45`, `refresh_velov_transit_coupling` → `7,22,37,52`.
 Aucune dépendance inter-DAG cassée (ils lisent des tables déjà produites).
 
-### C2. 🟠 `infrastructure_bottlenecks` — poids mort confirmé
+### C2. `infrastructure_bottlenecks` — poids mort confirmé
 `src/transformation/silver_to_gold.py` (`_BOTTLENECK_SQL`)
 
 * Scanne **7 jours** de `traffic_features_live` (`GROUP BY` heure) → même problème
@@ -116,7 +116,7 @@ Aucune dépendance inter-DAG cassée (ils lisent des tables déjà produites).
 puis **supprimer** la table + sa task de `refresh_heavy_mv` → −12 min de calcul par
 cycle `*/30`.
 
-### C3. 🟡 `refresh_sensor_saturation` — même bug latent que le Sprint 24
+### C3. `refresh_sensor_saturation` — même bug latent que le Sprint 24
 `dags/maintenance/refresh_sensor_saturation.py`
 
 Fait `REFRESH MATERIALIZED VIEW CONCURRENTLY gold.mv_sensor_saturation` **sans
@@ -128,7 +128,7 @@ homogénéiser et immuniser. Idem vérifier `refresh_congestion_propagation`,
 `refresh_velov_transit_coupling`, `refresh_xgb_vs_tomtom` (ceux-là ont déjà le
 fallback try/except — OK).
 
-### C4. 🟢 Points sains (RAS)
+### C4. Points sains (RAS)
 * `max_active_runs=1` + `catchup=False` partout → pas de backfill sauvage. Bon.
 * `build_xgb_training_set` (TRUNCATE+INSERT) et `dag_inference_xgboost`
   (DELETE ciblé) sont idempotents et bornés. Bon.

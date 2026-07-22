@@ -11,24 +11,24 @@ def render_slide_builder() -> list:
     Returns:
         Liste de dicts {'order': int, 'type': str, 'content': dict}.
     """
-    st.markdown("##### 🎬 Slides à inclure")
+    st.markdown("##### Slides à inclure")
 
     slide_types = st.multiselect(
         "Sections",
         [
-            "🟢 Slide de couverture",
-            "📊 Slide KPIs",
-            "🎯 Slide Bottlenecks",
-            "📈 Slide Évolution 12 mois",
-            "📰 Slide À annoncer",
-            "📋 Slide Méthodologie",
-            "📞 Slide Contact",
+            "Slide de couverture",
+            "Slide KPIs",
+            "Slide Bottlenecks",
+            "Slide Évolution 12 mois",
+            "Slide À annoncer",
+            "Slide Méthodologie",
+            "Slide Contact",
         ],
         default=[
-            "🟢 Slide de couverture",
-            "📊 Slide KPIs",
-            "🎯 Slide Bottlenecks",
-            "📰 Slide À annoncer",
+            "Slide de couverture",
+            "Slide KPIs",
+            "Slide Bottlenecks",
+            "Slide À annoncer",
         ],
         key="slide_builder_types",
     )

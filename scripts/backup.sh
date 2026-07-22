@@ -67,9 +67,9 @@ fi
 
 if [ -f "${DB_DUMP}" ]; then
     DB_SIZE=$(du -h "${DB_DUMP}" | cut -f1)
-    log "✅ PostgreSQL dumpé : ${DB_DUMP} (${DB_SIZE})"
+    log "PostgreSQL dumpé : ${DB_DUMP} (${DB_SIZE})"
 else
-    err "❌ Échec dump PostgreSQL"
+    err "Échec dump PostgreSQL"
     exit 1
 fi
 
@@ -87,9 +87,9 @@ if command -v docker &> /dev/null && docker ps --format '{{.Names}}' 2>/dev/null
         minio/mc mirror --quiet local/lyonflow-bronze /backup/lyonflow-bronze 2>&1 | head -3
 
     if [ -d "${MINIO_BACKUP_DIR}" ]; then
-        log "✅ MinIO mirroré : ${MINIO_BACKUP_DIR}"
+        log "MinIO mirroré : ${MINIO_BACKUP_DIR}"
     else
-        warn "⚠️  MinIO backup partiel ou échoué"
+        warn "MinIO backup partiel ou échoué"
     fi
 fi
 
@@ -98,10 +98,10 @@ fi
 # -----------------------------------------------------------------------------
 log "Purge backups > ${RETENTION_DAYS}j..."
 DELETED=$(find "${BACKUP_DIR}" -maxdepth 1 -name "lyonflow_*" -mtime +${RETENTION_DAYS} -print -delete 2>/dev/null | wc -l)
-log "✅ ${DELETED} ancien(s) backup(s) supprimé(s)"
+log "${DELETED} ancien(s) backup(s) supprimé(s)"
 
 # -----------------------------------------------------------------------------
 # 4. Résumé
 # -----------------------------------------------------------------------------
-log "✅ Backup terminé : ${BACKUP_NAME}"
+log "Backup terminé : ${BACKUP_NAME}"
 ls -lah "${BACKUP_DIR}/${BACKUP_NAME}"* 2>/dev/null | head -10

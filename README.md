@@ -1,136 +1,123 @@
-# =============================================================================
-# LyonFlow — README principal
-# =============================================================================
-# Plateforme MLOps end-to-end de prédiction et d'analyse du trafic multimodal
-# sur la Métropole de Lyon.
-#
-# Auteur: Patrice DUCLOS — Senior Data Analyst, Jedha RNCP 38777
-# Repo: PDUCLOS/lyonflow
-# Version: 0.12.1 (Sprint 22++ — Elu_2 fix + menu MLOps Usager — branche `vps` active)
-#
-# Branches :
-#   - main         : Phase 1 production-ready local + fixes pipeline
-#   - vps          : ACTIVE — Phase 2 déploiement VPS production (Sprints 1-22++)
-#   - kubernetes   : DORMANTE — Phase 3 K8s, futur AWS/GCP, NON mergée
-#   - cloud-demo   : DORMANTE — Phase 4 Scaleway Kapsule, démo Jedha, NON mergée
-#
-# Voir docs/GIT_STRUCTURE.md pour le workflow branches/merges.
-# Voir docs/REPO_STRUCTURE.md pour l'arbre annoté du repo.
-# Voir archive/sprints/SPRINT_VPS-8_REPORT.md pour le détail du dernier sprint.
-# =============================================================================
+# LyonFlow
 
-# Table des matières
-# ------------------
-# 1. Vue d'ensemble
-# 2. Architecture
-# 3. Stack technique
-# 4. Installation
-# 5. Configuration
-# 6. Utilisation
-# 7. Développement
-# 8. Tests
-# 9. Déploiement
-# 10. RGPD
-# 11. Roadmap
-# 12. Contribution
+**Plateforme MLOps end-to-end de prédiction et d'analyse du trafic multimodal sur la Métropole de Lyon.**
+
+[![Version](https://img.shields.io/badge/version-0.12.1-blue)]()
+[![Branche](https://img.shields.io/badge/branche-vps%20(prod)-success)]()
+[![Tests](https://img.shields.io/badge/tests-620%20verts-brightgreen)]()
+[![Licence](https://img.shields.io/badge/licence-MIT-lightgrey)]()
+
+Auteur : **Patrice DUCLOS** — Senior Data Analyst, Jedha RNCP 38777 (Architecte en IA)
+Repo : `PDUCLOS/lyonflow` · Déploiement production : VPS unique `51.83.159.224`
+
+---
+
+## Table des matières
+
+1. [Vue d'ensemble](#1-vue-densemble)
+2. [Architecture](#2-architecture)
+3. [Stack technique](#3-stack-technique)
+4. [Installation](#4-installation)
+5. [Configuration](#5-configuration)
+6. [Utilisation](#6-utilisation)
+7. [Développement](#7-développement)
+8. [Tests](#8-tests)
+9. [Déploiement](#9-déploiement)
+10. [RGPD](#10-rgpd)
+11. [État du projet & prochaines étapes](#11-état-du-projet--prochaines-étapes)
+12. [Contribution](#12-contribution)
 
 ---
 
 ## 1. Vue d'ensemble
 
-LyonFlow est une plateforme MLOps de prédiction et d'analyse du trafic
-multimodal sur la Métropole de Lyon. Elle fusionne trois projets open source
-en une solution unifiée :
+LyonFlow fusionne trois projets en une plateforme unifiée : ingestion temps réel
+(9 sources open data), pipeline Medallion Bronze→Silver→Gold sur PostgreSQL,
+modèles ML (trafic, bus, vélos en libre-service), routage multimodal
+(pgRouting), et un dashboard Streamlit à 3 personas.
 
-- `caroheymes/Architect-IA-final-project` — modèle ST-GRU-GNN (spatial)
-- `PDUCLOS/LyonFlow` — routing multimodal, ingestion ABC
-- `PDUCLOS/lyontraffic` — production Medallion, XGBoost live
+### Les 3 personas
 
-### Les 3 personas (interface unifiée)
+| Persona | Cible | Pages | Auth |
+|---|---|---|---|
+| Usager | Grand public | 5 (Mon Trajet, Alertes, Notre Modèle, Sources Données, Statut Service) | Non |
+| Pro TCL | Opérateurs réseau (Keolis) | 6 (PCC Live, Heatmap OTP, Corrélation, Simulateur, Pipeline Mgmt, Model Monitoring) | Oui |
+| Élu | Décideurs Grand Lyon | 5 (Synthèse, Bottlenecks, Avant/Après, Simulateur, Rapport PDF) | Oui |
 
-| Persona    | Cible            | Pages | Auth |
-|------------|------------------|-------|------|
-| 🌱 Usager  | Lyonnais (grand public) | 5 pages (Mon Trajet, Alertes, Notre Modèle, Sources Données, Statut Service) | Non |
-| 🎛 Pro TCL | Opérateurs réseau (Keolis) | 6 pages (PCC Live, Heatmap OTP, Corrélation, Simulateur, Pipeline Mgmt, Model Monitoring) | Oui (env) |
-| 🏛 Élu     | Décideurs Grand Lyon | 5 pages (Synthèse, Bottlenecks, Avant/Après, Simulateur, Rapport PDF) | Oui (env) |
+**18 pages × 3 personas + Accueil + RGPD + À propos — 59 widgets.**
 
 ### Les 4 piliers ML
 
-1. **Trafic routier** — tandem ST-GRU-GNN (spatial) + XGBoost (réactif)
-2. **Bus TCL** — analyse SIRI Lite + diagnostic infrastructure
-3. **Vélov** — prédiction disponibilité H+30min et H+1h
-4. **Recommandation trajet** — scoring composite (50% temps + 30% coût + 20% CO₂)
+1. **Trafic routier** — XGBoost H+1h (retrain toutes les 30 min), focus fiabilité production
+2. **Bus TCL** — analyse SIRI Lite (retard par tronçon/ligne/heure) + diagnostic infrastructure
+3. **Vélov** — XGBoost H+1h, label encoding stations (~458 stations, économe en RAM)
+4. **Recommandation trajet** — voiture (pgRouting `pgr_dijkstra` sur réseau OSM), bus/tram (SIRI), Vélov (scoring composite), marche, métro (GTFS) — scoring 50% temps + 30% coût + 20% CO₂
 
 ### Le différenciateur clé
 
-La **matrice de corrélation bus × trafic** croise retards bus et congestion
-routière par segment. Aucun concurrent open source (TomTom, HERE, Waze)
-ne fait ce croisement. C'est ce qui permet d'identifier :
-
-- 🟢 OK — RAS
-- 🔵 Voie bus dédiée fonctionne (à étendre)
-- 🟡 Problème exploitation (fréquence, charge)
-- 🔴 Problème infrastructure → action prioritaire (ROI 18 mois)
+Le croisement spatial **bus × trafic** (`gold.mv_bus_traffic_spatial`, JOIN 100m)
+identifie les zones où un retard bus coïncide avec une congestion routière —
+signal d'un problème d'infrastructure (voie dédiée à créer) plutôt
+qu'opérationnel.
 
 ---
 
 ## 2. Architecture
 
-Architecture Medallion (Bronze → Silver → Gold) sur PostgreSQL + PostGIS :
+Architecture Medallion (Bronze → Silver → Gold) sur PostgreSQL + PostGIS + pgRouting :
 
 ```
-┌─────────── 8 sources open data ───────────┐
-│ Grand Lyon WFS, Vélov GBFS, Open-Meteo,  │
-│ SIRI Lite, Chantiers, Calendrier, ...    │
-└────────────────┬───────────────────────────┘
-                 │  Airflow DAGs 5min
+┌──────────── 9 sources open data ────────────┐
+│ Grand Lyon (trafic, chantiers), TCL SIRI,   │
+│ Vélo'v GBFS, Open-Meteo (météo + air),      │
+│ Vigilance météo, TomTom, calendriers...     │
+└────────────────┬─────────────────────────────┘
+                 │  Airflow — collecte 5min → 6h selon source
                  ▼
         ┌────────────────┐
         │  BRONZE layer  │  Raw JSONB, immutable
         └────────┬───────┘
-                 │  Transforms psycopg2
+                 │  Transforms psycopg2 (dédup, parse, géo)
                  ▼
         ┌────────────────┐
-        │  SILVER layer  │  Dédup, géo, normalisé
+        │  SILVER layer  │  Nettoyé, normalisé
         └────────┬───────┘
                  │  Feature engineering
                  ▼
         ┌────────────────┐
-        │   GOLD layer   │  Features ML-ready
+        │   GOLD layer   │  Features ML-ready + vues métier
         └────────┬───────┘
                  │
-        ┌────────┴────────┐
-        │  Models (ML)    │
-        │  XGBoost + GNN  │
-        └────────┬────────┘
-                 │
-        ┌────────┴────────┐
-        │  FastAPI +      │
-        │  Streamlit      │
-        └─────────────────┘
+        ┌────────┴────────┐        ┌──────────────────┐
+        │  XGBoost H+1h   │        │  osm.* (pgRouting) │
+        │  trafic/vélov   │        │  routage voiture   │
+        └────────┬────────┘        └─────────┬──────────┘
+                 │                            │
+        ┌────────┴────────────────────────────┴────────┐
+        │        FastAPI + Streamlit (3 personas)       │
+        └────────────────────────────────────────────────┘
 ```
 
-Voir [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) pour le détail complet.
+Voir [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) et
+[docs/diagrams/](docs/diagrams/) (6 schémas drawio détaillés) pour le détail complet.
 
 ---
 
 ## 3. Stack technique
 
 | Couche | Technologie |
-|--------|-------------|
-| Orchestration | Apache Airflow 2.9 (CeleryExecutor) |
-| Base de données | PostgreSQL 16 + PostGIS 3.4 |
-| Storage objet | MinIO (S3-compatible) |
-| Cache | Redis 7 |
-| ML Tracking | MLflow 2.12 |
-| ML Trafic (spatial) | ST-GRU-GNN (PyTorch Geometric) |
-| ML Trafic (réactif) | XGBoost multi-horizon |
-| ML Vélov | XGBoost (label encoding, 2 horizons) |
-| ML Bus | XGBoost delay (analyse) |
+|---|---|
+| Orchestration | Apache Airflow 2.9 |
+| Base de données | PostgreSQL 16 + PostGIS 3.5 + **pgRouting 3.7.3** (schémas bronze/silver/gold/osm/referentiel/rgpd) |
+| Storage objet | MinIO (S3-compatible) — archivage silver > 7j |
+| ML Tracking / Registry | MLflow 2.12 |
+| ML Trafic | XGBoost H+1h |
+| ML Vélov | XGBoost H+1h (label encoding) |
+| ML Bus | XGBoost delay (phase analyse) |
 | API | FastAPI + Uvicorn |
 | Dashboard | Streamlit multi-pages |
-| Monitoring | Evidently AI |
-| PDF | WeasyPrint (HTML→PDF) |
+| Monitoring | Prometheus + Alertmanager + Grafana |
+| Transformation | psycopg2 pur (pas de Polars dans Airflow) |
 | CI/CD | GitHub Actions |
 | Infra | Docker Compose |
 | Reverse proxy | Nginx 1.27 |
@@ -142,14 +129,14 @@ Voir [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) pour le détail complet.
 ### Pré-requis
 
 - Docker 24+ et Docker Compose v2+
-- 6 CPU, 12 GB RAM, 100 GB SSD (minimum)
+- 6 CPU, 12 GB RAM, 100 GB SSD (minimum recommandé)
 - Python 3.12+ (pour dev local sans Docker)
 
 ### Démarrage rapide (Docker)
 
 ```bash
 # 1. Cloner
-git clone https://github.com/PDUCLOS/lyonflowfull.git
+git clone https://github.com/PDUCLOS/lyonflow.git
 cd lyonflow
 
 # 2. Configurer
@@ -169,20 +156,17 @@ L'app est accessible sur http://localhost (port 80, Nginx).
 ### Dev local (sans Docker)
 
 ```bash
-# Python 3.12
 python3.12 -m venv .venv
 source .venv/bin/activate
 pip install -r requirements.txt
 
-# PostgreSQL + PostGIS local
+# PostgreSQL + PostGIS + pgRouting local
 createdb lyonflow
 psql lyonflow < deploy/init-db.sql
 
-# Variables d'environnement
 cp .env.example .env
 export $(cat .env | xargs)
 
-# Lancer Streamlit
 streamlit run dashboard/Accueil.py
 ```
 
@@ -193,72 +177,47 @@ streamlit run dashboard/Accueil.py
 Variables d'environnement (voir `.env.example`) :
 
 | Variable | Obligatoire | Usage |
-|----------|-------------|-------|
-| `POSTGRES_USER` | oui | DB user |
-| `POSTGRES_PASSWORD` | oui | DB password |
-| `POSTGRES_HOST` | oui | DB host |
-| `POSTGRES_DB` | oui | DB name |
-| `MINIO_ROOT_USER` | oui | MinIO admin user |
-| `MINIO_ROOT_PASSWORD` | oui | MinIO admin password |
-| `MLFLOW_TRACKING_URI` | oui | MLflow server URL |
-| `LYONFLOW_API_KEY` | prod | API auth header |
-| `AIRFLOW_ADMIN_PASSWORD` | prod | Airflow webserver auth |
-| `AIRFLOW_FERNET_KEY` | prod | Airflow secret key |
-| `PERSONA_PRO_TCL_PASSWORD` | non | Auth Pro TCL (legacy env-var) |
-| `PERSONA_ELU_PASSWORD` | non | Auth Élu (legacy env-var) |
-| `SEQ_LEN` | non (120) | Longueur séquence GNN |
-| `HORIZONS` | non (6,12,36) | Horizons prédiction GNN |
-| `HIDDEN_CHANNELS` | non (128) | Dimension GRU/GCN |
-| `LYON_LATITUDE` | non (45.76) | Centre carte par défaut |
-| `LYON_LONGITUDE` | non (4.84) | Centre carte par défaut |
+|---|---|---|
+| `POSTGRES_USER` / `POSTGRES_PASSWORD` / `POSTGRES_HOST` / `POSTGRES_DB` | oui | DB |
+| `MLFLOW_TRACKING_URI` | oui | MLflow server |
+| `LYONFLOW_API_KEY` | oui | Auth FastAPI (header `X-API-Key`) |
+| `AIRFLOW_FERNET_KEY` | oui | Chiffrement Airflow |
+| `LYONFLOW_DEMO_MODE` | oui | **Doit être `0` en prod** — zéro mock |
+| `TOMTOM_API_KEY` | non | Cross-validation trafic (free tier 2500 req/j) |
+| `LYON_DEFAULT_SPEED` | non (30.0) | Vitesse imputation fallback |
+| `LYON_LATITUDE` / `LYON_LONGITUDE` | non | Centre carte par défaut (45.7640 / 4.8357) |
 
 ---
 
 ## 6. Utilisation
 
-### Pour l'usager (grand public)
+### Usager (grand public)
 
-- Aller sur http://localhost
-- Pas d'auth requise
-- Tester "Mon trajet" (ex: Villeurbanne → Part-Dieu)
-- Consulter "Alertes" et "Favoris"
+- http://localhost — pas d'auth
+- "Mon Trajet" (ex : Villeurbanne → Part-Dieu), Alertes, Notre Modèle, Statut Service
 
-### Pour Pro TCL (opérateur)
+### Pro TCL (opérateur)
 
-- Sélectionner persona "Pro TCL" sur l'accueil
-- Entrer le mot de passe (env `PERSONA_PRO_TCL_PASSWORD`)
-- Dashboard PCC avec 4 quadrants (carte live, alertes, heatmap, bottlenecks)
-- Simulateur de fréquences
-- Export SAEIV/Hastus
+- Sélectionner le persona "Pro TCL", auth par mot de passe env
+- Carte live, heatmap OTP, corrélation bus×trafic, simulateur, monitoring modèle
 
-### Pour l'Élu (décideur)
+### Élu (décideur)
 
-- Sélectionner persona "Élu"
-- Entrer le mot de passe (env `PERSONA_ELU_PASSWORD`)
-- Synthèse exécutive (5 KPIs + 5 décisions)
-- Bottlenecks classés par ROI
-- Génération PDF rapport CM
+- Sélectionner le persona "Élu", auth par mot de passe env
+- Synthèse exécutive, bottlenecks classés ROI, génération PDF rapport
 
 ### API REST
 
 ```bash
-# Health (public)
 curl http://localhost/api/health
 
-# Prédiction trafic
-curl -X POST http://localhost/api/api/v1/predict/traffic \
+curl -X POST http://localhost/api/v1/predict/traffic \
   -H "X-API-Key: <LYONFLOW_API_KEY>" \
   -H "Content-Type: application/json" \
-  -d '{"node_idx": 42, "horizon_minutes": 30}'
-
-# Recommandation
-curl -X POST http://localhost/api/api/v1/recommend \
-  -H "X-API-Key: <LYONFLOW_API_KEY>" \
-  -H "Content-Type: application/json" \
-  -d '{"origin": "Villeurbanne", "destination": "Part-Dieu"}'
+  -d '{"channel_id": "LYO00042", "horizon_minutes": 60}'
 ```
 
-Voir [docs/API.md](docs/API.md) (à venir) pour la référence complète.
+Voir [docs/API.md](docs/API.md) pour la référence complète.
 
 ---
 
@@ -268,156 +227,79 @@ Voir [docs/API.md](docs/API.md) (à venir) pour la référence complète.
 
 ```
 lyonflow/
-├── config/                 # Configs YAML (personas, etc.)
-├── dags/                   # Airflow DAGs
-│   ├── bronze/
-│   ├── transforms/
-│   ├── ml/
-│   ├── maintenance/
-│   └── utils/
-├── src/                    # Code source
+├── dags/                   # Airflow DAGs (bronze/, transforms/, ml/, maintenance/)
+├── src/
 │   ├── config.py           # Pydantic settings
-│   ├── db/                 # PostgreSQL connection
-│   ├── ingestion/          # 8 collecteurs (DataCollector ABC)
-│   ├── transformation/     # Bronze→Silver→Gold
-│   ├── models/             # XGBoost, GNN
-│   ├── api/                # FastAPI
-│   ├── rgpd/               # Consentement, audit
-│   ├── governance/         # Data dictionary, lineage
-│   ├── reporting/          # PDF generation
-│   └── data/               # Mock data
-├── training/               # GNN training (Sprint 5+)
-├── dashboard/              # Streamlit multi-pages
-│   ├── components/
-│   │   └── widgets/        # 59 widgets (14 Usager + 25 Pro TCL + 20 Élu)
-│   └── pages/              # 18 pages (5 Usager + 6 Pro TCL + 5 Élu + Accueil + RGPD + A_Propos)
-├── tests/                  # pytest
-├── docs/                   # Documentation
-├── deploy/                 # init-db.sql
-├── nginx/                  # nginx.conf
-├── .github/workflows/      # CI/CD
+│   ├── data/                # Accès données (data_loader, db_query — fail loud, zéro mock)
+│   ├── ingestion/           # Collecteurs (DataCollector ABC)
+│   ├── transformation/      # Bronze→Silver→Gold, data quality
+│   ├── models/              # XGBoost trafic/vélov/bus
+│   ├── routing/             # Recommandation multimodale
+│   ├── monitoring/          # Drift (PSI)
+│   ├── rgpd/                # Consentement, audit
+│   ├── governance/          # Data dictionary, lineage
+│   ├── reporting/           # Génération PDF
+│   └── api/                 # FastAPI
+├── dashboard/
+│   ├── components/widgets/  # 59 widgets (usager/pro_tcl/elu/common)
+│   └── pages/                # 18 pages × 3 personas
+├── scripts/
+│   ├── sql/                  # Migrations
+│   └── *.sh                  # Healthcheck, backup, déploiement
+├── tests/                    # pytest (unit, persona, integration, e2e)
+├── docs/                      # Documentation + docs/diagrams/ (schémas drawio)
+├── monitoring/                # Config Prometheus/Grafana/Alertmanager
+├── nginx/                      # Config reverse proxy
 ├── docker-compose.yml
-├── Dockerfile
-└── requirements.txt
+├── docker-compose.monitoring.yml
+└── Dockerfile
 ```
 
 ### Conventions de code
 
-- **Anglais pour le code** (variables, fonctions, classes)
-- **Français pour les commentaires et docstrings** métier
-- **SQL paramétré partout** (`%s` psycopg2 ou `:param` SQLAlchemy)
-- **Zéro credential en dur** — toujours via `os.getenv()`
-- **Pas de f-string SQL** — toujours `cur.execute(query, params)`
-- **Tests pytest** pour chaque module
-- **Type hints** partout (mypy non bloquant)
+- Anglais pour le code (variables, fonctions, classes) — français pour docstrings métier
+- **SQL paramétré partout** (`%s` psycopg2), zéro f-string SQL
+- Zéro credential en dur — toujours via `os.getenv()`
+- Tests pytest pour chaque module, type hints partout
 
-### Ajouter un nouveau collecteur
-
-```python
-# src/ingestion/mon_api.py
-from src.ingestion.base import DataCollector, FetchResult, CollectorError
-
-class MonAPICollector(DataCollector):
-    def __init__(self):
-        super().__init__(
-            source="mon_api",
-            bronze_table="ma_table_bronze",
-        )
-
-    def fetch_raw(self) -> FetchResult:
-        try:
-            r = self._http_get("https://api.example.com/data")
-            data = r.json()
-        except Exception as e:
-            raise CollectorError(f"Erreur: {e}") from e
-
-        return FetchResult(
-            source=self.source,
-            fetched_at=datetime.now(timezone.utc),
-            raw_data=data,
-            n_records=self._count_records(data),
-            bytes_fetched=len(r.content),
-            status_code=r.status_code,
-        )
-```
-
-Puis ajouter dans `src/ingestion/collectors.py::ALL_COLLECTORS` et créer le DAG.
+Voir [AGENTS.md](AGENTS.md) pour les conventions détaillées.
 
 ---
 
 ## 8. Tests
 
 ```bash
-# Tous les tests
-pytest tests/ -v
-
-# Tests persona (UI)
-pytest tests/persona/ -v
-
-# Tests d'intégration (infra)
-pytest tests/integration/ -v
-
-# Smoke tests (E2E — nécessite stack démarrée)
-pytest tests/smoke/ -v
-
-# Avec couverture
+pytest tests/ -v --tb=short           # suite complète (exclut integration par défaut)
+pytest tests/ -m integration          # tests nécessitant le stack démarré
 pytest tests/ --cov=src --cov=dags --cov-report=html
-open htmlcov/index.html
 ```
 
-Tests actuels : **658 verts** / 9 skipped (DB/ML indispo local) / 23 deselected (integration). Détail : 28 persona UI + 16+ intégration + 3 smoke + ~610 unit (data, ml, monitoring, widgets).
+**620 tests** (23 integration exclus par défaut, nécessitent le stack Docker démarré).
 
 ---
 
 ## 9. Déploiement
 
-**Cible production unique : VPS** (`51.83.159.224`, Ubuntu 6 CPU / 12 GB RAM).
+**Cible production unique : VPS** (`51.83.159.224`, Ubuntu, 6 CPU / 12 GB RAM, 2× 100 GB SSD).
 Branche `vps` = source de vérité du déploiement actif.
 
-### Déploiement local (Docker Compose)
-
 ```bash
-docker compose up -d --build
-```
-
-### Déploiement production VPS (branche `vps`)
-
-Stack complète livrée via Sprints VPS 1-4 :
-- **VPS-1** TLS Let's Encrypt + healthcheck + hardening SSH/firewall
-- **VPS-2** systemd unit + backup timer + rollback automatique
-- **VPS-3** monitoring Prometheus + Alertmanager + Grafana + exporters
-- **VPS-4** métriques FastAPI custom (predictions, latency, personas)
-
-```bash
-# Pré-flight (vérifie .deploy.env chmod 600 + vars critiques)
-make check-deploy-env
-
-# Déploiement initial
+make check-deploy-env       # vérifie .deploy.env (chmod 600 + vars critiques)
 make deploy-vps              # rsync + restart systemd
-make certbot-init            # cert TLS Let's Encrypt
-make monitoring-up           # stack Prometheus/Grafana
-
-# Opérations courantes
-make healthcheck-vps         # ping /api/health + TLS check
+./scripts/healthcheck-vps.sh  # 20+ checks (containers, disque, DB, endpoints)
 make rollback-vps            # rollback dernière release
-make backup                  # backup DB manuel (timer auto 03:00)
-make tls-status              # statut cert Let's Encrypt
-make monitoring-logs         # logs stack monitoring
+make monitoring-up           # stack Prometheus/Grafana/Alertmanager
+make tls-status               # statut cert Let's Encrypt
 ```
 
-Docs :
-- [docs/VPS_HARDENING.md](docs/VPS_HARDENING.md) — durcissement (SSH, firewall, fail2ban, users)
-- [docs/MONITORING.md](docs/MONITORING.md) — Prometheus + Grafana + alertes
-- [docs/CONTROLE_VPS_VS_CLOUD_DEMO.md](docs/CONTROLE_VPS_VS_CLOUD_DEMO.md) — isolation vs autres branches
+Docs : [docs/VPS_HARDENING.md](docs/VPS_HARDENING.md) ·
+[docs/MONITORING.md](docs/MONITORING.md) ·
+[docs/DEPLOYMENT.md](docs/DEPLOYMENT.md)
 
 ### Branches dormantes (futur AWS/GCP — ne pas merger)
 
-Le projet n'utilise QUE le VPS. Les branches suivantes sont préparées
-pour un éventuel déploiement cloud public, mais **ne doivent pas être
-mergées dans `vps` ni `main`** :
-
 | Branche | État | Cible future |
-|---------|------|--------------|
+|---|---|---|
 | `kubernetes` | dormante | EKS / GKE |
 | `cloud-demo` | dormante | POC Scaleway / AWS ponctuel |
 
@@ -427,72 +309,38 @@ mergées dans `vps` ni `main`** :
 
 Voir [docs/DATA_GOVERNANCE.md](docs/DATA_GOVERNANCE.md) pour le détail.
 
-Points clés :
-- ✅ Aucune donnée personnelle nominative collectée (que open data + hash)
-- ✅ Consentement utilisateur (rgpd.user_consents)
-- ✅ Audit log de toutes les actions (rgpd.audit_log)
-- ✅ Data Subject Requests (accès, suppression, portabilité, rectification)
-- ✅ IP et user_agent hashés en SHA256
-- ✅ Endpoint API RGPD public : `POST /api/v1/rgpd/request`
-- ✅ Page conformité : http://localhost/RGPD_Conformite
+- Aucune donnée personnelle nominative collectée (open data uniquement)
+- Consentement utilisateur (`rgpd.*`), audit des purges (`rgpd.purge_log`)
+- Purge automatique Bronze/Silver/Gold par rétention (Airflow, DAG `purge_bronze`)
+- Page conformité dans le dashboard (`RGPD_Conformite`)
 
 ---
 
-## 11. Roadmap
+## 11. État du projet & prochaines étapes
 
-### Sprint 1-4 (livré) ✅
-- Foundation personas + auth
-- 13 pages × 3 personas
-- 45 widgets Streamlit
-- Mock data Lyon réaliste
-- Génération PDF
-- 28 tests verts
+**Statut actuel** : production VPS stable — 18 pages / 59 widgets, 27 DAGs Airflow
+(25 actifs, 2 pausés intentionnellement), zéro mock en production, pipeline
+Medallion complet (9 sources → Bronze → Silver → Gold), routage voiture temps réel
+(pgRouting), monitoring Prometheus/Grafana déployé.
 
-### Sprint 5 (livré) ✅
-- Infrastructure Docker Compose complète
-- PostgreSQL + PostGIS + init-db.sql
-- 8 collecteurs Bronze (DataCollector ABC)
-- Transforms Bronze→Silver→Gold psycopg2
-- DAGs Airflow (collect, transform, retrain, maintenance)
-- FastAPI REST endpoints
-- XGBoost models (trafic + vélov)
-- RGPD (consent, audit, DSR)
-- Data governance (data dictionary, lineage)
-- File manager
-- CI/CD GitHub Actions
-- 47 tests
-
-### Sprint 6+ (livrés ✅ jusqu'à Sprint 22++)
-- Real data binding complet — Sprint 8 : zéro mock, `DashboardDataError` partout
-- Component deck.gl pour simulateur d'aménagement (Sprint 4)
-- Entraînement GNN réel — Sprint 9+ : `training/stgcn/` lit `gold.fact_traffic_series`
-- HPO Optuna intégré (Sprint 5)
-- Tests E2E Playwright (Sprint 13)
-- Métriques Prometheus + Grafana (Sprint 8+)
-- pgRouting routing voiture OSM (Sprint 18)
-- pgRouting `mv_bus_traffic_spatial` JOIN spatial 0.001° (Sprint 15+)
-- Menu MLOps Usager (Sprint 22+, v0.12.0)
-- Elu_2_Bottlenecks sur vraies données DB (Sprint 22++, v0.12.1)
-- Manifests K8s — Phase 3 DORMANTE (futur AWS/GCP)
+**Axes en cours ou à venir** :
+- Qualité des données (validateurs `data_quality.py`, contrôle continu)
+- Report modal Vélov ↔ transports en commun (proximité spatiale)
+- Propagation de congestion (corrélation spatiale/temporelle)
+- Météo comme variable d'interaction quantifiée par mode de transport
+- Phase cloud (Kubernetes / démo publique) — dormante, hors périmètre VPS actuel
 
 ---
 
 ## 12. Contribution
 
-Pour contribuer :
 1. Fork le repo
 2. Créer une branche feature (`git checkout -b feature/ma-feature`)
 3. Commiter (`git commit -m "feat: ma feature"`)
 4. Pousser (`git push origin feature/ma-feature`)
 5. Ouvrir une Pull Request
 
-Standards :
-- Tests pytest pour chaque nouvelle feature
-- Ruff lint (CI bloque si KO)
-- Type hints
-- Docstrings pour les fonctions publiques
-- Pas de credential en dur
-- Pas de f-string SQL
+Standards : tests pytest, ruff lint (CI bloquant), type hints, pas de credential en dur, pas de f-string SQL.
 
 ---
 
@@ -502,6 +350,4 @@ MIT — voir [LICENSE](LICENSE).
 
 ## Contact
 
-Patrice DUCLOS — patrice.duclos@example.fr
-
-*LyonFlow v0.12.1 · 2026-06-25 — branche `vps` (production VPS)*
+Patrice DUCLOS — [PDUCLOS](https://github.com/PDUCLOS) sur GitHub.

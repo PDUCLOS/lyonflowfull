@@ -28,13 +28,13 @@ Stack Prometheus + Alertmanager + Grafana, activée via `make monitoring-up`.
 
 | Service | Port (localhost) | Exposé via Nginx | Métriques clés | Statut Sprint 8+ |
 |---------|------------------|------------------|----------------|------------------|
-| Prometheus | 9090 | /prometheus/ | scrape_interval=15s, retention 30j | ✅ UP (config YAML v2.54 fixée) |
-| Alertmanager | 9093 | /alertmanager/ | Receivers (Sprint 8 : null-receiver) | ✅ UP (webhooks désactivés, no-op) |
-| Grafana | 3000 | /grafana/ | 1 dashboard "LyonFlow — API + DB Overview" provisionné | ✅ UP |
-| Node exporter | 9100 | interne | CPU, RAM, disk, load, network | ✅ |
-| Postgres exporter | 9187 | interne | connections, locks, queries, WAL | ✅ |
-| Nginx exporter | 9113 | interne | requests, 5xx, latency, active conns | ✅ |
-| Redis exporter | 9121 | interne | hit rate, memory, evictions | ✅ |
+| Prometheus | 9090 | /prometheus/ | scrape_interval=15s, retention 30j | UP (config YAML v2.54 fixée) |
+| Alertmanager | 9093 | /alertmanager/ | Receivers (Sprint 8 : null-receiver) | UP (webhooks désactivés, no-op) |
+| Grafana | 3000 | /grafana/ | 1 dashboard "LyonFlow — API + DB Overview" provisionné | UP |
+| Node exporter | 9100 | interne | CPU, RAM, disk, load, network | |
+| Postgres exporter | 9187 | interne | connections, locks, queries, WAL | |
+| Nginx exporter | 9113 | interne | requests, 5xx, latency, active conns | |
+| Redis exporter | 9121 | interne | hit rate, memory, evictions | |
 
 Tous les ports sont bindés sur `127.0.0.1` (uniquement). Nginx reverse proxy
 fait l'exposition publique (à configurer avec TLS).

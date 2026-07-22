@@ -601,11 +601,11 @@ def _popup_html(row: pd.Series) -> str:
         granger_dir = str(row.get("granger_direction", "n/a"))
         granger_sig = bool(row.get("granger_significant", False))
         sig_color = "#4CAF50" if granger_sig else "#9E9E9E"
-        sig_label = "✓ significatif" if granger_sig else "✗ non significatif"
+        sig_label = "significatif" if granger_sig else "non significatif"
         granger_section = (
             f"<hr style='margin:0.4rem 0;'>"
             f"<div style='font-size:0.85rem;'>"
-            f"<b>🔬 Granger (causalité)</b> :<br/>"
+            f"<b>Granger (causalité)</b> :<br/>"
             f"&nbsp;&nbsp;Direction : {granger_dir}<br/>"
             f"&nbsp;&nbsp;p-value : {granger_p:.4f} "
             f"<span style='color:{sig_color};font-weight:600;'>({sig_label})</span><br/>"
@@ -862,7 +862,7 @@ def render_propagation_map(
     granger_top_n: int = 200,
     height: int = 500,
 ) -> None:
-    with st.popover("ℹ️ Causalité de Granger ?"):
+    with st.popover("Causalité de Granger ?"):
         st.markdown(
             "Le **test de Granger** vérifie si les valeurs passées d'un capteur "
             "(A) améliorent la prédiction des valeurs futures d'un autre (B). "
@@ -941,12 +941,12 @@ def render_propagation_map(
             )
     except ImportError:
         st.warning(
-            "⚠️ statsmodels non installé — test Granger désactivé. "
+            "statsmodels non installé — test Granger désactivé. "
             "Installer avec `pip install statsmodels>=0.14.0` (ajouté à "
             "requirements-base.txt)."
         )
     except Exception as e:
-        st.warning(f"⚠️ Test Granger a échoué : {e}")
+        st.warning(f"Test Granger a échoué : {e}")
 
     # Merge Granger dans le corr_df (LEFT JOIN sur node_a, node_b)
     if not granger_df.empty:

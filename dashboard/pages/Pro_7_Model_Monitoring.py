@@ -36,7 +36,7 @@ render_sidebar_navigation()
 setup_auto_refresh()
 render_freshness_badge()
 
-st.title("🧠 Model Monitoring")
+st.title("Model Monitoring")
 render_data_status_banner()
 
 # Bandeau si dashboard désactivé
@@ -46,7 +46,7 @@ if not is_model_monitoring_visible():
         <div style="background:linear-gradient(135deg, #2A2D34 0%, #3F51B5 100%);
                     border:1px dashed #5C6BC0;border-radius:8px;padding:1rem;margin:0.5rem 0;">
             <div style="font-size:0.8rem;opacity:0.8;text-transform:uppercase;
-            letter-spacing:1px;">🟡 Dashboard préparé, non activé</div>
+            letter-spacing:1px;">Dashboard préparé, non activé</div>
             <div class="lyf-label" style="margin:0.5rem 0;">
                 Le dashboard Model Monitoring est <b>préparé</b> mais
                 <b>désactivé</b> par défaut.
@@ -72,7 +72,7 @@ render_model_monitoring_page()
 
 # Section 2 : Backtest XGBoost vs TomTom (Axe A)
 # 4 KPIs + scatter + courbe MAE + distribution + top 10 pires prédictions.
-# Button-gate via deferred_render ) car widget 🟠 lourd (3 Plotly + 1 MV).
+# Button-gate via deferred_render ) car widget lourd (3 Plotly + 1 MV).
 st.markdown("---")
 deferred_render(
     "backtest_dashboard",

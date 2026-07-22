@@ -46,10 +46,10 @@ FAIL=0
 assert_equals() {
     local expected="$1" actual="$2" desc="$3"
     if [[ "${expected}" == "${actual}" ]]; then
-        echo -e "  ${C_GREEN}✅${C_RESET} ${desc}"
+        echo -e "${C_GREEN}${C_RESET} ${desc}"
         PASS=$((PASS + 1))
     else
-        echo -e "  ${C_RED}❌${C_RESET} ${desc} (expected='${expected}' actual='${actual}')"
+        echo -e "${C_RED}${C_RESET} ${desc} (expected='${expected}' actual='${actual}')"
         FAIL=$((FAIL + 1))
     fi
 }
@@ -60,10 +60,10 @@ echo "Test extract_version :"
 
 # Vérifier que la fonction extract_version existe dans le script
 if grep -q "^extract_version()" "${APPLY_SH}"; then
-    echo -e "  ${C_GREEN}✅${C_RESET} extract_version() définie dans le script"
+    echo -e "${C_GREEN}${C_RESET} extract_version() définie dans le script"
     PASS=$((PASS + 1))
 else
-    echo -e "  ${C_RED}❌${C_RESET} extract_version() introuvable dans le script"
+    echo -e "${C_RED}${C_RESET} extract_version() introuvable dans le script"
     FAIL=$((FAIL + 1))
 fi
 
@@ -104,34 +104,34 @@ echo "Test idempotence (syntaxique) :"
 # peut tester que la fonction is_applied() et list_migrations()
 # sont bien définies.
 if grep -q "^is_applied()" "${APPLY_SH}"; then
-    echo -e "  ${C_GREEN}✅${C_RESET} is_applied() définie"
+    echo -e "${C_GREEN}${C_RESET} is_applied() définie"
     PASS=$((PASS + 1))
 else
-    echo -e "  ${C_RED}❌${C_RESET} is_applied() manquante"
+    echo -e "${C_RED}${C_RESET} is_applied() manquante"
     FAIL=$((FAIL + 1))
 fi
 
 if grep -q "^list_migrations()" "${APPLY_SH}"; then
-    echo -e "  ${C_GREEN}✅${C_RESET} list_migrations() définie"
+    echo -e "${C_GREEN}${C_RESET} list_migrations() définie"
     PASS=$((PASS + 1))
 else
-    echo -e "  ${C_RED}❌${C_RESET} list_migrations() manquante"
+    echo -e "${C_RED}${C_RESET} list_migrations() manquante"
     FAIL=$((FAIL + 1))
 fi
 
 if grep -q "ensure_tracking_table" "${APPLY_SH}"; then
-    echo -e "  ${C_GREEN}✅${C_RESET} ensure_tracking_table() définie"
+    echo -e "${C_GREEN}${C_RESET} ensure_tracking_table() définie"
     PASS=$((PASS + 1))
 else
-    echo -e "  ${C_RED}❌${C_RESET} ensure_tracking_table() manquante"
+    echo -e "${C_RED}${C_RESET} ensure_tracking_table() manquante"
     FAIL=$((FAIL + 1))
 fi
 
 if grep -q "ON CONFLICT.*DO UPDATE" "${APPLY_SH}"; then
-    echo -e "  ${C_GREEN}✅${C_RESET} record_migration() gère ON CONFLICT (idempotent)"
+    echo -e "${C_GREEN}${C_RESET} record_migration() gère ON CONFLICT (idempotent)"
     PASS=$((PASS + 1))
 else
-    echo -e "  ${C_RED}❌${C_RESET} record_migration() ne gère pas ON CONFLICT"
+    echo -e "${C_RED}${C_RESET} record_migration() ne gère pas ON CONFLICT"
     FAIL=$((FAIL + 1))
 fi
 
@@ -140,34 +140,34 @@ echo ""
 echo "Test parsing args :"
 
 if grep -q '\-\-dry-run' "${APPLY_SH}" && grep -q 'DRY_RUN=true' "${APPLY_SH}"; then
-    echo -e "  ${C_GREEN}✅${C_RESET} --dry-run géré"
+    echo -e "${C_GREEN}${C_RESET} --dry-run géré"
     PASS=$((PASS + 1))
 else
-    echo -e "  ${C_RED}❌${C_RESET} --dry-run manquant"
+    echo -e "${C_RED}${C_RESET} --dry-run manquant"
     FAIL=$((FAIL + 1))
 fi
 
 if grep -q '\-\-status' "${APPLY_SH}" && grep -q 'STATUS_ONLY=true' "${APPLY_SH}"; then
-    echo -e "  ${C_GREEN}✅${C_RESET} --status géré"
+    echo -e "${C_GREEN}${C_RESET} --status géré"
     PASS=$((PASS + 1))
 else
-    echo -e "  ${C_RED}❌${C_RESET} --status manquant"
+    echo -e "${C_RED}${C_RESET} --status manquant"
     FAIL=$((FAIL + 1))
 fi
 
 if grep -q '\-\-force' "${APPLY_SH}" && grep -q 'FORCE_VERSION=' "${APPLY_SH}"; then
-    echo -e "  ${C_GREEN}✅${C_RESET} --force géré"
+    echo -e "${C_GREEN}${C_RESET} --force géré"
     PASS=$((PASS + 1))
 else
-    echo -e "  ${C_RED}❌${C_RESET} --force manquant"
+    echo -e "${C_RED}${C_RESET} --force manquant"
     FAIL=$((FAIL + 1))
 fi
 
 if grep -q '\-\-direct' "${APPLY_SH}"; then
-    echo -e "  ${C_GREEN}✅${C_RESET} --direct géré"
+    echo -e "${C_GREEN}${C_RESET} --direct géré"
     PASS=$((PASS + 1))
 else
-    echo -e "  ${C_RED}❌${C_RESET} --direct manquant"
+    echo -e "${C_RED}${C_RESET} --direct manquant"
     FAIL=$((FAIL + 1))
 fi
 
@@ -176,10 +176,10 @@ echo ""
 echo "Test pre-checks :"
 for chk in "PostgreSQL reachable" "Schema gold exists" "PostGIS"; do
     if grep -q "${chk}" "${APPLY_SH}"; then
-        echo -e "  ${C_GREEN}✅${C_RESET} pre-check '${chk}' présent"
+        echo -e "${C_GREEN}${C_RESET} pre-check '${chk}' présent"
         PASS=$((PASS + 1))
     else
-        echo -e "  ${C_RED}❌${C_RESET} pre-check '${chk}' manquant"
+        echo -e "${C_RED}${C_RESET} pre-check '${chk}' manquant"
         FAIL=$((FAIL + 1))
     fi
 done
@@ -188,19 +188,19 @@ done
 echo ""
 echo "Test tracking table schema :"
 if grep -q "CREATE TABLE IF NOT EXISTS public.schema_migrations" "${APPLY_SH}"; then
-    echo -e "  ${C_GREEN}✅${C_RESET} table public.schema_migrations créée"
+    echo -e "${C_GREEN}${C_RESET} table public.schema_migrations créée"
     PASS=$((PASS + 1))
 else
-    echo -e "  ${C_RED}❌${C_RESET} table public.schema_migrations manquante"
+    echo -e "${C_RED}${C_RESET} table public.schema_migrations manquante"
     FAIL=$((FAIL + 1))
 fi
 
 for col in version filename applied_at checksum status; do
     if grep -q "    ${col} " "${APPLY_SH}"; then
-        echo -e "  ${C_GREEN}✅${C_RESET} colonne '${col}' présente"
+        echo -e "${C_GREEN}${C_RESET} colonne '${col}' présente"
         PASS=$((PASS + 1))
     else
-        echo -e "  ${C_RED}❌${C_RESET} colonne '${col}' manquante"
+        echo -e "${C_RED}${C_RESET} colonne '${col}' manquante"
         FAIL=$((FAIL + 1))
     fi
 done
@@ -212,10 +212,10 @@ if ls "${REPO_ROOT}"/scripts/sql/migration_*.sql >/dev/null 2>&1; then
     N_MIG=$(ls "${REPO_ROOT}"/scripts/sql/migration_*.sql | wc -l | tr -d ' ')
     N_ALL=$(ls "${REPO_ROOT}"/scripts/sql/*.sql | wc -l | tr -d ' ')
     N_NOT_MIG=$((N_ALL - N_MIG))
-    echo -e "  ${C_GREEN}✅${C_RESET} ${N_MIG} fichiers migration_*.sql, ${N_NOT_MIG} autres (create_*, audit_*, backfill_*)"
+    echo -e "${C_GREEN}${C_RESET} ${N_MIG} fichiers migration_*.sql, ${N_NOT_MIG} autres (create_*, audit_*, backfill_*)"
     PASS=$((PASS + 1))
 else
-    echo -e "  ${C_RED}❌${C_RESET} aucun fichier migration_*.sql"
+    echo -e "${C_RED}${C_RESET} aucun fichier migration_*.sql"
     FAIL=$((FAIL + 1))
 fi
 

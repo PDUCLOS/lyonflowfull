@@ -17,10 +17,10 @@ from __future__ import annotations
 # Codes diagnostiques pour l'infrastructure et le trafic (cf. scripts SQL)
 # Valeurs possibles observées dans la table gold.infrastructure_bottlenecks.diagnosis
 DIAGNOSIS_LABELS: dict[str, str] = {
-    "ok": "✅ OK",
-    "infra": "🔴 Infrastructure",
-    "operations": "🟡 Exploitation",
-    "bus_lane_ok": "🔵 Voie de bus fluide",
+    "ok": "OK",
+    "infra": "Infrastructure",
+    "operations": "Exploitation",
+    "bus_lane_ok": "Voie de bus fluide",
 }
 
 
@@ -37,19 +37,19 @@ MODE_COLORS: dict[str, str] = {
 
 # Niveaux de performance horaire OTP (On-Time Performance)
 OTP_STATUS_LABELS: dict[str, str] = {
-    "excellent": "🟢 Excellent",
-    "bon": "🟡 Bon",
-    "moyen": "🟠 Moyen",
-    "mediocre": "🔴 Médiocre",
-    "unknown": "⚪ N/D",
+    "excellent": "Excellent",
+    "bon": "Bon",
+    "moyen": "Moyen",
+    "mediocre": "Médiocre",
+    "unknown": "N/D",
 }
 
 
 # Étiquettes d'état des stations Vélo'v (utilisées dans referentiel.lieux_calendrier)
 VELOV_STATUS_LABELS: dict[str, str] = {
-    "OK": "🟢 OK",
-    "FAIBLE": "🟡 Faible",
-    "VIDE": "🔴 Vide",
-    "PLEINE": "🔴 Pleine",
-    "UNKNOWN": "⚪ N/D",
+    "OK": "OK",
+    "FAIBLE": "Faible",
+    "VIDE": "Vide",
+    "PLEINE": "Pleine",
+    "UNKNOWN": "N/D",
 }

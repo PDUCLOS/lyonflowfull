@@ -173,7 +173,7 @@ main() {
     step_8_cleanup_old
     green ""
     green "==================================="
-    green "✅ Migration terminee."
+    green "Migration terminee."
     green "==================================="
     green "Postgres data: ${MOUNT_POINT}/pgdata"
     green "Backup: ${MOUNT_POINT}/pre-migration-*.dump"

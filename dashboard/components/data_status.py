@@ -25,11 +25,11 @@ def render_data_status_banner(compact: bool = True) -> None:
     """
     db_ok = _is_db_available()
     if db_ok:
-        label = "🟢 Live · Postgres Gold"
+        label = "Live · Postgres Gold"
         bg = "rgba(76, 175, 80, 0.12)"
         border = "var(--status-ok)"
     else:
-        label = "🔴 DB non joignable — données indisponibles"
+        label = "DB non joignable — données indisponibles"
         bg = "rgba(255, 152, 0, 0.12)"
         border = "var(--status-warning)"
 

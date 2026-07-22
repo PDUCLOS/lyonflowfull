@@ -272,7 +272,7 @@ def _drift_table(drift_df: pd.DataFrame) -> None:
 
 
 def render_coherence_scatter() -> None:
-    with st.popover("ℹ️ Cross-validation TomTom vs GL ?"):
+    with st.popover("Cross-validation TomTom vs GL ?"):
         st.markdown(
             "La **cross-validation** compare les prédictions XGBoost H+1h "
             "aux observations TomTom (GPS flottes de véhicules, source "

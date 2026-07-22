@@ -4,7 +4,7 @@ Affiche pour chaque capteur du réseau routier lyonnais :
 * Saturation actuelle (vitesse / v85 7j) en %
 * Amplitude 24h normalisée (%)
 * Statut de santé (ok / stale / stuck / no_data)
-* Code couleur : 🟢 ok · 🟡 stale · 🔴 stuck · ⚪ no_data
+* Code couleur : ok · stale · stuck · no_data
 
 Sources :
 * ``gold.mv_sensor_saturation`` (migration 034 (matérialisée)) via
@@ -32,20 +32,20 @@ _STATUS_COLOR = {
 }
 
 _STATUS_EMOJI = {
-    "ok": "🟢",
-    "stale": "🟡",
-    "stuck": "🔴",
-    "no_data": "⚪",
+    "ok": "OK",
+    "stale": "Attention",
+    "stuck": "Alerte",
+    "no_data": "Inconnu",
 }
 
 
 def _render_kpi_banner(counts: dict[str, int], n_total: int) -> None:
     """Bandeau 4 KPIs : nb capteurs par statut."""
     col1, col2, col3, col4 = st.columns(4)
-    col1.metric("🟢 OK", counts.get("ok", 0))
-    col2.metric("🟡 Stale (>15min)", counts.get("stale", 0))
-    col3.metric("🔴 Stuck", counts.get("stuck", 0))
-    col4.metric("⚪ No data (>7j)", counts.get("no_data", 0))
+    col1.metric("OK", counts.get("ok", 0))
+    col2.metric("Stale (>15min)", counts.get("stale", 0))
+    col3.metric("Stuck", counts.get("stuck", 0))
+    col4.metric("No data (>7j)", counts.get("no_data", 0))
 
 
 def _status_counts(df: pd.DataFrame) -> dict[str, int]:
@@ -116,12 +116,12 @@ def _render_summary_text(df: pd.DataFrame) -> None:
 
     if pct_stuck > 5:
         st.error(
-            f"🔴 **{n_stuck} capteurs stuck** ({pct_stuck:.1f}% du réseau) — "
+            f"**{n_stuck} capteurs stuck** ({pct_stuck:.1f}% du réseau) — "
             f"variation < 2% sur 24h (suspect panne). À investiguer."
         )
     elif pct_stale > 10:
         st.warning(
-            f"🟡 **{n_stale} capteurs stale** ({pct_stale:.1f}% du réseau) — "
+            f"**{n_stale} capteurs stale** ({pct_stale:.1f}% du réseau) — "
             f"pas de mesure depuis > 15 min. DAG `transform_silver_to_gold` à vérifier."
         )
 
@@ -132,13 +132,13 @@ def render_sensor_saturation() -> None:
     Fail loud via ``DashboardDataError`` si PostgreSQL indispo ou si
     la migration 034 (matérialisée) n'est pas appliquée.
     """
-    st.markdown("##### 📡 Saturation + amplitude par capteur (+)")
+    st.markdown("##### Saturation + amplitude par capteur (+)")
 
     with loading_wrapper("Chargement Sensor saturation…", "📡"):
         try:
             df = cached_sensor_saturation()
         except DashboardDataError as e:
-            show_error("db_down", f"⚠️ Saturation indisponible : {e}")
+            show_error("db_down", f"Saturation indisponible : {e}")
             return
 
     if df.empty:

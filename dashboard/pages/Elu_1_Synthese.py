@@ -40,7 +40,7 @@ render_freshness_badge()
 
 # Pattern défensif : pm.is_widget_visible() pour chaque widget utilisé dans la page.
 
-st.title("📈 Synthèse exécutive — Métropole de Lyon")
+st.title("Synthèse exécutive — Métropole de Lyon")
 render_data_status_banner()
 
 # Bandeau santé réseau (Axe 5, migration 019)
@@ -78,7 +78,7 @@ render_kpi_cards()
 st.markdown("---")
 
 # Carte charge trafic — synthèse exécutive )
-with st.expander("🗺️ Charge du trafic — projection H+1h", expanded=False):
+with st.expander("Charge du trafic — projection H+1h", expanded=False):
     render_traffic_map_compact(height=340, horizon_minutes=60, key_suffix="elu")
 
 st.markdown("---")
@@ -96,19 +96,19 @@ with col1:
         metric_key="part_modale_tc",
     )
 with col2:
-    st.markdown("##### 🏆 Top Décisions")
+    st.markdown("##### Top Décisions")
     render_top_decisions(n=3)
 
 st.markdown("---")
 
 # Bloc À annoncer
-with st.expander("📢 À annoncer (News)", expanded=False):
+with st.expander("À annoncer (News)", expanded=False):
     render_news_section()
 
 st.markdown("---")
 
 # Bouton PDF synthèse — données live via data_loader fail loud si DB indispo)
-with st.expander("📄 Génération rapport PDF", expanded=False):
+with st.expander("Génération rapport PDF", expanded=False):
     kpis_dict = cached_elu_kpis_dict()
     bottlenecks_top = cached_bottlenecks_top()
     sections = {

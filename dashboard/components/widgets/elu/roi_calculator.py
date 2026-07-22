@@ -17,10 +17,10 @@ from dashboard.components.loading_state import loading_wrapper
 
 # Diagnostic → emoji + label FR (cohérent avec bottleneck_ranking.py)
 _DIAGNOSIS_ROI = {
-    "infra": ("🔴", "Infrastructure — travaux d'aménagement"),
-    "operations": ("🟠", "Opérationnel — ajustement de service"),
-    "bus_lane_ok": ("🟢", "Voie bus fonctionnelle — surveillance"),
-    "ok": ("⚪", "Sous surveillance"),
+    "infra": ("Alerte", "Infrastructure — travaux d'aménagement"),
+    "operations": ("Attention", "Opérationnel — ajustement de service"),
+    "bus_lane_ok": ("OK", "Voie bus fonctionnelle — surveillance"),
+    "ok": ("Inconnu", "Sous surveillance"),
 }
 
 
@@ -35,7 +35,7 @@ def render_roi_calculator(line_id: str | None = None) -> None:
     Args:
         line_id: si fourni, focus sur le bottleneck de cette ligne.
     """
-    st.markdown("##### 🧮 Calculateur ROI")
+    st.markdown("##### Calculateur ROI")
 
     bottlenecks = cached_bottlenecks_top()
     if not bottlenecks:

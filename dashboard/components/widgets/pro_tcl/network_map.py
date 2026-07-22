@@ -79,7 +79,7 @@ def render_network_map(buses: list | None = None, height: int = 400) -> None:
                         )
                     ).total_seconds() / 60
                     if age_min > 5:
-                        st.caption(f"⏱️ Données SIRI datant de {age_min:.0f} min")
+                        st.caption(f"Données SIRI datant de {age_min:.0f} min")
         else:
             st.info(
                 "Aucun bus en circulation (pas de données SIRI dans les 30 dernières minutes). "
@@ -136,7 +136,7 @@ def render_network_map(buses: list | None = None, height: int = 400) -> None:
 
     except ImportError:
         # Fallback si pydeck n'est pas installé
-        st.warning("⚠️ Pydeck non disponible — fallback liste")
+        st.warning("Pydeck non disponible — fallback liste")
         st.dataframe(
             df[["bus_id", "line_id", "segment", "delay_min"]],
             use_container_width=True,

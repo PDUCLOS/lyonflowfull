@@ -125,37 +125,37 @@ def _render_kpi_banner(df: pd.DataFrame) -> None:
         if traffic_band:
             label = METEO_BAND_LABELS.get(traffic_band, traffic_band)
             st.metric(
-                label="🚗 Trafic : pire condition",
+                label="Trafic : pire condition",
                 value=label,
                 delta=_format_delta_traffic(traffic_delta),
                 delta_color="inverse",  # négatif = pire (rouge)
             )
         else:
-            st.metric("🚗 Trafic", "—", "Aucune donnée hors fair")
+            st.metric("Trafic", "—", "Aucune donnée hors fair")
 
     with col2:
         if tcl_band:
             label = METEO_BAND_LABELS.get(tcl_band, tcl_band)
             st.metric(
-                label="🚌 TCL : pire condition",
+                label="TCL : pire condition",
                 value=label,
                 delta=_format_delta_tcl(tcl_delta),
                 delta_color="inverse",  # positif = pire (rouge)
             )
         else:
-            st.metric("🚌 TCL", "—", "Aucune donnée hors fair")
+            st.metric("TCL", "—", "Aucune donnée hors fair")
 
     with col3:
         if velov_band:
             label = METEO_BAND_LABELS.get(velov_band, velov_band)
             st.metric(
-                label="🚲 Vélov : pire condition",
+                label="Vélov : pire condition",
                 value=label,
                 delta=_format_delta_velov(velov_delta),
                 delta_color="inverse",
             )
         else:
-            st.metric("🚲 Vélov", "—", "Aucune donnée hors fair")
+            st.metric("Vélov", "—", "Aucune donnée hors fair")
 
 
 def _render_comparison_table(df: pd.DataFrame) -> None:
@@ -199,7 +199,7 @@ def _render_delta_chart(df: pd.DataFrame) -> None:
     # Trafic : delta en km/h, plus négatif = pire
     fig.add_trace(
         go.Bar(
-            name="🚗 Trafic (km/h)",
+            name="Trafic (km/h)",
             x=non_fair["label"],
             y=non_fair["traffic_delta_kmh_vs_fair"],
             marker_color="#FF9800",
@@ -209,7 +209,7 @@ def _render_delta_chart(df: pd.DataFrame) -> None:
     # TCL : delta en secondes, plus positif = pire
     fig.add_trace(
         go.Bar(
-            name="🚌 TCL retard (s)",
+            name="TCL retard (s)",
             x=non_fair["label"],
             y=non_fair["tcl_delay_delta_sec_vs_fair"],
             marker_color="#F44336",
@@ -219,7 +219,7 @@ def _render_delta_chart(df: pd.DataFrame) -> None:
     # Vélov : delta vélos, plus négatif = pire
     fig.add_trace(
         go.Bar(
-            name="🚲 Vélos dispo",
+            name="Vélos dispo",
             x=non_fair["label"],
             y=non_fair["velov_delta_bikes_vs_fair"],
             marker_color="#2196F3",

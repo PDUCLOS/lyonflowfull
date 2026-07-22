@@ -31,7 +31,7 @@ render_sidebar_navigation()
 setup_auto_refresh()
 render_freshness_badge()
 
-st.title("🎚 Simulateur de fréquences")
+st.title("Simulateur de fréquences")
 render_data_status_banner()
 
 st.caption("Simule l'impact d'ajout/retrait de bus sur l'OTP d'une ligne.")
@@ -44,7 +44,7 @@ target_line = selected[0] if selected else "C3"
 
 # KPIs de la ligne sélectionnée (live via data_loader)
 target_label = clean_line_label(target_line)
-st.markdown(f"##### 📊 État actuel — {target_label}")
+st.markdown(f"##### État actuel — {target_label}")
 all_line_kpis = cached_line_kpis()
 kpis = all_line_kpis.get(target_line, {})
 c1, c2, c3, c4 = st.columns(4)
@@ -66,7 +66,7 @@ st.markdown("---")
 
 # Projection
 base_otp = kpis.get("otp_pct", 78.0)
-st.markdown("##### 🔮 Projection")
+st.markdown("##### Projection")
 render_otp_projection(simulation, base_otp=base_otp)
 
 # Graphique avant/après
@@ -78,9 +78,9 @@ render_before_after_chart(base_otp, new_otp, label="OTP %")
 st.markdown("---")
 st.markdown("##### ⏰ Export vers Hastus")
 st.caption("L'export au format Hastus permet d'intégrer le scénario dans l'outil de planification des horaires.")
-if st.button("📤 Exporter scénario vers Hastus", key="hastus_export_btn"):
+if st.button("Exporter scénario vers Hastus", key="hastus_export_btn"):
     st.success(
-        f"✅ Scénario exporté : {target_label} · {simulation.get('buses_added', 0):+d} bus · "
+        f"Scénario exporté : {target_label} · {simulation.get('buses_added', 0):+d} bus · "
         f"{simulation.get('period_start', 17)}h-{simulation.get('period_end', 19)}h"
     )
 

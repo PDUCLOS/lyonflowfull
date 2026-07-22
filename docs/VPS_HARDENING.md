@@ -10,7 +10,7 @@
 Ce document décrit les étapes de durcissement du VPS (51.83.159.224) après
 le premier déploiement. À exécuter **une seule fois** (idempotent).
 
-## 0. 🔴 Règle backup OFFSITE (AVANT TOUT)
+## 0. Règle backup OFFSITE (AVANT TOUT)
 
 **JAMAIS de backup persistant sur le VPS.** Le VPS est full à 100%
 (96G/96G, 583M libre). Tout backup local est impossible ET interdit.

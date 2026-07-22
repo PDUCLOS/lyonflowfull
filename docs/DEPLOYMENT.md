@@ -78,7 +78,7 @@ curl http://localhost/api/health
 docker compose exec airflow-webserver airflow dags list
 ```
 
-> **⚠️ Healthcheck Docker Nginx (depuis VPS-6)** : la commande interne est
+> **Healthcheck Docker Nginx (depuis VPS-6)** : la commande interne est
 > `wget --spider -q http://127.0.0.1/nginx-health` (IPv4 forcée). **Ne pas
 > remettre `localhost`** : Alpine `wget` résout en IPv6 `::1` → Nginx n'écoute
 > qu'en IPv4 → healthcheck échoue en boucle.
@@ -269,7 +269,7 @@ Avant de déployer en prod :
 
 - [ ] Tous les secrets générés (mots de passe > 16 chars)
 - [ ] `.env` en `chmod 600`
-- [ ] `.env` dans .gitignore (✅ déjà)
+- [ ] `.env` dans .gitignore (déjà)
 - [ ] SSH key only (password auth désactivé)
 - [ ] HTTPS activé (Let's Encrypt)
 - [ ] Firewall ouvert uniquement 80/443/22

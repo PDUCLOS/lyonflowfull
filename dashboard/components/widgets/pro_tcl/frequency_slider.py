@@ -16,7 +16,7 @@ def render_frequency_slider(line_id: str = "C3") -> dict:
     Returns:
         Dict avec 'line_id', 'buses_added', 'period_start', 'period_end'
     """
-    st.markdown(f"##### 🎚 Simulateur — Ligne {clean_line_label(line_id)}")
+    st.markdown(f"##### Simulateur — Ligne {clean_line_label(line_id)}")
 
     col1, col2 = st.columns(2)
     with col1:

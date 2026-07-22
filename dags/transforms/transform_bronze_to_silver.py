@@ -28,7 +28,7 @@ default_args = {
 
 with DAG(
     dag_id="transform_bronze_to_silver",
-    description="Bronze → Silver toutes les 5 min (5 sources en parallèle)",
+    description="Bronze → Silver toutes les 5 min (6 sources en parallèle)",
     default_args=default_args,
     schedule_interval="2-57/5 * * * *",
     start_date=datetime(2026, 1, 1),
@@ -40,7 +40,7 @@ with DAG(
     # traitent des tables silver >1M rows + ON CONFLICT, donc INSERTs lents
     # sous contention disque (autovacuum silver.meteo_hourly a 96% dead
     # tuples, cf. run logs 13:19-13:24). Bump 5 vers 12 min pour ces 2 sources.
-    for source in ["trafic_boucles", "velov", "tcl_vehicles", "meteo", "chantiers"]:
+    for source in ["trafic_boucles", "velov", "tcl_vehicles", "meteo", "chantiers", "air_quality"]:
         timeout_min = 12 if source in ("tcl_vehicles", "velov") else 5
         PythonOperator(
             task_id=f"transform_{source}",

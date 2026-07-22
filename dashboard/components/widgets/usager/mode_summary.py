@@ -37,9 +37,9 @@ _MODE_ACCENT = {
 }
 
 _MODE_LABEL = {
-    "tc": "🚌 Transport en commun",
-    "voiture": "🚗 Voiture",
-    "velov": "🚲 Vélov",
+    "tc": "Transport en commun",
+    "voiture": "Voiture",
+    "velov": "Vélov",
 }
 
 
@@ -61,7 +61,7 @@ def render_mode_summary(
     """
     if mode not in _MODE_ACCENT:
         # Mode inconnu → on log un warning et on affiche un fallback sobre
-        st.warning(f"⚠️ Mode inconnu dans render_mode_summary : {mode!r}")
+        st.warning(f"Mode inconnu dans render_mode_summary : {mode!r}")
         mode = "tc"
         mode_label = _MODE_LABEL[mode]
     else:
@@ -79,10 +79,10 @@ def render_mode_summary(
                          border-radius:12px;font-size:0.8rem;font-weight:600;">
                 {mode_label}
             </span>
-            <span style="opacity:0.85;">📏 {distance_km:.2f} km</span>
-            <span style="opacity:0.85;">🕐 {duration_min:.0f} min</span>
+            <span style="opacity:0.85;">{distance_km:.2f} km</span>
+            <span style="opacity:0.85;">{duration_min:.0f} min</span>
             {
-            f'<span style="opacity:0.85;color:{accent};font-weight:600;">⚠️ Congestionné</span>'
+            f'<span style="opacity:0.85;color:{accent};font-weight:600;">Congestionné</span>'
             if impact.get("is_congested")
             else ""
         }
@@ -96,27 +96,27 @@ def render_mode_summary(
         # Vélov : 5 cards (Durée, Coût, CO2, Distance, Calories)
         cols = st.columns(5)
         with cols[0]:
-            st.metric("🕐 Durée", f"{duration_min:.0f} min")
+            st.metric("Durée", f"{duration_min:.0f} min")
         with cols[1]:
             cost = float(impact.get("cost_eur", 0.0))
             st.metric(
-                "💰 Coût",
+                "Coût",
                 f"{cost:.2f} €",
                 help="Gratuit < 30 min pour abonné annuel (Vélov SYTRAL 2026)",
             )
         with cols[2]:
             co2 = float(impact.get("co2_g", 0.0))
             st.metric(
-                "🌿 CO2",
+                "CO2",
                 f"{int(co2)} g",
                 help="Zéro émission directe (ADEME Base Carbone 2024)",
             )
         with cols[3]:
-            st.metric("📏 Distance", f"{distance_km:.2f} km")
+            st.metric("Distance", f"{distance_km:.2f} km")
         with cols[4]:
             kcal = int(impact.get("calories_kcal", 0))
             st.metric(
-                "🔥 Calories",
+                "Calories",
                 f"{kcal} kcal",
                 help="~46 kcal/km (MET tables ADEME/INSERM)",
             )
@@ -124,24 +124,24 @@ def render_mode_summary(
         # TC + voiture : 4 cards (Durée, Coût, CO2, Distance)
         cols = st.columns(4)
         with cols[0]:
-            st.metric("🕐 Durée", f"{duration_min:.0f} min")
+            st.metric("Durée", f"{duration_min:.0f} min")
         with cols[1]:
             cost = float(impact.get("cost_eur", 0.0))
             help_text = (
                 "Ticket TCL unitaire (SYTRAL 2026)" if mode == "tc" else "Carburant SP95 seul (parking = Phase 2)"
             )
-            st.metric("💰 Coût", f"{cost:.2f} €", help=help_text)
+            st.metric("Coût", f"{cost:.2f} €", help=help_text)
         with cols[2]:
             co2 = float(impact.get("co2_g", 0.0))
             help_co2 = "Mix bus/tram/métro (SYTRAL/ADEME)" if mode == "tc" else "193 g CO2/km base (ADEME 2024)"
-            st.metric("🌿 CO2", f"{int(co2)} g", help=help_co2)
+            st.metric("CO2", f"{int(co2)} g", help=help_co2)
         with cols[3]:
-            st.metric("📏 Distance", f"{distance_km:.2f} km")
+            st.metric("Distance", f"{distance_km:.2f} km")
 
     # Note congestion pour voiture (sous les KPIs)
     if mode == "voiture" and impact.get("is_congested"):
         penalty = float(impact.get("congestion_penalty", 1.0))
         st.caption(
-            f"⚠️ Trafic congestionné : consommation et coût majorés de "
+            f"Trafic congestionné : consommation et coût majorés de "
             f"{int((penalty - 1.0) * 100)}% (référence ADEME impact trafic)."
         )

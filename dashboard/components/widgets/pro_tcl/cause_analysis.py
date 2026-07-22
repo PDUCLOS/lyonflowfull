@@ -30,7 +30,7 @@ def render_cause_analysis(segment: dict | None = None) -> None:
     # On convertit ici en HTML (``<b>``, ``<br/>• ``) pour que le rendu
     # final soit correct.
     if diagnosis == "infra":
-        cause = "🚗 Trafic congestionné sur le tronçon — la voirie est saturée"
+        cause = "Trafic congestionné sur le tronçon — la voirie est saturée"
         recommendation_html = (
             "<b>Action prioritaire :</b><br/>"
             "• Étude couloir bus dédié (ROI 18 mois sur cette ligne)<br/>"
@@ -48,7 +48,7 @@ def render_cause_analysis(segment: dict | None = None) -> None:
         )
         color = COLORS["status_warning"]
     elif diagnosis == "bus_lane_ok":
-        cause = "🚌 Couloir bus fonctionnel — trafic VP bouché mais bus protégé"
+        cause = "Couloir bus fonctionnel — trafic VP bouché mais bus protégé"
         recommendation_html = (
             "<b>Bonne pratique à généraliser :</b><br/>"
             "• Étendre le couloir bus aux tronçons adjacents<br/>"
@@ -56,7 +56,7 @@ def render_cause_analysis(segment: dict | None = None) -> None:
         )
         color = COLORS["status_info"]
     else:
-        cause = "✅ Aucune anomalie détectée"
+        cause = "Aucune anomalie détectée"
         recommendation_html = "RAS — fonctionnement normal."
         color = COLORS["status_ok"]
 

@@ -11,6 +11,8 @@
 > **Source de vérité du code (ETL)** : `scripts/sql/` (38 fichiers de migration) + `dags/` (DAGs Airflow). Si tu modifies le schéma, ajoute une migration dans `scripts/sql/migration_NNN_*.sql` et référence-la ici.
 >
 > **Mode lecture / écriture** : aucune donnée n'est inventée — tout est issu de requêtes `pg_catalog` / `information_schema` sur la base live au moment de la rédaction. Les comptages de lignes proviennent de `pg_class.reltuples` (estimation du planner, suffisamment précise pour une vue d'ensemble).
+>
+> ** Mise à jour 2026-07-05 (migration_045, pas encore ré-introspectée)** : ajout de `bronze.vigilance_meteo` (+1 table bronze), `silver.air_quality_clean` (+1 table silver), `gold.v_velov_safety_advisory` (+1 vue gold). Les compteurs/tailles ci-dessous (§2) datent du 2026-07-01 et n'incluent pas encore ces 3 objets — voir §4.2/§4.3/§5/§11 pour le détail à jour de ces nouveaux objets.
 
 ---
 
@@ -27,6 +29,7 @@
    - [4.5 `osm` — Réseau routier OSM / pgRouting](#45-osm--réseau-routier-osm--pgrouting)
    - [4.6 `referentiel` — Lieux & modes de transport](#46-referentiel--lieux--modes-de-transport)
    - [4.7 `public` — MLflow + spatial_ref_sys + favoris utilisateurs](#47-public--mlflow--spatial_ref_sys--favoris-utilisateurs)
+   - [4.8 `rgpd` — Audit conformité](#48-rgpd--audit-conformité)
 5. [Vues (lecture seule)](#5-vues-lecture-seule)
 6. [Vues matérialisées (refresh périodique)](#6-vues-matérialisées-refresh-périodique)
 7. [Fonctions applicatives](#7-fonctions-applicatives)
@@ -86,7 +89,8 @@ LyonFlow stocke **trois domaines temps réel** (trafic routier, transports en co
 | `osm` | 5 | 0 | 1 | 4 | **1.2 GB** | Réseau routier OSM + pgRouting |
 | `public` | 19 | 2 | 0 | 1 | **11 MB** | MLflow tracking + `spatial_ref_sys` + favoris |
 | `referentiel` | 3 | 7 | 0 | 3 | **312 KB** | Lieux & modes (DAG monthly) |
-| **TOTAL** | **85** | **20** | **11** | **39** | **48 GB** | |
+| `rgpd` | 1 | 0 | 0 | 1 | négligeable | Audit purges rétention |
+| **TOTAL** | **86** | **20** | **11** | **40** | **48 GB** | |
 
 > **Note** : `silver.trafic_vitesse_propre` = **29.7 GB** à lui seul (1.55 M rows, table de vérité-vitesse historique purifiée). C'est la table qui consomme le plus d'espace disque — voir [§13 Maintenance](#13-maintenance--rétention).
 
@@ -288,6 +292,7 @@ LyonFlow suit strictement la **médaille** :
 | `chantiers_voirie` | Voirie spécifique | 1x/jour | 9 324 | `fetched_at, geom, raw_data` |
 | `tomtom_traffic` | TomTom Flow API | */15 min | 30 498 | `tile_key, fetched_at, current_speed_kmh, free_flow_speed_kmh, confidence, road_closure, raw_data` |
 | `tomtom_flow` | TomTom Flow Segment | journalier | 4 340 | `point_name, collected_at, current_speed_kmh, free_flow_speed_kmh, confidence, raw_data` |
+| `vigilance_meteo` **(NOUVEAU 2026-07-05)** | API Opendatasoft (miroir gratuit vigilance météo-france, sans clé) | */6h | — | `fetched_at, departement ('69'), couleur_canicule, echeance ('J'), begin_time, end_time, bulletin_date, raw_data` (UNIQUE `(departement, echeance, begin_time, fetched_at)`). Sert `gold.v_velov_safety_advisory` (migration_045) |
 | `pvotrafic_snapshots` | Snapshots pvotrafic | */5 min | 1 074 141 | `code, collected_at, value, raw_data` (UNIQUE `(code, collected_at)`) |
 | `calendrier_scolaire` | data.education.gouv.fr | 1x/mois | — | `zone, description, start_date, end_date, annee_scolaire` (Zone A) |
 | `jours_feries` | calendrier.api.gouv.fr | 1x/mois | — | `date_ferie, nom` |
@@ -334,8 +339,9 @@ LyonFlow suit strictement la **médaille** :
 | `trafic_vitesse_propre` | trafic_boucles_clean | infini | **1.55 M** | `properties_twgid, transformed_at, vitesse_kmh, geom` — table de référence vitesse (utilisée par `referentiel.v_avg_speed_7d`). UNIQUE `(properties_twgid, transformed_at)` |
 | `tcl_vehicles_clean` | bronze.tcl_vehicles | 90 j | 1.90 M | `line_ref, journey_ref, stop_ref, vehicle_ref, measurement_time, lat, lon, delay_seconds, is_delayed, is_vacances, is_ferie, geom, line_mode` (UNIQUE `(line_ref, journey_ref, stop_ref, measurement_time)`) |
 | `velov_clean` | bronze.velov | 30 j | 3.12 M | `station_id, measurement_time, num_bikes_available, num_docks_available, is_installed, is_renting, is_returning, is_maintenance, lat, lon, geom` (UNIQUE `(station_id, measurement_time)`) |
-| `meteo_hourly` | bronze.meteo | 2 ans | 9 855 | `measurement_time, temperature_2m, precipitation, rain, is_raining, wind_speed_10m, wind_direction_10m, weather_code, visibility, humidity, uv_index, is_vacances, is_ferie` (PK `measurement_time`) |
+| `meteo_hourly` | bronze.meteo | 2 ans | 9 855 | `measurement_time, temperature_2m, precipitation, rain, is_raining, wind_speed_10m, wind_direction_10m, weather_code, visibility, humidity, uv_index, is_vacances, is_ferie` (PK `measurement_time`). **Drift détecté 2026-07-05** : le code vivant (`get_weather_hourly`, `_transform_meteo`) lit/écrit `temperature_c`/`rain_mm`, pas `temperature_2m`/`precipitation` — voir `docs/DICTIONNAIRE_COLONNES.md` pour le détail. |
 | `chantiers_actifs` | bronze.chantiers | infini | — | `chantier_id, fetched_at, nom, type_perturbation, severite, date_debut, date_fin, commune, geom, is_active` (UNIQUE `(chantier_id, fetched_at)`) |
+| `air_quality_clean` **(NOUVEAU 2026-07-05)** | bronze.air_quality | infini | — | `measurement_time, european_aqi, pm10, pm2_5, nitrogen_dioxide, ozone, carbon_monoxide, fetched_at` (PK `measurement_time`). Dédup pattern identique à `meteo_hourly`. Sert `gold.v_velov_safety_advisory` (migration_045) |
 
 #### Notes importantes sur `silver`
 
@@ -516,6 +522,16 @@ ways.tag_id        → configuration.tag_id
 
 ---
 
+### 4.8 `rgpd` — Audit conformité
+
+> **Rôle** : traçabilité des purges de rétention (Bronze/Silver/Gold), consultable pour justifier la politique de conservation des données.
+
+| Table | Rôle |
+|-------|------|
+| `purge_log` | Une ligne par purge exécutée : `(purged_at, schema_name, table_name, rows_purged, retention_days)`. Alimentée par `dags/maintenance/maintenance.py::_purge_table()` (DAG `purge_bronze`). Index `idx_rgpd_purge_log_purged_at` (DESC) pour consultation chronologique. |
+
+---
+
 ## 5. Vues (lecture seule)
 
 20 vues totales (hors PostGIS `geography_columns`/`geometry_columns`).
@@ -540,6 +556,7 @@ ways.tag_id        → configuration.tag_id
 | `gold.v_tomtom_traffic_live` | Dernier snapshot TomTom Flow par tuile (24h). Sert carte trafic (Mon Trajet). |
 | `gold.v_traffic_combined` | **Sprint VPS-6** — Vue unifiée trafic : priorité `gold_live (capteurs <5min) > gold_pred (H+1h) > tomtom`. Sert la carte dashboard partout à Lyon (y compris hors couverture boucles). |
 | `gold.v_xgb_accuracy_summary` | **Sprint 16 Axe A** — KPIs agrégés par heure (MAE, MAPE, P90, `accuracy_band`) depuis `mv_xgb_vs_tomtom`. Sert widget `backtest_dashboard` pour courbe MAE + pie distribution. |
+| `gold.v_velov_safety_advisory` **(NOUVEAU 2026-07-05, migration_045)** — JOIN dernier `silver.air_quality_clean` (fenêtre 3h) + dernière vigilance canicule `bronze.vigilance_meteo` dept 69 (fenêtre 12h). `status ∈ {ok,warning,severe,unknown}` — `unknown` si aucune des deux sources récente (jamais de faux "ok"). Sert `weather_widget`/`velov_trip`/`velov_widget` (Usager) via `dashboard/components/velov_safety_banner.py` : avertit sans bloquer le mode Vélov. |
 
 ### Vues `referentiel.*` (7)
 
@@ -764,7 +781,16 @@ Voir [§4.6](#46-referentiel--lieux--modes-de-transport).
 | `velov` | `velov_clean` | `transform_bronze_to_silver` (Vélov) */5min |
 | `meteo` | `meteo_hourly` | `transform_bronze_to_silver` (météo) */1h |
 | `chantiers` | `chantiers_actifs` | `transform_bronze_to_silver` (chantiers) 1x/jour |
-| `pvotrafic_snapshots`, `comptages`, `air_quality`, `vitesse_limite_ref`, `chantiers_voirie`, `chantiers_historique`, `parkings`, `prix_carburants`, `jours_feries`, `calendrier_scolaire`, `tomtom_flow`, `tomtom_traffic` | (pas de silver direct — lus directement ou via gold.*) | — |
+| `air_quality` **(2026-07-05)** | `air_quality_clean` | `transform_bronze_to_silver` (air_quality) */5min |
+| `pvotrafic_snapshots`, `comptages`, `vitesse_limite_ref`, `chantiers_voirie`, `chantiers_historique`, `parkings`, `prix_carburants`, `jours_feries`, `calendrier_scolaire`, `tomtom_flow`, `tomtom_traffic`, `vigilance_meteo` **(2026-07-05)** | (pas de silver direct — lus directement ou via gold.*) | — |
+
+### Sécurité Vélov (2026-07-05, migration_045)
+
+| Source | Cible | DAG / Fréquence |
+|--------|-------|------------------|
+| `silver.air_quality_clean` + `bronze.vigilance_meteo` | `gold.v_velov_safety_advisory` (vue, calculée à la volée) | Lu direct — pas de DAG de refresh dédié |
+| `bronze.air_quality` | `silver.air_quality_clean` | `transform_bronze_to_silver` */5min |
+| API Opendatasoft (vigilance météo dept 69) | `bronze.vigilance_meteo` | `collect_vigilance_meteo` */6h |
 
 ### Silver → Gold
 
@@ -830,6 +856,7 @@ gold.* → Streamlit dashboard (18 pages × 3 personas)
 | Pistes cyclables + GTFS | `collect_bronze` | 1x/sem | `0 4 * * 0` |
 | TomTom Traffic Flow | `collect_tomtom_traffic` | */15 min | `*/15 * * * *` (Sprint 13+) |
 | Calendriers scolaires + jours fériés | `collect_calendriers_monthly` | mensuel | `0 0 1 * *` |
+| Vigilance météo (canicule dept 69) **(NOUVEAU 2026-07-05)** | `collect_vigilance_meteo` | */6 h | `0 */6 * * *` |
 
 ### DAGs transformation (silver / gold)
 
@@ -885,7 +912,7 @@ gold.* → Streamlit dashboard (18 pages × 3 personas)
 | `bronze.chantiers_voirie` | **90 j** | DELETE WHERE fetched_at < now() - interval '90 days' |
 | `silver.trafic_boucles_clean`, `velov_clean`, `tcl_vehicles_clean` | **30 j** | DELETE WHERE measurement_time < now() - interval '30 days' (après archivage MinIO) |
 | `silver.meteo_hourly` | **2 ans** | DELETE WHERE measurement_time < now() - interval '2 years' |
-| `silver.trafic_vitesse_propre` | **∞ (pas de purge)** | ⚠️ Croissance linéaire, ~30 MB/j. Voir partitionnement recommandé. |
+| `silver.trafic_vitesse_propre` | **∞ (pas de purge)** | Croissance linéaire, ~30 MB/j. Voir partitionnement recommandé. |
 | `silver.chantiers_actifs` | **∞** | Snapshot permanent chantiers actifs |
 | `gold.traffic_features_live` | **30 j** | DELETE WHERE fetched_at < now() - interval '30 days' |
 | `gold.xgb_training_set` | **14 j** | DELETE WHERE computed_at < now() - interval '14 days' |
@@ -908,7 +935,7 @@ VACUUM (ANALYZE) gold.traffic_features_live;
 -- etc., toutes les tables > 1M rows
 ```
 
-### ⚠️ Alerte maintenance — `silver.trafic_vitesse_propre`
+### Alerte maintenance — `silver.trafic_vitesse_propre`
 
 Cette table cumule **29.7 GB / 1.55M rows en 18 mois** et n'a aucune purge automatique. Scénarios alternatifs :
 
@@ -960,7 +987,7 @@ cf. `scripts/sql/migration_NNN_*.sql`. Liste :
 ### Backups
 
 - **DB quotidienne 03:00** via `scripts/backup.sh` (pg_dump full).
-- **Offsite (Sprint VPS-2)** : via `scripts/backup-offsite.sh` → rclone vers Google Drive (systemd timer `lyonflow-backup.timer`). ⚠️ Action user requise (OAuth rclone).
+- **Offsite (Sprint VPS-2)** : via `scripts/backup-offsite.sh` → rclone vers Google Drive (systemd timer `lyonflow-backup.timer`). Action user requise (OAuth rclone).
 - **Métadonnées restauration** : cf. `docs/RUNBOOK.md`.
 
 ### Gotchas PostgreSQL (rappel `lyonflow-postgresql.md`)
