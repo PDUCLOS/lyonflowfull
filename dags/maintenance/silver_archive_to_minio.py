@@ -113,9 +113,10 @@ def _archive_one_table(table: str, cutoff: datetime) -> dict:
 
     writer: pq.ParquetWriter | None = None
     rows_written = 0
-    with raw_connection() as conn, conn.cursor(
-        name="silver_archive_cursor", cursor_factory=psycopg2.extras.RealDictCursor
-    ) as cur:
+    with (
+        raw_connection() as conn,
+        conn.cursor(name="silver_archive_cursor", cursor_factory=psycopg2.extras.RealDictCursor) as cur,
+    ):
         cur.itersize = ARCHIVE_CHUNK_SIZE
         cur.execute(
             f"SELECT * FROM silver.{table} WHERE transformed_at < %s ORDER BY transformed_at",

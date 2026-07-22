@@ -126,10 +126,7 @@ def _purge_table(
             """,
             (schema, table_name, deleted, days),
         )
-        logger.info(
-            f"Purged {deleted} rows from {table} (>{days}j, "
-            f"ts={ts_column})"
-        )
+        logger.info(f"Purged {deleted} rows from {table} (>{days}j, ts={ts_column})")
         return deleted
 
 
@@ -379,16 +376,16 @@ with DAG(
     # 'computed_at' pour gold.traffic_features_live (calculée par
     # transform_silver_to_gold, pas ingérée).
     retentions = [
-        ("bronze.trafic_boucles",          7, "fetched_at"),
-        ("bronze.velov",                    7, "fetched_at"),
-        ("bronze.tcl_vehicles",             7, "fetched_at"),
-        ("bronze.meteo",                    7, "fetched_at"),
-        ("bronze.air_quality",              7, "fetched_at"),
-        ("bronze.chantiers",                7, "fetched_at"),
+        ("bronze.trafic_boucles", 7, "fetched_at"),
+        ("bronze.velov", 7, "fetched_at"),
+        ("bronze.tcl_vehicles", 7, "fetched_at"),
+        ("bronze.meteo", 7, "fetched_at"),
+        ("bronze.air_quality", 7, "fetched_at"),
+        ("bronze.chantiers", 7, "fetched_at"),
         # Sprint P3.4+ : purge gold.traffic_features_live (UPSERT massif
         # */10min, grossit sans borne). 7j couvre le besoin dashboard
         # (filtré NOW() - 2h dans les requêtes live) + buffer analyse.
-        ("gold.traffic_features_live",      7, "computed_at"),
+        ("gold.traffic_features_live", 7, "computed_at"),
     ]
     for table, days, ts_column in retentions:
         PythonOperator(
