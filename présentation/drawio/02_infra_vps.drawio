@@ -1,0 +1,156 @@
+<mxfile host="Electron" agent="claude-code">
+  <diagram id="infra-vps" name="Infrastructure VPS — Déploiement">
+    <mxGraphModel dx="1556" dy="855" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1600" pageHeight="1400" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="title" parent="1" style="text;html=1;fontSize=18;fontStyle=1;align=center;" value="LyonFlow — Infrastructure VPS 51.83.159.224 (Ubuntu, 6 CPU, 12 Go RAM, 2× 100 Go SSD)" vertex="1">
+          <mxGeometry height="30" width="1500" x="40" y="10" as="geometry" />
+        </mxCell>
+        <mxCell id="internet" parent="1" style="ellipse;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;" value="Internet" vertex="1">
+          <mxGeometry height="60" width="120" x="700" y="60" as="geometry" />
+        </mxCell>
+        <mxCell id="nginx" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#666666;fontSize=12;fontStyle=1;" value="lyonflow-nginx (nginx:1.27-alpine)&#xa;0.0.0.0:80 / :443 — SEUL conteneur exposé publiquement" vertex="1">
+          <mxGeometry height="60" width="400" x="560" y="160" as="geometry" />
+        </mxCell>
+        <mxCell id="dockerroot" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=10;dashed=1;" value="Docker data-root = /mnt/postgres-data/docker (sdb)&#xa;NE PAS revenir à /var/lib/docker" vertex="1">
+          <mxGeometry height="60" width="360" x="1140" y="60" as="geometry" />
+        </mxCell>
+        <mxCell id="i68ZdSasBBXCMd0Mn3-e-3" edge="1" parent="1" source="streamlit" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" target="api" value="">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="streamlit" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=11;" value="lyonflow-streamlit&#xa;127.0.0.1:8501 (healthy)" vertex="1">
+          <mxGeometry height="60" width="260" x="80" y="280" as="geometry" />
+        </mxCell>
+        <mxCell id="i68ZdSasBBXCMd0Mn3-e-2" edge="1" parent="1" source="api" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" target="streamlit" value="">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="api" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=11;" value="lyonflow-api (FastAPI)&#xa;127.0.0.1:8000 (healthy)" vertex="1">
+          <mxGeometry height="60" width="260" x="380" y="280" as="geometry" />
+        </mxCell>
+        <mxCell id="airflow_web" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=11;" value="lyonflow-airflow (webserver)&#xa;127.0.0.1:8080 (healthy)" vertex="1">
+          <mxGeometry height="60" width="260" x="680" y="280" as="geometry" />
+        </mxCell>
+        <mxCell id="airflow_sched" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=11;" value="lyonflow-airflow-scheduler&#xa;25/27 DAGs actifs (2 pausés intentionnels)" vertex="1">
+          <mxGeometry height="60" width="260" x="980" y="280" as="geometry" />
+        </mxCell>
+        <mxCell id="mlflow" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=11;" value="lyonflow-mlflow&#xa;127.0.0.1:5001 (healthy) — 6 modèles" vertex="1">
+          <mxGeometry height="60" width="220" x="1280" y="280" as="geometry" />
+        </mxCell>
+        <mxCell id="postgres" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;fontSize=11;fontStyle=1;" value="lyonflow-postgres&#xa;pgrouting/pgrouting:16-3.5-3.7.3&#xa;127.0.0.1:5432 (healthy)&#xa;bronze/silver/gold/osm/referentiel/mlflow&#xa;Volume : /mnt/postgres-data (sdb)" vertex="1">
+          <mxGeometry height="100" width="420" x="80" y="420" as="geometry" />
+        </mxCell>
+        <mxCell id="minio" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=11;" value="lyonflow-minio&#xa;127.0.0.1:9000-9001 (healthy)&#xa;5 buckets (bronze-archive actif 15M, reste vide)&#xa;Archive silver.trafic_vitesse_propre &gt;30j" vertex="1">
+          <mxGeometry height="100" width="380" x="540" y="420" as="geometry" />
+        </mxCell>
+        <mxCell id="grafana" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=11;" value="lyonflow-grafana&#xa;127.0.0.1:3000&#xa;datasource Prometheus active (redéployé 2026-07-02)" vertex="1">
+          <mxGeometry height="100" width="280" x="960" y="420" as="geometry" />
+        </mxCell>
+        <mxCell id="alertmanager" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=11;" value="lyonflow-alertmanager&#xa;127.0.0.1:9093&#xa;lié à Prometheus, 7 groupes de règles chargés" vertex="1">
+          <mxGeometry height="100" width="220" x="1280" y="420" as="geometry" />
+        </mxCell>
+        <mxCell id="sda1" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;fontSize=11;" value="Disque sda1 (OS + code + Docker)&#xa;96G total — 64G utilisé (67%) — 33G libre" vertex="1">
+          <mxGeometry height="60" width="420" x="80" y="580" as="geometry" />
+        </mxCell>
+        <mxCell id="sdb" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;fontSize=11;" value="Disque sdb (Postgres + MinIO)&#xa;98G total — 63G utilisé (67%) — 31G libre" vertex="1">
+          <mxGeometry height="60" width="380" x="540" y="580" as="geometry" />
+        </mxCell>
+        <mxCell id="backup" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=11;dashed=1;" value="Backup — systemd timer 03h00&#xa;scripts/backup.sh → offsite rclone/SSH&#xa;🔴 rclone offsite config OAuth pending" vertex="1">
+          <mxGeometry height="70" width="420" x="80" y="700" as="geometry" />
+        </mxCell>
+        <mxCell id="systemd" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#666666;fontSize=11;" value="systemd unit lyonflow.service (process supervisor)&#xa;make deploy-vps (rsync + restart) · make rollback-vps" vertex="1">
+          <mxGeometry height="70" width="380" x="540" y="700" as="geometry" />
+        </mxCell>
+        <mxCell id="hc" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#666666;fontSize=11;" value="scripts/healthcheck-vps.sh&#xa;20 checks (containers, disque, CPU/RAM, DB, endpoints)" vertex="1">
+          <mxGeometry height="70" width="540" x="960" y="700" as="geometry" />
+        </mxCell>
+        <mxCell id="e1" edge="1" parent="1" source="internet" style="edgeStyle=orthogonalEdgeStyle;html=1;" target="nginx">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e2a" edge="1" parent="1" source="nginx" style="edgeStyle=orthogonalEdgeStyle;html=1;" target="streamlit">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e2b" edge="1" parent="1" source="nginx" style="edgeStyle=orthogonalEdgeStyle;html=1;" target="api">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e2c" edge="1" parent="1" source="nginx" style="edgeStyle=orthogonalEdgeStyle;html=1;" target="airflow_web">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e2d" edge="1" parent="1" source="nginx" style="edgeStyle=orthogonalEdgeStyle;html=1;" target="mlflow">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e3a" edge="1" parent="1" source="streamlit" style="edgeStyle=orthogonalEdgeStyle;html=1;" target="postgres">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e3b" edge="1" parent="1" source="api" style="edgeStyle=orthogonalEdgeStyle;html=1;" target="postgres">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="420" y="380" />
+              <mxPoint x="290" y="380" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="e3c" edge="1" parent="1" source="airflow_sched" style="edgeStyle=orthogonalEdgeStyle;html=1;exitX=0.462;exitY=0.99;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.908;entryY=0.006;entryDx=0;entryDy=0;entryPerimeter=0;" target="postgres">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="1100" y="380" />
+              <mxPoint x="461" y="380" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="e3d" edge="1" parent="1" source="mlflow" style="edgeStyle=orthogonalEdgeStyle;html=1;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.858;entryY=0.006;entryDx=0;entryDy=0;entryPerimeter=0;" target="postgres">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="1390" y="360" />
+              <mxPoint x="440" y="360" />
+            </Array>
+            <mxPoint x="1400" y="360" as="sourcePoint" />
+            <mxPoint x="440" y="410" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="e3e" edge="1" parent="1" source="airflow_sched" style="edgeStyle=orthogonalEdgeStyle;html=1;exitX=0.174;exitY=0.969;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.524;entryY=-0.031;entryDx=0;entryDy=0;entryPerimeter=0;" target="minio">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="1025" y="370" />
+              <mxPoint x="740" y="370" />
+              <mxPoint x="740" y="417" />
+            </Array>
+            <mxPoint x="1010" y="370" as="sourcePoint" />
+            <mxPoint x="720" y="420" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="e4a" edge="1" parent="1" source="grafana" style="edgeStyle=orthogonalEdgeStyle;html=1;dashed=1;" target="alertmanager">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e5a" edge="1" parent="1" source="postgres" style="edgeStyle=orthogonalEdgeStyle;html=1;entryX=0.28;entryY=0.042;entryDx=0;entryDy=0;entryPerimeter=0;" target="sdb">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="400" y="540" />
+              <mxPoint x="646" y="540" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="e5b" edge="1" parent="1" source="minio" style="edgeStyle=orthogonalEdgeStyle;html=1;" target="sdb">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e5c" edge="1" parent="1" source="streamlit" style="edgeStyle=orthogonalEdgeStyle;html=1;" target="sda1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="50" y="310" />
+              <mxPoint x="50" y="550" />
+              <mxPoint x="290" y="550" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="e6" edge="1" parent="1" source="postgres" style="edgeStyle=orthogonalEdgeStyle;html=1;" target="backup">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="40" y="470" />
+              <mxPoint x="40" y="735" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

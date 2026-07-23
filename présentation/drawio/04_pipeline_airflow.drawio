@@ -1,0 +1,207 @@
+<mxfile host="Electron">
+  <diagram name="Pipeline Airflow — DAGs et scheduling" id="pipeline-airflow">
+    <mxGraphModel dx="1668" dy="1505" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1080" pageHeight="1160" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="title" parent="1" style="text;html=1;fontSize=18;fontStyle=1;align=center;" value="LyonFlow — Pipeline Airflow (28 DAGs, 26 actifs + 2 pauses intentionnelles — 2026-07-23)" vertex="1">
+          <mxGeometry height="30" width="1000" x="40" y="30" as="geometry" />
+        </mxCell>
+        <mxCell id="n3" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;verticalAlign=top;fontSize=14;fontStyle=1;arcSize=4;" value="BRONZE - ingestion (4 DAGs)" vertex="1">
+          <mxGeometry height="150" width="1000" x="40" y="80" as="geometry" />
+        </mxCell>
+        <mxCell id="b1" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#666666;fontSize=11;arcSize=10;" value="collect_bronze&#xa;*/5 min" vertex="1">
+          <mxGeometry height="70" width="220" x="60" y="120" as="geometry" />
+        </mxCell>
+        <mxCell id="b2" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#666666;fontSize=11;arcSize=10;" value="collect_tomtom_traffic&#xa;*/15 min" vertex="1">
+          <mxGeometry height="70" width="220" x="300" y="120" as="geometry" />
+        </mxCell>
+        <mxCell id="b3" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#666666;fontSize=11;arcSize=10;" value="collect_calendriers_monthly&#xa;mensuel" vertex="1">
+          <mxGeometry height="70" width="220" x="540" y="120" as="geometry" />
+        </mxCell>
+        <mxCell id="b4" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#666666;fontSize=11;arcSize=10;" value="collect_vigilance_meteo&#xa;*/6h (2026-07-05)" vertex="1">
+          <mxGeometry height="70" width="220" x="780" y="120" as="geometry" />
+        </mxCell>
+        <mxCell id="n7" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#999999;verticalAlign=top;fontSize=14;fontStyle=1;arcSize=4;" value="TRANSFORMS - Silver &amp; Gold (4 DAGs)" vertex="1">
+          <mxGeometry height="150" width="1000" x="40" y="270" as="geometry" />
+        </mxCell>
+        <mxCell id="t1" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#666666;fontSize=11;arcSize=10;" value="transform_bronze_to_silver&#xa;2-57/5 min" vertex="1">
+          <mxGeometry height="70" width="220" x="60" y="310" as="geometry" />
+        </mxCell>
+        <mxCell id="t2" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#666666;fontSize=11;arcSize=10;" value="transform_silver_to_gold&#xa;*/10 min" vertex="1">
+          <mxGeometry height="70" width="220" x="300" y="310" as="geometry" />
+        </mxCell>
+        <mxCell id="t3" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#666666;fontSize=11;arcSize=10;" value="build_spatial_mapping&#xa;02h30 - grille H3" vertex="1">
+          <mxGeometry height="70" width="220" x="540" y="310" as="geometry" />
+        </mxCell>
+        <mxCell id="t4" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=11;arcSize=10;" value="refresh_heavy_mv&#xa;:15,:45 - PAUSE" vertex="1">
+          <mxGeometry height="70" width="220" x="780" y="310" as="geometry" />
+        </mxCell>
+        <mxCell id="n11" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;verticalAlign=top;fontSize=14;fontStyle=1;arcSize=4;" value="ML - entrainement, inference, drift (8 DAGs)" vertex="1">
+          <mxGeometry height="230" width="1000" x="40" y="460" as="geometry" />
+        </mxCell>
+        <mxCell id="m1" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#666666;fontSize=11;arcSize=10;" value="dag_daily_speed_train&#xa;03h00" vertex="1">
+          <mxGeometry height="70" width="220" x="60" y="500" as="geometry" />
+        </mxCell>
+        <mxCell id="m2" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#666666;fontSize=11;arcSize=10;" value="dag_inference_xgboost&#xa;*/15 min" vertex="1">
+          <mxGeometry height="70" width="220" x="300" y="500" as="geometry" />
+        </mxCell>
+        <mxCell id="ss2A2IVqo8CUlDlaoS55-1" edge="1" parent="1" source="m3" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" target="m2" value="">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="m3" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#666666;fontSize=11;arcSize=10;" value="dag_inference_velov&#xa;4,19,34,49" vertex="1">
+          <mxGeometry height="70" width="220" x="540" y="500" as="geometry" />
+        </mxCell>
+        <mxCell id="m4" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#666666;fontSize=11;arcSize=10;" value="build_xgb_training_set&#xa;02h30" vertex="1">
+          <mxGeometry height="70" width="220" x="780" y="500" as="geometry" />
+        </mxCell>
+        <mxCell id="m5" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#666666;fontSize=11;arcSize=10;" value="refresh_xgb_vs_tomtom&#xa;:05,:35 - support drift" vertex="1">
+          <mxGeometry height="70" width="220" x="60" y="610" as="geometry" />
+        </mxCell>
+        <mxCell id="m6" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#666666;fontSize=11;arcSize=10;" value="daily_drift_report&#xa;05h30 - PSI + Evidently" vertex="1">
+          <mxGeometry height="70" width="220" x="300" y="610" as="geometry" />
+        </mxCell>
+        <mxCell id="m7" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=11;arcSize=10;" value="retrain_xgboost_speed&#xa;:25 - PAUSE (legacy)" vertex="1">
+          <mxGeometry height="70" width="220" x="540" y="610" as="geometry" />
+        </mxCell>
+        <mxCell id="m8" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#666666;fontSize=11;arcSize=10;" value="retrain_xgboost_velov&#xa;:50" vertex="1">
+          <mxGeometry height="70" width="220" x="780" y="610" as="geometry" />
+        </mxCell>
+        <mxCell id="n16" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#666666;verticalAlign=top;fontSize=14;fontStyle=1;arcSize=4;" value="MAINTENANCE - MV et housekeeping (12 DAGs)" vertex="1">
+          <mxGeometry height="310" width="1000" x="40" y="730" as="geometry" />
+        </mxCell>
+        <mxCell id="mt1" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#666666;fontSize=11;arcSize=10;" value="backfill_dim_spatial_lat_lon&#xa;*/5 min" vertex="1">
+          <mxGeometry height="70" width="220" x="60" y="770" as="geometry" />
+        </mxCell>
+        <mxCell id="mt2" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#666666;fontSize=11;arcSize=10;" value="refresh_osm_traffic_costs&#xa;3,18,33,48" vertex="1">
+          <mxGeometry height="70" width="220" x="300" y="770" as="geometry" />
+        </mxCell>
+        <mxCell id="mt3" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#666666;fontSize=11;arcSize=10;" value="record_network_health&#xa;*/15 min" vertex="1">
+          <mxGeometry height="70" width="220" x="540" y="770" as="geometry" />
+        </mxCell>
+        <mxCell id="mt4" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#666666;fontSize=11;arcSize=10;" value="refresh_sensor_saturation&#xa;7,22,37,52 - decale de :07" vertex="1">
+          <mxGeometry height="70" width="220" x="780" y="770" as="geometry" />
+        </mxCell>
+        <mxCell id="mt5" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#666666;fontSize=11;arcSize=10;" value="refresh_velov_transit_coupling&#xa;12,27,42,57" vertex="1">
+          <mxGeometry height="70" width="220" x="60" y="860" as="geometry" />
+        </mxCell>
+        <mxCell id="mt6" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#666666;fontSize=11;arcSize=10;" value="refresh_congestion_propagation&#xa;10,40" vertex="1">
+          <mxGeometry height="70" width="220" x="300" y="860" as="geometry" />
+        </mxCell>
+        <mxCell id="mt7" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#666666;fontSize=11;arcSize=10;" value="refresh_meteo_impact&#xa;04h30" vertex="1">
+          <mxGeometry height="70" width="220" x="540" y="860" as="geometry" />
+        </mxCell>
+        <mxCell id="mt8" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#666666;fontSize=11;arcSize=10;" value="refresh_lieux_calendrier&#xa;05h00" vertex="1">
+          <mxGeometry height="70" width="220" x="780" y="860" as="geometry" />
+        </mxCell>
+        <mxCell id="mt9" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#666666;fontSize=11;arcSize=10;" value="silver_archive_to_minio&#xa;04h00" vertex="1">
+          <mxGeometry height="70" width="220" x="60" y="950" as="geometry" />
+        </mxCell>
+        <mxCell id="mt10" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#666666;fontSize=11;arcSize=10;" value="data_quality_daily&#xa;04h15" vertex="1">
+          <mxGeometry height="70" width="220" x="300" y="950" as="geometry" />
+        </mxCell>
+        <mxCell id="mt11" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#666666;fontSize=11;arcSize=10;" value="purge_bronze&#xa;03h00" vertex="1">
+          <mxGeometry height="70" width="220" x="540" y="950" as="geometry" />
+        </mxCell>
+        <mxCell id="mt12" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#666666;fontSize=11;arcSize=10;" value="dag_critical_pipeline_health&#xa;*/15 min" vertex="1">
+          <mxGeometry height="70" width="220" x="780" y="950" as="geometry" />
+        </mxCell>
+        <mxCell id="db1" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#0d1117;strokeColor=#0d1117;fontColor=#ffffff;fontSize=11;arcSize=10;shape=cylinder3;" value="PostgreSQL 16 + PostGIS + pgRouting" vertex="1">
+          <mxGeometry height="56" width="320" x="380" y="1080" as="geometry" />
+        </mxCell>
+        <mxCell id="e1" edge="1" parent="1" source="b1" style="endArrow=block;html=1;strokeColor=#666666;fontSize=9;" target="t1" value="">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e2" edge="1" parent="1" source="b2" style="endArrow=block;html=1;strokeColor=#666666;fontSize=9;" target="t1" value="">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="310" y="220" />
+              <mxPoint x="220" y="220" />
+              <mxPoint x="190" y="220" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="e3" edge="1" parent="1" source="b3" style="endArrow=block;html=1;strokeColor=#666666;fontSize=9;" target="t1" value="">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="550" y="250" />
+              <mxPoint x="240" y="250" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="e4" edge="1" parent="1" source="b4" style="endArrow=block;html=1;strokeColor=#666666;fontSize=9;" target="t1" value="">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="830" y="260" />
+              <mxPoint x="270" y="260" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="e5" edge="1" parent="1" source="t1" style="endArrow=block;html=1;strokeColor=#666666;fontSize=9;" target="t2" value="">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e6" edge="1" parent="1" source="t3" style="endArrow=block;html=1;dashed=1;strokeColor=#666666;fontSize=9;" target="t2" value="">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e7" edge="1" parent="1" source="t2" style="endArrow=block;html=1;strokeColor=#666666;fontSize=9;" target="m4" value="">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="580" y="430" />
+              <mxPoint x="800" y="440" />
+              <mxPoint x="890" y="440" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="e8" edge="1" parent="1" source="m4" style="endArrow=block;html=1;strokeColor=#666666;fontSize=9;exitX=0.214;exitY=1.029;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.544;entryY=1.02;entryDx=0;entryDy=0;entryPerimeter=0;" target="m1" value="">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="827.08" y="590" />
+              <mxPoint x="540" y="590" />
+              <mxPoint x="200" y="590" />
+            </Array>
+            <mxPoint x="243.92" y="567.97" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="e9" edge="1" parent="1" source="m1" style="endArrow=block;html=1;dashed=1;strokeColor=#666666;fontSize=9;" target="m2" value="via MLflow registry">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e10" edge="1" parent="1" source="t2" style="endArrow=block;html=1;strokeColor=#666666;fontSize=9;entryX=0.941;entryY=0.008;entryDx=0;entryDy=0;entryPerimeter=0;" target="m3" value="">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="480" y="440" />
+              <mxPoint x="700" y="450" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="e11" edge="1" parent="1" source="m5" style="endArrow=block;html=1;dashed=1;strokeColor=#666666;fontSize=9;" target="m6" value="">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e12" edge="1" parent="1" source="m6" style="endArrow=block;html=1;dashed=1;strokeColor=#666666;fontSize=9;entryX=0;entryY=0.7;entryDx=0;entryDy=0;" target="db1" value="model_drift_reports&#xa;(retrain manuel)">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="410" y="700" />
+              <mxPoint x="10" y="700" />
+              <mxPoint x="10" y="1108" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="e13" edge="1" parent="1" source="m2" style="endArrow=block;html=1;strokeColor=#666666;fontSize=9;" target="db1" value="">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="380" y="580" />
+              <mxPoint x="20" y="580" />
+              <mxPoint x="20" y="810" />
+              <mxPoint x="30" y="1090" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="e14" edge="1" parent="1" source="db1" style="endArrow=block;html=1;dashed=1;strokeColor=#666666;fontSize=9;entryX=0.5;entryY=1;entryDx=0;entryDy=0;" target="mt9" value="lit silver &gt;30j, DELETE apres export MinIO">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e15" edge="1" parent="1" source="mt11" style="endArrow=block;html=1;strokeColor=#666666;fontSize=9;" target="db1" value="DELETE retention 7j">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

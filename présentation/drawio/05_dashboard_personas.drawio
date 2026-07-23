@@ -1,0 +1,171 @@
+<mxfile host="Electron" agent="Mavis">
+  <diagram id="dashboard-personas" name="Dashboard — 18 pages × 3 personas">
+    <mxGraphModel dx="1465" dy="805" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1800" pageHeight="1300" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="title" parent="1" style="text;html=1;fontSize=18;fontStyle=1;align=center;" value="LyonFlow — Dashboard Streamlit · 18 pages × 3 personas · 59 widgets · 2026-07-05" vertex="1">
+          <mxGeometry height="30" width="1720" x="40" y="10" as="geometry" />
+        </mxCell>
+        <mxCell id="src_title" parent="1" style="text;html=1;fontSize=12;fontStyle=1;align=center;fillColor=#1f2937;strokeColor=#1f2937;fontColor=#ffffff;" value="📊 SOURCES DE DONNÉES (toutes les pages)" vertex="1">
+          <mxGeometry height="30" width="1680" x="60" y="1080" as="geometry" />
+        </mxCell>
+        <mxCell id="src_pg" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;fontSize=10;" value="PostgreSQL gold&#xa;trafic_predictions · velov_predictions&#xa;mv_bus_traffic_spatial · mv_multimodal_grid&#xa;referentiel.lieux · network_health_history" vertex="1">
+          <mxGeometry height="80" width="320" x="60" y="1120" as="geometry" />
+        </mxCell>
+        <mxCell id="src_api" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=10;" value="FastAPI&#xa;/predict · /route&#xa;/health · /metrics" vertex="1">
+          <mxGeometry height="80" width="320" x="400" y="1120" as="geometry" />
+        </mxCell>
+        <mxCell id="src_mlflow" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#b084cc;strokeColor=#6b3d8c;fontColor=#ffffff;fontSize=10;" value="MLflow Registry&#xa;versions modèles&#xa;metadata · lineage" vertex="1">
+          <mxGeometry height="80" width="320" x="740" y="1120" as="geometry" />
+        </mxCell>
+        <mxCell id="src_airflow" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=10;" value="Airflow API&#xa;statut DAGs&#xa;freshness badge" vertex="1">
+          <mxGeometry height="80" width="320" x="1080" y="1120" as="geometry" />
+        </mxCell>
+        <mxCell id="src_osm" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=10;" value="OSM + pgRouting&#xa;osm.route_car()&#xa;itinéraires voiture" vertex="1">
+          <mxGeometry height="80" width="320" x="1420" y="1120" as="geometry" />
+        </mxCell>
+        <mxCell id="transv_header" parent="1" style="text;html=1;fontSize=14;fontStyle=1;align=center;fillColor=#1f2937;strokeColor=#1f2937;fontColor=#ffffff;" value="🏠 TRANSVERSAL" vertex="1">
+          <mxGeometry height="30" width="280" x="30" y="60" as="geometry" />
+        </mxCell>
+        <mxCell id="p_accueil" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f3f4f6;strokeColor=#6b7280;fontSize=10;" value="Accueil&#xa;Vue d&#39;ensemble + KPIs clés + carte" vertex="1">
+          <mxGeometry height="60" width="280" x="30" y="100" as="geometry" />
+        </mxCell>
+        <mxCell id="p_rgpd" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f3f4f6;strokeColor=#6b7280;fontSize=10;" value="RGPD&#xa;Conformité · données collectées&#xa;durée rétention · contact DPO" vertex="1">
+          <mxGeometry height="60" width="280" x="30" y="170" as="geometry" />
+        </mxCell>
+        <mxCell id="p_apropos" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f3f4f6;strokeColor=#6b7280;fontSize=10;" value="À propos&#xa;Méthodologie · modèles · stack tech" vertex="1">
+          <mxGeometry height="60" width="280" x="30" y="240" as="geometry" />
+        </mxCell>
+        <mxCell id="col_usager_header" parent="1" style="text;html=1;fontSize=14;fontStyle=1;align=center;fillColor=#82b366;strokeColor=#82b366;fontColor=#ffffff;" value="🧍 USAGER (5 pages · 17 widgets)" vertex="1">
+          <mxGeometry height="30" width="340" x="360" y="60" as="geometry" />
+        </mxCell>
+        <mxCell id="p_u1" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=10;fontStyle=1;" value="Usager_1 — Mon Trajet ⭐&#xa;Recommandation multimodale&#xa;5 modes (voiture/bus/vélov/marche/métro)&#xa;scoring 50/30/20 (temps/coût/CO₂)" vertex="1">
+          <mxGeometry height="80" width="340" x="360" y="100" as="geometry" />
+        </mxCell>
+        <mxCell id="p_u2" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=10;" value="Usager_2 — Mon Quotidien&#xa;Widget persistant (mes trajets)&#xa;vélov + TCL favori" vertex="1">
+          <mxGeometry height="70" width="340" x="360" y="190" as="geometry" />
+        </mxCell>
+        <mxCell id="p_u3" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=10;" value="Usager_3 — Notre Modèle&#xa;MLOps citoyen&#xa;Comment on prédit · limites · feedback" vertex="1">
+          <mxGeometry height="70" width="340" x="360" y="270" as="geometry" />
+        </mxCell>
+        <mxCell id="p_u4" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=10;" value="Usager_4 — Statut Service&#xa;Ma ligne · retards en cours&#xa;ETA temps réel" vertex="1">
+          <mxGeometry height="70" width="340" x="360" y="350" as="geometry" />
+        </mxCell>
+        <mxCell id="p_u5" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=10;" value="Usager_5 — Idées &amp; Retours&#xa;Soumettre une idée · voter · suivre" vertex="1">
+          <mxGeometry height="60" width="340" x="360" y="430" as="geometry" />
+        </mxCell>
+        <mxCell id="col_pro_header" parent="1" style="text;html=1;fontSize=14;fontStyle=1;align=center;fillColor=#6c8ebf;strokeColor=#6c8ebf;fontColor=#ffffff;" value="🔧 PRO TCL (6 pages · 24 widgets)" vertex="1">
+          <mxGeometry height="30" width="340" x="720" y="60" as="geometry" />
+        </mxCell>
+        <mxCell id="p_pro1" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=10;fontStyle=1;" value="Pro_1 — Carte Trafic Live vs H+1h ⭐&#xa;Folium · couleurs Rouge/Orange/Bleu/Violet/Vert&#xa;bottlenecks · alternatives multimodales" vertex="1">
+          <mxGeometry height="80" width="340" x="720" y="100" as="geometry" />
+        </mxCell>
+        <mxCell id="p_pro2" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=10;" value="Pro_2 — Vue Réseau&#xa;Heatmap OTP par ligne × heure&#xa;155 lignes TCL" vertex="1">
+          <mxGeometry height="70" width="340" x="720" y="190" as="geometry" />
+        </mxCell>
+        <mxCell id="p_pro3" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=10;" value="Pro_3 — Prédictions par axe&#xa;Tableau trafic_predictions&#xa;vitesse live + prédite + label" vertex="1">
+          <mxGeometry height="70" width="340" x="720" y="270" as="geometry" />
+        </mxCell>
+        <mxCell id="p_pro4" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=10;fontStyle=1;" value="Pro_4 — Simulateur de ligne ⭐&#xa;Sélecteur 155 lignes + auto-catégorisation&#xa;KPIs (OTP · retard · charge · fréq) + tri + top N" vertex="1">
+          <mxGeometry height="80" width="340" x="720" y="350" as="geometry" />
+        </mxCell>
+        <mxCell id="p_pro5" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=10;" value="Pro_5 — Vue Avancée&#xa;Diagnostic fin&#xa;features · drift · modèle metadata" vertex="1">
+          <mxGeometry height="60" width="340" x="720" y="440" as="geometry" />
+        </mxCell>
+        <mxCell id="p_pro6" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=10;" value="Pro_6 — Bottlenecks Carte&#xa;Carte spatiale bus × trafic&#xa;diagnostic infrastructure" vertex="1">
+          <mxGeometry height="60" width="340" x="720" y="510" as="geometry" />
+        </mxCell>
+        <mxCell id="col_elu_header" parent="1" style="text;html=1;fontSize=14;fontStyle=1;align=center;fillColor=#9673a6;strokeColor=#9673a6;fontColor=#ffffff;" value="🏛 ÉLU (5 pages · 18 widgets)" vertex="1">
+          <mxGeometry height="30" width="340" x="1080" y="60" as="geometry" />
+        </mxCell>
+        <mxCell id="p_e1" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=10;fontStyle=1;" value="Élu_1 — Tableau de Bord ⭐&#xa;KPIs stratégiques · tendances 30j&#xa;Jauge santé réseau 0-100 + sparkline" vertex="1">
+          <mxGeometry height="80" width="340" x="1080" y="100" as="geometry" />
+        </mxCell>
+        <mxCell id="p_e2" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=10;" value="Élu_2 — Économie&#xa;Gain modal · ROI&#xa;dérivé de mv_bus_traffic_spatial (zéro mock)" vertex="1">
+          <mxGeometry height="70" width="340" x="1080" y="190" as="geometry" />
+        </mxCell>
+        <mxCell id="p_e3" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=10;" value="Élu_3 — Environnement&#xa;CO₂ évité · qualité air&#xa;Open-Meteo AQ · modes doux" vertex="1">
+          <mxGeometry height="70" width="340" x="1080" y="270" as="geometry" />
+        </mxCell>
+        <mxCell id="p_e4" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=10;" value="Élu_4 — Satisfaction&#xa;SLA OTP · retards&#xa;comparaison historique" vertex="1">
+          <mxGeometry height="70" width="340" x="1080" y="350" as="geometry" />
+        </mxCell>
+        <mxCell id="p_e5" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=10;" value="Élu_5 — Rapport&#xa;Export PDF · partage institutionnel" vertex="1">
+          <mxGeometry height="60" width="340" x="1080" y="430" as="geometry" />
+        </mxCell>
+        <mxCell id="widgets_banner" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontSize=11;fontStyle=1;align=center;" value="🧩 59 WIDGETS au total — composants transversaux : plotly_theme · error_display · loading_state · freshness_badge · a11y · sparkline · auto_refresh&amp;nbsp;" vertex="1">
+          <mxGeometry height="60" width="710" x="530" y="600" as="geometry" />
+        </mxCell>
+        <mxCell id="flux_label" parent="1" style="text;html=1;fontSize=11;fontStyle=2;align=center;fontColor=#888888;" value="Toutes les pages lisent depuis ces sources (zéro mock) ↓" vertex="1">
+          <mxGeometry height="30" width="1680" x="60" y="1040" as="geometry" />
+        </mxCell>
+        <mxCell id="e_pg_u1" edge="1" parent="1" source="src_pg" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;exitX=0.5;exitY=0;dashed=1;strokeColor=#d79b00;entryX=-0.001;entryY=0.364;entryDx=0;entryDy=0;entryPerimeter=0;" target="p_u1" value="">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="330" y="1120" />
+              <mxPoint x="330" y="129" />
+            </Array>
+            <mxPoint x="350" y="130" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="e_osm_u1" edge="1" parent="1" source="src_osm" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;exitX=0.5;exitY=0;entryX=0;entryY=0.75;dashed=1;strokeColor=#9673a6;entryDx=0;entryDy=0;" target="p_u1" value="">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="1580" y="730" />
+              <mxPoint x="340" y="730" />
+              <mxPoint x="340" y="160" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="e_api_u3" edge="1" parent="1" source="src_api" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;exitX=0.5;exitY=0;dashed=1;strokeColor=#6c8ebf;" value="">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="560" y="850" />
+              <mxPoint x="350" y="850" />
+              <mxPoint x="350" y="320" />
+            </Array>
+            <mxPoint x="360" y="320" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="e_pg_pro1" edge="1" parent="1" source="src_pg" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;exitX=0.5;exitY=0;entryX=0.999;entryY=0.629;dashed=1;strokeColor=#d79b00;entryDx=0;entryDy=0;entryPerimeter=0;" target="p_pro1" value="">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="240" y="1120" />
+              <mxPoint x="240" y="590" />
+              <mxPoint x="1070" y="590" />
+              <mxPoint x="1070" y="150" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="e_pg_pro4" edge="1" parent="1" source="src_pg" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;exitX=0.5;exitY=0;entryX=0;entryY=0.5;dashed=1;strokeColor=#d79b00;entryDx=0;entryDy=0;" target="p_pro4" value="">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="220" y="530" />
+              <mxPoint x="710" y="530" />
+              <mxPoint x="710" y="390" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="e_mlflow_e1" edge="1" parent="1" source="src_mlflow" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;exitX=0.5;exitY=0;entryX=1;entryY=0.75;dashed=1;strokeColor=#6b3d8c;entryDx=0;entryDy=0;" target="p_e1" value="">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="900" y="690" />
+              <mxPoint x="1460" y="690" />
+              <mxPoint x="1460" y="160" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="e_airflow_e1" edge="1" parent="1" source="src_airflow" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;exitX=0.5;exitY=0;entryX=1;entryY=0.5;dashed=1;strokeColor=#82b366;entryDx=0;entryDy=0;" target="p_e1" value="">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="1240" y="710" />
+              <mxPoint x="1510" y="710" />
+              <mxPoint x="1510" y="140" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>
