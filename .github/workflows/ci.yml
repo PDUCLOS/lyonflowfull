@@ -2,9 +2,9 @@ name: CI LyonFlow
 
 on:
   push:
-    branches: [main, develop, vps, "feature/**", "fix/**"]
+    branches: [main, develop, "feature/**", "fix/**"]
   pull_request:
-    branches: [main, develop, vps]
+    branches: [main, develop]
 
 env:
   PYTHON_VERSION: "3.12"
@@ -161,14 +161,14 @@ jobs:
           path: coverage.xml
 
   # ---------------------------------------------------------------------------
-  # 5. Docker build — bloquant (skip sur vps, déploié manuellement)
+  # 5. Docker build — bloquant (skip sur main, déployé manuellement sur VPS)
   # ---------------------------------------------------------------------------
   docker-build:
     name: Docker build
     runs-on: ubuntu-latest
     needs: [lint, test]
-    # Skip docker build on vps branch (no Dockerfile change needed, just deploy)
-    if: github.ref != 'refs/heads/vps'
+    # Skip docker build on main branch (deployed manually to VPS via deploy-vps)
+    if: github.ref != 'refs/heads/main'
     steps:
       - uses: actions/checkout@v4
 

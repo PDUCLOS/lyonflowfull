@@ -3,7 +3,7 @@
 -- =============================================================================
 -- Date        : 2026-06-21
 -- Version     : v0.9.0 (cible)
--- Branche     : vps
+-- Branche     : main
 -- Prérequis   : src/transformation/data_quality.py (Sprint 17 Axe 6)
 --               dags/maintenance/maintenance.py (utilise _log_quality_report)
 --

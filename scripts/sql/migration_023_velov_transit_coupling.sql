@@ -3,7 +3,7 @@
 -- =============================================================================
 -- Date        : 2026-06-20
 -- Version     : v0.9.0 (cible)
--- Branche     : vps
+-- Branche     : main
 -- Prérequis   : Sprint 8+ (silver.velov_clean + gold.tcl_vehicle_realtime)
 --               PostGIS activé (ST_DWithin, ST_MakePoint, ST_SetSRID)
 --

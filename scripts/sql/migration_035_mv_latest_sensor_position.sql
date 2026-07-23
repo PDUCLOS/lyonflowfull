@@ -8,7 +8,7 @@
 -- Pourquoi v1 a échoué (2026-06-29) : CREATE INDEX non-concurrent = SHARE lock
 --   sur silver.trafic_boucles_clean → bloque les INSERT collect_bronze 5+ min.
 -- Pourquoi v2 a re-échoué (2026-06-30) : exécutions CONCURRENTES (plusieurs
---   instances Claude Code / hands) ont lancé 3× le même CREATE INDEX en
+--   agents en parallèle) ont lancé 3× le même CREATE INDEX en
 --   parallèle → contention + cancels → index laissés INVALIDES.
 --
 -- Fix v3 — ajoute les 2 garde-fous manquants à v2 :

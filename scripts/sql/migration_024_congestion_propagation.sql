@@ -3,7 +3,7 @@
 -- =============================================================================
 -- Date        : 2026-06-20
 -- Version     : v0.9.0 (cible)
--- Branche     : vps
+-- Branche     : main
 -- Prérequis   : Sprint 8+ (gold.traffic_features_live schéma v0.3.1)
 --               Sprint 9+ (gold.dim_spatial_grid_mapping peuplé)
 --               build_spatial_mapping.py tourne → dim_gnn_adjacency alimenté

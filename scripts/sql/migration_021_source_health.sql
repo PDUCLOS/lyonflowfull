@@ -3,7 +3,7 @@
 -- =============================================================================
 -- Date        : 2026-06-20
 -- Version     : v0.8.0
--- Branche     : vps
+-- Branche     : main
 -- Prérequis   : Sprint 8+ (toutes sources Bronze actives)
 --               Sprint 13+ (bronze.tomtom_traffic)
 --               Sprint 15+ (gold.trafic_predictions)

@@ -3,21 +3,23 @@
 # =============================================================================
 # Ce fichier est la source de vérité sur les décisions de phase et conventions
 # du projet. À lire en premier par tout assistant IA.
-# Dernière mise à jour : 2026-06-22, Sprint 21 (v0.11.0).
+# Dernière mise à jour : 2026-07-23, Sprint 23 (v0.13.0) — bascule vps → main.
 # =============================================================================
 
-# Phases du projet (état 2026-06-22)
+# Phases du projet (état 2026-07-23)
 # --------------------------------
 
-# PHASE 1 (livrée) — Production-ready LOCAL (branche `main`)
-# - Tout le code fonctionne via `docker compose up -d --build`
-# - Dashboard via `streamlit run dashboard/Accueil.py`
-# - 3 personas (usager, pro_tcl, elu) naviguent
-# - 8 collecteurs Bronze, transforms Silver/Gold, ML XGBoost, FastAPI, RGPD
+# PHASE 1 (livrée) — Production-ready LOCAL (historique, branche figée)
+# - Snapshot préservé dans `legacy/phase1-main` (backup du 2026-07-23)
+# - 3 personas (usager, pro_tcl, elu), 8 collecteurs Bronze, ML XGBoost, FastAPI, RGPD
 #
-# PHASE 2 (ACTIVE) — Déploiement VPS production (branche `vps`)
+# PHASE 2 (ACTIVE) — Déploiement VPS production (branche `main` depuis 2026-07-23)
 # - Cible production unique : VPS 51.83.159.224 (Ubuntu, 6 CPU, 12 Go RAM, 2× 100 Go SSD)
-# - **v0.11.0** — 615 tests verts, ~60 widgets, 15 pages × 3 personas, 15 DAGs Airflow
+# - **v0.13.0** (en cours sur main) — 620 tests verts, ~60 widgets, 15 pages × 3 personas, 15 DAGs Airflow
+# - **Sprint 23 (2026-07-23)** : `vps` renommé `main` (force-push).
+#   Backup complet de l'ancien `main` dans `legacy/phase1-main`.
+#   Le VPS tourne maintenant sur `main` (checkout + pull OK, containers healthy).
+#   La branche `vps` reste trackée comme alias (== main @ cf75e53).
 # - Sprints livrés : VPS 1-8, 9+, 11+, 12+, 13, 13+, 15+, 17, 17+, 18, 20, 21
 #
 # Résumé des sprints majeurs :
@@ -43,13 +45,16 @@
 #   * Sprint 21 : quantile regression XGBoost P10/P50/P90, sparkline 24h,
 #     backup template, documentation cleanup (13 docs archivés, doublons
 #     tests mergés, docs centrales à jour)
+#   * Sprint 22+ : optimisations UX/RAM (lazy loading, onglets, see MODIFICATIONS_IA_SPRINT22)
+#   * Sprint 23 : docs/ hors github, `presentation.html` → `présentation/`,
+#     `vps` → `main` (force-push), .opencode/tmp untrack, gitignore renforcé
 #
 # PHASE 3 (dormante, futur AWS/GCP) — Kubernetes (branche `kubernetes`)
-# - NE PAS MERGER dans `vps` ni `main`
+# - NE PAS MERGER dans `main`
 # - Préparée pour EKS/GKE futur, pas de déploiement actif
 #
 # PHASE 4 (dormante, futur AWS/GCP) — Cloud démo Jedha (branche `cloud-demo`)
-# - NE PAS MERGER dans `vps` ni `main`
+# - NE PAS MERGER dans `main`
 # - Préparée pour POC cloud public ponctuel, pas active
 
 # Déploiement VPS (cible production unique)
@@ -61,20 +66,21 @@
 # - DB : PostgreSQL 16 + PostGIS 3.5 + pgRouting 3.7.3
 #   (4 schémas : bronze/silver/gold/osm + referentiel)
 #   Image Docker : pgrouting/pgrouting:16-3.5-3.7.3
-# - Path déploiement : /opt/lyonflow/
+# - Path déploiement : /opt/lyonflow/ (branche checkout = `main` depuis Sprint 23)
 # - Reverse proxy : Nginx 1.27 (self-signed cert, DNS lyonflow.fr mort → accès par IP)
 # - Process : systemd unit lyonflow.service
 # - Backup : timer systemd quotidien 03:00 → scripts/backup.sh + offsite scripts/backup-offsite.sh
 # - Monitoring : Grafana + Alertmanager UP. Prometheus supprimé Sprint 15+ (config YAML cassée v2.54)
 # - NE PAS TOUCHER AU VPS tant que l'utilisateur n'a pas donné le feu vert
 # - Commandes : make deploy-vps, make rollback-vps, make monitoring-up, ./scripts/healthcheck-vps.sh
+# - DEPLOY_BRANCH dans `.deploy.env` = `main` (Sprint 23)
 #
 # Règle CRITIQUE : toute correction faite SUR le VPS doit aussi être commitée dans git
 # --------------------------------------------------------------------------
 # Si tu patch un fichier en place sur le VPS (sed, edit, etc.), tu dois
 # IMPÉRATIVEMENT aussi :
 #   1. Récupérer la version patchée (scp vers le Mac)
-#   2. L'appliquer dans le repo local (branche vps)
+#   2. L'appliquer dans le repo local (branche main)
 #   3. git commit + push
 # Sinon le prochain deploy (rsync + restart) ÉCRASE ta correction.
 # Idem pour les installs pip dans un container : ajouter au requirements.txt

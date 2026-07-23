@@ -3,7 +3,7 @@
 -- =============================================================================
 -- Date        : 2026-06-22
 -- Version     : v0.11.0 (cible)
--- Branche     : vps
+-- Branche     : main
 -- Prérequis   : Sprint 18 (migration 026 + 027 + 028b) déployé
 --
 -- Contexte :
