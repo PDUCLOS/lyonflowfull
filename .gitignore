@@ -96,16 +96,40 @@ secrets/
 docs/_build/
 site/
 
+# docs/ complet (RNCP 38777 : pas versionné, conservable local pour traçabilité)
+# Sorti du tracking git Sprint 23 (2026-07-23) — les .md restent sur disque,
+# ne sont plus poussés sur GitHub. Voir archive/README.md pour l'historique.
+docs/
+
 # Local orchestration plans
 .mavis/
 .claude/
 
-# Mémoire projet Claude (notes internes, pas destinées au repo public)
+# LLM / coding assistant tools (defensive — couvre les outils qu'on utilise
+# + ceux qu'on pourrait adopter). Sans cette section, certains outils créent
+# des caches qu'on voit revenir dans le file browser même s'ils sont gitignored.
+.opencode/          # opencode (LLM)
+.aider*             # aider
+.aider.chat.history
+.continue/          # Continue.dev
+.cody/              # Sourcegraph Cody
+.cursor/            # Cursor
+.cursorignore
+.windsurf/          # Windsurf
+.crush/             # Crush
+.roo/               # Roo Code
+.copilot/           # GitHub Copilot workspace
+.cline/             # Cline
+.kiro/              # Kiro
+
+# Mac binary libraries (defensive — émises par certains outils Mac)
+*.dylib
+
+# Mémoire projet assistant IA (notes internes, pas destinées au repo public)
 CLAUDE.md
 
 # TLS certs (generated, never committed)
 nginx/certs/*.pem
-.opencode/
 
 # Audit pipeline data (artefacts générés, pas versionnés — RNCP 38777)
 # Le script générateur scripts/audit/generate_audit_doc.py reste en local
@@ -116,7 +140,7 @@ nginx/certs/*.pem
 scripts/audit/
 docs/AUDIT_*.docx
 
-# Soutenance (slides HTML, pas du code)
+# Soutenance (slides HTML, pas du code) — soutenance-bloc4.html (enraciné) ignoré, présentation/ versionné
 presentation.html
 
 # Scripts scratch/debug ponctuels (vérifications ad-hoc pendant une session,

@@ -16,7 +16,9 @@ archive/
 ├── analysis/     # Analyses des 3 repos sources (pré-fusion, obsolète)
 ├── dags_disabled/# DAGs Airflow archivés (training/inf séparés, etc.)
 ├── scripts/      # Scripts one-off (codemods, migrations ponctuelles) déjà appliqués
-└── misc/         # Documents divers annulés ou contextuels
+├── misc/         # Documents divers annulés ou contextuels
+├── legacy/       # Composants code archivés (ex: GNN)
+└── REPO_STRUCTURE.md  # Snapshot structure repo (June 2026, obsolète depuis GNN archivé + tests 104→620)
 ```
 
 ### `scripts/` (2026-07-03)
@@ -79,6 +81,7 @@ actives, gérées par `scripts/apply-migrations.sh`, ne pas y toucher).
 | `AUDIT_PIPELINE_2026-06-12.md` | Audit pipeline complet (mock résiduels, schéma v0.3.1) |
 | `AUDIT_PRO_TCL_FIXES.md` | Tracker corrections Pro TCL (8/14 faits, 6 cosmétiques restants) |
 | `AUDIT_USAGER_FIXES.md` | Tracker corrections Usager (11/16 faits, 5 cosmétiques restants) |
+| `AUDIT_CERTIFICATION_2026-07-01.md` | Audit certification RNCP 38777 — snapshot 2026-07-01 (tous items "Corrigé aujourd'hui", photo historique) |
 | `RAPPORT_VPS_2026-06-22.md` | Rapport ops cleanup VPS (sda1 88%→47%, backup timer créé) |
 | `SPRINT_24_FIX_GOLD_STALE.md` | Incident gold stale (0 lignes TCL, carte indispo) — fix livré |
 | `AUDIT_DB_2026-06-30.md` | Audit DB (migrations, tuning, bloat, MV) — snapshot 2026-06-30 |
@@ -125,8 +128,9 @@ Les documents suivants restent à la racine ou dans `docs/` :
 - `CONTRIBUTING.md`, `SECURITY.md`, `LICENSE`, `NOTICE` — fichiers standard
 - `docs/ARCHITECTURE.md`, `API.md`, `DEPLOYMENT.md`, `RUNBOOK.md`, `MONITORING.md`,
   `VPS_HARDENING.md`, `DASHBOARD_PAGES.md`, `DATA_GOVERNANCE.md`,
-  `REPO_STRUCTURE.md`, `GIT_STRUCTURE.md`, `CONTROLE_VPS_VS_CLOUD_DEMO.md`,
+  `GIT_STRUCTURE.md`, `CONTROLE_VPS_VS_CLOUD_DEMO.md`,
   `POSTGRES_DATABASE_REFERENCE.md`, `POSTGRES_TUNING_PROD.md`,
+  `DICTIONNAIRE_COLONNES.md`, `WIDGETS_CALCULS_PAR_PERSONA.md`,
   `AUDIT_AIRFLOW_POSTGRES_SPRINT24.md` (actionable — plan D pas complet),
   `SPEC_OPTIMISATION_INTERDEPENDANCES.md` (actionable — axes 2/4/6/7 restants)
 - `docs/ADR/` — Architecture Decision Records (référencés depuis CLAUDE.md)
