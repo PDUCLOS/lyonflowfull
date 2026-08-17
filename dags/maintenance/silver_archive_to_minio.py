@@ -22,12 +22,12 @@ Schedule : quotidien 04h00 (après dag_daily_speed_train 03h00).
 
 from __future__ import annotations
 
+import gc
 import logging
 from datetime import datetime, timedelta
 from pathlib import Path
 
 import boto3
-import pandas as pd
 import psycopg2.extras
 import pyarrow as pa
 import pyarrow.parquet as pq
@@ -37,7 +37,7 @@ from airflow.operators.python import PythonOperator
 from src.config import get_settings
 from src.db.connection import execute_query, raw_connection
 
-ARCHIVE_CHUNK_SIZE = 50_000
+ARCHIVE_CHUNK_SIZE = 20_000
 
 logger = logging.getLogger(__name__)
 
@@ -52,8 +52,14 @@ DEFAULT_ARGS = {
 }
 
 # Tables silver à archiver > 30 jours (rétention or / Gold)
-SILVER_TABLES = [
-    "trafic_vitesse_propre",  # 28 Go, 1.5M rows, top priorité
+# Sprint 24+ (2026-08-17) — trafic_vitesse_propre DROP directement (table
+# morte depuis 2026-06-15, remplacée par trafic_boucles_clean ; le job
+# d'archive plantait silencieusement dessus depuis Sprint 10 — exception
+# pyarrow "cannot mix list and non-list, non-null values" avalée par le
+# try/except de _archive_silver(), qui marquait quand même la task SUCCESS.
+# Liste vide en attendant une vraie décision de rétention sur les tables
+# silver actives (trafic_boucles_clean, velov_clean, tcl_vehicles_clean).
+SILVER_TABLES: list[str] = [
     # "tcl_vehicles_clean",  # 260 Mo, à faire Sprint 11+
     # "velov_clean",  # 282 Mo, à faire Sprint 11+
 ]
@@ -123,19 +129,29 @@ def _archive_one_table(table: str, cutoff: datetime) -> dict:
             (cutoff,),
         )
         try:
+            chunk_num = 0
             while True:
                 chunk = cur.fetchmany(ARCHIVE_CHUNK_SIZE)
                 if not chunk:
                     break
-                chunk_table = pa.Table.from_pandas(pd.DataFrame(chunk), preserve_index=False)
+                # pa.Table.from_pylist evite le detour par pandas (une copie
+                # memoire en moins par chunk) — pandas + pyarrow ensemble
+                # retenaient la RSS entre chunks (OOM 6.3 Go constate
+                # 2026-08-01 malgre le chunking deja en place).
+                chunk_table = pa.Table.from_pylist(list(chunk))
                 if writer is None:
                     writer = pq.ParquetWriter(local_path, chunk_table.schema, compression="snappy")
                 writer.write_table(chunk_table)
                 rows_written += len(chunk)
                 logger.info("  chunk écrit : %d lignes (total %d/%d)", len(chunk), rows_written, n_rows)
+                del chunk, chunk_table
+                chunk_num += 1
+                if chunk_num % 5 == 0:
+                    gc.collect()
         finally:
             if writer is not None:
                 writer.close()
+            gc.collect()
 
     bytes_parquet = local_path.stat().st_size
     logger.info("Wrote %s (%.1f MB) — %d rows", local_path, bytes_parquet / 1e6, rows_written)

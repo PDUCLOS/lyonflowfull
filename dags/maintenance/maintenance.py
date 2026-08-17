@@ -387,10 +387,20 @@ with DAG(
         # (filtré NOW() - 2h dans les requêtes live) + buffer analyse.
         ("gold.traffic_features_live", 7, "computed_at"),
     ]
+    # Sprint 24+ (2026-08-17) — bronze.trafic_boucles et
+    # gold.traffic_features_live sont les 2 plus grosses tables (8-10 Go) :
+    # le DELETE seul (hors comptage/vacuum) dépasse les 5min par défaut dès
+    # qu'un backlog s'accumule (ex: après une coupure VPS), ce qui faisait
+    # échouer purge_bronze en boucle (13j sans purge réussie, constaté
+    # 2026-08-17). Timeout élargi pour ces deux tables spécifiquement.
+    LARGE_TABLE_TIMEOUT_MIN = {
+        "bronze.trafic_boucles": 30,
+        "gold.traffic_features_live": 30,
+    }
     for table, days, ts_column in retentions:
         PythonOperator(
             task_id=f"purge_{table.replace('.', '_')}_d{days}",
             python_callable=_purge_table,
             op_kwargs={"table": table, "days": days, "ts_column": ts_column},
-            execution_timeout=timedelta(minutes=5),
+            execution_timeout=timedelta(minutes=LARGE_TABLE_TIMEOUT_MIN.get(table, 5)),
         )
