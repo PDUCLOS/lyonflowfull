@@ -68,7 +68,11 @@ echo ""
 echo "--- Containers ---"
 # Sprint 15+ — retiré : redis (LocalExecutor), prometheus (config cassée),
 # airflow-worker (LocalExecutor n'en a pas besoin).
-for svc in postgres minio mlflow api streamlit airflow airflow-scheduler nginx grafana alertmanager; do
+# Sprint 24+ (2026-08-17) — retiré : grafana, alertmanager (stack monitoring
+# docker-compose.monitoring.yml jamais déployée, cf. décision cron léger +
+# alerte Telegram). Faisaient échouer le healthcheck en boucle (faux positif
+# repris par vps-watchdog.sh toutes les 5min).
+for svc in postgres minio mlflow api streamlit airflow airflow-scheduler nginx; do
     status=$(docker ps --format '{{.Status}}' --filter "name=lyonflow-$svc" 2>/dev/null | head -1)
     if [ -n "$status" ]; then
         echo -e "${GREEN}OK${NC} $svc: $status"
@@ -149,7 +153,7 @@ echo ""
 echo "--- Endpoints HTTP ---"
 check "Streamlit 8501" "curl -sk -o /dev/null -w '%{http_code}' http://localhost:8501/_stcore/health 2>/dev/null"
 check "API 8000" "curl -sk -o /dev/null -w '%{http_code}' http://localhost:8000/health 2>/dev/null"
-check "Grafana 3000" "curl -sk -o /dev/null -w '%{http_code}' http://localhost:3000/api/health 2>/dev/null"
+# Grafana retiré Sprint 24+ (stack monitoring dormante, cf. section Containers).
 # Sprint 15+ — MLflow mappé 127.0.0.1:5001→5000 (cf. docker-compose.yml).
 # Le check direct sur 5000 ne fonctionne que DEPUIS le container MLflow.
 check "MLflow 5001" "curl -sk -o /dev/null -w '%{http_code}' http://localhost:5001/health 2>/dev/null"
