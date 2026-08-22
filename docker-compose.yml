@@ -87,6 +87,19 @@ services:
       POSTGRES_DB: lyonflow
       POSTGRES_USER: ${POSTGRES_USER}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    # Sprint 25 (2026-08-22) — anti-fuite connexions TCP. Sans ce param
+    # (défaut OS = 7200s = 2h), un client mort n'est détecté par le kernel
+    # qu'au bout de 2h. Résultat observé : 14 backends fantômes d'un
+    # container détruit ont sature la RAM Postgres à 93 % avant que le
+    # vps-watchdog ne restart le stack. Voir docs/INCIDENTS/2026-08-22-postgres-connection-leak.md.
+    # `tcp_keepalives_idle` est `postmaster` context en PG 16 → ne peut
+    # pas être set via `ALTER SYSTEM`, doit être passé en CLI au postmaster.
+    # `idle_in_transaction_session_timeout` est passé en migration SQL
+    # (migration_047) car context `user` (SIGHUP-reloadable).
+    command:
+      - "postgres"
+      - "-c"
+      - "tcp_keepalives_idle=60"
     volumes:
       # POSTGRES_DATA_DIR pointe vers le bind mount disque dédié (VPS = /mnt/postgres-data/pgdata).
       # Default = volume Docker pour dev local (cf. .env.example).
