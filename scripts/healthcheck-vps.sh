@@ -158,14 +158,24 @@ check "API 8000" "curl -sk -o /dev/null -w '%{http_code}' http://localhost:8000/
 # Le check direct sur 5000 ne fonctionne que DEPUIS le container MLflow.
 check "MLflow 5001" "curl -sk -o /dev/null -w '%{http_code}' http://localhost:5001/health 2>/dev/null"
 
-# 8. Airflow DAGs derniers runs (Sprint 15+ — fix: --limit n'existe pas sur list-runs)
-# Format plain : colonnes whitespace-separated (header en ligne 1, runs en-dessous).
-# La dernière run (la plus récente) est en ligne 2 ; state = colonne 3.
+# 8. Airflow DAGs derniers runs
+# Sprint 25+ (2026-08-25) — fix: la CLI `airflow dags list-runs` reparse toute
+# la DagBag à chaque invocation (imports Python + scan DAGS_FOLDER). Sous charge
+# scheduler (transforms concurrents), ça peut bloquer 1-2min voire indéfiniment
+# (observé : process CLI resté bloqué >45s sans jamais rendre la main), ce qui
+# gèle tout le healthcheck et déclenche des faux FAIL en boucle côté watchdog.
+# On lit directement la table dag_run (même Postgres, db "airflow") avec un
+# statement_timeout court — même pattern que psql_query, mais db différente.
+airflow_dag_state() {
+    local dag_id="$1"
+    docker exec lyonflow-postgres psql -U lyonflow -d airflow -tAc \
+        "SET statement_timeout='5s'; SELECT state FROM dag_run WHERE dag_id='${dag_id}' ORDER BY execution_date DESC LIMIT 1;" 2>&1 | tail -1
+}
 echo ""
 echo "--- Airflow DAGs (last run state) ---"
-check_warn "collect_bronze" "docker exec lyonflow-airflow-scheduler airflow dags list-runs -d collect_bronze -o plain 2>/dev/null | sed -n '2p' | awk '{print \$3}'"
-check_warn "transform_silver_to_gold" "docker exec lyonflow-airflow-scheduler airflow dags list-runs -d transform_silver_to_gold -o plain 2>/dev/null | sed -n '2p' | awk '{print \$3}'"
-check_warn "dag_inference_xgboost" "docker exec lyonflow-airflow-scheduler airflow dags list-runs -d dag_inference_xgboost -o plain 2>/dev/null | sed -n '2p' | awk '{print \$3}'"
+check_warn "collect_bronze" "airflow_dag_state collect_bronze"
+check_warn "transform_silver_to_gold" "airflow_dag_state transform_silver_to_gold"
+check_warn "dag_inference_xgboost" "airflow_dag_state dag_inference_xgboost"
 
 # Résumé
 echo ""

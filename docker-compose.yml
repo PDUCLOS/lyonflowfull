@@ -72,6 +72,11 @@ x-common-env: &common-env
   AIRFLOW__WEBSERVER__PROXY_FIX_X_HOST: "1"
   AIRFLOW__WEBSERVER__PROXY_FIX_X_PORT: "1"
   AIRFLOW__WEBSERVER__PROXY_FIX_X_PREFIX: "0"
+  # Sprint VPS optim (2026-08-01) — defaut 30s trop court sous charge nightly
+  # (03h-05h) : import DagBag de silver_archive_to_minio.py (pandas+pyarrow)
+  # timeoutait, DAG absent de serialized_dag, cascade vers purge_bronze /
+  # refresh_osm_traffic_costs zombies (heartbeat scheduler manque).
+  AIRFLOW__CORE__DAGBAG_IMPORT_TIMEOUT: "90"
   PYTHONUNBUFFERED: "1"
   TZ: Europe/Paris
 
@@ -100,6 +105,16 @@ services:
       - "postgres"
       - "-c"
       - "tcp_keepalives_idle=60"
+    # Sprint 25+ (2026-08-25) — shm_size par défaut Docker = 64Mo, insuffisant
+    # face à maintenance_work_mem=256Mo : toute VACUUM (auto ou manuelle)
+    # échouait silencieusement avec "No space left on device" sur le segment
+    # dynamic shared memory POSIX (/dev/shm), jamais loggé côté autovacuum
+    # (autovacuum_count restait à 0 en permanence sur les tables silver à
+    # forte fréquence d'upsert : velov_clean, tcl_vehicles_clean — ~50% dead
+    # tuples constaté). Le host a 5.8Go de /dev/shm dispo (tmpfs), le cap
+    # venait uniquement du container. 1Go laisse de la marge pour plusieurs
+    # workers autovacuum concurrents (max 3 x 256Mo).
+    shm_size: "1gb"
     volumes:
       # POSTGRES_DATA_DIR pointe vers le bind mount disque dédié (VPS = /mnt/postgres-data/pgdata).
       # Default = volume Docker pour dev local (cf. .env.example).
