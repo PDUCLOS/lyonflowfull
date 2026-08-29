@@ -130,7 +130,15 @@ services:
     deploy:
       resources:
         limits:
-          cpus: "1.0"
+          # 1.0 → 3.0 (2026-08-29) : cap CPU jamais revu depuis les débuts du
+          # projet alors que le mem limit l'a été 3x (2G→2.5G→4G) au fil de la
+          # croissance du pipeline. Constaté : refresh_osm_traffic_costs à 91%
+          # d'échec et transform_silver_to_gold à 50% sur 24h, tous deux tués
+          # par statement_timeout — alors que le host (6 coeurs) tournait à
+          # <20% CPU total. Postgres throttlé sur 1 seul coeur pendant les
+          # rafales de REFRESH MATERIALIZED VIEW CONCURRENTLY concurrents,
+          # largement de la marge dispo sur les 5 autres coeurs.
+          cpus: "3.0"
           # 2.5G → 4G (2026-07-01) : shared_buffers=1GB + maintenance_work_mem=256MB
           # + work_mem=32MB×N connexions approchaient déjà la limite 2.5G
           # (94% mem usage observé) — cf. docs/POSTGRES_TUNING_PROD.md Option A.
