@@ -62,10 +62,20 @@ with DAG(
     dag_id="transform_silver_to_gold",
     description=(
         "Silver → Gold (traffic + velov + tcl_realtime + bus_delay + bottleneck "
-        "+ multimodal_grid + bus_traffic_spatial) — toutes les 10 min"
+        "+ multimodal_grid + bus_traffic_spatial) — toutes les 15 min, décalé :05"
     ),
     default_args=default_args,
-    schedule_interval="*/10 * * * *",
+    # Sprint 26+ (2026-09-06) — */10 * * * * alignait ce DAG (le plus lourd :
+    # 383s en moyenne, jusqu'à 1655s constaté) sur les minutes :00/:10/:20/
+    # :30/:40/:50, dont :00 et :30 sont aussi les créneaux de collect_bronze,
+    # dag_inference_xgboost, record_network_health et dag_critical_pipeline_
+    # health (tous */15 ou */5) — jusqu'à 5-6 DAGs déclenchés à la même
+    # seconde, load average observé à 10.67 sur 6 coeurs. Décalé à :05/:20/
+    # :35/:50 (toutes les 15 min au lieu de 10) pour sortir de ce carrefour.
+    # N'élimine pas tout chevauchement (ce DAG peut encore déborder sur le
+    # suivant vu son pire cas de 27min pour un cycle de 15min) mais retire
+    # la pire collision. Taux d'échec 24h avant ce fix : 21.1%.
+    schedule_interval="5,20,35,50 * * * *",
     start_date=datetime(2026, 1, 1),
     catchup=False,
     max_active_runs=1,

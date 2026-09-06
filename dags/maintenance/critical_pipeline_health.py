@@ -158,11 +158,18 @@ default_args = {
 with DAG(
     dag_id="dag_critical_pipeline_health",
     description=(
-        "Sprint 23 — Monitoring */15 min des DAGs critiques + fraîcheur Gold. "
-        "Alerte via AirflowException → Alertmanager → email/Slack."
+        "Sprint 23 — Monitoring des DAGs critiques + fraîcheur Gold, toutes "
+        "les 15 min décalé :02. Alerte via AirflowException → Alertmanager → email/Slack."
     ),
     default_args=default_args,
-    schedule_interval="*/15 * * * *",
+    # Sprint 26+ (2026-09-06) — */15 * * * * le mettait pile sur :00/:15/:30/
+    # :45, en même temps que collect_bronze, dag_inference_xgboost et
+    # record_network_health (jusqu'à 5-6 DAGs simultanés, load avg 10.67/6
+    # coeurs observé). Ce DAG lui-même est léger (29s en moyenne, 38s max)
+    # mais son taux d'échec 24h était de 37.9% — famine de slot/connexion DB
+    # pendant le pic, pas son propre coût. Décalé à :02 pour éviter le
+    # carrefour exact tout en restant tôt dans le cycle de 15min.
+    schedule_interval="2,17,32,47 * * * *",
     start_date=datetime(2026, 6, 27),
     catchup=False,
     max_active_runs=1,

@@ -59,7 +59,11 @@ with DAG(
     # Décalé 3,18,33,48 (au lieu de */15 pile) — évite le thundering herd
     # :00/:15/:30/:45 avec collect_bronze/dag_inference_xgboost/etc.
     # (cf. docs/AUDIT_AIRFLOW_POSTGRES_SPRINT24.md item C1).
-    schedule="3,18,33,48 * * * *",
+    # Sprint 26+ (2026-09-06) — +3min ne suffisait pas : transform_silver_to_gold
+    # démarre maintenant à :05 (ex :00/:10/:20/:30/:40/:50, tout aussi lourd,
+    # 383s en moyenne) et peut encore tourner à +8min. Taux d'échec 24h avant
+    # ce fix : 35.8%. Repoussé à +11 pour laisser passer sa queue typique.
+    schedule="11,26,41,56 * * * *",
     start_date=datetime(2026, 6, 1),
     catchup=False,
     max_active_runs=1,
