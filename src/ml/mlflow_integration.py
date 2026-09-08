@@ -320,16 +320,25 @@ class MLflowTracker:
         except Exception as e:  # pragma: no cover
             logger.warning("Échec de MLflow log_dict: %s", e)
 
-    def register_model(self, model_name: str) -> None:
+    def register_model(self, model_name: str) -> str | None:
         """Enregistre le modèle du run courant dans le Model Registry.
 
         Si le modèle existe déjà, une nouvelle version sera créée.
 
         Args:
             model_name (str): Le nom sous lequel enregistrer le modèle.
+
+        Returns:
+            Le numéro de version créée (str), ou None si l'enregistrement a
+            échoué. Sprint 26+ (2026-09-08) — le retour était None avant : le
+            seul appelant (``transition_to_production``) devinait "la
+            dernière version" via ``get_latest_versions()`` (déprécié
+            MLflow 2.9+, retourne un résultat par stage — pas forcément la
+            version qu'on vient de créer). Retourner explicitement la
+            version évite cette ambiguïté à la source.
         """
         if not self._run:
-            return
+            return None
         try:
             run_id = self._run.info.run_id
             uri = f"runs:/{run_id}/{model_name}.pkl"
@@ -343,35 +352,46 @@ class MLflowTracker:
             with contextlib.suppress(Exception):
                 client.create_registered_model(model_name)
 
-            client.create_model_version(name=model_name, source=uri, run_id=run_id)
-            logger.info("Modèle enregistré: %s (run %s)", model_name, run_id)
-        except Exception as e:
-            logger.warning("Échec de l'enregistrement du modèle: %s", e)
+            mv = client.create_model_version(name=model_name, source=uri, run_id=run_id)
+            logger.info("Modèle enregistré: %s v%s (run %s)", model_name, mv.version, run_id)
+            return mv.version
+        except Exception:
+            # Sprint 26+ (2026-09-08) — logger.exception (pas .warning) pour
+            # garder la stacktrace : cette erreur était invisible en pratique,
+            # cf. modèles Production bloqués 71 jours (v204/v276 du 29 juin)
+            # sans qu'aucun log exploitable ne remonte le pourquoi.
+            logger.exception("Échec de l'enregistrement du modèle %s", model_name)
+            return None
 
-    def transition_to_production(self, model_name: str) -> None:
-        """Promeut la dernière version existante de ce modèle à l'état 'Production'.
+    def transition_to_production(self, model_name: str, version: str | None = None) -> None:
+        """Promeut une version de ce modèle à l'état 'Production'.
 
         Archive automatiquement toutes les versions précédentes actuellement en Production.
 
         Args:
             model_name (str): Nom du modèle enregistré.
+            version (str | None): Version à promouvoir. Si None, retombe sur
+                ``get_latest_versions()`` (déprécié — à éviter, préférer
+                passer la version retournée par ``register_model()``).
         """
         try:
             from mlflow.tracking import MlflowClient
 
             client = MlflowClient()
-            versions = client.get_latest_versions(name=model_name)
-            if not versions:
-                return
-            latest = versions[0]
+            if version is None:
+                versions = client.get_latest_versions(name=model_name)
+                if not versions:
+                    logger.warning("Aucune version trouvée pour %s, transition annulée", model_name)
+                    return
+                version = versions[0].version
 
             # Transition vers la phase "Production" et archivage de l'existant
             client.transition_model_version_stage(
-                name=model_name, version=latest.version, stage="Production", archive_existing_versions=True
+                name=model_name, version=version, stage="Production", archive_existing_versions=True
             )
-            logger.info("Transition réussie: %s (version %s) vers Production", model_name, latest.version)
-        except Exception as e:
-            logger.warning("Échec de la transition du modèle vers Production: %s", e)
+            logger.info("Transition réussie: %s (version %s) vers Production", model_name, version)
+        except Exception:
+            logger.exception("Échec de la transition du modèle %s vers Production", model_name)
 
     @property
     def run_id(self) -> str | None:

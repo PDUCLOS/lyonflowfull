@@ -232,8 +232,8 @@ class XGBoostSpeedModel:
                     tracker.log_artifact(str(models_path))
                     # Register & transition to Production natively
                     reg_model_name = f"xgboost_speed_h{horizon_minutes}"
-                    tracker.register_model(reg_model_name)
-                    tracker.transition_to_production(reg_model_name)
+                    new_version = tracker.register_model(reg_model_name)
+                    tracker.transition_to_production(reg_model_name, version=new_version)
             except Exception as e:  # pragma: no cover
                 logger.warning("MLflow tracking failed (non-bloquant): %s", e)
 
