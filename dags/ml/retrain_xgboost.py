@@ -78,14 +78,17 @@ def _train_xgboost_speed():
     from src.models.xgboost_speed import XGBoostSpeedModel
 
     model = XGBoostSpeedModel()
-    results = {}
-    for horizon in [60]:
-        try:
-            metrics = model.train_one(horizon_minutes=horizon)
-            results[f"h{horizon}"] = metrics
-        except Exception as e:
-            logger.exception(f"Train H+{horizon}min failed: {e}")
-    return results
+    # Sprint 26+ (2026-09-08) — try/except silencieux datait de l'époque
+    # multi-horizons (4 horizons, un échec ne devait pas tuer les 3 autres).
+    # Avec un seul horizon restant (H+1h strict), il ne servait qu'à avaler
+    # les erreurs : la task Airflow finissait SUCCESS même si le training
+    # avait planté (constaté — connexion DB coupée pendant l'entraînement,
+    # xgb_velov_h60 resté bloqué 15 jours sans que le DAG ne l'affiche nulle
+    # part). Laisser l'exception remonter : Airflow marque FAILED, le
+    # monitoring de taux d'échec (dag-failure-rate-monitor.sh) le détecte.
+    horizon = 60
+    metrics = model.train_one(horizon_minutes=horizon)
+    return {f"h{horizon}": metrics}
 
 
 def _train_xgboost_velov():
@@ -93,14 +96,12 @@ def _train_xgboost_velov():
     from src.models.xgboost_velov import XGBoostVelovModel
 
     model = XGBoostVelovModel()
-    results = {}
-    for horizon in [60]:
-        try:
-            metrics = model.train_one(horizon_minutes=horizon)
-            results[f"h{horizon}"] = metrics
-        except Exception as e:
-            logger.exception(f"Train Velov H+{horizon}min failed: {e}")
-    return results
+    # Sprint 26+ (2026-09-08) — cf. commentaire _train_xgboost_speed() :
+    # même try/except silencieux retiré, même raison (xgb_velov_h60 bloqué
+    # 15 jours en MLflow malgré un DAG systématiquement SUCCESS).
+    horizon = 60
+    metrics = model.train_one(horizon_minutes=horizon)
+    return {f"h{horizon}": metrics}
 
 
 default_args = {
