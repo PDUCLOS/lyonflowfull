@@ -56,6 +56,21 @@ from src.ingestion.base import DataCollector, FetchResult
 logger = logging.getLogger(__name__)
 
 
+class TomTomAuthError(Exception):
+    """Clé API TomTom rejetée (401/403) — erreur systémique, pas transitoire.
+
+    Sprint 26+ (2026-09-08) — avant ce fix, un 403 sur CHAQUE tuile finissait
+    en `get_flow() -> None` par tuile (comportement voulu pour les erreurs
+    transitoires : timeout, 5xx, etc.), donc `collect_lyon_tiles()` retournait
+    une liste vide, et le collecteur loggait "0 enregistrements, skip de
+    l'INSERT (idempotence)" puis se marquait SUCCÈS. Résultat : la clé TomTom
+    a été rejetée (403 Forbidden) sur 100% des requêtes sans qu'aucune tâche
+    Airflow n'échoue jamais — bronze.tomtom_traffic vide depuis des semaines,
+    invisible de tous les monitorings existants (ils regardent l'état
+    success/failed, pas le contenu réel).
+    """
+
+
 # -----------------------------------------------------------------------------
 # Constantes et Paramètres Globaux
 # -----------------------------------------------------------------------------
@@ -263,6 +278,18 @@ def get_flow(lat: float, lon: float, use_cache: bool = True) -> dict | None:
 
     try:
         data = _query_tomtom_flow(lat, lon, api_key)
+    except httpx.HTTPStatusError as e:
+        if e.response.status_code in (401, 403):
+            # Erreur d'auth : pas la peine de continuer à taper l'API avec la
+            # même clé cassée sur les 11 autres tuiles — on le remonte tel
+            # quel, collect_lyon_tiles() décide de la suite.
+            raise TomTomAuthError(
+                f"Clé TomTom rejetée (HTTP {e.response.status_code}) — "
+                "vérifier/renouveler sur https://developer.tomtom.com/"
+            ) from e
+        logger.warning("Échec de l'API TomTom pour (%s, %s): %s", lat, lon, e)
+        _cache_set(key, None)
+        return None
     except Exception as e:
         logger.warning("Échec de l'API TomTom pour (%s, %s): %s", lat, lon, e)
         _cache_set(key, None)
@@ -325,6 +352,11 @@ def collect_lyon_tiles() -> list[dict]:
 
     results = []
     for lat, lon in LYON_TILES:
+        # get_flow() laisse TomTomAuthError se propager (non catchée ici,
+        # volontairement) : la clé est la même pour les 12 tuiles, si elle
+        # est rejetée sur la première inutile d'insister sur les 11 autres.
+        # L'exception remonte jusqu'au collecteur (base.py), qui marque la
+        # tâche Airflow FAILED au lieu d'un "0 enregistrements" silencieux.
         result = get_flow(lat, lon, use_cache=False)
         if result is not None:
             results.append(result)

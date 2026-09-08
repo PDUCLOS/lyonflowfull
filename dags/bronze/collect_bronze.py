@@ -31,6 +31,18 @@ def _run_collector(collector_class: type[DataCollector]) -> dict:
     """Instancie le collecteur (lazy) puis lance run()."""
     collector = collector_class()  # type: ignore
     result = collector.run()
+    if result.error:
+        # Sprint 26+ (2026-09-08) — DataCollector.run() catche déjà toute
+        # exception en interne et la range dans result.error (cf. base.py) ;
+        # cette fonction se contentait de la relayer dans le dict de retour
+        # sans jamais la faire remonter à Airflow. Conséquence constatée :
+        # clé API TomTom rejetée (403 sur 100% des requêtes) pendant des
+        # semaines, tâche toujours SUCCESS, aucune alerte, aucun retry —
+        # alors que `retries=2` est configuré sur ce DAG précisément pour
+        # ce genre de cas. On lève maintenant pour de vrai : Airflow retry
+        # (2x) puis marque FAILED si ça persiste, visible par
+        # dag-failure-rate-monitor.sh et dag_critical_pipeline_health.
+        raise RuntimeError(f"Collecteur {result.source} en échec : {result.error}")
     return {
         "source": result.source,
         "n_records": result.n_records,
