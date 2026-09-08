@@ -38,11 +38,22 @@ logger = logging.getLogger(__name__)
 # DAGs dont la panne bloque le dashboard (paused OU is_active=False)
 # Note : SIRI Lite est collecté via collect_bronze (REALTIME_COLLECTORS),
 # pas via un DAG dédié. Le vieux dag_collect_siri_lite est un fantôme en DB.
+#
+# Sprint 26+ (2026-09-08) — ajout collect_tomtom_traffic : trouvé is_paused
+# depuis le 2026-08-19 (probablement mis en pause pendant l'incident du
+# DagRun zombie de cette date, jamais réactivé) — 20 jours sans une seule
+# collecte, invisible aux deux autres monitorings (dag-failure-rate-monitor.sh
+# ne regarde que les DAGs avec ≥5 runs/24h, un DAG en pause n'en a aucun ; ce
+# check-ci ne couvrait que les 4 DAGs ci-dessus). Conséquence en cascade :
+# bronze.tomtom_traffic vide → gold.v_tomtom_traffic_live vide →
+# gold.mv_xgb_vs_tomtom vide → widget "Modèle" du dashboard Usager_5 coincé
+# sur "Indéterminé" (dépend de 7j d'historique XGBoost-vs-TomTom).
 CRITICAL_DAGS = [
     "collect_bronze",
     "transform_bronze_to_silver",
     "transform_silver_to_gold",
     "dag_inference_xgboost",
+    "collect_tomtom_traffic",
 ]
 
 # Tables Gold dont la fraîcheur < 1h est requise pour le dashboard
