@@ -142,7 +142,15 @@ services:
           # 2.5G → 4G (2026-07-01) : shared_buffers=1GB + maintenance_work_mem=256MB
           # + work_mem=32MB×N connexions approchaient déjà la limite 2.5G
           # (94% mem usage observé) — cf. docs/POSTGRES_TUNING_PROD.md Option A.
-          memory: 4G
+          # 4G → 6G (2026-09-09) : même schéma que le fix CPU du 2026-08-29 —
+          # cap jamais revu depuis alors que le host (11Go) a 8Go dispo.
+          # Constaté à 90.3% du cap (3.6/4Go) sous charge normale, aucune
+          # marge pour absorber un pic (retrain ML, REFRESH MV concurrents,
+          # checkpoint). Moins de marge mémoire = éviction de buffers plus
+          # agressive = plus de pression I/O aux checkpoints — contribue au
+          # blocage retrain_xgboost_velov (idle_in_transaction_session_timeout
+          # atteint pendant un checkpoint de 270s, cf. commit fix connection.py).
+          memory: 6G
 
   # ---------------------------------------------------------------------------
   # Redis — SUPPRIMÉ Sprint 15+ (2026-06-19)

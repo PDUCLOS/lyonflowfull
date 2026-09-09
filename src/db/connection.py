@@ -131,7 +131,23 @@ def execute_query(query: str, params: tuple = ()) -> list[dict]:
         cur.execute("SET search_path TO public, gold, bronze, silver, referentiel, airflow_db, mlflow")
         cur.execute(query, params)
         if cur.description:
-            return [dict(row) for row in cur.fetchall()]
+            rows = cur.fetchall()
+            # Sprint 26+ (2026-09-09) — commit AVANT la conversion Python
+            # (pas après, comme avant). Une fois fetchall() revenu, la
+            # transaction Postgres est "idle" côté serveur pendant que le
+            # client convertit les lignes en dict — pour un gros résultat
+            # (14 jours de gold.velov_features, ~millions de lignes), cette
+            # conversion peut dépasser idle_in_transaction_session_timeout
+            # (2min, migration_047) et Postgres tue la connexion avant que
+            # le commit (déclenché en sortie du `with raw_connection()`)
+            # n'ait eu l'occasion de s'exécuter. Constaté : retrain_xgboost_velov
+            # à 57.7% d'échec, "connection already closed" pendant
+            # _load_training_data(). Le commit ici est un no-op fonctionnel
+            # (lecture seule) mais libère la transaction côté serveur tout
+            # de suite ; le commit implicite de raw_connection() à la sortie
+            # du bloc `with` devient un second commit sans effet (sans-risque).
+            conn.commit()
+            return [dict(row) for row in rows]
         return []
 
 
@@ -151,6 +167,7 @@ def execute_scalar(query: str, params: tuple = ()) -> object | None:
         cur.execute("SET search_path TO public, gold, bronze, silver, referentiel, airflow_db, mlflow")
         cur.execute(query, params)
         row = cur.fetchone()
+        conn.commit()  # cf. execute_query() — libère la transaction tout de suite
         return row[0] if row else None
 
 
