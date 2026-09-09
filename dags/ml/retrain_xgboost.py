@@ -125,6 +125,7 @@ with DAG(
         task_id="train_xgboost_speed",
         python_callable=_train_xgboost_speed_wrapped,
         execution_timeout=timedelta(minutes=15),
+        pool="ml_training",  # Sprint 26+ (2026-09-09) — cf. dag_daily_speed_train.py
     )
 
 # DAG 2: retrain_xgboost_velov (hourly :50 — match CLAUDE.md)
@@ -142,4 +143,5 @@ with DAG(
         task_id="train_xgboost_velov",
         python_callable=_train_xgboost_velov_wrapped,
         execution_timeout=timedelta(minutes=15),
+        pool="ml_training",  # Sprint 26+ (2026-09-09) — cf. dag_daily_speed_train.py
     )

@@ -103,4 +103,15 @@ with DAG(
         task_id="train_xgboost_speed_h1h",
         python_callable=_train_xgboost_speed_h1h,
         execution_timeout=timedelta(minutes=30),
+        # Sprint 26+ (2026-09-09) — pool ml_training (1 slot), partagé avec
+        # retrain_xgboost_velov/speed : évite que deux gros trainings XGBoost
+        # tournent en même temps et se disputent CPU/connexions Postgres.
+        # Ne couvre pas les DAGs de collecte (collect_bronze etc.) — les
+        # mettre dans ce pool ferait attendre des collecteurs temps réel
+        # (execution_timeout=4min) derrière un training de plusieurs minutes,
+        # remplaçant un problème par un autre. Le vrai fix pour la collision
+        # training/collecte est le commit avant fetchall() (connection.py,
+        # 25390a2) qui referme la transaction quasi instantanément au lieu
+        # de la laisser ouverte plusieurs minutes.
+        pool="ml_training",
     )
