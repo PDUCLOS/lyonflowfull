@@ -130,24 +130,23 @@ def execute_query(query: str, params: tuple = ()) -> list[dict]:
     with raw_connection() as conn, conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
         cur.execute("SET search_path TO public, gold, bronze, silver, referentiel, airflow_db, mlflow")
         cur.execute(query, params)
+        # Sprint 26+ (2026-09-09) — commit ICI, juste après execute() et
+        # AVANT fetchall(). Un cursor psycopg2 standard (pas server-side)
+        # a déjà tout le résultat bufferisé côté client dès qu'execute()
+        # rend la main — le commit à ce stade ne coupe rien. Un premier
+        # essai committait après fetchall() en pensant que la conversion
+        # Python (`[dict(row) for row in rows]`) était la partie lente :
+        # faux, c'est fetchall() lui-même (construction des RealDictRow,
+        # potentiellement des millions pour 14 jours de gold.velov_features)
+        # qui prend le temps, et Postgres compte déjà la session "idle in
+        # transaction" dès qu'execute() est terminé server-side — confirmé
+        # via docker logs postgres ("FATAL: terminating connection due to
+        # idle-in-transaction timeout") pile pendant ce fetchall(), échec
+        # identique après le premier correctif. Commit avant fetchall()
+        # ferme la fenêtre pour de vrai.
+        conn.commit()
         if cur.description:
-            rows = cur.fetchall()
-            # Sprint 26+ (2026-09-09) — commit AVANT la conversion Python
-            # (pas après, comme avant). Une fois fetchall() revenu, la
-            # transaction Postgres est "idle" côté serveur pendant que le
-            # client convertit les lignes en dict — pour un gros résultat
-            # (14 jours de gold.velov_features, ~millions de lignes), cette
-            # conversion peut dépasser idle_in_transaction_session_timeout
-            # (2min, migration_047) et Postgres tue la connexion avant que
-            # le commit (déclenché en sortie du `with raw_connection()`)
-            # n'ait eu l'occasion de s'exécuter. Constaté : retrain_xgboost_velov
-            # à 57.7% d'échec, "connection already closed" pendant
-            # _load_training_data(). Le commit ici est un no-op fonctionnel
-            # (lecture seule) mais libère la transaction côté serveur tout
-            # de suite ; le commit implicite de raw_connection() à la sortie
-            # du bloc `with` devient un second commit sans effet (sans-risque).
-            conn.commit()
-            return [dict(row) for row in rows]
+            return [dict(row) for row in cur.fetchall()]
         return []
 
 
@@ -166,8 +165,8 @@ def execute_scalar(query: str, params: tuple = ()) -> object | None:
     with raw_connection() as conn, conn.cursor() as cur:
         cur.execute("SET search_path TO public, gold, bronze, silver, referentiel, airflow_db, mlflow")
         cur.execute(query, params)
+        conn.commit()  # cf. execute_query() — avant fetchone(), pas après
         row = cur.fetchone()
-        conn.commit()  # cf. execute_query() — libère la transaction tout de suite
         return row[0] if row else None
 
 
