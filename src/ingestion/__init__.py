@@ -26,11 +26,15 @@ REALTIME_COLLECTORS: list[type[DataCollector]] = [
     AirQualityOpenMeteo,
     ChantiersGrandLyon,
     TclSiriLite,
-    # (2026-06-18) — TomTomTrafficFlow réactivé.
-    # Wrapper DataCollector autour de collect_lyon_tiles() et
-    # save_lyon_tiles_to_bronze(). Le DAG collect_tomtom_traffic s'exécute
-    # désormais toutes les 15 minutes sur 12 tuiles de Lyon.
-    TomTomTrafficFlow,
+    # TomTomTrafficFlow retiré (2026-09-10) — cette liste est consommée par
+    # collect_bronze (toutes les 5 min), qui exécutait donc TomTom 3x plus
+    # souvent que le DAG dédié collect_tomtom_traffic (*/15 * * * *) —
+    # double collecte, double consommation de quota sur une clé API
+    # TomTom en tier gratuit/évaluation. Le commentaire ci-dessus (2026-06-18)
+    # affirmait à tort que "le DAG collect_tomtom_traffic s'exécute toutes
+    # les 15 minutes" comme si ça s'appliquait à cette liste — faux, les
+    # deux chemins sont indépendants. collect_tomtom_traffic reste la seule
+    # source désormais, à 15 min.
     # (2026-07-05) — VigilanceMeteo. Vigilance canicule dept 69 (Rhône),
     # API publique Opendatasoft sans clé. DAG collect_vigilance_meteo */6h.
     # Alimente gold.v_velov_safety_advisory (conseil sécurité Vélov).
