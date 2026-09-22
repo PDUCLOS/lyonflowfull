@@ -13,6 +13,11 @@
 # Cron (toutes les 30 min) :
 #   */30 * * * * /opt/lyonflow/scripts/dag-failure-rate-monitor.sh >> /var/log/lyonflow-dag-monitor.log 2>&1
 #
+# Sprint 26 (2026-09-22) — hystérésis : un DAG entre en alerte à
+# >= FAIL_RATE_THRESHOLD et n'en sort qu'à < RECOVER_THRESHOLD. Avant ce fix,
+# un DAG oscillant pile sur le seuil (refresh_osm_traffic_costs à 19/95 =
+# 20,0 %) produisait alerte / recovery / alerte à chaque cycle de 30 min.
+#
 # Credentials Telegram réutilisées depuis /opt/lyonflow/.watchdog.env :
 #   TELEGRAM_BOT_TOKEN=xxxx
 #   TELEGRAM_CHAT_ID=xxxx
@@ -24,6 +29,7 @@ ENV_FILE="$COMPOSE_DIR/.watchdog.env"
 STATE_FILE="$COMPOSE_DIR/.dag-failure-monitor.state"
 WINDOW_HOURS=24
 FAIL_RATE_THRESHOLD=20   # % d'échec sur la fenêtre pour déclencher l'alerte
+RECOVER_THRESHOLD=15     # % sous lequel un DAG en alerte est considéré rétabli (hystérésis)
 MIN_RUNS=5               # ignore les DAGs avec trop peu de runs (bruit statistique)
 
 [ -f "$ENV_FILE" ] && source "$ENV_FILE"
@@ -63,12 +69,22 @@ if [ $? -ne 0 ]; then
     exit 1
 fi
 
-# DAGs au-dessus du seuil ce cycle
-above_threshold=$(echo "$rows" | awk -F'|' -v t="$FAIL_RATE_THRESHOLD" '$5+0 >= t {print $1}')
-
 # DAGs déjà en alerte au cycle précédent (un dag_id par ligne)
 previously_alerting=""
 [ -f "$STATE_FILE" ] && previously_alerting=$(cat "$STATE_FILE")
+
+# DAGs au-dessus du seuil d'entrée ce cycle
+above_threshold=$(echo "$rows" | awk -F'|' -v t="$FAIL_RATE_THRESHOLD" '$5+0 >= t {print $1}')
+
+# Hystérésis : un DAG déjà en alerte reste en alerte tant qu'il est
+# >= RECOVER_THRESHOLD (même s'il est repassé sous FAIL_RATE_THRESHOLD)
+still_above_recover=$(echo "$rows" | awk -F'|' -v r="$RECOVER_THRESHOLD" '$5+0 >= r {print $1}')
+while IFS= read -r dag; do
+    [ -z "$dag" ] && continue
+    if grep -qxF "$dag" <<< "$still_above_recover" && ! grep -qxF "$dag" <<< "$above_threshold"; then
+        above_threshold+=$'\n'"$dag"
+    fi
+done <<< "$previously_alerting"
 
 # Nouvelles entrées en alerte (présentes maintenant, absentes avant)
 new_alerts=""
@@ -88,7 +104,7 @@ recovered=""
 while IFS= read -r dag; do
     [ -z "$dag" ] && continue
     if ! grep -qxF "$dag" <<< "$above_threshold"; then
-        recovered+="🟢 ${dag} : repassé sous ${FAIL_RATE_THRESHOLD}% d'échec sur ${WINDOW_HOURS}h"$'\n'
+        recovered+="🟢 ${dag} : repassé sous ${RECOVER_THRESHOLD}% d'échec sur ${WINDOW_HOURS}h"$'\n'
     fi
 done <<< "$previously_alerting"
 
