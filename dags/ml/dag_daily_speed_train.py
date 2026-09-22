@@ -93,7 +93,9 @@ with DAG(
     dag_id=DAG_ID,
     default_args=DEFAULT_ARGS,
     description="Entraînement quotidien XGBoost H+1h Optimisation)",
-    schedule_interval="0 3 * * *",  # 03h00 tous les jours
+    # Sprint 26 (2026-09-22) — décalé de 03:00 à 03:38 (tempête 03:00, cf.
+    # purge_bronze dans maintenance.py). Reste dans le pool ml_training.
+    schedule_interval="38 3 * * *",
     start_date=datetime(2026, 6, 12),
     catchup=False,
     max_active_runs=1,

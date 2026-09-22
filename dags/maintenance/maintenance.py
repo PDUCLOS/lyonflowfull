@@ -366,7 +366,12 @@ with DAG(
 with DAG(
     dag_id="purge_bronze",
     description="Purge Bronze + Gold (rétention: 7j par défaut)",
-    schedule="0 3 * * *",
+    # Sprint 26 (2026-09-22) — décalé de :00 à :08 : à 03:00 pile démarraient
+    # purge_bronze + dag_daily_speed_train + tous les DAGs */5 et */15 (:00).
+    # Le 2026-09-10, 8 DAGs failed entre 03:00 et 03:15, healthcheck KO 2 cycles
+    # → restart auto par vps-watchdog.sh + 2 alertes Telegram (idem 05, 06, 07/09).
+    # :08 est le seul créneau sans DAG récurrent (b2s à :07 et :12).
+    schedule="8 3 * * *",
     start_date=datetime(2026, 1, 1),
     catchup=False,
     max_active_runs=1,
