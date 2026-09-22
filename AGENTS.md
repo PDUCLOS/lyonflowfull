@@ -3,7 +3,7 @@
 # =============================================================================
 # Ce fichier est la source de vérité sur les décisions de phase et conventions
 # du projet. À lire en premier par tout assistant IA.
-# Dernière mise à jour : 2026-07-23, Sprint 23 (v0.13.0) — bascule vps → main.
+# Dernière mise à jour : 2026-09-22, Sprint 26 (v0.14.1) — débloat osm.ways, backup offsite durci.
 # =============================================================================
 
 # Phases du projet (état 2026-07-23)
@@ -15,12 +15,34 @@
 #
 # PHASE 2 (ACTIVE) — Déploiement VPS production (branche `main` depuis 2026-07-23)
 # - Cible production unique : VPS 51.83.159.224 (Ubuntu, 6 CPU, 12 Go RAM, 2× 100 Go SSD)
-# - **v0.13.0** (en cours sur main) — 620 tests verts, ~60 widgets, 15 pages × 3 personas, 15 DAGs Airflow
+# - **v0.14.1** (en cours sur main) — Sprint 26 (2026-09-22) : alertes Telegram en boucle + backup
+# - **Sprint 26 (2026-09-22)** : origine des alertes Telegram = `refresh_osm_traffic_costs`
+#   à 20,0 % d'échec (19/95, timeout 240 s) pile sur le seuil du dag-failure-rate-monitor.
+#   Cause racine : `osm.ways` à 98 % de vide (1,5 Go heap + 0,9 Go index pour 101 k lignes)
+#   parce que la migration 029 avait indexé `cost`/`reverse_cost` (jamais lus par pgr_dijkstra,
+#   idx_scan = 0) → chaque UPDATE non-HOT. Fix : migration 048 (DROP 2 index + fillfactor 50 +
+#   VACUUM FULL → 59 Mo / 6 Mo), migration 049 (4 index morts, ~10 Go, idx_scan = 0),
+#   hystérésis 20 % / 15 % dans `scripts/dag-failure-rate-monitor.sh`, `purge_bronze` 03:00 → 03:08
+#   et `dag_daily_speed_train` 03:00 → 03:38 (tempête 03:00 = restarts watchdog 05/06/07/10 sept).
+#   Backup : timer `lyonflow-backup.timer` trouvé DÉSACTIVÉ depuis le 2026-07-22, config rclone
+#   invalide (token JSON), 0 backup pendant 2 mois. Réactivé + `backup-offsite.sh` durci
+#   (preflight destination AVANT pg_dump, trap qui termine le pg_dump orphelin, purge auto par
+#   taille/âge) + `lyonflow-backup-failed.service` (OnFailure → Telegram). Reste à faire par
+#   Patrice : OAuth Google Drive (`rclone authorize "drive"` sur le Mac, coller le token dans
+#   `/opt/lyonflow/.rclone.conf`).
+#   Incident annexe : activer le timer avec `Persistent=true` déclenche un run immédiat ; le
+#   pg_dump lancé via `docker exec` a survécu 30 min à la mort du pipe rclone (locks sur toutes
+#   les tables, REFRESH MV bloqués). Corrigé par le preflight + trap.
+# - **Sprint 25 (2026-08-22)** : durcissement PG `tcp_keepalives_idle=60` + `idle_in_txn=2min` (commit 5c7289f).
+#   Patch : `docker-compose.yml` (command: postgres -c tcp_keepalives_idle=60) +
+#   `scripts/sql/migration_047_postgres_connection_health.sql` (ALTER SYSTEM + vue `gold.v_connection_health`).
+#   Incident : 14 backends fantômes d'un container détruit → RAM PG 93 % → watchdog en boucle.
+#   Doc : `docs/INCIDENTS/2026-08-22-postgres-connection-leak.md` (hors-github par convention Sprint 23).
 # - **Sprint 23 (2026-07-23)** : `vps` renommé `main` (force-push).
 #   Backup complet de l'ancien `main` dans `legacy/phase1-main`.
 #   Le VPS tourne maintenant sur `main` (checkout + pull OK, containers healthy).
 #   La branche `vps` reste trackée comme alias (== main @ cf75e53).
-# - Sprints livrés : VPS 1-8, 9+, 11+, 12+, 13, 13+, 15+, 17, 17+, 18, 20, 21
+# - Sprints livrés : VPS 1-8, 9+, 11+, 12+, 13, 13+, 15+, 17, 17+, 18, 20, 21, 25, 26
 #
 # Résumé des sprints majeurs :
 #   * VPS-1 à VPS-4 : TLS, systemd, backup, monitoring, métriques custom
@@ -116,8 +138,15 @@
 # - sparkline.py : sparkline 24h santé réseau.
 # - auto_refresh.py : auto-refresh par persona (streamlit-autorefresh).
 
-# Dette technique connue (Sprint 21)
+# Dette technique connue (Sprint 26)
 # -----------------------------------
+# - BACKUP OFFSITE : OAuth Google Drive à finaliser (cf. Sprint 26). Tant que ce n'est pas fait,
+#   `lyonflow-backup.service` échoue chaque nuit à 03:00 UTC au preflight (sans lancer pg_dump)
+#   et envoie 1 alerte Telegram/jour — c'est voulu (signal), pas un bug.
+# - `collect_bronze` ~4,5 % d'échec : `404 Not Found` du WFS data.grandlyon.com par rafales
+#   (23 h et 08 h UTC), 3 collecteurs simultanés → panne amont, rien à corriger côté projet.
+# - `.backup-offsite.conf` : `BACKUP_MAX_TOTAL_GB` / `BACKUP_KEEP_MIN` / `BACKUP_RETENTION_DAYS`
+#   à ajuster une fois la taille réelle d'un dump connue (DB ~40 Go, Drive gratuit 15 Go).
 # - Vélov schéma ancien : xgboost_velov.py + gold.velov_features sur ancien
 #   schéma (temperature_c, rain_mm, hour_sin). Pipeline trafic migré v0.3.1.
 # - dim_spatial_grid_mapping.properties_twgid ≠ traffic_features_live.channel_id
@@ -128,6 +157,11 @@
 # - Prometheus supprimé Sprint 15+ (config YAML v2.54 cassée). Grafana sans source.
 # - test_error_display 3 failures pré-existantes (test_persona_a_5_types).
 # - OFFSITE_HOST non configuré (backup-template.sh livré, destination à choisir).
+# - Connexions DB sans `application_name` → impossible d'identifier le
+#   service fuyard si leak à l'avenir. Patch P2 Sprint 26+ : forcer
+#   `?application_name=lyonflow-<service>` dans DATABASE_URL.
+# - `gold.v_connection_health` créé Sprint 25 (migration 047) mais pas
+#   encore câblé dans le healthcheck-vps.sh. À faire Sprint 26+.
 
 # Résolu depuis Sprint 8
 # ----------------------
@@ -144,6 +178,11 @@
 # - snap_to_roads.py : VIRÉ Sprint 18. Dead code.
 # - 13 docs stale : ARCHIVÉS Sprint 21 (convention déplacer, jamais supprimer).
 # - test drift_detector doublon : MERGÉ Sprint 21.
+# - Bloat osm.ways + alertes Telegram en boucle (Sprint 26) : FIXÉ (migrations 048/049,
+#   hystérésis dag-monitor). Détail dans la section Sprint 26 ci-dessus.
+# - Fuite connexions Postgres (Sprint 25) : FIXÉ (tcp_keepalives_idle=60 +
+#   idle_in_txn=2min + vue gold.v_connection_health). Incident doc
+#   docs/INCIDENTS/2026-08-22-postgres-connection-leak.md.
 
 # Règles strictes
 # ---------------
