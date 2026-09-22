@@ -1,0 +1,11 @@
+[Unit]
+Description=LyonFlow — alerte Telegram si lyonflow-backup.service échoue
+# Déclenché par OnFailure= dans lyonflow-backup.service (Sprint 26, 2026-09-22).
+# Logique dans scripts/backup-failed-alert.sh (credentials : .watchdog.env).
+
+[Service]
+Type=oneshot
+User=ubuntu
+Group=ubuntu
+WorkingDirectory=/opt/lyonflow
+ExecStart=/opt/lyonflow/scripts/backup-failed-alert.sh

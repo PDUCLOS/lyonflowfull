@@ -6,6 +6,8 @@ Documentation=https://github.com/PDUCLOS/lyonflowfull
 Requires=docker.service
 After=docker.service
 ConditionPathExists=/opt/lyonflow/scripts/backup-offsite.sh
+# Sprint 26 (2026-09-22) : alerte Telegram si le backup échoue (cf. lyonflow-backup-failed.service)
+OnFailure=lyonflow-backup-failed.service
 
 [Service]
 Type=oneshot
