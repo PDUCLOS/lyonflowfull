@@ -140,13 +140,12 @@
 
 # Dette technique connue (Sprint 26)
 # -----------------------------------
-# - BACKUP OFFSITE : OAuth Google Drive à finaliser (cf. Sprint 26). Tant que ce n'est pas fait,
-#   `lyonflow-backup.service` échoue chaque nuit à 03:00 UTC au preflight (sans lancer pg_dump)
-#   et envoie 1 alerte Telegram/jour — c'est voulu (signal), pas un bug.
+# - BACKUP OFFSITE : OK depuis le 2026-09-23 (OAuth refait, premier dump 3,7 Go gz en 22 min vers
+#   gdrive:backups/lyonflow, quota Drive 5 TiB). Réglages VPS hors git dans `.backup-offsite.conf` :
+#   BACKUP_MAX_TOTAL_GB=150 (+ défauts rétention 14 j, keep_min 2). Si alerte Telegram « backup
+#   ÉCHOUÉ » : `journalctl -u lyonflow-backup.service` — preflight KO = token rclone expiré/révoqué.
 # - `collect_bronze` ~4,5 % d'échec : `404 Not Found` du WFS data.grandlyon.com par rafales
 #   (23 h et 08 h UTC), 3 collecteurs simultanés → panne amont, rien à corriger côté projet.
-# - `.backup-offsite.conf` : `BACKUP_MAX_TOTAL_GB` / `BACKUP_KEEP_MIN` / `BACKUP_RETENTION_DAYS`
-#   à ajuster une fois la taille réelle d'un dump connue (DB ~40 Go, Drive gratuit 15 Go).
 # - Vélov schéma ancien : xgboost_velov.py + gold.velov_features sur ancien
 #   schéma (temperature_c, rain_mm, hour_sin). Pipeline trafic migré v0.3.1.
 # - dim_spatial_grid_mapping.properties_twgid ≠ traffic_features_live.channel_id

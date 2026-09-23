@@ -270,16 +270,21 @@ if [ "$TOTAL_BYTES" -gt "$CAP_BYTES" ]; then
     echo "   WARN : toujours au-dessus du plafond apres purge (keep_min=${BACKUP_KEEP_MIN} protege les derniers backups)."
     echo "          Augmenter le quota destination ou baisser BACKUP_KEEP_MIN."
 fi
-SIZE_HUMAN=$(du -h /opt/lyonflow/data 2>/dev/null | tail -1 | awk '{print $1}' || echo "?")
+DB_SIZE=$(docker exec lyonflow-postgres psql -U "${POSTGRES_USER:-lyonflow}" -d "${POSTGRES_DB:-lyonflow}" -tAc \
+    "SELECT pg_size_pretty(pg_database_size(current_database()))" 2>/dev/null || echo "?")
+if [ "$GPG_CMD" = "cat" ]; then DECRYPT_HINT=""; else DECRYPT_HINT=" | gpg -d"; fi
 
 echo
 echo "Backup termine en ${DURATION}s"
 echo "   Destination : $DEST_LOG"
-echo "   DB source   : ${POSTGRES_USER:-lyonflow}@lyonflow (taille ~18 GB)"
+echo "   DB source   : ${POSTGRES_USER:-lyonflow}@${POSTGRES_DB:-lyonflow} (${DB_SIZE})"
 echo "   Methode     : stream pipe (RIEN ecrit sur VPS)"
 echo
 echo "Pour restaurer :"
-echo "   ssh user@backup-host"
-echo "   rclone cat 'gdrive:${GDRIVE_BACKUP_DEST:-}/$FINAL_NAME' | gunzip | gpg -d | pg_restore -U lyonflow -d lyonflow"
+if [ -n "${GDRIVE_BACKUP_DEST:-}" ]; then
+    echo "   rclone cat 'gdrive:${GDRIVE_BACKUP_DEST}/$FINAL_NAME' | gunzip${DECRYPT_HINT} | pg_restore -U lyonflow -d lyonflow"
+else
+    echo "   ssh $SSH_HOST cat '$SSH_DIR/$FINAL_NAME' | gunzip${DECRYPT_HINT} | pg_restore -U lyonflow -d lyonflow"
+fi
 echo
 echo "REGLE RESPECTEE : aucun backup persistant sur le VPS."
