@@ -116,7 +116,7 @@ Voir [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) et
 | ML Bus | XGBoost delay (phase analyse) |
 | API | FastAPI + Uvicorn |
 | Dashboard | Streamlit multi-pages |
-| Monitoring | Prometheus + Alertmanager + Grafana |
+| Monitoring | Cron VPS : `vps-watchdog.sh` (5 min) + `dag-failure-rate-monitor.sh` (30 min) → alertes Telegram. Prometheus retiré Sprint 15+ |
 | Transformation | psycopg2 pur (pas de Polars dans Airflow) |
 | CI/CD | GitHub Actions |
 | Infra | Docker Compose |
@@ -288,7 +288,7 @@ make check-deploy-env       # vérifie .deploy.env (chmod 600 + vars critiques)
 make deploy-vps              # rsync + restart systemd
 ./scripts/healthcheck-vps.sh  # 20+ checks (containers, disque, DB, endpoints)
 make rollback-vps            # rollback dernière release
-make monitoring-up           # stack Prometheus/Grafana/Alertmanager
+make monitoring-up           # stack Grafana/Alertmanager (dormante, non déployée)
 make tls-status               # statut cert Let's Encrypt
 ```
 
@@ -321,7 +321,7 @@ Voir [docs/DATA_GOVERNANCE.md](docs/DATA_GOVERNANCE.md) pour le détail.
 **Statut actuel** : production VPS stable — 18 pages / 59 widgets, 27 DAGs Airflow
 (25 actifs, 2 pausés intentionnellement), zéro mock en production, pipeline
 Medallion complet (9 sources → Bronze → Silver → Gold), routage voiture temps réel
-(pgRouting), monitoring Prometheus/Grafana déployé.
+(pgRouting), monitoring par cron + Telegram (watchdog, taux d'échec DAGs, backup offsite quotidien).
 
 **Axes en cours ou à venir** :
 - Qualité des données (validateurs `data_quality.py`, contrôle continu)

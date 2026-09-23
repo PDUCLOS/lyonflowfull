@@ -5,6 +5,55 @@ Toutes les modifications notables de ce projet sont documentées ici.
 Le format suit [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/),
 et ce projet adhère au [Semantic Versioning](https://semver.org/lang/fr/).
 
+## [Unreleased] - 2026-09-23 — Sprint 26 : alertes Telegram en boucle, débloat osm.ways, backup offsite
+
+Origine des alertes Telegram reçues depuis le 2026-09-22 : `refresh_osm_traffic_costs`
+à 20,0 % d'échec sur 24 h (19/95, `statement_timeout` 240 s), pile sur le seuil du
+`dag-failure-rate-monitor.sh` → alerte / recovery / alerte toutes les 30 min.
+
+### Corrigé
+
+- **`osm.ways` : 98 % d'espace vide** (heap 1 561 Mo + index 908 Mo pour 101 k lignes).
+  Cause racine : la migration 029 avait indexé `cost` / `reverse_cost` alors que
+  `pgr_dijkstra` ne les lit jamais par index (`idx_scan = 0` depuis leur création) ;
+  chaque UPDATE du DAG (39 k arêtes / 15 min) devenait non-HOT. Un `VACUUM FULL`
+  précédent (juillet) n'avait traité que le symptôme. Migration 048 : DROP des 2 index,
+  `fillfactor = 50`, `VACUUM FULL` → 59 Mo / 6 Mo. DAG : 190-255 s → **10-12 s**,
+  0 échec sur 67 runs après le fix.
+- **Migration 049** : 4 index jamais scannés supprimés (`idx_gold_traffic_ml` 2,5 Go,
+  `idx_silver_boucles_channel` 3,7 Go, `idx_silver_trafic_chn_time_geom` 3,5 Go,
+  `idx_traffic_features_live_computed_at` doublon). sdb : 61 % → 48 %.
+- **`dag-failure-rate-monitor.sh`** : hystérésis (alerte ≥ 20 %, recovery < 15 %).
+- **Tempête 03:00 UTC** : `purge_bronze` 03:00 → 03:08, `dag_daily_speed_train`
+  03:00 → 03:38. Les 05, 06, 07 et 10/09, 8 DAGs failed entre 03:00 et 03:15 →
+  healthcheck KO 2 cycles → restart auto par `vps-watchdog.sh` + 2 alertes Telegram.
+- **`check_gold_freshness`** (`dag_critical_pipeline_health`) : `gold.tcl_vehicle_realtime`
+  ignorée entre 00:30 et 05:30 (heure de Paris), réseau TCL à l'arrêt → table vide
+  chaque nuit, 12-14 échecs / nuit (14,7 % sur 24 h) avant le fix.
+- **Bandeau Vélov « Pollution très mauvaise » permanent** : la migration 045 lisait
+  `european_aqi` comme un niveau 1-6 ; Open-Meteo renvoie l'EAQI 0-100+. 761 h / 761 h
+  en `severe` sur 30 jours. Migration 050 : warning ≥ 60, severe ≥ 80.
+
+### Backup offsite (Règle 12)
+
+- **Constat** : `lyonflow-backup.timer` désactivé depuis le 2026-07-22 et token rclone
+  invalide → **aucun backup PostgreSQL pendant 2 mois**, sans alerte.
+- Timer réactivé, OAuth Google Drive refait (2026-09-23), premier dump **3,7 Go gz en
+  22 min** vers `gdrive:backups/lyonflow` (quota Drive 5 TiB).
+- `scripts/backup-offsite.sh` durci : preflight destination **avant** `pg_dump`
+  (sans ça, un rclone cassé laissait un `pg_dump` orphelin dans le container avec
+  `AccessShareLock` sur toutes les tables → `REFRESH MV` et migrations bloqués),
+  trap qui termine le backend `lyonflow-backup` en cas d'erreur, **purge automatique**
+  bornée par la taille de la destination (`BACKUP_RETENTION_DAYS` 14, `BACKUP_KEEP_MIN` 2,
+  `BACKUP_MAX_TOTAL_GB` 150 ou `BACKUP_MAX_QUOTA_PCT` 30 % du quota `rclone about`).
+- Nouvelle unit `lyonflow-backup-failed.service` (`OnFailure=`) →
+  `scripts/backup-failed-alert.sh` → alerte Telegram avec le journal.
+
+### Documentation
+
+- `AGENTS.md` (Sprint 26), `deploy/systemd/README.md`, `docs/INCIDENTS/2026-09-22-telegram-osm-ways-backup.md`
+  (hors GitHub), `docs/POSTGRES_DATABASE_REFERENCE.md` (index 048/049, EAQI).
+
 ## [Unreleased] - 2026-07-01 — Préparation certification RNCP : purge GNN + bugfixes prod + MLOps + DB (pas encore commité)
 
 **600 tests verts** (601 avant retrait 1 test GNN) · ruff clean.

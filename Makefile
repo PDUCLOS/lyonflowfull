@@ -349,7 +349,7 @@ monitoring-logs:  ## Logs monitoring
 # (utilisable en local OU en ssh depuis la machine de dev).
 
 SYSTEMD_DIR := /etc/systemd/system
-SYSTEMD_UNITS := lyonflow-backup.service lyonflow-backup.timer
+SYSTEMD_UNITS := lyonflow-backup.service lyonflow-backup.timer lyonflow-backup-failed.service
 BACKUP_CONF := /opt/lyonflow/.backup-offsite.conf
 
 install-systemd:  ## Installe les units systemd + active le timer (backup offsite)
