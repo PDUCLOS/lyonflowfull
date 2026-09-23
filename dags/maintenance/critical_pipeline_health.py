@@ -27,6 +27,7 @@ import os
 from datetime import datetime, timedelta
 from typing import Any
 
+import pendulum
 import psycopg2
 from airflow import DAG
 from airflow.exceptions import AirflowException
@@ -64,11 +65,39 @@ CRITICAL_DAGS = [
 # remplacée par gold.mv_bus_traffic_spatial (Sprint 22++). À supprimer
 # définitivement quand correlation_matrix.py / segment_table.py liront la MV
 # spatiale (consommateurs legacy).
+#
+# Sprint 26 (2026-09-23) : 4e élément optionnel = fenêtre "réseau à l'arrêt"
+# (heure de Paris, début inclus, fin exclue) pendant laquelle VIDE / STALE est
+# normal et ne déclenche pas d'anomalie. Le réseau TCL s'arrête ~00:30-05:00 :
+# gold.tcl_vehicle_realtime (fenêtre glissante) est vide chaque nuit et
+# check_gold_freshness échouait 12-14 fois par nuit (14,7 % d'échec sur 24 h,
+# juste sous le seuil 20 % du dag-failure-rate-monitor → alerte Telegram
+# fausse à la première mauvaise nuit).
 FRESHNESS_CHECKS = [
-    ("gold.traffic_features_live", "computed_at", 30),  # carte trafic
-    ("gold.tcl_vehicle_realtime", "recorded_at", 30),  # Pro_TCL
-    ("gold.trafic_predictions", "calculated_at", 90),  # H+1h
+    ("gold.traffic_features_live", "computed_at", 30, None),  # carte trafic
+    ("gold.tcl_vehicle_realtime", "recorded_at", 30, ("00:30", "05:30")),  # Pro_TCL, TCL à l'arrêt la nuit
+    ("gold.trafic_predictions", "calculated_at", 90, None),  # H+1h
 ]
+
+PARIS_TZ = "Europe/Paris"
+
+
+def _in_quiet_window(window: tuple[str, str] | None, now: pendulum.DateTime | None = None) -> bool:
+    """True si l'heure de Paris courante est dans [début, fin) de la fenêtre.
+
+    Gère une fenêtre qui traverse minuit (ex. ("23:00", "05:00")).
+    """
+    if window is None:
+        return False
+    now = now or pendulum.now(PARIS_TZ)
+    start_h, start_m = (int(x) for x in window[0].split(":"))
+    end_h, end_m = (int(x) for x in window[1].split(":"))
+    now_min = now.hour * 60 + now.minute
+    start_min = start_h * 60 + start_m
+    end_min = end_h * 60 + end_m
+    if start_min <= end_min:
+        return start_min <= now_min < end_min
+    return now_min >= start_min or now_min < end_min
 
 
 def _pg_conn(dbname: str | None = None):
@@ -133,18 +162,25 @@ def check_gold_freshness() -> dict[str, str]:
     anomalies: list[str] = []
 
     with _pg_conn() as conn, conn.cursor() as cur:
-        for table, ts_col, max_age_min in FRESHNESS_CHECKS:
+        for table, ts_col, max_age_min, quiet_window in FRESHNESS_CHECKS:
             cur.execute(f"SELECT MAX({ts_col}), NOW() - MAX({ts_col}) FROM {table}")
             row = cur.fetchone()
             max_ts, age = row if row else (None, None)
+            quiet = _in_quiet_window(quiet_window)
             if max_ts is None or age is None:
-                anomalies.append(f"{table}: VIDE (aucune ligne)")
-                results[table] = "EMPTY"
+                if quiet:
+                    results[table] = "EMPTY (réseau à l'arrêt, ignoré)"
+                else:
+                    anomalies.append(f"{table}: VIDE (aucune ligne)")
+                    results[table] = "EMPTY"
                 continue
             age_min = age.total_seconds() / 60
             if age_min > max_age_min:
-                anomalies.append(f"{table}: stale ({age_min:.0f} min > {max_age_min} min)")
-                results[table] = f"STALE ({age_min:.0f} min)"
+                if quiet:
+                    results[table] = f"STALE ({age_min:.0f} min, réseau à l'arrêt, ignoré)"
+                else:
+                    anomalies.append(f"{table}: stale ({age_min:.0f} min > {max_age_min} min)")
+                    results[table] = f"STALE ({age_min:.0f} min)"
             else:
                 results[table] = f"OK ({age_min:.0f} min)"
 
