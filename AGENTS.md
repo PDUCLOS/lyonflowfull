@@ -178,6 +178,11 @@
 # - snap_to_roads.py : VIRÉ Sprint 18. Dead code.
 # - 13 docs stale : ARCHIVÉS Sprint 21 (convention déplacer, jamais supprimer).
 # - test drift_detector doublon : MERGÉ Sprint 21.
+# - Bandeau Vélov « Pollution très mauvaise » permanent (Sprint 26) : FIXÉ (migration 050).
+#   La migration 045 lisait european_aqi comme un niveau 1-6 ; Open-Meteo renvoie l'EAQI 0-100+.
+#   761 h/761 h en « severe » sur 30 j. Seuils corrigés : warning >= 60, severe >= 80.
+# - check_gold_freshness la nuit (Sprint 26) : FIXÉ — tcl_vehicle_realtime ignorée 00:30-05:30 Paris
+#   (réseau TCL à l'arrêt, table vide chaque nuit, 12-14 échecs/nuit avant).
 # - Bloat osm.ways + alertes Telegram en boucle (Sprint 26) : FIXÉ (migrations 048/049,
 #   hystérésis dag-monitor). Détail dans la section Sprint 26 ci-dessus.
 # - Fuite connexions Postgres (Sprint 25) : FIXÉ (tcp_keepalives_idle=60 +

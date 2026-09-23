@@ -40,7 +40,7 @@ class TestGetVelovSafetySeverity:
         monkeypatch.setattr(
             velov_safety_banner,
             "cached_velov_safety_advisory",
-            lambda: {"status": "warning", "reason": "Pollution dégradée (indice européen 4/6)"},
+            lambda: {"status": "warning", "reason": "Pollution dégradée (indice européen 65, EAQI 0-100)"},
         )
         severity, advisory = velov_safety_banner.get_velov_safety_severity()
         assert severity == 1
