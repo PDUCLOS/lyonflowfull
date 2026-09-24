@@ -46,7 +46,7 @@
         <mxCell id="safety" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontSize=11;" value="Sécurité Vélov (2026-07-05, migration_045)&#xa;bronze.vigilance_meteo (NOUVEAU, */6h, API Opendatasoft sans clé) + silver.air_quality_clean (NOUVEAU)&#xa;→ gold.v_velov_safety_advisory → weather_widget/velov_trip/velov_widget (avertit sans bloquer)" vertex="1">
           <mxGeometry height="60" width="1360" x="120" y="1030" as="geometry" />
         </mxCell>
-        <mxCell id="mon" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=11;" value="Monitoring stack&#xa;Prometheus redéployé et vérifié (2026-07-02)&#xa;Grafana/Alertmanager alimentés (5/5 cibles up)" vertex="1">
+        <mxCell id="mon" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=11;" value="Monitoring infra&#xa;cron + alertes Telegram (watchdog 5 min, DAGs 30 min, backup)&#xa;Cible : Prometheus / Grafana (non déployé)" vertex="1">
           <mxGeometry height="80" width="440" x="1040" y="750" as="geometry" />
         </mxCell>
         <mxCell id="iD3HUW9IFC8d6fNhLGpc-4" edge="1" parent="1" source="nginx" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" target="users" value="">

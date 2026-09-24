@@ -43,10 +43,10 @@
         <mxCell id="minio" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=11;" value="lyonflow-minio&#xa;127.0.0.1:9000-9001 (healthy)&#xa;5 buckets (bronze-archive actif 15M, reste vide)&#xa;Archive silver.trafic_vitesse_propre &gt;30j" vertex="1">
           <mxGeometry height="100" width="380" x="540" y="420" as="geometry" />
         </mxCell>
-        <mxCell id="grafana" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=11;" value="lyonflow-grafana&#xa;127.0.0.1:3000&#xa;datasource Prometheus active (redéployé 2026-07-02)" vertex="1">
+        <mxCell id="grafana" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=11;" value="lyonflow-grafana (cible)&#xa;non déployé&#xa;docker-compose.monitoring.yml prêt" vertex="1">
           <mxGeometry height="100" width="280" x="960" y="420" as="geometry" />
         </mxCell>
-        <mxCell id="alertmanager" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=11;" value="lyonflow-alertmanager&#xa;127.0.0.1:9093&#xa;lié à Prometheus, 7 groupes de règles chargés" vertex="1">
+        <mxCell id="alertmanager" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=11;" value="lyonflow-alertmanager (cible)&#xa;non déployé&#xa;alertes actuelles : cron → Telegram" vertex="1">
           <mxGeometry height="100" width="220" x="1280" y="420" as="geometry" />
         </mxCell>
         <mxCell id="sda1" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;fontSize=11;" value="Disque sda1 (OS + code + Docker)&#xa;96G total — 64G utilisé (67%) — 33G libre" vertex="1">
@@ -55,7 +55,7 @@
         <mxCell id="sdb" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;fontSize=11;" value="Disque sdb (Postgres + MinIO)&#xa;98G total — 63G utilisé (67%) — 31G libre" vertex="1">
           <mxGeometry height="60" width="380" x="540" y="580" as="geometry" />
         </mxCell>
-        <mxCell id="backup" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=11;dashed=1;" value="Backup — systemd timer 03h00&#xa;scripts/backup.sh → offsite rclone/SSH&#xa;🔴 rclone offsite config OAuth pending" vertex="1">
+        <mxCell id="backup" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=11;dashed=1;" value="Backup — systemd timer 03h00&#xa;scripts/backup-offsite.sh → Google Drive (rclone)&#xa;✅ ~3,7 Go/jour, purge auto 14 j, alerte Telegram si échec" vertex="1">
           <mxGeometry height="70" width="420" x="80" y="700" as="geometry" />
         </mxCell>
         <mxCell id="systemd" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#666666;fontSize=11;" value="systemd unit lyonflow.service (process supervisor)&#xa;make deploy-vps (rsync + restart) · make rollback-vps" vertex="1">
