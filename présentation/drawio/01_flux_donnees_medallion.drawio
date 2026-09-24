@@ -4,7 +4,7 @@
       <root>
         <mxCell id="0" />
         <mxCell id="1" parent="0" />
-        <mxCell id="title" parent="1" style="text;html=1;fontSize=20;fontStyle=1;align=center;" value="LyonFlow — Flux de données (2026-07-23)" vertex="1">
+        <mxCell id="title" parent="1" style="text;html=1;fontSize=20;fontStyle=1;align=center;" value="LyonFlow — Flux de données (2026-09-24)" vertex="1">
           <mxGeometry height="30" width="1500" x="40" y="10" as="geometry" />
         </mxCell>
         <mxCell id="sources" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=12;" value="SOURCES OPEN DATA (8)&#xa;Grand Lyon boucles · TCL SIRI Lite · Vélo&#39;v GBFS · Open-Meteo (météo + AQ)&#xa;Chantiers · Vitesse limite ref · Pistes/GTFS · TomTom Traffic Flow" vertex="1">
@@ -28,7 +28,7 @@
         <mxCell id="osm" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=11;" value="OSM / pgRouting (schéma osm)&#xa;osm.ways (~101k arêtes) · ways_vertices_pgr (~87k)&#xa;refresh_osm_traffic_costs (*/15min) → injecte vitesses capteurs&#xa;osm.route_car() = pgr_dijkstra pour recommandation voiture" vertex="1">
           <mxGeometry height="70" width="770" x="400" y="530" as="geometry" />
         </mxCell>
-        <mxCell id="ml_trafic" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=11;" value="ML — XGBoost Speed H+1h&#xa;dag_daily_speed_train (03h00, entrainement)&#xa;dag_inference_xgboost (*/15min) → INSERT gold.trafic_predictions" vertex="1">
+        <mxCell id="ml_trafic" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=11;" value="ML — XGBoost Speed H+1h&#xa;dag_daily_speed_train (03h38, entrainement)&#xa;dag_inference_xgboost (*/15min) → INSERT gold.trafic_predictions" vertex="1">
           <mxGeometry height="80" width="440" x="120" y="630" as="geometry" />
         </mxCell>
         <mxCell id="ml_velov" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=11;" value="ML — XGBoost Vélov H+1h&#xa;dag_inference_velov (4,19,34,49) → INSERT gold.velov_predictions&#xa;retrain_xgboost_velov hourly :50" vertex="1">
