@@ -15,15 +15,15 @@ import streamlit as st
 
 from src.persona.manager import PersonaManager
 
+PersonaId = Literal["usager", "pro_tcl", "elu"]
+
 # Mapping page file → persona attendu
 # Mis à jour manuellement quand on ajoute une page
-_PAGE_TO_PERSONA = {
+_PAGE_TO_PERSONA: dict[str, PersonaId] = {
     "Usager_": "usager",
     "Pro_": "pro_tcl",
     "Elu_": "elu",
 }
-
-PersonaId = Literal["usager", "pro_tcl", "elu"]
 
 
 def apply_persona_guard(expected_persona: PersonaId | None = None) -> PersonaManager:

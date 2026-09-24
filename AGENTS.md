@@ -116,7 +116,9 @@
 # - Code (variables, fonctions) en ANGLAIS
 # - Commentaires / docstrings en FRANÇAIS
 # - Ruff lint (line-length 120)
-# - Type hints partout — mypy clean (82 fichiers, 0 erreur, Sprint 15+ v0.7.1)
+# - Type hints partout — mypy clean (161 fichiers src/ + dashboard/, 0 erreur, revalidé 2026-09-24)
+#   Vérif : `mypy src dashboard` (24 erreurs corrigées 2026-09-24, dont 2 NameError runtime
+#   dans lieux_velov_map.py : show_error non importé, _render_lieux_velov_list absent)
 # - pytest pour chaque module (conftest.py centralisé avec MockDB fixture)
 # - Zéro mock dans le projet (Sprint 8) — DashboardDataError + show_error()
 

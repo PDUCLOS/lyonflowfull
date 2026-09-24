@@ -15,6 +15,7 @@ from __future__ import annotations
 import streamlit as st
 
 from dashboard.components.a11y import st_folium_with_alt
+from dashboard.components.error_display import show_error
 from src.data.exceptions import DashboardDataError
 
 # Icônes par type de lieu
@@ -117,6 +118,22 @@ def render_lieux_velov_map(
                 ).add_to(m)
 
     st_folium_with_alt(m, width=None, height=height, returned_objects=[])
+
+
+def _render_lieux_velov_list(lieux_with_velov: list[dict]) -> None:
+    """Fallback texte quand folium est absent : un bloc par lieu, une ligne par borne.
+
+    Même contenu que les popups de la carte (nom, distance, vélos/docks dispo),
+    sans dépendance cartographique — le widget reste utilisable en dégradé.
+    """
+    for lieu in lieux_with_velov:
+        icon = _TYPE_ICON.get(lieu["lieu_type"], "📍")
+        st.markdown(f"**{icon} {lieu['lieu_name']}** ({lieu['lieu_type']})")
+        for b in lieu.get("bornes", []):
+            st.caption(
+                f"{b.get('velov_name', '?')} — {int(b['distance_m'])}m — "
+                f"{b.get('num_bikes_available', '?')} vélos, {b.get('num_docks_available', '?')} docks"
+            )
 
 
 def _lieu_popup_html(lieu: dict) -> str:

@@ -67,20 +67,20 @@ def render_velov_trip(
                 origin_coords = _resolve_lieu(origin)
             except DashboardDataError as e:
                 show_error("db_down", str(e))
-                return
+                return None
         if dest_coords is None:
             try:
                 dest_coords = _resolve_lieu(destination)
             except DashboardDataError as e:
                 show_error("db_down", str(e))
-                return
+                return None
 
         if not origin_coords or not dest_coords:
             show_error(
                 "geocoding_fail",
                 f"Adresses non résolues. Origin={origin!r} → {origin_coords}, Dest={destination!r} → {dest_coords}",
             )
-            return
+            return None
 
         origin_lon, origin_lat = origin_coords
         dest_lon, dest_lat = dest_coords
@@ -98,7 +98,7 @@ def render_velov_trip(
                 )
             except DashboardDataError as e:
                 show_error("db_down", str(e))
-                return
+                return None
 
         # (2026-06-17) — viré le check `itin.source == "demo"` :
         # plan_velov_trip() ne retourne plus source="demo" (mode démo supprimé).
@@ -108,7 +108,7 @@ def render_velov_trip(
                 "Aucune station Vélov disponible à proximité. "
                 "Vérifiez que silver.velov_clean est alimentée (DAG collect_bronze)."
             )
-            return
+            return None
 
         render_velov_safety_banner()
         _render_velov_summary(itin)

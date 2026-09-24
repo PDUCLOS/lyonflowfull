@@ -23,7 +23,7 @@ def get_velov_safety_severity() -> tuple[int, dict]:
     faux "ok" ni un blocage du mode Vélov).
     """
     advisory = cached_velov_safety_advisory()
-    severity = {"severe": 2, "warning": 1}.get(advisory.get("status"), 0)
+    severity = {"severe": 2, "warning": 1}.get(advisory.get("status") or "unknown", 0)
     return severity, advisory
 
 

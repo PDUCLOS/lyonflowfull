@@ -60,7 +60,7 @@ ANOMALY_Z_THRESHOLD = -2.0
 
 def _format_z_score(val: float | None) -> str:
     """Format z-score : rouge si < seuil, vert sinon, gris si None."""
-    if pd.isna(val):
+    if val is None or pd.isna(val):
         return "—"
     if val < ANOMALY_Z_THRESHOLD:
         return f"Alerte {val:.2f}"
