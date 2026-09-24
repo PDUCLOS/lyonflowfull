@@ -77,6 +77,11 @@ FRESHNESS_CHECKS = [
     ("gold.traffic_features_live", "computed_at", 30, None),  # carte trafic
     ("gold.tcl_vehicle_realtime", "recorded_at", 30, ("00:30", "05:30")),  # Pro_TCL, TCL à l'arrêt la nuit
     ("gold.trafic_predictions", "calculated_at", 90, None),  # H+1h
+    # Sprint 26 (2026-09-24) : collect_vigilance_meteo (*/6h) = 4 runs/jour,
+    # sous MIN_RUNS du dag-failure-rate-monitor → invisible s'il échoue. 13 h
+    # = un run manqué toléré. Sans ce check, gold.v_velov_safety_advisory
+    # perdrait la vigilance canicule sans aucun signal.
+    ("bronze.vigilance_meteo", "fetched_at", 780, None),
 ]
 
 PARIS_TZ = "Europe/Paris"
