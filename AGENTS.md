@@ -146,6 +146,14 @@
 #   gdrive:backups/lyonflow, quota Drive 5 TiB). Réglages VPS hors git dans `.backup-offsite.conf` :
 #   BACKUP_MAX_TOTAL_GB=150 (+ défauts rétention 14 j, keep_min 2). Si alerte Telegram « backup
 #   ÉCHOUÉ » : `journalctl -u lyonflow-backup.service` — preflight KO = token rclone expiré/révoqué.
+# - Vigilance météo (2026-09-24) : collectée uniquement par `collect_vigilance_meteo` (*/6h, réactivé :
+#   il n'avait jamais tourné), plus par `collect_bronze` (288 appels/jour inutiles). Liste
+#   `DEDICATED_DAG_COLLECTORS` (TomTom + Vigilance) dans `src/ingestion/__init__.py`. Fraîcheur
+#   `bronze.vigilance_meteo` < 13 h surveillée par `dag_critical_pipeline_health`.
+# - Tests : 638 passent, 0 échec (suite suivie hors e2e). Ne pas lancer `pytest` nu : les doublons
+#   iCloud `test_* 2.py` non suivis sont collectés. Commande fiable :
+#   git ls-files 'tests/*test_*.py' | grep -v '^tests/e2e/' | tr '\n' '\0' | xargs -0 python -m pytest -q
+# - mypy : 21 erreurs pré-existantes (dont noms non définis dans `lieux_velov_map.py`), correction en cours.
 # - `collect_bronze` ~4,5 % d'échec : `404 Not Found` du WFS data.grandlyon.com par rafales
 #   (23 h et 08 h UTC), 3 collecteurs simultanés → panne amont, rien à corriger côté projet.
 # - Vélov schéma ancien : xgboost_velov.py + gold.velov_features sur ancien
@@ -156,7 +164,6 @@
 # - GNN training : code livré (stgcn_wrapper), retrain Airflow à finaliser.
 # - DNS lyonflow.fr mort → accès par IP. Self-signed cert (Sprint 21 fix).
 # - Prometheus supprimé Sprint 15+ (config YAML v2.54 cassée). Grafana sans source.
-# - test_error_display 3 failures pré-existantes (test_persona_a_5_types).
 # - OFFSITE_HOST non configuré (backup-template.sh livré, destination à choisir).
 # - Connexions DB sans `application_name` → impossible d'identifier le
 #   service fuyard si leak à l'avenir. Patch P2 Sprint 26+ : forcer

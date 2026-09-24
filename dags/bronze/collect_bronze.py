@@ -1,6 +1,6 @@
 """DAG — Collecte Bronze temps réel (5 min).
 
-Itère sur `REALTIME_COLLECTORS` (7 classes) et lance chaque collecteur
+Itère sur `REALTIME_COLLECTORS` (6 classes) et lance chaque collecteur
 en parallèle. Les collecteurs calendaires (vacances scolaires, jours
 fériés) sont dans `collect_calendriers_monthly.py` (DAG mensuel).
 

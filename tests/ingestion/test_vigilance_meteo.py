@@ -4,7 +4,7 @@ Vérifie :
 1. fetch_raw() parse correctement la réponse Opendatasoft (records/fields).
 2. validate() refuse 0 enregistrement (signal d'un problème API).
 3. _save_raw() insère une ligne par période horaire, ON CONFLICT DO NOTHING.
-4. Intégration dans src.ingestion (export + REALTIME_COLLECTORS).
+4. Intégration dans src.ingestion (export + DEDICATED_DAG_COLLECTORS, hors collect_bronze).
 """
 
 from __future__ import annotations
@@ -149,10 +149,29 @@ class TestVigilanceMeteoImports:
 
         assert PackageClass is DirectClass
 
-    def test_collector_in_realtime_list(self):
+    def test_collector_not_in_realtime_list(self):
+        """Hors collect_bronze (*/5 min) depuis le 2026-09-24.
+
+        Les bulletins changent 2x/jour : 288 appels/jour à l'API publique
+        étaient inutiles. Collecte par le DAG dédié collect_vigilance_meteo.
+        """
         from src.ingestion import REALTIME_COLLECTORS, VigilanceMeteo
 
-        assert VigilanceMeteo in REALTIME_COLLECTORS
+        assert VigilanceMeteo not in REALTIME_COLLECTORS
+
+    def test_collector_in_dedicated_dag_list(self):
+        from src.ingestion import DEDICATED_DAG_COLLECTORS, VigilanceMeteo
+
+        assert VigilanceMeteo in DEDICATED_DAG_COLLECTORS
+
+    def test_dedicated_dag_uses_collector(self):
+        """Le DAG collect_vigilance_meteo est la seule collecte (lecture texte, sans Airflow)."""
+        from pathlib import Path
+
+        dag_src = (Path(__file__).resolve().parents[2] / "dags" / "bronze" / "collect_vigilance_meteo.py").read_text(
+            encoding="utf-8"
+        )
+        assert "VigilanceMeteo" in dag_src
 
     def test_collector_in_all_classes_list(self):
         from src.ingestion import ALL_COLLECTOR_CLASSES, VigilanceMeteo

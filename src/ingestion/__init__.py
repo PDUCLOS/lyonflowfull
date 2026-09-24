@@ -35,11 +35,7 @@ REALTIME_COLLECTORS: list[type[DataCollector]] = [
     # les 15 minutes" comme si ça s'appliquait à cette liste — faux, les
     # deux chemins sont indépendants. collect_tomtom_traffic reste la seule
     # source désormais, à 15 min.
-    # (2026-07-05) — VigilanceMeteo. Vigilance canicule dept 69 (Rhône),
-    # API publique Opendatasoft sans clé. Collectée ici par collect_bronze
-    # (toutes les 5 min) ; le DAG dédié collect_vigilance_meteo (*/6h) est
-    # en pause depuis (redondant). Alimente gold.v_velov_safety_advisory.
-    VigilanceMeteo,
+    # VigilanceMeteo retiré (2026-09-24) — voir DEDICATED_DAG_COLLECTORS.
 ]
 
 # Liste des collecteurs à fréquence mensuelle/annuelle
@@ -51,8 +47,14 @@ MONTHLY_COLLECTORS: list[type[DataCollector]] = [
 # Collecteurs exécutés uniquement par leur propre DAG, hors collect_bronze.
 # TomTomTrafficFlow : DAG collect_tomtom_traffic (*/15 min), seule source
 # depuis son retrait de REALTIME_COLLECTORS (2026-09-10, quota API).
+# VigilanceMeteo : DAG collect_vigilance_meteo (*/6h), seule source depuis
+# le 2026-09-24. Avant, collect_bronze l'appelait toutes les 5 min (~288
+# appels/jour à l'API publique Opendatasoft) alors que les bulletins ne
+# changent que 2x/jour, et le DAG dédié n'avait jamais tourné (en pause
+# depuis sa création). Alimente gold.v_velov_safety_advisory.
 DEDICATED_DAG_COLLECTORS: list[type[DataCollector]] = [
     TomTomTrafficFlow,
+    VigilanceMeteo,
 ]
 
 # Agrégation de l'ensemble des classes de collecteurs

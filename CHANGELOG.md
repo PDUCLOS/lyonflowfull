@@ -42,6 +42,14 @@ Origine des alertes Telegram reçues depuis le 2026-09-22 : `refresh_osm_traffic
   `european_aqi` comme un niveau 1-6 ; Open-Meteo renvoie l'EAQI 0-100+. 761 h / 761 h
   en `severe` sur 30 jours. Migration 050 : warning ≥ 60, severe ≥ 80.
 
+- **Vigilance météo sur-collectée** : `collect_bronze` appelait l'API Opendatasoft toutes les 5 min
+  (~288 appels/jour) alors que les bulletins changent 2×/jour, et le DAG dédié
+  `collect_vigilance_meteo` (*/6h) n'avait jamais tourné (en pause depuis sa création). `VigilanceMeteo`
+  passe dans `DEDICATED_DAG_COLLECTORS` avec TomTom, DAG réactivé (premier run OK le 2026-09-24),
+  contrôle de fraîcheur 13 h ajouté à `check_gold_freshness`.
+- **Tests** : 3 tests obsolètes alignés sur le code (TomTom hors `collect_bronze`, carte Vélo'v compacte).
+  638 tests passent, 0 échec.
+
 ### Backup offsite (Règle 12)
 
 - **Constat** : `lyonflow-backup.timer` désactivé depuis le 2026-07-22 et token rclone
