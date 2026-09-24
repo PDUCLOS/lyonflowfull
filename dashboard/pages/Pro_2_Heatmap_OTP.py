@@ -49,6 +49,7 @@ with col_period:
     st.markdown(f"##### Vue : {period}")
 with col_topn:
     show_all = st.checkbox("Toutes les lignes", value=False, key="otp_show_all")
+    top_n: int | None
     if not show_all:
         top_n = st.slider("Top N pires lignes", min_value=5, max_value=50, value=20, key="otp_top_n")
     else:

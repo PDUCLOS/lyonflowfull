@@ -49,7 +49,7 @@ def _global_score(df) -> float:
         "bronze.tomtom_traffic": 1,
         "gold.trafic_predictions": 2,
     }
-    total_w, sum_w = 0, 0
+    total_w, sum_w = 0, 0.0
     for _, row in df.iterrows():
         w = weights.get(row["source"], 1)
         total_w += w

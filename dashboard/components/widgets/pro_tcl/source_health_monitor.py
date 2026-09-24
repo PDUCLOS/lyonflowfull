@@ -21,6 +21,7 @@ Si DB indispo → fail loud via DashboardDataError.
 from __future__ import annotations
 
 import pandas as pd
+import plotly.graph_objects as go
 import streamlit as st
 
 from dashboard.components.a11y import plotly_with_alt
@@ -59,7 +60,7 @@ def _global_score(df: pd.DataFrame) -> float:
     if df.empty:
         return 0.0
     total_weight = 0
-    weighted_sum = 0
+    weighted_sum = 0.0
     for _, row in df.iterrows():
         w = SOURCE_WEIGHTS.get(row["source"], 1)
         weighted_sum += float(row["health_score"]) * w
@@ -67,10 +68,8 @@ def _global_score(df: pd.DataFrame) -> float:
     return round(weighted_sum / total_weight, 1) if total_weight > 0 else 0.0
 
 
-def _gauge_plotly(score: float) -> plotly.graph_objects.Figure:
+def _gauge_plotly(score: float) -> go.Figure:
     """Jauge Plotly 0-100 avec seuils colorés."""
-    import plotly.graph_objects as go
-
     color = "#4CAF50" if score >= 70 else "#FF9800" if score >= 40 else "#F44336"
     fig = go.Figure(
         go.Indicator(

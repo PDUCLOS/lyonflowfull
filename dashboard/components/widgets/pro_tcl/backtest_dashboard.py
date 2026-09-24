@@ -32,7 +32,7 @@ from dashboard.components.a11y import plotly_with_alt
 from dashboard.components.data_cache import cached_xgb_accuracy_summary, cached_xgb_vs_tomtom
 from dashboard.components.error_display import show_error
 from dashboard.components.loading_state import loading_wrapper
-from dashboard.components.plotly_theme import apply_lyf_theme
+from dashboard.components.plotly_theme import LYF_TEMPLATE, apply_lyf_theme
 from src.data.exceptions import DashboardDataError
 
 # Seuils d'accuracy (cf SPEC_SPRINT_16.md §A.1)

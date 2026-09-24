@@ -80,3 +80,85 @@ def test_usager_pages_have_widgets_imports():
     content = (pages_dir / "Usager_2_Alertes.py").read_text(encoding="utf-8")
     assert "render_alert_card" in content
     assert "render_alert_timeline" in content
+
+
+# =============================================================================
+# lieux_velov_map — chemins dégradés (mypy clean 2026-09-24)
+# =============================================================================
+# Régression : `show_error` n'était pas importé et `_render_lieux_velov_list`
+# n'existait pas → NameError à l'exécution dès que la DB tombait ou que folium
+# manquait. Les tests ci-dessous exercent les deux chemins sans DB ni folium.
+
+_LIEUX_SAMPLE = [
+    {
+        "lieu_name": "Part-Dieu",
+        "lieu_type": "gare",
+        "lieu_lat": 45.76,
+        "lieu_lon": 4.86,
+        "bornes": [
+            {
+                "velov_name": "Gare Part-Dieu Villette",
+                "distance_m": 120.0,
+                "num_bikes_available": 5,
+                "num_docks_available": 12,
+            }
+        ],
+    }
+]
+
+
+def _capture_streamlit(monkeypatch):
+    """Remplace les appels Streamlit d'affichage par un enregistreur (nom, args)."""
+    import streamlit as st
+
+    calls: list[tuple[str, tuple]] = []
+    for name in ("warning", "markdown", "caption", "info"):
+        monkeypatch.setattr(st, name, lambda *a, _n=name, **k: calls.append((_n, a)))
+    return calls
+
+
+def test_lieux_velov_map_list_fallback_without_folium(monkeypatch):
+    """Sans folium : warning + liste texte (1 markdown par lieu, 1 caption par borne)."""
+    from dashboard.components.widgets.usager import lieux_velov_map
+
+    calls = _capture_streamlit(monkeypatch)
+    # `import folium` lève ImportError quand sys.modules["folium"] vaut None
+    monkeypatch.setitem(sys.modules, "folium", None)
+
+    lieux_velov_map.render_lieux_velov_map(_LIEUX_SAMPLE)
+
+    names = [n for n, _ in calls]
+    assert names == ["warning", "markdown", "caption"]
+    assert "Part-Dieu" in calls[1][1][0]
+    assert "Gare Part-Dieu Villette" in calls[2][1][0]
+    assert "120m" in calls[2][1][0]
+
+
+def test_lieux_velov_map_db_down_shows_error(monkeypatch):
+    """DashboardDataError au chargement → show_error('db_down', ...) puis retour."""
+    from dashboard.components.widgets.usager import lieux_velov_map
+    from src.data import db_query
+    from src.data.exceptions import DashboardDataError
+
+    calls = _capture_streamlit(monkeypatch)
+    errors: list[tuple[str, str]] = []
+    monkeypatch.setattr(lieux_velov_map, "show_error", lambda t, d="": errors.append((t, d)))
+
+    def _raise(k: int = 1):
+        raise DashboardDataError("postgresql", "connexion refusée")
+
+    monkeypatch.setattr(db_query, "get_lieux_with_velov", _raise)
+
+    lieux_velov_map.render_lieux_velov_map(None)
+
+    assert errors == [("db_down", "[postgresql] Données du pipeline indisponibles — connexion refusée")]
+    assert calls == []
+
+
+def test_lieux_velov_map_empty_list_shows_info(monkeypatch):
+    """Liste vide → st.info, rien d'autre."""
+    from dashboard.components.widgets.usager import lieux_velov_map
+
+    calls = _capture_streamlit(monkeypatch)
+    lieux_velov_map.render_lieux_velov_map([])
+    assert [n for n, _ in calls] == ["info"]

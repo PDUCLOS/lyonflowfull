@@ -13,6 +13,14 @@ Origine des alertes Telegram reçues depuis le 2026-09-22 : `refresh_osm_traffic
 
 ### Corrigé
 
+- **mypy : 24 erreurs dans 12 fichiers** alors qu'AGENTS.md annonçait « mypy clean ».
+  Deux étaient des crashs runtime dans `lieux_velov_map.py` : `show_error` jamais importé
+  (NameError dès que la DB tombe) et `_render_lieux_velov_list` appelé mais jamais défini
+  (NameError si folium absent) — helper réécrit, 3 tests ajoutés sur ces chemins dégradés.
+  Reste : `LYF_TEMPLATE` / `plotly` non importés (backtest_dashboard, source_health_monitor),
+  `return` nu dans `velov_trip` (`-> dict | None`), accumulateurs `int` recevant des `float`,
+  `pd.isna` qui ne narrow pas `Optional`, 2 `# type: ignore` inutiles, mapping page→persona
+  non typé. `mypy src dashboard` : 161 fichiers, 0 erreur.
 - **`osm.ways` : 98 % d'espace vide** (heap 1 561 Mo + index 908 Mo pour 101 k lignes).
   Cause racine : la migration 029 avait indexé `cost` / `reverse_cost` alors que
   `pgr_dijkstra` ne les lit jamais par index (`idx_scan = 0` depuis leur création) ;

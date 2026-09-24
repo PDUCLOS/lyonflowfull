@@ -47,6 +47,7 @@ def render_cost_estimate(zone: str | None = None) -> None:
         st.warning(f"Type d'aménagement inconnu : « {type_amenagement} ». Coût par défaut appliqué (500€/m).")
         cout_unitaire = 500
 
+    cout_total: float
     if is_forfait:
         cout_total = cout_unitaire
         cout_unite = "forfait"

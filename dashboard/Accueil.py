@@ -137,8 +137,8 @@ from dashboard.components.data_cache import (  # noqa: E402
 )
 from src.data.exceptions import DashboardDataError  # noqa: E402
 
-n_lines = "—"
-n_stations_velov = "—"
+n_lines: int | str = "—"
+n_stations_velov: int | str = "—"
 try:
     n_lines_raw = cached_tcl_lines()
     n_lines = len(n_lines_raw) if n_lines_raw else 0

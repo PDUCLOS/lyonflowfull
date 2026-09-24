@@ -34,7 +34,7 @@ def _cached_training_history():
     """Historique MLflow runs (7j). TTL 300s — retrain horaire au mieux,
     était sans cache, requêtée à chaque rerun/auto-refresh (audit perf 2026-07-03).
     """
-    from src.data.db_query import _df_from_query  # type: ignore
+    from src.data.db_query import _df_from_query
 
     return _df_from_query(
         """
@@ -193,7 +193,7 @@ def _render_model_registry_table(models: list[dict]) -> None:
             # mae None-safe (m["metrics"] peut être absent ou metrics.mae peut être None)
             mae_raw = m.get("metrics", {}).get("mae") if m.get("metrics") else None
             try:
-                mae_str = f"{float(mae_raw):.2f}"
+                mae_str = f"{float(mae_raw):.2f}" if mae_raw is not None else "—"
             except (TypeError, ValueError):
                 mae_str = "—"
             st.markdown(f"**{mae_str}**")
@@ -649,7 +649,7 @@ def _cached_data_quality_rows() -> list[dict]:
     """
     from psycopg2 import sql
 
-    from src.data.db_query import _df_from_query  # type: ignore
+    from src.data.db_query import _df_from_query
 
     branches = []
     for schema, table, ts_col, _expected in _DATA_QUALITY_TABLES:
