@@ -16,16 +16,22 @@ from __future__ import annotations
 import inspect
 
 
-def test_velov_map_selectbox_h1h_only():
-    """Le selectbox horizon du widget velov_map expose uniquement H+1h."""
-    from dashboard.components.widgets.usager.velov_map import render_velov_map
+def test_velov_map_h1h_only():
+    """Le widget velov_map ne charge et n'affiche que H+1h.
 
-    src = inspect.getsource(render_velov_map)
-    # Le selectbox ne doit proposer QUE H+1h
-    assert 'labels = {60: "Prédiction H+1h"}' in src, "velov_map selectbox doit être {60: 'Prédiction H+1h'} uniquement"
-    # Pas d'option 0 ou 30 dans le dict labels
-    assert "labels = {0:" not in src, "labels ne doit pas contenir l'option 0 (Maintenant)"
-    assert "labels = {30:" not in src, "labels ne doit pas contenir l'option 30 (H+30min)"
+    La carte complète avec selectbox (render_velov_map) a été supprimée le
+    2026-06-23 (28f098d) ; seule reste render_velov_map_compact, sans choix
+    d'horizon. On vérifie les jetons de code, pas les docstrings (qui gardent
+    une note historique sur l'ancien horizon H+30min).
+    """
+    from dashboard.components.widgets.usager import velov_map
+    from dashboard.components.widgets.usager.velov_map import render_velov_map_compact
+
+    module_src = inspect.getsource(velov_map)
+    assert "horizon_minutes=30" not in module_src, "velov_map charge encore l'horizon H+30min"
+    assert "predicted_bikes_30" not in module_src, "velov_map expose encore predicted_bikes_30"
+    assert "horizon_minutes=60" in module_src, "velov_map doit charger l'horizon H+1h (60 min)"
+    assert "H+1h" in inspect.getsource(render_velov_map_compact), "le tooltip doit afficher H+1h"
 
 
 def test_traffic_widget_one_card_h1h():

@@ -154,10 +154,32 @@ class TestTomTomTrafficFlowImports:
 
         assert TomTomTrafficFlow is DirectClass
 
-    def test_collector_in_realtime_list(self):
+    def test_collector_not_in_realtime_list(self):
+        """TomTom hors collect_bronze (*/5 min) depuis daaf862 (2026-09-10).
+
+        Sinon double collecte avec collect_tomtom_traffic (*/15 min) et
+        consommation x4 du quota de la clé API TomTom.
+        """
         from src.ingestion import REALTIME_COLLECTORS, TomTomTrafficFlow
 
-        assert TomTomTrafficFlow in REALTIME_COLLECTORS
+        assert TomTomTrafficFlow not in REALTIME_COLLECTORS
+
+    def test_collector_in_dedicated_dag_list(self):
+        from src.ingestion import DEDICATED_DAG_COLLECTORS, TomTomTrafficFlow
+
+        assert TomTomTrafficFlow in DEDICATED_DAG_COLLECTORS
+
+    def test_dedicated_dag_uses_collector(self):
+        """Le DAG collect_tomtom_traffic reste la seule collecte TomTom.
+
+        Lecture texte du fichier : pas d'import Airflow nécessaire en local.
+        """
+        from pathlib import Path
+
+        dag_src = (Path(__file__).resolve().parents[2] / "dags" / "bronze" / "collect_tomtom_traffic.py").read_text(
+            encoding="utf-8"
+        )
+        assert "TomTomTrafficFlow" in dag_src
 
     def test_collector_in_all_classes_list(self):
         from src.ingestion import ALL_COLLECTOR_CLASSES, TomTomTrafficFlow

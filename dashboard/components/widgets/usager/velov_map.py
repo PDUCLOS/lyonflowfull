@@ -2,12 +2,12 @@
 
 Affiche toutes les stations Vélo'v sur la carte de Lyon avec :
 * Couleur = nb de vélos disponibles **actuel** (silver.velov_clean)
-* Tooltip = nom station + vélos/places actuels + prédiction H+30/H+1h
-* Mode "Maintenant" ou "Prédiction H+X" (selectbox)
+* Tooltip = nom station + vélos/places actuels + prédiction H+1h
+* Version compacte uniquement (pas de sélecteur d'horizon : focus H+1h strict)
 
 Source données :
 * ``silver.velov_clean`` via ``get_velov_stations_geo()``
-* ``gold.velov_predictions`` via ``get_velov_predictions(30 ou 60)``
+* ``gold.velov_predictions`` via ``cached_velov_predictions(horizon_minutes=60)``
 
  comble le gap "on prédit la dispo mais on l'affiche pas".
 """

@@ -36,8 +36,9 @@ REALTIME_COLLECTORS: list[type[DataCollector]] = [
     # deux chemins sont indépendants. collect_tomtom_traffic reste la seule
     # source désormais, à 15 min.
     # (2026-07-05) — VigilanceMeteo. Vigilance canicule dept 69 (Rhône),
-    # API publique Opendatasoft sans clé. DAG collect_vigilance_meteo */6h.
-    # Alimente gold.v_velov_safety_advisory (conseil sécurité Vélov).
+    # API publique Opendatasoft sans clé. Collectée ici par collect_bronze
+    # (toutes les 5 min) ; le DAG dédié collect_vigilance_meteo (*/6h) est
+    # en pause depuis (redondant). Alimente gold.v_velov_safety_advisory.
     VigilanceMeteo,
 ]
 
@@ -47,12 +48,20 @@ MONTHLY_COLLECTORS: list[type[DataCollector]] = [
     JoursFeries,
 ]
 
+# Collecteurs exécutés uniquement par leur propre DAG, hors collect_bronze.
+# TomTomTrafficFlow : DAG collect_tomtom_traffic (*/15 min), seule source
+# depuis son retrait de REALTIME_COLLECTORS (2026-09-10, quota API).
+DEDICATED_DAG_COLLECTORS: list[type[DataCollector]] = [
+    TomTomTrafficFlow,
+]
+
 # Agrégation de l'ensemble des classes de collecteurs
-ALL_COLLECTOR_CLASSES: list[type[DataCollector]] = REALTIME_COLLECTORS + MONTHLY_COLLECTORS
+ALL_COLLECTOR_CLASSES: list[type[DataCollector]] = REALTIME_COLLECTORS + MONTHLY_COLLECTORS + DEDICATED_DAG_COLLECTORS
 
 
 __all__ = [
     "ALL_COLLECTOR_CLASSES",
+    "DEDICATED_DAG_COLLECTORS",
     "MONTHLY_COLLECTORS",
     "REALTIME_COLLECTORS",
     "AirQualityOpenMeteo",

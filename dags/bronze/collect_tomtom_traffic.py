@@ -6,7 +6,8 @@ conforme (juste helpers cache/quota).
 
  (2026-06-18) — Réactivation :
 * Nouvelle classe ``TomTomTrafficFlow(DataCollector)`` dans
-  ``src.ingestion/tomtom_traffic.py`` (câblée dans REALTIME_COLLECTORS).
+  ``src.ingestion/tomtom_traffic.py``. Retirée de REALTIME_COLLECTORS le
+  2026-09-10 : ce DAG est désormais la seule collecte TomTom (DEDICATED_DAG_COLLECTORS).
 * Ce DAG utilise maintenant le pattern unifié : ``TomTomTrafficFlow().run()``
   appelle ``collect_lyon_tiles()`` + ``save_lyon_tiles_to_bronze()``.
 * Vue SQL ``gold.v_coherence_tomtom_vs_grandlyon`` (migration 14) fait
