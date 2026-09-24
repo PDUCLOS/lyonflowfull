@@ -96,7 +96,14 @@ sudo journalctl -u lyonflow-backup.service -n 50 --no-pager
 #     sudo bash -c 'grep -v \"^token = \" /opt/lyonflow/.rclone.conf > /tmp/rc && \
 #     printf \"token = %s\n\" \"\$(tr -d \"\\n\" < /opt/lyonflow/.rclone.token)\" >> /tmp/rc && \
 #     cat /tmp/rc > /opt/lyonflow/.rclone.conf && rm -f /opt/lyonflow/.rclone.token /tmp/rc'"
-# Test : sudo bash -c 'source /opt/lyonflow/.backup-offsite.conf; rclone --config "$RCLONE_CONFIG" lsd gdrive:'
+# Test (SANS sudo — voir avertissement ci-dessous) :
+#   bash -c 'source /opt/lyonflow/.backup-offsite.conf; rclone --config "$RCLONE_CONFIG" lsd gdrive:'
+#
+# ⚠️ Ne JAMAIS lancer rclone avec sudo sur /opt/lyonflow/.rclone.conf : quand le
+# token OAuth expire (1 h), rclone le rafraîchit et RÉÉCRIT le fichier → il
+# devient root:ubuntu 600, illisible par le service (User=ubuntu). Incident
+# 2026-09-24 03:07 : « Failed to load config file … permission denied ».
+# Réparation : sudo chown ubuntu:ubuntu /opt/lyonflow/.rclone.conf
 
 # Backup orphelin (pg_dump toujours actif après échec) :
 docker exec lyonflow-postgres psql -U lyonflow -d lyonflow -c \

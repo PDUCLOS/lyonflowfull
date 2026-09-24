@@ -85,6 +85,13 @@ if [ -n "${GDRIVE_BACKUP_DEST:-}" ]; then
         echo "ERREUR : rclone non installe (curl https://rclone.org/install.sh | sudo bash)"
         exit 1
     fi
+    # Config rclone illisible = typiquement reecrite par un `sudo rclone` (refresh
+    # du token OAuth → fichier root:ubuntu 600). Incident 2026-09-24.
+    if [ -n "${RCLONE_CONFIG:-}" ] && [ ! -r "$RCLONE_CONFIG" ]; then
+        echo "ERREUR : $RCLONE_CONFIG illisible par $(id -un) (proprietaire : $(stat -c %U "$RCLONE_CONFIG" 2>/dev/null))."
+        echo "   Cause probable : rclone lance avec sudo. Fix : sudo chown ubuntu:ubuntu $RCLONE_CONFIG"
+        exit 1
+    fi
     # mkdir idempotent : cree le dossier si absent, echoue si remote/OAuth KO
     if ! rclone mkdir "$RCLONE_REMOTE" 2>&1 | sed 's/^/   rclone: /'; then
         echo "ERREUR : destination '$RCLONE_REMOTE' inaccessible (config rclone / OAuth ?)."
