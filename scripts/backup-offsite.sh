@@ -187,7 +187,7 @@ if [ -n "${GDRIVE_BACKUP_DEST:-}" ]; then
     # chaque bloc est bufferise en RAM donc re-essayable (--low-level-retries).
     # Sous systemd (pas de TTY), --progress ecrit une ligne toutes les 500 ms
     # dans journald et noie l'erreur dans l'alerte Telegram : stats sur 1 ligne / 5 min.
-    if [ -t 1 ]; then RCLONE_STATS=(--progress); else RCLONE_STATS=(--stats 5m --stats-one-line); fi
+    if [ -t 1 ]; then RCLONE_STATS=(--progress); else RCLONE_STATS=(--stats 5m --stats-one-line --stats-log-level NOTICE); fi
     $PG_DUMP_CMD | gzip | $GPG_CMD | rclone rcat "gdrive:${GDRIVE_BACKUP_DEST}/${FINAL_NAME}" \
         --drive-chunk-size 128M --low-level-retries 20 "${RCLONE_STATS[@]}"
     DEST_LOG="Google Drive: gdrive:${GDRIVE_BACKUP_DEST}/${FINAL_NAME}"
