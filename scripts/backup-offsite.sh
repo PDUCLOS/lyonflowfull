@@ -181,7 +181,15 @@ if [ -n "${GDRIVE_BACKUP_DEST:-}" ]; then
         echo "   rclone config  # setup Google Drive OAuth"
         exit 1
     fi
-    $PG_DUMP_CMD | gzip | $GPG_CMD | rclone rcat "gdrive:${GDRIVE_BACKUP_DEST}/${FINAL_NAME}" --progress
+    # Sprint 26 (2026-09-25) : backup du 25/09 refusé en fin d'upload par Google
+    # (403 rateLimitExceeded, quota par minute du client OAuth partagé de rclone).
+    # Blocs de 128 Mo (defaut 8 Mo) : ~30 requetes au lieu de ~490 pour 3,8 Go,
+    # chaque bloc est bufferise en RAM donc re-essayable (--low-level-retries).
+    # Sous systemd (pas de TTY), --progress ecrit une ligne toutes les 500 ms
+    # dans journald et noie l'erreur dans l'alerte Telegram : stats sur 1 ligne / 5 min.
+    if [ -t 1 ]; then RCLONE_STATS=(--progress); else RCLONE_STATS=(--stats 5m --stats-one-line); fi
+    $PG_DUMP_CMD | gzip | $GPG_CMD | rclone rcat "gdrive:${GDRIVE_BACKUP_DEST}/${FINAL_NAME}" \
+        --drive-chunk-size 128M --low-level-retries 20 "${RCLONE_STATS[@]}"
     DEST_LOG="Google Drive: gdrive:${GDRIVE_BACKUP_DEST}/${FINAL_NAME}"
 elif [ -n "${OFFSITE_SSH:-}" ]; then
     # Mode SSH serveur backup
