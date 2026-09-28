@@ -150,3 +150,6 @@ scripts/scratch_*
 scripts/*_scratch.*
 scripts/sql/scratch_*
 scripts/sql/check_*.sql
+
+# Mémoire projet pour assistants — hors dépôt
+AGENTS.md
