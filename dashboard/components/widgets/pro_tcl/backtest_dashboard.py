@@ -1,15 +1,16 @@
-"""Widget — Backtest Dashboard (XGBoost vs TomTom oracle).
+"""Widget — Backtest Dashboard (XGBoost vs vitesse observée).
 
- Axe A (2026-06-20) — Validation modèle cross-source.
-Compare les prédictions XGBoost H+1h (gold.trafic_predictions) avec les
-observations TomTom Traffic Flow (GPS flottes, gold.v_tomtom_traffic_live).
+ Axe A (2026-06-20) — Validation modèle en production.
+Compare les prédictions XGBoost H+1h (gold.trafic_predictions) avec la
+vitesse mesurée par les boucles Grand Lyon une heure plus tard
+(gold.traffic_features_live). Référence TomTom abandonnée (migration 051).
 
-Source : ``gold.mv_xgb_vs_tomtom`` (migration 020, matérialisée) +
+Source : ``gold.mv_xgb_vs_tomtom`` (migration 051, nom historique) +
 ``gold.v_xgb_accuracy_summary`` (vue simple, KPIs agrégés par heure).
 
 Affiche :
 1. **4 KPI cards** (bandeau) : MAE, MAPE, P90, paires validées (24h).
-2. **Scatter plot** : TomTom (x) vs XGBoost (y), colorisé par accuracy_band.
+2. **Scatter plot** : observé (x) vs XGBoost (y), colorisé par accuracy_band.
 3. **Courbe MAE temporelle** : MAE par heure sur 7 jours + bande seuil 10 km/h.
 4. **Distribution accuracy** : bar chart accurate/acceptable/poor.
 5. **Table top 10 pires prédictions** : trié par error_abs_kmh DESC.
@@ -18,7 +19,7 @@ Cible : Pro_7_Model_Monitoring (Pro TCL). À envelopper avec
 ``deferred_render()`` ) — coût élevé (3 Plotly + 1 MV refresh).
 
 Si PostgreSQL indispo → fail loud via DashboardDataError.
-Si MV vide (TomTom pas encore collecté ou pas de paires dans la fenêtre) →
+Si MV vide (pas encore de paires dans la fenêtre) →
 message d'info, pas d'erreur (c'est un état valide en bootstrap).
 """
 
@@ -49,7 +50,7 @@ _BAND_COLORS = {
 
 
 def _compute_kpis(pairs: pd.DataFrame) -> dict:
-    """Calcule les 4 KPIs du bandeau depuis les paires XGBoost/TomTom.
+    """Calcule les 4 KPIs du bandeau depuis les paires XGBoost/observé.
 
     Returns:
         Dict avec mae_kmh, mape_pct, p90_kmh, n_pairs.
@@ -72,11 +73,11 @@ def _compute_kpis(pairs: pd.DataFrame) -> dict:
 
 
 def _scatter_xgb_vs_tomtom(pairs: pd.DataFrame) -> go.Figure:
-    """Scatter Plotly TomTom (x) vs XGBoost (y), colorisé par accuracy_band."""
+    """Scatter Plotly vitesse observée (x) vs XGBoost (y), colorisé par accuracy_band."""
     fig = go.Figure()
     if pairs.empty:
         fig.add_annotation(
-            text="Aucune paire (XGBoost, TomTom) à afficher",
+            text="Aucune paire (prédiction, vitesse observée) à afficher",
             xref="paper",
             yref="paper",
             x=0.5,
@@ -100,13 +101,12 @@ def _scatter_xgb_vs_tomtom(pairs: pd.DataFrame) -> go.Figure:
                     "size": 6,
                     "opacity": 0.6,
                 },
-                customdata=subset[["axis_key", "error_abs_kmh", "tomtom_confidence"]].values,
+                customdata=subset[["axis_key", "error_abs_kmh"]].values,
                 hovertemplate=(
-                    "<b>axis_key</b>: %{customdata[0]}<br>"
-                    "TomTom: %{x} km/h<br>"
+                    "<b>capteur</b>: %{customdata[0]}<br>"
+                    "Observé (+1 h): %{x} km/h<br>"
                     "XGBoost: %{y} km/h<br>"
-                    "|Δ|: %{customdata[1]} km/h<br>"
-                    "TomTom confidence: %{customdata[2]:.2f}"
+                    "|Δ|: %{customdata[1]:.1f} km/h"
                     "<extra></extra>"
                 ),
             )
@@ -130,8 +130,8 @@ def _scatter_xgb_vs_tomtom(pairs: pd.DataFrame) -> go.Figure:
         )
 
     fig.update_layout(
-        title="XGBoost H+1h vs TomTom Flow (dernières 24h)",
-        xaxis_title="TomTom speed (km/h) — oracle",
+        title="XGBoost H+1h vs vitesse observée 1 h plus tard (dernières 24h)",
+        xaxis_title="Vitesse observée Grand Lyon (km/h)",
         yaxis_title="XGBoost speed (km/h) — prédiction",
         height=450,
         template=LYF_TEMPLATE,
@@ -215,12 +215,12 @@ def render_backtest_dashboard(hours_pairs: int = 24, hours_summary: int = 168) -
     with st.popover("MAE vs MAPE ?"):
         st.markdown(
             "Le **MAE (Mean Absolute Error)** mesure l'erreur moyenne en km/h "
-            "entre les prédictions XGBoost et l'oracle TomTom. Le **MAPE** "
+            "entre les prédictions XGBoost et la vitesse mesurée par les capteurs Grand Lyon une heure plus tard. Le **MAPE** "
             "exprime la même erreur en % relatif. **Plus c'est bas, plus le "
             "modèle colle à la réalité**. Référence cible : MAE < 8 km/h."
         )
     with loading_wrapper("Chargement Backtest dashboard…", "⏳"):
-        """Render le dashboard complet de backtest XGBoost vs TomTom.
+        """Render le dashboard complet de backtest XGBoost vs vitesse observée.
 
     Args:
         hours_pairs: fenêtre temporelle pour les paires (scatter + KPIs), défaut 24h.
@@ -235,9 +235,9 @@ def render_backtest_dashboard(hours_pairs: int = 24, hours_summary: int = 168) -
 
     if pairs.empty:
         st.info(
-            f"Aucune paire (XGBoost, TomTom) sur les dernières {hours_pairs}h. "
-            "Vérifie que le DAG ``refresh_xgb_vs_tomtom`` tourne et que TomTom "
-            "collecte bien (cf. ``gold.v_tomtom_traffic_live``)."
+            f"Aucune paire (prédiction, vitesse observée) sur les dernières {hours_pairs}h. "
+            "Vérifie que le DAG ``refresh_xgb_vs_tomtom`` tourne et que "
+            "``gold.traffic_features_live`` est alimentée."
         )
         return
 
@@ -285,7 +285,7 @@ def render_backtest_dashboard(hours_pairs: int = 24, hours_summary: int = 168) -
 
     st.markdown("---")
 
-    # ── 2. Scatter XGBoost vs TomTom ────────────────────────────────────────
+    # ── 2. Scatter XGBoost vs observé ────────────────────────────────────────
     plotly_with_alt(_scatter_xgb_vs_tomtom(pairs), use_container_width=True)
 
     st.markdown("---")
@@ -307,7 +307,7 @@ def render_backtest_dashboard(hours_pairs: int = 24, hours_summary: int = 168) -
             columns={
                 "axis_key": "Canal",
                 "xgb_speed_kmh": "XGBoost (km/h)",
-                "tomtom_speed_kmh": "TomTom (km/h)",
+                "tomtom_speed_kmh": "Observé (km/h)",
                 "error_abs_kmh": "|Δ| (km/h)",
                 "accuracy_band": "Bande",
                 "calculated_at": "Date",
