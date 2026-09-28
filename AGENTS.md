@@ -191,6 +191,17 @@
 #   761 h/761 h en « severe » sur 30 j. Seuils corrigés : warning >= 60, severe >= 80.
 # - check_gold_freshness la nuit (Sprint 26) : FIXÉ — tcl_vehicle_realtime ignorée 00:30-05:30 Paris
 #   (réseau TCL à l'arrêt, table vide chaque nuit, 12-14 échecs/nuit avant).
+# - « Notre modèle » bloquée sur « Indéterminé » (2026-09-28) : FIXÉ (migration 051). L'évaluation
+#   H+1h compare désormais chaque prédiction à la vitesse Grand Lyon observée 1 h plus tard
+#   (gold.traffic_features_live), plus à TomTom. 7 j : ~660 k paires, MAE 2,2 km/h, 87 % à ±5 km/h.
+#   Nom `gold.mv_xgb_vs_tomtom` conservé (colonne tomtom_speed_kmh = vitesse observée).
+# - TomTom MIS DE CÔTÉ (2026-09-28) : clé rejetée (403) depuis le 23/09. DAG collect_tomtom_traffic
+#   en pause, retiré de CRITICAL_DAGS et de gold.v_source_health (migration 052). Le modèle n'a
+#   jamais été entraîné sur TomTom (11 features Grand Lyon + météo + calendrier).
+# - /mlflow/ page blanche + /grafana/ 502 (2026-09-28) : FIXÉ. `proxy_pass $var/;` remplaçait toute
+#   l'URI par `/` ; MLflow lancé avec --static-prefix /mlflow ; Grafana servi sous /grafana/
+#   (SERVE_FROM_SUB_PATH), volume grafana_data chown 472, `make monitoring-up` ne cite plus
+#   redis-exporter (service supprimé → compose échouait → Grafana jamais démarré).
 # - Bloat osm.ways + alertes Telegram en boucle (Sprint 26) : FIXÉ (migrations 048/049,
 #   hystérésis dag-monitor). Détail dans la section Sprint 26 ci-dessus.
 # - Fuite connexions Postgres (Sprint 25) : FIXÉ (tcp_keepalives_idle=60 +

@@ -170,7 +170,7 @@ if k_model:
     model_sub = f"{pct * 100:.0f}% précises (±5 km/h) · erreur moy. {mae:.1f} km/h"
 else:
     model_value = "Indéterminé"
-    model_sub = "Pas encore 7 jours d'historique de production"
+    model_sub = "Évaluation momentanément indisponible"
     color = COLORS["text_muted"]
 model_color = color
 

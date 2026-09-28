@@ -49,12 +49,16 @@ logger = logging.getLogger(__name__)
 # bronze.tomtom_traffic vide → gold.v_tomtom_traffic_live vide →
 # gold.mv_xgb_vs_tomtom vide → widget "Modèle" du dashboard Usager_5 coincé
 # sur "Indéterminé" (dépend de 7j d'historique XGBoost-vs-TomTom).
+#
+# 2026-09-28 — collect_tomtom_traffic RETIRÉ : clé TomTom rejetée (403) depuis
+# le 2026-09-23, collecte mise de côté (DAG en pause). La MV
+# gold.mv_xgb_vs_tomtom ne dépend plus de TomTom (migration 051, référence =
+# vitesse Grand Lyon observée) : l'absence de TomTom ne bloque plus rien.
 CRITICAL_DAGS = [
     "collect_bronze",
     "transform_bronze_to_silver",
     "transform_silver_to_gold",
     "dag_inference_xgboost",
-    "collect_tomtom_traffic",
 ]
 
 # Tables Gold dont la fraîcheur < 1h est requise pour le dashboard

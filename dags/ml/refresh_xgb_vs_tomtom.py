@@ -1,9 +1,13 @@
 """DAG Airflow — Refresh materialized view gold.mv_xgb_vs_tomtom.
 
- Axe A (2026-06-20) — TomTom Niveau 2 Backtest Engine.
+ Axe A (2026-06-20) — Backtest Engine XGBoost H+1h.
 Re-calcul la MV ``gold.mv_xgb_vs_tomtom`` toutes les 30 min pour fournir
-les paires (XGBoost H+1h, TomTom Flow) au widget Pro_7_Model_Monitoring
-et au détecteur de drift Evidently.
+les paires (XGBoost H+1h, vitesse observée) au widget Pro_7_Model_Monitoring,
+aux pages Usager « Notre modèle » / « Statut » et au détecteur de drift Evidently.
+
+Migration 051 (2026-09-28) : la référence n'est plus TomTom (clé rejetée,
+collecte mise de côté) mais la vitesse Grand Lyon observée à H+1h
+(``gold.traffic_features_live``). Nom de MV historique conservé.
 
 Schedule : ``*/30 * * * *`` (toutes les 30 min, aligné cycle d'inférence
 XGBoost H+1h).
@@ -50,17 +54,14 @@ def _refresh_mv(**context) -> dict:
     import time
 
     start = time.monotonic()
-    # CONCURRENTLY évite le lock exclusif. Si la MV n'a pas d'index UNIQUE,
-    # PostgreSQL retombe en mode non-concurrent (warning) — la MV a 3 index
-    # mais pas d'UNIQUE, donc on n'utilise PAS CONCURRENTLY pour éviter
-    # l'erreur. Le refresh reste rapide (< 5s sur VPS 12 Go).
+    # CONCURRENTLY : pas de lock lecteurs pendant le refresh (~20 s sur 7 j).
+    # Possible depuis la migration 051 (index UNIQUE axis_key, calculated_at).
+    # Fallback non-concurrent si l'index manque (base pas encore migrée).
     try:
-        execute_query("REFRESH MATERIALIZED VIEW gold.mv_xgb_vs_tomtom")
-    except Exception as e:
-        # Fallback : essayer avec CONCURRENTLY (au cas où un index UNIQUE
-        # aurait été ajouté manuellement)
-        logger.warning("REFRESH standard failed, retry avec CONCURRENTLY: %s", e)
         execute_query("REFRESH MATERIALIZED VIEW CONCURRENTLY gold.mv_xgb_vs_tomtom")
+    except Exception as e:
+        logger.warning("REFRESH CONCURRENTLY failed, retry sans CONCURRENTLY: %s", e)
+        execute_query("REFRESH MATERIALIZED VIEW gold.mv_xgb_vs_tomtom")
     duration = time.monotonic() - start
 
     # Count post-refresh pour télémétrie

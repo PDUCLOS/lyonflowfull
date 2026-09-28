@@ -88,7 +88,7 @@ _SOURCE_BLURB: dict[str, dict[str, str]] = {
         "icon": "🤖",
         "who": "LyonFlow (notre modèle XGBoost)",
         "use": "Vitesses prédites à H+1h — alimentent Mon trajet",
-        "freq": "Toutes les 30 min",
+        "freq": "Toutes les 15 min",
     },
     "silver.trafic_boucles_clean": {
         "label": "Boucles nettoyées",

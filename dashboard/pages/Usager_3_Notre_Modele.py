@@ -41,7 +41,7 @@ _MODEL_BLURB = {
         "- **L'heure, le jour**, les vacances scolaires et jours fériés\n"
         "- **La météo** (température, pluie)\n"
         "- **Les vitesses des dernières heures** (tendances récentes)\n\n"
-        "Toutes les 30 min, il met à jour sa prédiction pour l'heure suivante. "
+        "Toutes les 15 min, il met à jour sa prédiction pour l'heure suivante. "
         "C'est ce qui te permet de voir un temps de trajet ajusté dans "
         "**Mon trajet** au lieu d'une simple moyenne."
     ),
@@ -68,13 +68,13 @@ def _accuracy_pie(accurate: int, acceptable: int, poor: int) -> go.Figure:
 
     Bands :
     - accurate  : erreur < 5 km/h (vert)
-    - acceptable : erreur 5-10 km/h (orange)
-    - poor      : erreur > 10 km/h (rouge)
+    - acceptable : erreur 5-15 km/h (orange)
+    - poor      : erreur > 15 km/h (rouge)
     """
     fig = go.Figure(
         data=[
             go.Pie(
-                labels=["Très précises (±5 km/h)", "Approximatives (5-10 km/h)", "Imprécises (>10 km/h)"],
+                labels=["Très précises (±5 km/h)", "Approximatives (5-15 km/h)", "Imprécises (>15 km/h)"],
                 values=[accurate, acceptable, poor],
                 hole=0.55,
                 marker={
@@ -192,9 +192,9 @@ with loading_wrapper("Chargement de la précision…", "🎯"):
 
 if mae_df.empty:
     st.info(
-        "Pas encore 7 jours d'historique de production (le modèle a été "
-        "mis en service récemment). Les chiffres apparaîtront au bout de "
-        "quelques jours."
+        "Évaluation momentanément indisponible : aucune prédiction récente "
+        "n'a encore pu être comparée à la vitesse réellement mesurée une "
+        "heure plus tard. Les chiffres reviennent au prochain calcul."
     )
 else:
     # Agrégat global 7j : somme des 3 bands
@@ -208,6 +208,7 @@ else:
     pct_poor = n_poor / n_total if n_total else None
 
     mae_global = float(mae_df["mae_kmh"].mean())
+    n_total_fr = f"{n_total:,}".replace(",", "\u202f")  # séparateur de milliers français
     p90_global = float(mae_df["p90_error_kmh"].mean())
 
     quality_label, quality_emoji, quality_color = _quality_card(pct_accurate, mae_global)
@@ -223,7 +224,7 @@ else:
                 {quality_emoji} {quality_label}
             </div>
             <div style="font-size:0.9rem;opacity:0.7;margin-top:0.5rem;">
-                Sur {n_total:,} prédictions évaluées — marge d'erreur moyenne {mae_global:.1f} km/h
+                Sur {n_total_fr} prédictions évaluées — marge d'erreur moyenne {mae_global:.1f} km/h
             </div>
         </div>
         """,
@@ -242,12 +243,12 @@ else:
     k2.metric(
         "Approximatives",
         _humanize_pct(pct_acceptable),
-        help="Prédictions dont l'erreur est entre 5 et 10 km/h.",
+        help="Prédictions dont l'erreur est entre 5 et 15 km/h.",
     )
     k3.metric(
-        "Imprécises (>10 km/h)",
+        "Imprécises (>15 km/h)",
         _humanize_pct(pct_poor),
-        help="Prédictions dont l'erreur dépasse 10 km/h (souvent incident exceptionnel).",
+        help="Prédictions dont l'erreur dépasse 15 km/h (souvent incident exceptionnel).",
     )
     k4.metric(
         "Erreur moyenne",
@@ -294,7 +295,8 @@ with st.container():
 
 st.caption(
     "LyonFlow · Modèle XGBoost H+1h, ré-entraîné quotidiennement · "
-    "Évaluation = comparaison prédiction vs vitesse réelle observée sur 7 jours"
+    "Évaluation = chaque prédiction à 1 h comparée à la vitesse mesurée par les "
+    "capteurs Grand Lyon une heure plus tard, sur 7 jours glissants"
 )
 
 # Évite le warning pylint sur STATUS_COLORS (utilisé pour la cohérence

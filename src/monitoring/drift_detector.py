@@ -38,7 +38,9 @@ NUMERICAL_FEATURES = [
     "tomtom_speed_kmh",
     "error_abs_kmh",
     "error_pct",
-    "tomtom_confidence",
+    # "tomtom_confidence" retiré (migration 051) : NULL depuis que la référence
+    # est la vitesse observée Grand Lyon — une colonne 100 % NULL fait échouer
+    # le test statistique Evidently.
 ]
 
 

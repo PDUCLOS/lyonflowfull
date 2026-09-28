@@ -48,7 +48,7 @@ services:
       resources:
         limits:
           cpus: "0.3"
-          memory: 256M
+          memory: 512M
 
   # ---------------------------------------------------------------------------
   # Alertmanager
@@ -88,7 +88,11 @@ services:
       GF_SECURITY_ADMIN_USER: ${GRAFANA_ADMIN_USER:-admin}
       GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:-changeme}
       GF_USERS_ALLOW_SIGN_UP: "false"
-      GF_SERVER_ROOT_URL: "https://${VPS_DOMAIN:-localhost}/grafana"
+      # 2026-09-28 : servi sous /grafana/ (nginx transmet l'URI complète).
+      # Plus de https://${VPS_DOMAIN} : DNS lyonflow.fr mort, accès par IP.
+      GF_SERVER_DOMAIN: ${GRAFANA_DOMAIN:-51.83.159.224}
+      GF_SERVER_ROOT_URL: "%(protocol)s://%(domain)s/grafana/"
+      GF_SERVER_SERVE_FROM_SUB_PATH: "true"
       # Auto-provisioning via /etc/grafana/provisioning/
     volumes:
       - ./monitoring/grafana/provisioning:/etc/grafana/provisioning:ro

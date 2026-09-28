@@ -318,7 +318,7 @@ backup-offsite:  ## Push backup vers serveur distant (rsync over SSH)
 MONITORING_COMPOSE := docker compose -f docker-compose.yml -f docker-compose.monitoring.yml
 
 monitoring-up:  ## Démarre la stack monitoring (Prometheus + Grafana + Alertmanager)
-	$(MONITORING_COMPOSE) up -d prometheus alertmanager grafana node-exporter postgres-exporter nginx-exporter redis-exporter
+	$(MONITORING_COMPOSE) up -d prometheus alertmanager grafana node-exporter postgres-exporter nginx-exporter
 	@echo ""
 	@echo "✅ Stack monitoring démarrée :"
 	@echo "  - Prometheus    : http://localhost:9090"
@@ -328,10 +328,10 @@ monitoring-up:  ## Démarre la stack monitoring (Prometheus + Grafana + Alertman
 	@echo "⚠️  Expose via Nginx sur /grafana/, /prometheus/, /alertmanager/"
 
 monitoring-down:  ## Stoppe la stack monitoring
-	$(MONITORING_COMPOSE) stop prometheus alertmanager grafana node-exporter postgres-exporter nginx-exporter redis-exporter
+	$(MONITORING_COMPOSE) stop prometheus alertmanager grafana node-exporter postgres-exporter nginx-exporter
 
 monitoring-status:  ## Status des services monitoring
-	@$(MONITORING_COMPOSE) ps prometheus alertmanager grafana node-exporter postgres-exporter nginx-exporter redis-exporter 2>/dev/null || echo "Stack monitoring pas démarrée"
+	@$(MONITORING_COMPOSE) ps prometheus alertmanager grafana node-exporter postgres-exporter nginx-exporter 2>/dev/null || echo "Stack monitoring pas démarrée"
 	@echo ""
 	@echo "==[ Targets Prometheus ]=="
 	@curl -fsS http://localhost:9090/api/v1/targets 2>/dev/null | python3 -c "import json,sys; d=json.load(sys.stdin); [print(f\"  {t['labels']['job']:20s} {t['health']:10s} {t['lastScrape'][:19]}\") for t in d.get('data',{}).get('activeTargets',[])]" 2>/dev/null || echo "  (Prometheus pas accessible)"

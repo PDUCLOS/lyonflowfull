@@ -223,12 +223,16 @@ services:
     image: lyonflow-mlflow:custom
     container_name: lyonflow-mlflow
     restart: unless-stopped
+    # --static-prefix /mlflow (2026-09-28) : UI servie sous /mlflow derrière
+    # nginx (sinon assets chargés depuis / → page blanche). /health et l'API
+    # REST /api/2.0 restent sans préfixe (clients internes http://mlflow:5000).
     command: >
       mlflow server
         --backend-store-uri postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/mlflow
         --default-artifact-root s3://lyonflow-gold/mlflow-artifacts/
         --host 0.0.0.0
         --port 5000
+        --static-prefix /mlflow
     environment:
       <<: *common-env
       AWS_ACCESS_KEY_ID: ${MINIO_ROOT_USER}

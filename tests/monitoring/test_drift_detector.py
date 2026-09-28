@@ -150,7 +150,7 @@ class TestRunDriftReport:
         df["extra_col"] = rng.normal(0, 1, 100)  # pas dans NUMERICAL_FEATURES
         result = run_drift_report(reference_df=df, current_df=df.copy())
         assert "extra_col" not in result["details"]
-        # Seules les 5 features NUMERICAL_FEATURES sont là
+        # Seules les features NUMERICAL_FEATURES sont là
         assert set(result["details"].keys()) == set(NUMERICAL_FEATURES)
 
     def test_result_is_json_serializable(self) -> None:
