@@ -24,6 +24,7 @@ from __future__ import annotations
 
 import logging
 import os
+from collections.abc import Callable
 from datetime import datetime, timedelta
 from typing import Any
 
@@ -32,6 +33,8 @@ import psycopg2
 from airflow import DAG
 from airflow.exceptions import AirflowException
 from airflow.operators.python import PythonOperator
+
+from src.ingestion.vigilance_meteo import is_canicule_season
 
 logger = logging.getLogger(__name__)
 
@@ -85,19 +88,31 @@ FRESHNESS_CHECKS = [
     # sous MIN_RUNS du dag-failure-rate-monitor → invisible s'il échoue. 13 h
     # = un run manqué toléré. Sans ce check, gold.v_velov_safety_advisory
     # perdrait la vigilance canicule sans aucun signal.
-    ("bronze.vigilance_meteo", "fetched_at", 780, None),
+    #
+    # 2026-09-30 : hors veille saisonnière (1er juin → 15 sept) Météo-France
+    # ne publie plus aucune donnée canicule ; la table ne peut donc plus
+    # rafraîchir. Le check échouait en continu (1142 min > 780 min, alerte
+    # Telegram dag_critical_pipeline_health à 21 %). Ignoré hors saison.
+    ("bronze.vigilance_meteo", "fetched_at", 780, lambda: not is_canicule_season()),
 ]
 
 PARIS_TZ = "Europe/Paris"
 
+# Fenêtre de silence : plage horaire de Paris (début, fin) OU règle calculée.
+QuietRule = tuple[str, str] | Callable[[], bool] | None
 
-def _in_quiet_window(window: tuple[str, str] | None, now: pendulum.DateTime | None = None) -> bool:
-    """True si l'heure de Paris courante est dans [début, fin) de la fenêtre.
 
-    Gère une fenêtre qui traverse minuit (ex. ("23:00", "05:00")).
+def _in_quiet_window(window: QuietRule, now: pendulum.DateTime | None = None) -> bool:
+    """True si le check doit être ignoré maintenant.
+
+    Plage horaire : True si l'heure de Paris courante est dans [début, fin),
+    y compris pour une fenêtre qui traverse minuit (ex. ("23:00", "05:00")).
+    Règle calculée : renvoie simplement son résultat.
     """
     if window is None:
         return False
+    if callable(window):
+        return window()
     now = now or pendulum.now(PARIS_TZ)
     start_h, start_m = (int(x) for x in window[0].split(":"))
     end_h, end_m = (int(x) for x in window[1].split(":"))
@@ -178,7 +193,7 @@ def check_gold_freshness() -> dict[str, str]:
             quiet = _in_quiet_window(quiet_window)
             if max_ts is None or age is None:
                 if quiet:
-                    results[table] = "EMPTY (réseau à l'arrêt, ignoré)"
+                    results[table] = "EMPTY (hors période surveillée, ignoré)"
                 else:
                     anomalies.append(f"{table}: VIDE (aucune ligne)")
                     results[table] = "EMPTY"
@@ -186,7 +201,7 @@ def check_gold_freshness() -> dict[str, str]:
             age_min = age.total_seconds() / 60
             if age_min > max_age_min:
                 if quiet:
-                    results[table] = f"STALE ({age_min:.0f} min, réseau à l'arrêt, ignoré)"
+                    results[table] = f"STALE ({age_min:.0f} min, hors période surveillée, ignoré)"
                 else:
                     anomalies.append(f"{table}: stale ({age_min:.0f} min > {max_age_min} min)")
                     results[table] = f"STALE ({age_min:.0f} min)"

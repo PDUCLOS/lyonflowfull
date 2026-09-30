@@ -2,7 +2,9 @@
 
 Vérifie :
 1. fetch_raw() parse correctement la réponse Opendatasoft (records/fields).
-2. validate() refuse 0 enregistrement (signal d'un problème API).
+2. validate() refuse 0 enregistrement en saison canicule (1er juin → 15 sept),
+   l'accepte hors saison (Météo-France ne publie alors rien), refuse une
+   réponse mal formée.
 3. _save_raw() insère une ligne par période horaire, ON CONFLICT DO NOTHING.
 4. Intégration dans src.ingestion (export + DEDICATED_DAG_COLLECTORS, hors collect_bronze).
 """
@@ -10,6 +12,7 @@ Vérifie :
 from __future__ import annotations
 
 import sys
+from datetime import date
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
@@ -18,7 +21,7 @@ import pytest
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
 from src.ingestion.base import FetchResult
-from src.ingestion.vigilance_meteo import VigilanceMeteo
+from src.ingestion.vigilance_meteo import VigilanceMeteo, is_canicule_season
 
 FAKE_API_RESPONSE = {
     "nhits": 2,
@@ -95,15 +98,48 @@ class TestVigilanceMeteoFetch:
 
 
 class TestVigilanceMeteoValidate:
-    def test_validate_rejects_zero_records(self):
+    EMPTY = {"nhits": 0, "records": []}
+
+    def test_validate_rejects_zero_records_in_season(self):
         c = VigilanceMeteo()
-        result = FetchResult(source="vigilance_meteo", fetched_at=None, raw_data={}, n_records=0)
-        assert c.validate(result) is False
+        result = FetchResult(source="vigilance_meteo", fetched_at=None, raw_data=self.EMPTY, n_records=0)
+        with patch("src.ingestion.vigilance_meteo.is_canicule_season", return_value=True):
+            assert c.validate(result) is False
+
+    def test_validate_accepts_zero_records_out_of_season(self):
+        c = VigilanceMeteo()
+        result = FetchResult(source="vigilance_meteo", fetched_at=None, raw_data=self.EMPTY, n_records=0)
+        with patch("src.ingestion.vigilance_meteo.is_canicule_season", return_value=False):
+            assert c.validate(result) is True
 
     def test_validate_accepts_nonzero_records(self):
         c = VigilanceMeteo()
-        result = FetchResult(source="vigilance_meteo", fetched_at=None, raw_data={}, n_records=2)
+        result = FetchResult(
+            source="vigilance_meteo", fetched_at=None, raw_data=FAKE_API_RESPONSE, n_records=2
+        )
         assert c.validate(result) is True
+
+    def test_validate_rejects_malformed_response(self):
+        c = VigilanceMeteo()
+        result = FetchResult(source="vigilance_meteo", fetched_at=None, raw_data={}, n_records=0)
+        with patch("src.ingestion.vigilance_meteo.is_canicule_season", return_value=False):
+            assert c.validate(result) is False
+
+
+class TestCaniculeSeason:
+    @pytest.mark.parametrize(
+        ("day", "expected"),
+        [
+            (date(2026, 5, 31), False),
+            (date(2026, 6, 1), True),
+            (date(2026, 8, 15), True),
+            (date(2026, 9, 15), True),
+            (date(2026, 9, 16), False),
+            (date(2026, 12, 25), False),
+        ],
+    )
+    def test_is_canicule_season(self, day, expected):
+        assert is_canicule_season(day) is expected
 
 
 class TestVigilanceMeteoSaveRaw:
