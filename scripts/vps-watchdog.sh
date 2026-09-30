@@ -89,12 +89,14 @@ fi
 
 # Checks en échec, sans les codes couleur, gardés dans le log du watchdog.
 failed_checks=$(sed 's/\x1b\[[0-9;]*m//g' /tmp/watchdog-healthcheck.log | grep '^FAIL ' || true)
-echo "$failed_checks" | sed 's/^/[watchdog]   /'
+[ -n "$failed_checks" ] && echo "$failed_checks" | sed 's/^/[watchdog]   /'
 hard_failures=$(echo "$failed_checks" | grep -v 'statement timeout' | grep -c . || true)
 
 if [ "$hard_failures" -eq 0 ] && [ -n "$failed_checks" ]; then
     slow_streak=$((slow_streak + 1))
     echo "[watchdog] lenteur DB seule (timeouts) — slow_streak=$slow_streak/$SLOW_THRESHOLD, pas de restart"
+    # -eq volontaire : une seule alerte par épisode de lenteur (pas de répétition,
+    # pas de message de retour à la normale — rien n'a été redémarré).
     if [ "$slow_streak" -eq "$SLOW_THRESHOLD" ]; then
         telegram_send "🟠 LyonFlow VPS : base lente depuis ~$((slow_streak * 5)) min (requêtes du healthcheck en timeout), services up, pas de restart.
 $failed_checks"
