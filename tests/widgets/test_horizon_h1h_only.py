@@ -63,7 +63,7 @@ def test_itinerary_default_h1h():
     from dashboard.components.widgets.usager.itinerary import render_itinerary_result
 
     sig = inspect.signature(render_itinerary_result)
-    # Plus de paramètre horizon_minutes : la requête passe par pgr_ksp qui
+    # Plus de paramètre horizon_minutes : la requête passe par osm.route_car_ksp qui
     # consomme directement gold.trafic_predictions. Le widget applique
     # implicitement H+1h via compute_itinerary_alternatives().
     assert "horizon_minutes" not in sig.parameters, (

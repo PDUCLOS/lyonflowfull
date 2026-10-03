@@ -28,22 +28,22 @@ fi
 mkdir -p "$WORK_DIR"
 cd "$WORK_DIR"
 
-echo "=== 1/5 Téléchargement Rhône-Alpes PBF (~400 Mo) ==="
+echo "=== 1/6 Téléchargement Rhône-Alpes PBF (~400 Mo) ==="
 if [ ! -f rhone-alpes-latest.osm.pbf ]; then
     wget -q --show-progress "$REGION_PBF_URL" -O rhone-alpes-latest.osm.pbf
 fi
 
-echo "=== 2/5 Extraction bbox Métropole de Lyon ==="
+echo "=== 2/6 Extraction bbox Métropole de Lyon ==="
 osmium extract \
     --bbox="$LYON_BBOX" \
     --strategy=complete_ways \
     rhone-alpes-latest.osm.pbf \
     -o lyon_metro.osm.pbf --overwrite
 
-echo "=== 3/5 Conversion PBF → XML (osm2pgrouting exige du XML) ==="
+echo "=== 3/6 Conversion PBF → XML (osm2pgrouting exige du XML) ==="
 osmium cat lyon_metro.osm.pbf -o lyon_metro.osm --overwrite
 
-echo "=== 4/5 Import osm2pgrouting ==="
+echo "=== 4/6 Import osm2pgrouting ==="
 osm2pgrouting \
     --file lyon_metro.osm \
     --conf "$MAPCONFIG" \
@@ -54,7 +54,7 @@ osm2pgrouting \
     --schema osm \
     --clean
 
-echo "=== 5/5 Post-traitement : calcul length_m + cost_default ==="
+echo "=== 5/6 Post-traitement : calcul length_m + cost_default ==="
 PGPASSWORD="${POSTGRES_PASSWORD}" psql -h "$DB_HOST" -p "$DB_PORT" -U "$DB_USER" -d "$DB_NAME" <<'EOSQL'
 -- Longueur réelle en mètres (geography cast)
 UPDATE osm.ways
@@ -88,6 +88,12 @@ SELECT COUNT(*) AS total_vertices FROM osm.ways_vertices_pgr;
 
 SELECT COUNT(*) AS sensors_mapped FROM osm.mv_sensor_to_way;
 EOSQL
+
+echo "=== 6/6 Restrictions d'accès voiture (couloirs bus, voies tram, voies privées) ==="
+# --clean recrée osm.ways sans la colonne car_access : on rejoue la migration 053.
+# Pour rafraîchir la liste depuis OSM : python scripts/generate_osm_car_access.py
+PGPASSWORD="${POSTGRES_PASSWORD}" psql -h "$DB_HOST" -p "$DB_PORT" -U "$DB_USER" -d "$DB_NAME" \
+    -v ON_ERROR_STOP=1 -f "$(dirname "$MAPCONFIG")/sql/migration_053_osm_car_access.sql"
 
 echo ""
 echo "=== Import terminé ==="

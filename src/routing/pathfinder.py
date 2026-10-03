@@ -248,7 +248,7 @@ def compute_itinerary_alternatives(
     k: int = 3,
     horizon_minutes: int = 0,
 ) -> list[Itinerary] | None:
-    """Calcule K itinéraires voiture alternatifs via pgr_ksp (Sprint 22).
+    """Calcule jusqu'à K itinéraires voiture alternatifs (``osm.route_car_ksp``).
 
     Wrapper sur ``compute_route_pgrouting_ksp()`` côté PostgreSQL.
     Retourne jusqu'à K ``Itinerary`` distincts que l'usager peut comparer.
@@ -261,7 +261,7 @@ def compute_itinerary_alternatives(
             coûts courants de osm.ways, refresh toutes les 15 min par DAG).
 
     Returns:
-        Liste de K ``Itinerary`` distincts (les moins chers en tête),
+        Liste d'au plus K ``Itinerary`` distincts (le plus rapide en tête),
         ou ``None`` si DB indispo / pas de chemin.
     """
     routes_edges = compute_route_pgrouting_ksp(
@@ -293,4 +293,7 @@ def compute_itinerary_alternatives(
                 confidence=confidence,
             )
             itineraries.append(itin)
+    # Le n°1 (le plus rapide) reste en tête ; les alternatives sortent dans
+    # l'ordre de découverte de la méthode de pénalité → triées par durée.
+    itineraries[1:] = sorted(itineraries[1:], key=lambda it: it.total_duration_s)
     return itineraries if itineraries else None

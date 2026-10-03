@@ -1,8 +1,8 @@
 """Widget — Affichage d'un itinéraire voiture avec carte et segments.
 
 Affiche :
-- 3 alternatives pgr_ksp (radio selector, )
-- Carte Folium avec polyline colorée par vitesse (vert→rouge)
+- Jusqu'à 3 itinéraires réellement différents (radio selector)
+- Carte Folium avec polyline colorée par vitesse (vert→rouge), alternatives en gris
 - Liste des segments avec longueur / vitesse / durée
 - KPI résumé (durée, distance, vitesse moyenne, confiance capteurs)
 
@@ -22,7 +22,7 @@ from dashboard.components.error_display import show_error
 from dashboard.components.map_tiles import FOLIUM_TILES
 from src.data.data_loader import load_lyon_addresses
 from src.data.exceptions import DashboardDataError
-from src.routing import Itinerary, compute_itinerary_alternatives
+from src.routing import Itinerary, ItinerarySegment, compute_itinerary_alternatives
 
 logger = logging.getLogger(__name__)
 
@@ -140,7 +140,8 @@ def render_itinerary_result(
         return None
 
     if len(alternatives) > 1:
-        options = [f"Itinéraire {i + 1} — {_fmt_route_label(it)}" for i, it in enumerate(alternatives)]
+        fastest = alternatives[0]
+        options = [f"Itinéraire {i + 1} — {_fmt_route_label(it, fastest)}" for i, it in enumerate(alternatives)]
         chosen_idx = st.radio(
             "Choisis ton itinéraire",
             options=range(len(alternatives)),
@@ -148,15 +149,18 @@ def render_itinerary_result(
             index=0,
             key="itin_alt_choice",
             horizontal=True,
-            help="3 alternatives calculées par pgr_ksp (algorithme Yen). "
-            "Différentes rues principales pour comparer les temps.",
+            help="Le n°1 est le plus rapide. Les autres empruntent d'autres axes "
+            "(au plus 75 % de trajet commun, au plus +50 % de temps). Seules les voies "
+            "ouvertes aux voitures sont utilisées (ni couloirs bus, ni voies tram).",
         )
         itinerary = alternatives[chosen_idx]
     else:
+        chosen_idx = 0
         itinerary = alternatives[0]
 
     _render_summary(itinerary)
-    _render_map(itinerary, origin_coords, dest_coords)
+    others = [alt for i, alt in enumerate(alternatives) if i != chosen_idx]
+    _render_map(itinerary, origin_coords, dest_coords, others=others, map_key=f"itin_map_{chosen_idx}")
     _render_segments(itinerary)
 
     return {
@@ -168,24 +172,32 @@ def render_itinerary_result(
     }
 
 
-def _fmt_route_label(itin: Itinerary) -> str:
-    """Label compact pour radio button d'alternative (Sprint 22).
+def _main_road(itin: Itinerary, exclude: frozenset[str] = frozenset()) -> str | None:
+    """Rue nommée la plus longue de l'itinéraire, hors ``exclude``."""
+    lengths: dict[str, float] = {}
+    for seg in itin.segments:
+        if seg.channel_id and seg.channel_id not in exclude:
+            lengths[seg.channel_id] = lengths.get(seg.channel_id, 0.0) + seg.length_m
+    return max(lengths, key=lengths.__getitem__) if lengths else None
 
-    Format : "8.0 km · 24 min · Bd Eugène Derelle → Rue Servient"
+
+def _fmt_route_label(itin: Itinerary, fastest: Itinerary | None = None) -> str:
+    """Label compact du radio button d'alternative.
+
+    Le départ et l'arrivée sont communs à tous les itinéraires : on affiche
+    ce qui les distingue, l'écart de temps avec le plus rapide et l'axe
+    principal qui n'est pas sur le plus rapide.
+    Format : "3.6 km · 11 min (+2 min) · via Rue Baraban"
     """
-    km = itin.total_length_m / 1000.0
-    minutes = itin.total_duration_s / 60.0
-    named = [s.channel_id for s in itin.segments if s.channel_id]
-    first_road = named[0] if named else None
-    last_road = named[-1] if len(named) > 1 else None
-    if first_road and last_road and first_road != last_road:
-        label = f"{km:.1f} km · {minutes:.0f} min · {first_road} → {last_road}"
-        if len(label) > 70:
-            label = f"{km:.1f} km · {minutes:.0f} min · {first_road[:20]}…"
-    elif first_road:
-        label = f"{km:.1f} km · {minutes:.0f} min · via {first_road}"
-    else:
-        label = f"{km:.1f} km · {minutes:.0f} min"
+    label = f"{itin.total_length_m / 1000.0:.1f} km · {itin.total_duration_s / 60.0:.0f} min"
+    road = _main_road(itin)
+    if fastest is not None and fastest is not itin:
+        delta_min = round((itin.total_duration_s - fastest.total_duration_s) / 60.0)
+        label += f" (+{delta_min} min)" if delta_min >= 1 else " (même durée)"
+        fastest_roads = frozenset(seg.channel_id for seg in fastest.segments if seg.channel_id)
+        road = _main_road(itin, exclude=fastest_roads) or road
+    if road:
+        label += f" · via {road[:35] + '…' if len(road) > 35 else road}"
     return label
 
 
@@ -206,11 +218,15 @@ def _render_map(
     itinerary: Itinerary,
     origin_coords: tuple[float, float],
     dest_coords: tuple[float, float],
+    others: list[Itinerary] | None = None,
+    map_key: str = "itin_map",
 ) -> None:
     """Affiche la carte Folium avec segments colorés par vitesse trafic.
 
     origin_coords / dest_coords = (lon, lat) from DB.
     Folium expects [lat, lon].
+    ``others`` : alternatives non sélectionnées, tracées en gris sous l'itinéraire
+    choisi. ``map_key`` change avec la sélection pour forcer le rendu de la carte.
     """
     try:
         import folium
@@ -218,7 +234,8 @@ def _render_map(
         o_lat, o_lon = origin_coords[1], origin_coords[0]
         d_lat, d_lon = dest_coords[1], dest_coords[0]
 
-        node_latlons = [(seg.start_lat, seg.start_lon) for seg in itinerary.segments]
+        others = others or []
+        node_latlons = [(seg.start_lat, seg.start_lon) for it in [itinerary, *others] for seg in it.segments]
         all_lats = [o_lat, d_lat] + [p[0] for p in node_latlons]
         all_lons = [o_lon, d_lon] + [p[1] for p in node_latlons]
 
@@ -238,21 +255,25 @@ def _render_map(
             icon=folium.Icon(color="red", icon="stop"),
         ).add_to(m)
 
+        # Alternatives non sélectionnées : trait gris pointillé, sous l'itinéraire choisi
+        for alt in others:
+            for seg in alt.segments:
+                folium.PolyLine(
+                    locations=_segment_latlons(seg),
+                    color=COLORS["text_disabled"],
+                    weight=4,
+                    opacity=0.6,
+                    dash_array="6 8",
+                    tooltip="Autre itinéraire",
+                ).add_to(m)
+
         # chaque segment peut avoir une géométrie OSM multi-vertices
         # (LineString). On l'utilise pour tracer des polylines qui suivent
         # les vraies rues, pas des lignes droites entre nœuds H3.
         for seg in itinerary.segments:
             color = _speed_to_color(seg.speed_kmh)
 
-            if seg.geometry and len(seg.geometry) >= 2:
-                # Géométrie OSM : [[lon, lat], ...] → Folium veut [[lat, lon], ...]
-                locations = [[float(pt[1]), float(pt[0])] for pt in seg.geometry]
-            else:
-                # Fallback si géométrie absente (ne devrait plus arriver avec pgRouting)
-                locations = [
-                    [seg.start_lat, seg.start_lon],
-                    [seg.end_lat, seg.end_lon],
-                ]
+            locations = _segment_latlons(seg)
 
             popup = f"<b>{seg.speed_kmh:.0f} km/h</b><br>{seg.length_m:.0f} m · {seg.duration_s:.0f}s"
             if seg.channel_id:
@@ -283,12 +304,20 @@ def _render_map(
             [[min(all_lats) - 0.003, min(all_lons) - 0.003], [max(all_lats) + 0.003, max(all_lons) + 0.003]],
         )
 
-        st_folium_with_alt(m, width=None, height=400, returned_objects=[])
+        st_folium_with_alt(m, width=None, height=400, returned_objects=[], key=map_key)
 
         st.markdown("**Légende trafic** : Fluide (>40 km/h) · Modéré (25-40) · Dense (15-25) · Bloqué (<15)")
 
     except ImportError:
         st.warning("folium non disponible — affichage liste uniquement")
+
+
+def _segment_latlons(seg: ItinerarySegment) -> list[list[float]]:
+    """Polyline [[lat, lon], ...] d'un segment (géométrie OSM [[lon, lat], ...])."""
+    if seg.geometry and len(seg.geometry) >= 2:
+        return [[float(pt[1]), float(pt[0])] for pt in seg.geometry]
+    # Fallback si géométrie absente (ne devrait plus arriver avec pgRouting)
+    return [[seg.start_lat, seg.start_lon], [seg.end_lat, seg.end_lon]]
 
 
 def _render_segments(itinerary: Itinerary) -> None:

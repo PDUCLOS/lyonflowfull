@@ -6,7 +6,7 @@ OpenStreetMap (OSM) importé via `osm2pgrouting`.
 
 Fonctions publiques exposées :
 - ``compute_route_pgrouting(origin_lon, origin_lat, dest_lon, dest_lat)`` — Appel SQL pgRouting.
-- ``compute_route_pgrouting_ksp(...)`` — K itinéraires alternatifs (Yen).
+- ``compute_route_pgrouting_ksp(...)`` — K itinéraires alternatifs (méthode de pénalité).
 - ``get_nearest_osm_node(lon, lat)`` — Trouve le nœud OSM le plus proche d'un point GPS.
 """
 
@@ -91,9 +91,13 @@ def compute_route_pgrouting_ksp(
     dest_lat: float,
     k: int = 3,
 ) -> list[list[dict]] | None:
-    """Calcule K itinéraires voiture alternatifs via pgr_ksp (algorithme Yen).
+    """Calcule jusqu'à K itinéraires voiture réellement différents.
 
-      Wrapper sur ``osm.route_car_ksp()`` côté PostgreSQL. Chaque route retournée
+      Wrapper sur ``osm.route_car_ksp()`` côté PostgreSQL. Malgré son nom, la
+      fonction n'utilise plus pgr_ksp (Yen renvoyait des quasi-doublons) mais la
+      méthode de pénalité (migration 054) : Dijkstra répété en doublant le coût
+      des arêtes déjà utilisées. Seules les voies ouvertes aux voitures sont
+      empruntées (migration 053). Chaque route retournée
       est une liste d'arêtes avec géométrie OSM (identique au contrat de
       ``compute_route_pgrouting``).
 

@@ -409,7 +409,7 @@ def test_build_itinerary_unnamed_road_gets_empty_string():
 
 
 def test_fmt_route_label_named_roads():
-    """_fmt_route_label shows first→last named roads."""
+    """_fmt_route_label shows the longest named road (tie → first seen)."""
     from src.routing.pathfinder import Itinerary, ItinerarySegment
 
     itin = Itinerary(
@@ -455,10 +455,10 @@ def test_fmt_route_label_named_roads():
     from dashboard.components.widgets.usager.itinerary import _fmt_route_label
 
     label = _fmt_route_label(itin)
-    assert "Rue A" in label
-    assert "Rue B" in label
+    assert "via Rue A" in label
     assert "5.0 km" in label
     assert "10 min" in label
+    assert "+" not in label
 
 
 def test_fmt_route_label_all_unnamed():
@@ -501,3 +501,85 @@ def test_fmt_route_label_all_unnamed():
     assert "3.0 km" in label
     assert "6 min" in label
     assert "edge_" not in label
+
+
+def _itin(roads: list[tuple[str, float]], duration_s: float):
+    """Helper — Itinerary built from (road_name, length_m) pairs."""
+    from src.routing.pathfinder import Itinerary, ItinerarySegment
+
+    segments = [
+        ItinerarySegment(
+            channel_id=name,
+            length_m=length,
+            speed_kmh=30,
+            duration_s=duration_s / len(roads),
+            start_lon=0,
+            start_lat=0,
+            end_lon=0,
+            end_lat=0,
+        )
+        for name, length in roads
+    ]
+    return Itinerary(
+        origin_node="1",
+        destination_node="2",
+        horizon_minutes=0,
+        total_length_m=sum(length for _, length in roads),
+        total_duration_s=duration_s,
+        segments=segments,
+    )
+
+
+def test_fmt_route_label_alternative_shows_delta_and_distinct_road():
+    """Alternative label = time gap vs fastest + main road absent from the fastest route."""
+    from dashboard.components.widgets.usager.itinerary import _fmt_route_label
+
+    fastest = _itin([("Rue Départ", 300), ("Cours Émile Zola", 2000), ("Rue Arrivée", 300)], 540)
+    alt = _itin([("Rue Départ", 300), ("Cours Émile Zola", 900), ("Rue Baraban", 700), ("Rue Arrivée", 300)], 660)
+
+    label = _fmt_route_label(alt, fastest)
+    assert "(+2 min)" in label
+    assert "via Rue Baraban" in label
+    assert _fmt_route_label(fastest, fastest).endswith("via Cours Émile Zola")
+
+
+def test_fmt_route_label_alternative_same_duration():
+    """Under one minute of difference the label says so instead of '+0 min'."""
+    from dashboard.components.widgets.usager.itinerary import _fmt_route_label
+
+    fastest = _itin([("Rue A", 1000)], 600)
+    alt = _itin([("Rue B", 1000)], 620)
+
+    label = _fmt_route_label(alt, fastest)
+    assert "(même durée)" in label
+    assert "+0" not in label
+    assert "via Rue B" in label
+
+
+def test_compute_itinerary_alternatives_sorts_alternatives_keeps_fastest_first():
+    """Route 1 (fastest) stays first; alternatives are sorted by duration."""
+    from src.routing.pathfinder import compute_itinerary_alternatives
+
+    def _route(edge_id: int, cost_s: float) -> list[dict]:
+        return [
+            {
+                "edge_id": edge_id,
+                "cost_s": cost_s,
+                "length_m": 500.0,
+                "speed_kmh": 30.0,
+                "road_name": f"Rue {edge_id}",
+                "geom_coordinates": [[4.83, 45.76], [4.84, 45.77]],
+            }
+        ]
+
+    with (
+        patch(
+            "src.routing.pathfinder.compute_route_pgrouting_ksp",
+            return_value=[_route(1, 600.0), _route(2, 900.0), _route(3, 700.0)],
+        ),
+        patch("src.routing.pathfinder._compute_pgrouting_confidence", return_value=0.80),
+    ):
+        alts = compute_itinerary_alternatives(4.83, 45.76, 4.84, 45.77, k=3)
+
+    assert alts is not None
+    assert [it.total_duration_s for it in alts] == [600.0, 700.0, 900.0]
