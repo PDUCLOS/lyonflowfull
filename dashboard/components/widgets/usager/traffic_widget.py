@@ -39,11 +39,11 @@ def render_traffic_widget(traffic: dict | None = None) -> None:
     data_age = traffic.get("data_age_seconds", -1)
     freshness = traffic.get("freshness_status", "unknown")
     if data_age >= 0 and freshness == "live":
-        st.caption(f"À jour · dernière mesure il y a {data_age // 60} min")
+        st.caption(f"À jour · dernière mesure il y a {int(data_age // 60)} min")
     elif data_age >= 0 and freshness == "stale":
-        st.caption(f"En retard · dernière mesure il y a {data_age // 60} min")
+        st.caption(f"En retard · dernière mesure il y a {int(data_age // 60)} min")
     elif data_age >= 0 and freshness == "stuck":
-        st.caption(f"Figé · dernière mesure il y a {data_age // 3600:.1f}h — vérifier DAG")
+        st.caption(f"Figé · dernière mesure il y a {data_age / 3600:.1f} h — vérifier DAG")
     else:
         st.caption("Fraîcheur inconnue — DB n'a pas remonté d'âge")
 
