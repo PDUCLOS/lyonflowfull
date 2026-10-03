@@ -18,6 +18,13 @@
 # un DAG oscillant pile sur le seuil (refresh_osm_traffic_costs à 19/95 =
 # 20,0 %) produisait alerte / recovery / alerte à chaque cycle de 30 min.
 #
+# 2026-10-03 — DAGs peu fréquents : MIN_RUNS écarte les DAGs quotidiens ou
+# hebdomadaires du calcul de taux (bruit statistique), si bien que
+# refresh_lieux_calendrier a échoué 101 jours de suite sans une alerte. Règle
+# complémentaire : un DAG non suspendu sous MIN_RUNS runs/24h entre en alerte
+# quand ses STREAK_FAILS derniers runs (8 jours) ont échoué, et en sort au
+# premier succès. Même état / même hystérésis d'envoi que les taux.
+#
 # Credentials Telegram réutilisées depuis /opt/lyonflow/.watchdog.env :
 #   TELEGRAM_BOT_TOKEN=xxxx
 #   TELEGRAM_CHAT_ID=xxxx
@@ -31,6 +38,7 @@ WINDOW_HOURS=24
 FAIL_RATE_THRESHOLD=20   # % d'échec sur la fenêtre pour déclencher l'alerte
 RECOVER_THRESHOLD=15     # % sous lequel un DAG en alerte est considéré rétabli (hystérésis)
 MIN_RUNS=5               # ignore les DAGs avec trop peu de runs (bruit statistique)
+STREAK_FAILS=2           # DAGs peu fréquents : N derniers runs en échec = alerte
 
 [ -f "$ENV_FILE" ] && source "$ENV_FILE"
 
@@ -69,12 +77,44 @@ if [ $? -ne 0 ]; then
     exit 1
 fi
 
+# DAGs peu fréquents (< MIN_RUNS runs/24h, non suspendus) dont les
+# STREAK_FAILS derniers runs sur 8 jours ont tous échoué : dag_id|n_failed
+streaks=$(docker exec lyonflow-postgres psql -U lyonflow -d airflow -tA -F'|' -c "
+    SET statement_timeout='60s';
+    WITH frequent AS (
+        SELECT dag_id FROM dag_run
+        WHERE execution_date > now() - interval '${WINDOW_HOURS} hours'
+            AND state IN ('success','failed')
+        GROUP BY dag_id HAVING count(*) >= ${MIN_RUNS}
+    ),
+    runs AS (
+        SELECT r.dag_id, r.state,
+            row_number() OVER (PARTITION BY r.dag_id ORDER BY r.execution_date DESC) AS rn
+        FROM dag_run r JOIN dag d ON d.dag_id = r.dag_id AND NOT d.is_paused
+        WHERE r.execution_date > now() - interval '8 days'
+            AND r.state IN ('success','failed')
+            AND r.dag_id NOT IN (SELECT dag_id FROM frequent)
+    )
+    SELECT dag_id, count(*) FROM runs
+    WHERE rn <= ${STREAK_FAILS}
+    GROUP BY dag_id
+    HAVING count(*) FILTER (WHERE state = 'failed') = ${STREAK_FAILS};
+" 2>&1)
+
+if [ $? -ne 0 ]; then
+    echo "[dag-monitor] $(date -Is) — requête streaks échouée, abandon ce cycle : $streaks"
+    exit 1
+fi
+# grep '|' : psql affiche aussi « SET » (écho du statement_timeout), à ne pas prendre pour un DAG
+streak_dags=$(echo "$streaks" | grep '|' | cut -d'|' -f1 || true)
+
 # DAGs déjà en alerte au cycle précédent (un dag_id par ligne)
 previously_alerting=""
 [ -f "$STATE_FILE" ] && previously_alerting=$(cat "$STATE_FILE")
 
-# DAGs au-dessus du seuil d'entrée ce cycle
+# DAGs au-dessus du seuil d'entrée ce cycle (+ DAGs peu fréquents en échec répété)
 above_threshold=$(echo "$rows" | awk -F'|' -v t="$FAIL_RATE_THRESHOLD" '$5+0 >= t {print $1}')
+[ -n "$streak_dags" ] && above_threshold+=$'\n'"$streak_dags"
 
 # Hystérésis : un DAG déjà en alerte reste en alerte tant qu'il est
 # >= RECOVER_THRESHOLD (même s'il est repassé sous FAIL_RATE_THRESHOLD)
@@ -91,6 +131,10 @@ new_alerts=""
 while IFS= read -r dag; do
     [ -z "$dag" ] && continue
     if ! grep -qxF "$dag" <<< "$previously_alerting"; then
+        if grep -qxF "$dag" <<< "$streak_dags"; then
+            new_alerts+="🔴 ${dag} : ${STREAK_FAILS} derniers runs en échec (DAG peu fréquent)"$'\n'
+            continue
+        fi
         line=$(echo "$rows" | awk -F'|' -v d="$dag" '$1==d')
         ok=$(echo "$line" | cut -d'|' -f2); ko=$(echo "$line" | cut -d'|' -f3)
         total=$(echo "$line" | cut -d'|' -f4); rate=$(echo "$line" | cut -d'|' -f5)
@@ -104,7 +148,7 @@ recovered=""
 while IFS= read -r dag; do
     [ -z "$dag" ] && continue
     if ! grep -qxF "$dag" <<< "$above_threshold"; then
-        recovered+="🟢 ${dag} : repassé sous ${RECOVER_THRESHOLD}% d'échec sur ${WINDOW_HOURS}h"$'\n'
+        recovered+="🟢 ${dag} : revenu à la normale (sous ${RECOVER_THRESHOLD}% d'échec ou dernier run réussi)"$'\n'
     fi
 done <<< "$previously_alerting"
 
