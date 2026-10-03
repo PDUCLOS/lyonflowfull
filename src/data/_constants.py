@@ -16,8 +16,11 @@ from __future__ import annotations
 # Seuils utilisés à la fois par ``load_traffic()`` (data_loader.py) pour
 # calculer ``freshness_status`` et par ``render_traffic_widget()`` pour
 # afficher le bandeau adaptatif. Ces valeurs doivent rester synchronisées.
-FRESHNESS_LIVE_MAX_S: int = 300  # < 5 min → Donnée en direct (Live)
-FRESHNESS_STALE_MAX_S: int = 1800  # < 30 min → Donnée obsolète (Stale)
+# Calés sur la cadence de transform_silver_to_gold (toutes les 15 min, ~6 min
+# de calcul) : une donnée normale a 0 à ~22 min. Avec l'ancien seuil de 5 min
+# le widget affichait « en retard » presque en permanence.
+FRESHNESS_LIVE_MAX_S: int = 1500  # < 25 min → à jour (cycle normal)
+FRESHNESS_STALE_MAX_S: int = 3600  # < 60 min → en retard (1 à 2 cycles manqués)
 # > FRESHNESS_STALE_MAX_S → Donnée bloquée (Stuck)
 
 
