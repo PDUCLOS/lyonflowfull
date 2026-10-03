@@ -672,6 +672,16 @@ def _cached_data_quality_rows() -> list[dict]:
     return df.to_dict(orient="records")
 
 
+def _as_utc(ts: object) -> pd.Timestamp:
+    """Timestamp UTC, que la valeur DB soit naïve ou déjà avec fuseau.
+
+    ``pd.Timestamp(x, tz="UTC")`` lève ValueError si ``x`` a déjà un tzinfo
+    (colonnes timestamptz) : la page Model Monitoring entière plantait.
+    """
+    stamp = pd.Timestamp(ts)
+    return stamp.tz_localize("UTC") if stamp.tzinfo is None else stamp.tz_convert("UTC")
+
+
 def render_data_quality_panel() -> None:
     """Sprint 10 — Panel data quality style Elementary.
 
@@ -695,7 +705,7 @@ def render_data_quality_panel() -> None:
             continue
         n_rows = int(r.get("n_rows") or 0)
         last_ts = r.get("last_ts")
-        lag = (pd.Timestamp.now(tz="UTC") - pd.Timestamp(last_ts, tz="UTC")) if last_ts is not None else None
+        lag = (pd.Timestamp.now(tz="UTC") - _as_utc(last_ts)) if last_ts is not None else None
         lag_str = str(lag).split(".")[0] if lag is not None else "—"
         status = "OK" if n_rows > 0 and last_ts is not None else "Alerte"
         rows.append(

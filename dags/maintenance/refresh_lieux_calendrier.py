@@ -6,8 +6,8 @@ gold 03:00, drift 06:00).
 Taches :
 1. REFRESH MATERIALIZED VIEW gold.mv_line_kpis_live CONCURRENTLY
 2. REFRESH MATERIALIZED VIEW gold.mv_otp_heatmap CONCURRENTLY
-3. REFRESH MATERIALIZED VIEW referentiel.lieux_calendrier (table,
-   pas matview — on la re-popule via seed_lieux_calendrier.py)
+3. referentiel.lieux_calendrier (table, pas matview) : UPSERT depuis
+   referentiel.v_cadence_summary
 
 Notes :
 * CONCURRENTLY necessite UNIQUE INDEX sur la vue (deja cree dans le
@@ -19,8 +19,6 @@ Notes :
 from __future__ import annotations
 
 import logging
-import subprocess
-import sys
 from datetime import datetime, timedelta
 
 from airflow import DAG
@@ -57,33 +55,50 @@ def _refresh_mv_otp_heatmap(**context) -> None:
 
 
 def _refresh_lieux_calendrier(**context) -> None:
-    """Re-popule referentiel.lieux_calendrier via le script seed.
+    """Re-popule referentiel.lieux_calendrier depuis referentiel.v_cadence_summary.
 
-      Le calendrier (jours feries, vacances) evolue peu, mais les
-      cadences (7j glissants) doivent etre recalculees pour rester
-    representatives. remplacer par une vue materialisee
-      raffraichie en place.
+    UPSERT direct en SQL. L'ancienne version lançait
+    ``/opt/lyonflow/scripts/seed_lieux_calendrier.py`` en sous-processus, or
+    ``scripts/`` n'est pas monté dans les containers Airflow : la tâche n'a
+    jamais réussi (table figée au 2026-06-11). Le script reste utilisable à la
+    main ; la requête ci-dessous fait le même UPSERT.
+
+    La vue ne couvre que la fenêtre récente de gold.tcl_vehicle_realtime : chaque
+    run met à jour le type de jour courant, les 4 types sont rafraîchis en une
+    semaine.
     """
-    try:
-        result = subprocess.run(
-            [sys.executable, "/opt/lyonflow/scripts/seed_lieux_calendrier.py"],
-            capture_output=True,
-            text=True,
-            timeout=300,
+    from src.db import execute_query
+
+    rows = execute_query(
+        """
+        WITH upserted AS (
+            INSERT INTO referentiel.lieux_calendrier
+                (line_ref, day_type, time_bucket, cadence_min_per_vehicle,
+                 n_observations, confidence, computed_at)
+            SELECT line_ref, day_type, time_bucket, cadence_min_per_vehicle,
+                   n_observations, confidence, NOW()
+            FROM referentiel.v_cadence_summary
+            ON CONFLICT (line_ref, day_type, time_bucket) DO UPDATE SET
+                cadence_min_per_vehicle = EXCLUDED.cadence_min_per_vehicle,
+                n_observations          = EXCLUDED.n_observations,
+                confidence              = EXCLUDED.confidence,
+                computed_at             = NOW()
+            RETURNING day_type
         )
-        if result.returncode == 0:
-            logger.info("lieux_calendrier re-popule OK:\n%s", result.stdout)
-        else:
-            logger.error(
-                "seed_lieux_calendrier a echoue (code=%d):\n%s\nstderr: %s",
-                result.returncode,
-                result.stdout,
-                result.stderr,
-            )
-            raise RuntimeError(f"seed_lieux_calendrier failed: {result.stderr}")
-    except subprocess.TimeoutExpired:
-        logger.error("seed_lieux_calendrier timeout apres 300s")
-        raise
+        SELECT day_type, COUNT(*) AS n FROM upserted GROUP BY day_type ORDER BY day_type
+        """
+    )
+    if not rows:
+        logger.warning(
+            "v_cadence_summary vide : gold.tcl_vehicle_realtime sans données récentes "
+            "(réseau TCL à l'arrêt ou collecte en panne). Rien à mettre à jour."
+        )
+        return
+    logger.info(
+        "lieux_calendrier : %s lignes upsertées (%s)",
+        sum(int(r["n"]) for r in rows),
+        ", ".join(f"{r['day_type']}={r['n']}" for r in rows),
+    )
 
 
 default_args = {

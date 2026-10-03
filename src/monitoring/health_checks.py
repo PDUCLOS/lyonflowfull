@@ -61,14 +61,19 @@ def check_bronze_freshness(max_age_minutes: int = 30) -> CheckResult:
     )
 
 
-def check_bronze_volume() -> CheckResult:
-    """Vérifie que le volume Bronze est dans les normes attendues."""
+def check_bronze_volume(min_fetches_per_hour: int = 6) -> CheckResult:
+    """Vérifie que chaque source Bronze temps réel a été collectée sur la dernière heure.
+
+    Bronze stocke UNE ligne par appel API (payload complet), pas une ligne par
+    mesure : collect_bronze tourne toutes les 5 min, soit 12 lignes/h par source.
+    L'ancien seuil « 1000 records/h » ne pouvait jamais être atteint.
+    """
     query = """
         SELECT
             (SELECT COUNT(*) FROM bronze.trafic_boucles WHERE fetched_at > NOW() - INTERVAL '1 hour') AS trafic,
             (SELECT COUNT(*) FROM bronze.velov WHERE fetched_at > NOW() - INTERVAL '1 hour') AS velov,
             (SELECT COUNT(*) FROM bronze.tcl_vehicles WHERE fetched_at > NOW() - INTERVAL '1 hour') AS tcl,
-            (SELECT COUNT(*) FROM bronze.meteo WHERE fetched_at > INTERVAL '1 day') AS meteo
+            (SELECT COUNT(*) FROM bronze.meteo WHERE fetched_at > NOW() - INTERVAL '1 day') AS meteo
     """
     rows = execute_query(query, ())
     if not rows:
@@ -79,29 +84,48 @@ def check_bronze_volume() -> CheckResult:
             timestamp=_now_iso(),
         )
     r = rows[0]
-    n_total = sum(int(v or 0) for v in r.values())
-    # Seuil minimum : 1000 records/h attendu (somme des 3 sources 5min)
-    status = "ok" if n_total > 1000 else "warning" if n_total > 100 else "critical"
+    hourly = {src: int(r.get(src) or 0) for src in ("trafic", "velov", "tcl")}
+    weakest = min(hourly.values())
+    # 12 appels/h attendus par source (*/5 min) ; moins de la moitié = collecte dégradée
+    status = "ok" if weakest >= min_fetches_per_hour else "warning" if weakest > 0 else "critical"
     return CheckResult(
         name="bronze_volume",
         status=status,
-        details=f"Volume Bronze 1h: trafic={r.get('trafic', 0)}, velov={r.get('velov', 0)}, tcl={r.get('tcl', 0)}, meteo_24h={r.get('meteo', 0)}",
-        metric_value=float(n_total),
-        threshold=1000.0,
+        details=(
+            f"Appels Bronze 1h: trafic={hourly['trafic']}, velov={hourly['velov']}, tcl={hourly['tcl']} "
+            f"(12 attendus), meteo_24h={r.get('meteo', 0)}"
+        ),
+        metric_value=float(weakest),
+        threshold=float(min_fetches_per_hour),
         timestamp=_now_iso(),
     )
 
 
-def check_silver_nulls(max_null_pct: float = 5.0) -> CheckResult:
-    """Vérifie qu'il n'y a pas trop de NULLs sur les colonnes critiques Silver."""
+def check_silver_nulls(max_null_pct: float = 15.0) -> CheckResult:
+    """Vérifie le taux de vitesses NULL sur les capteurs qui mesurent la vitesse.
+
+    ~1 260 boucles sur 2 400 ne remontent que le débit, jamais la vitesse : le
+    taux brut est structurellement à ~55 %. On ne mesure donc que les capteurs
+    ayant remonté au moins une vitesse sur 24 h (taux normal 4-9 %, plus haut la
+    nuit faute de véhicules). geom est contrôlé sur toutes les lignes.
+    """
     query = """
+        WITH recent AS (
+            SELECT channel_id, vitesse_kmh, geom
+            FROM silver.trafic_boucles_clean
+            WHERE measurement_time > NOW() - INTERVAL '1 hour'
+        ),
+        speed_channels AS (
+            SELECT DISTINCT channel_id
+            FROM silver.trafic_boucles_clean
+            WHERE measurement_time > NOW() - INTERVAL '24 hours'
+              AND vitesse_kmh IS NOT NULL
+        )
         SELECT
-            COUNT(*) FILTER (WHERE vitesse_kmh IS NULL)::FLOAT /
-                NULLIF(COUNT(*), 0) * 100 AS vitesse_null_pct,
-            COUNT(*) FILTER (WHERE geom_wgs84 IS NULL)::FLOAT /
-                NULLIF(COUNT(*), 0) * 100 AS geom_null_pct
-        FROM silver.trafic_boucles_clean
-        WHERE measurement_time > NOW() - INTERVAL '1 hour'
+            (SELECT COUNT(*) FILTER (WHERE r.vitesse_kmh IS NULL)::FLOAT / NULLIF(COUNT(*), 0) * 100
+             FROM recent r JOIN speed_channels s USING (channel_id)) AS vitesse_null_pct,
+            (SELECT COUNT(*) FILTER (WHERE geom IS NULL)::FLOAT / NULLIF(COUNT(*), 0) * 100
+             FROM recent) AS geom_null_pct
     """
     rows = execute_query(query, ())
     if not rows or rows[0].get("vitesse_null_pct") is None:
@@ -111,14 +135,14 @@ def check_silver_nulls(max_null_pct: float = 5.0) -> CheckResult:
             details="Pas de données Silver 1h pour vérification",
             timestamp=_now_iso(),
         )
-    vitesse_null = float(rows[0].get("vitesse_null_pct", 0))
-    geom_null = float(rows[0].get("geom_null_pct", 0))
+    vitesse_null = float(rows[0].get("vitesse_null_pct") or 0)
+    geom_null = float(rows[0].get("geom_null_pct") or 0)
     max_observed = max(vitesse_null, geom_null)
     status = "ok" if max_observed < max_null_pct else "warning" if max_observed < max_null_pct * 2 else "critical"
     return CheckResult(
         name="silver_nulls",
         status=status,
-        details=f"Nulls Silver 1h: vitesse={vitesse_null:.1f}%, geom={geom_null:.1f}%",
+        details=f"Nulls Silver 1h: vitesse={vitesse_null:.1f}% (capteurs de vitesse), geom={geom_null:.1f}%",
         metric_value=max_observed,
         threshold=max_null_pct,
         timestamp=_now_iso(),
