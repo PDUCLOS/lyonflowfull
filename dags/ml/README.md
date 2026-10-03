@@ -3,27 +3,28 @@
 DAGs Airflow qui pilotent l'entraînement, l'inférence et le suivi qualité
 des modèles ML du projet LyonFlow.
 
-## DAGs actifs (Sprint 22+)
+## DAGs (état 2026-10-03)
 
 | DAG | Schedule | Rôle | Modèles concernés |
 |-----|----------|------|-------------------|
-| `dag_daily_speed_train` | `0 3 * * *` (03h00 daily) | Entraînement quotidien XGBoost Speed | `xgboost_speed_h60` |
-| `dag_inference_xgboost` | `*/15 * * * *` | Inférence pure (pas de fit) | `xgboost_speed_h60` |
-| `build_xgb_training_set` | `30 2 * * *` (02h30 daily) | Matérialise `gold.xgb_training_set` | upstream training |
-| `retrain_xgboost_speed` | `25 * * * *` (hourly :25) | Retrain XGBoost Speed — **voir TODO ci-dessous** | `xgboost_speed_h5/h60/h180/h360` |
-| `retrain_xgboost_velov` | `50 * * * *` (hourly :50) | Retrain XGBoost Vélov (2 horizons) | `xgboost_velov_h30`, `xgboost_velov_h60` |
-| `retrain_gnn` | `0 3 * * *` | Train ST-GCN GNN — toggle `LYONFLOW_STGCN_TRAINING` | (PyTorch state_dict) |
-| `daily_drift_report` | `30 5 * * *` (05h30 daily) | Drift Evidently quotidien | Tous |
-| `refresh_xgb_vs_tomtom` | `*/30 * * * *` | Backtest XGBoost vs TomTom | `xgboost_speed_h60` vs TomTom |
+| `build_xgb_training_set` | `30 2 * * *` (02h30) | Matérialise `gold.xgb_training_set` | upstream training |
+| `dag_daily_speed_train` | `38 3 * * *` (03h38) | Entraînement quotidien XGBoost Speed H+1h, enregistré et promu en Production dans MLflow | `xgboost_speed_h60` |
+| `dag_inference_xgboost` | `*/15 * * * *` | Inférence pure (pas de fit) → `gold.trafic_predictions` | `xgboost_speed_h60` |
+| `retrain_xgboost_velov` | `50 * * * *` (hourly :50) | Retrain XGBoost Vélov H+1h | `xgboost_velov_h60` |
+| `dag_inference_velov` | `4,19,34,49 * * * *` | Inférence Vélov | `xgboost_velov_h60` |
+| `daily_drift_report` | `30 5 * * *` (05h30) | Drift Evidently / PSI quotidien → `gold.model_drift_reports` | `xgboost_speed_h60` |
+| `refresh_xgb_vs_tomtom` | `5,35 * * * *` | Backtest H+1h : prédiction vs vitesse Grand Lyon observée 1 h plus tard (nom historique, TomTom mis de côté le 2026-09-28) | `xgboost_speed_h60` |
+| `retrain_xgboost_speed` | `25 * * * *` — **EN PAUSE depuis le 2026-07-01** | Ancien retrain horaire, H+1h seul | `xgboost_speed_h60` |
 
-> **TODO Sprint 22+ — Incohérence H+1h strict** : `retrain_xgboost_speed`
-> tourne encore hourly avec **4 horizons** (5min, 1h, 3h, 6h) — en
-> contradiction avec la règle projet (Sprint VPS-6 : focus H+1h strict).
-> Le DAG `dag_daily_speed_train` (1×/jour 03h00) le remplace fonctionnellement
-> pour H+1h, mais `retrain_xgboost_speed` n'a pas été désactivé/archivé.
-> **Action recommandée Sprint 22+** : ajouter toggle `LYONFLOW_XGBOOST_TRAINING`
-> effectif (déjà câblé dans `_is_xgboost_dag_enabled()`) pour skip le DAG,
-> ou déplacer le fichier vers `archive/dags_disabled/`.
+> **`retrain_xgboost_speed` en pause, volontairement** : il entraîne le même
+> modèle H+1h que `dag_daily_speed_train`, sur la même table
+> `gold.xgb_training_set`, qui n'est reconstruite qu'une fois par jour (02h30).
+> Le relancer toutes les heures produisait des runs MLflow identiques (mêmes
+> métriques à 12 décimales sur 24 runs) et occupait le pool `ml_training`
+> (1 slot, partagé avec `retrain_xgboost_velov` et `dag_daily_speed_train`).
+> Pour réentraîner à la demande : `airflow dags trigger dag_daily_speed_train`.
+>
+> `retrain_gnn` a été archivé (`archive/legacy/gnn/retrain_gnn.py`).
 
 ## DAGs archivés
 
