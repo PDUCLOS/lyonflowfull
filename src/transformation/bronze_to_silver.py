@@ -433,7 +433,15 @@ def _transform_tcl_vehicles() -> int:
 
 
 def _transform_meteo() -> int:
-    """Bronze.meteo → silver.meteo_hourly."""
+    """Bronze.meteo → silver.meteo_hourly.
+
+    Chaque collecte Open-Meteo (toutes les 5 min) renvoie la même plage horaire
+    observations + prévisions. Pour chaque heure on garde la collecte la plus
+    récente : auparavant les 200 collectes étaient upsertées de la plus récente
+    à la plus ancienne, si bien que la plus ANCIENNE (≈16 h) gagnait. fetched_at
+    = date de la collecte Bronze retenue, is_forecast = heure postérieure à
+    cette collecte.
+    """
     with raw_connection() as conn, conn.cursor() as cur:
         cur.execute("""
                 SELECT id, fetched_at, raw_data
@@ -446,17 +454,24 @@ def _transform_meteo() -> int:
         _sql = """
             INSERT INTO silver.meteo_hourly
                 (measurement_time, temperature_c, humidity,
-                 rain_mm, wind_speed_10m, weather_code)
-            VALUES (%s, %s, %s, %s, %s, %s)
+                 rain_mm, wind_speed_10m, weather_code, fetched_at, is_forecast)
+            -- Open-Meteo renvoie des heures locales (timezone=Europe/Paris)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, (%s::timestamp AT TIME ZONE 'Europe/Paris') > %s)
             ON CONFLICT (measurement_time) DO UPDATE
             SET temperature_c  = EXCLUDED.temperature_c,
                 humidity       = EXCLUDED.humidity,
                 rain_mm        = EXCLUDED.rain_mm,
                 wind_speed_10m = EXCLUDED.wind_speed_10m,
-                weather_code   = EXCLUDED.weather_code
+                weather_code   = EXCLUDED.weather_code,
+                fetched_at     = EXCLUDED.fetched_at,
+                is_forecast    = EXCLUDED.is_forecast
+            WHERE silver.meteo_hourly.fetched_at IS NULL
+               OR EXCLUDED.fetched_at >= silver.meteo_hourly.fetched_at
         """
         batch: list[tuple] = []
-        for _id, _fetched_at, raw_data in rows:
+        seen_hours: set[str] = set()
+        # rows triées fetched_at DESC : la première occurrence d'une heure est la plus récente
+        for _id, fetched_at, raw_data in rows:
             if not isinstance(raw_data, dict):
                 continue
             hourly = raw_data.get("hourly", {})
@@ -468,6 +483,9 @@ def _transform_meteo() -> int:
             codes = hourly.get("weather_code", [])
 
             for i, t in enumerate(times):
+                if t in seen_hours:
+                    continue
+                seen_hours.add(t)
                 batch.append(
                     (
                         t,
@@ -476,6 +494,9 @@ def _transform_meteo() -> int:
                         rains[i] if i < len(rains) else None,
                         winds[i] if i < len(winds) else None,
                         codes[i] if i < len(codes) else None,
+                        fetched_at,
+                        t,
+                        fetched_at,
                     )
                 )
 
@@ -506,7 +527,7 @@ def _transform_air_quality() -> int:
             INSERT INTO silver.air_quality_clean
                 (measurement_time, european_aqi, pm10, pm2_5,
                  nitrogen_dioxide, ozone, carbon_monoxide, fetched_at)
-            VALUES (%s, %s, %s, %s, %s, %s, %s, NOW())
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
             ON CONFLICT (measurement_time) DO UPDATE
             SET european_aqi     = EXCLUDED.european_aqi,
                 pm10             = EXCLUDED.pm10,
@@ -514,10 +535,14 @@ def _transform_air_quality() -> int:
                 nitrogen_dioxide = EXCLUDED.nitrogen_dioxide,
                 ozone            = EXCLUDED.ozone,
                 carbon_monoxide  = EXCLUDED.carbon_monoxide,
-                fetched_at       = NOW()
+                fetched_at       = EXCLUDED.fetched_at
+            WHERE silver.air_quality_clean.fetched_at IS NULL
+               OR EXCLUDED.fetched_at >= silver.air_quality_clean.fetched_at
         """
         batch: list[tuple] = []
-        for _id, _fetched_at, raw_data in rows:
+        seen_hours: set[str] = set()
+        # Comme _transform_meteo : la collecte la plus récente gagne pour chaque heure
+        for _id, fetched_at, raw_data in rows:
             if not isinstance(raw_data, dict):
                 continue
             hourly = raw_data.get("hourly", {})
@@ -530,6 +555,9 @@ def _transform_air_quality() -> int:
             cos = hourly.get("carbon_monoxide", [])
 
             for i, t in enumerate(times):
+                if t in seen_hours:
+                    continue
+                seen_hours.add(t)
                 batch.append(
                     (
                         t,
@@ -539,6 +567,7 @@ def _transform_air_quality() -> int:
                         no2s[i] if i < len(no2s) else None,
                         o3s[i] if i < len(o3s) else None,
                         cos[i] if i < len(cos) else None,
+                        fetched_at,
                     )
                 )
 
