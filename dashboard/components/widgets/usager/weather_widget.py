@@ -11,6 +11,7 @@
 
 from __future__ import annotations
 
+import pandas as pd
 import streamlit as st
 
 from dashboard.components.colors import COLORS
@@ -35,7 +36,10 @@ def render_weather_widget(weather: dict | None = None) -> None:
             show_error("db_down", str(e))
             return
         if not df.empty:
-            current = df.iloc[0].to_dict()
+            # Requête bornée à NOW()+1h, triée DESC : la 1re ligne est la prévision de
+            # l'heure suivante. « Actuellement » = dernière heure <= maintenant.
+            past = df[pd.to_datetime(df["measurement_time"], utc=True) <= pd.Timestamp.now(tz="UTC")]
+            current = (past if not past.empty else df).iloc[0].to_dict()
             # weather_code est un int WMO (Open-Meteo). On le convertit
             # en label FR lisible + emoji via _wmo_to_label().
             raw_code = current.get("condition_label") or current.get("weather_code")

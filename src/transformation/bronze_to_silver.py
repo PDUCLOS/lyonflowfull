@@ -441,6 +441,11 @@ def _transform_meteo() -> int:
     à la plus ancienne, si bien que la plus ANCIENNE (≈16 h) gagnait. fetched_at
     = date de la collecte Bronze retenue, is_forecast = heure postérieure à
     cette collecte.
+
+    Les heures Open-Meteo sont locales (``timezone=Europe/Paris``, cf.
+    src/ingestion/meteo.py) : converties en UTC à l'insertion. Avant la
+    migration 055 elles étaient stockées telles quelles comme de l'UTC
+    (+2 h l'été, +1 h l'hiver).
     """
     with raw_connection() as conn, conn.cursor() as cur:
         cur.execute("""
@@ -455,8 +460,9 @@ def _transform_meteo() -> int:
             INSERT INTO silver.meteo_hourly
                 (measurement_time, temperature_c, humidity,
                  rain_mm, wind_speed_10m, weather_code, fetched_at, is_forecast)
-            -- Open-Meteo renvoie des heures locales (timezone=Europe/Paris)
-            VALUES (%s, %s, %s, %s, %s, %s, %s, (%s::timestamp AT TIME ZONE 'Europe/Paris') > %s)
+            -- Open-Meteo renvoie des heures locales (timezone=Europe/Paris) : converties en UTC
+            VALUES ((%s::timestamp AT TIME ZONE 'Europe/Paris'), %s, %s, %s, %s, %s, %s,
+                    (%s::timestamp AT TIME ZONE 'Europe/Paris') > %s)
             ON CONFLICT (measurement_time) DO UPDATE
             SET temperature_c  = EXCLUDED.temperature_c,
                 humidity       = EXCLUDED.humidity,
@@ -527,7 +533,8 @@ def _transform_air_quality() -> int:
             INSERT INTO silver.air_quality_clean
                 (measurement_time, european_aqi, pm10, pm2_5,
                  nitrogen_dioxide, ozone, carbon_monoxide, fetched_at)
-            VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
+            -- Heures locales Open-Meteo (timezone=Europe/Paris) converties en UTC
+            VALUES ((%s::timestamp AT TIME ZONE 'Europe/Paris'), %s, %s, %s, %s, %s, %s, %s)
             ON CONFLICT (measurement_time) DO UPDATE
             SET european_aqi     = EXCLUDED.european_aqi,
                 pm10             = EXCLUDED.pm10,

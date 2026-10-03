@@ -144,8 +144,11 @@ def _ensure_helpers(cur) -> None:
 
 _TRAFFIC_SQL = """
 WITH latest_meteo AS (
+    -- Heure courante, pas la dernière ligne : silver.meteo_hourly contient aussi
+    -- les prévisions jusqu'à J+1 23h (les features prenaient la météo du lendemain soir)
     SELECT temperature_c, rain_mm, visibility, wind_speed_10m, weather_code
     FROM silver.meteo_hourly
+    WHERE measurement_time <= NOW()
     ORDER BY measurement_time DESC
     LIMIT 1
 ),
@@ -254,8 +257,10 @@ ON CONFLICT (channel_id, fetched_at) DO UPDATE SET
 
 _VELOV_SQL = """
 WITH latest_meteo AS (
+    -- Heure courante (cf. _TRAFFIC_SQL : la table contient aussi les prévisions)
     SELECT temperature_c, rain_mm
     FROM silver.meteo_hourly
+    WHERE measurement_time <= NOW()
     ORDER BY measurement_time DESC
     LIMIT 1
 ),

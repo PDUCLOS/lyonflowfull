@@ -52,7 +52,10 @@ def test_transform_meteo_keeps_most_recent_fetch_per_hour():
     assert [b[0] for b in batch] == ["2026-10-03T18:00", "2026-10-03T19:00"]
     assert [b[1] for b in batch] == [15.0, 16.0]
     assert all(b[6] == NEWER for b in batch)
-    assert "EXCLUDED.fetched_at >= silver.meteo_hourly.fetched_at" in mock_batch.call_args.args[1]
+    sql = mock_batch.call_args.args[1]
+    assert "EXCLUDED.fetched_at >= silver.meteo_hourly.fetched_at" in sql
+    # Heures Open-Meteo locales (Europe/Paris) converties en UTC à l'insertion
+    assert "VALUES ((%s::timestamp AT TIME ZONE 'Europe/Paris')" in sql
 
 
 def test_transform_air_quality_keeps_most_recent_fetch_per_hour():
@@ -74,3 +77,13 @@ def test_transform_air_quality_keeps_most_recent_fetch_per_hour():
     assert batch[0][1] == 30
     assert batch[0][-1] == NEWER
     assert "NOW()" not in mock_batch.call_args.args[1]
+    assert "VALUES ((%s::timestamp AT TIME ZONE 'Europe/Paris')" in mock_batch.call_args.args[1]
+
+
+def test_silver_to_gold_uses_current_hour_weather_not_forecast():
+    """latest_meteo : la dernière ligne de meteo_hourly est une prévision J+1 → borner à NOW()."""
+    from src.transformation import silver_to_gold
+
+    for sql in (silver_to_gold._TRAFFIC_SQL, silver_to_gold._VELOV_SQL):
+        cte = sql.split("latest_meteo AS (", 1)[1].split("),", 1)[0]
+        assert "WHERE measurement_time <= NOW()" in cte
