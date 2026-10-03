@@ -13,6 +13,7 @@ Alternatives cachées en session_state pour survivre aux reruns Streamlit.
 from __future__ import annotations
 
 import logging
+import math
 
 import streamlit as st
 
@@ -239,10 +240,13 @@ def _render_map(
         all_lats = [o_lat, d_lat] + [p[0] for p in node_latlons]
         all_lons = [o_lon, d_lon] + [p[1] for p in node_latlons]
 
-        center_lat = sum(all_lats) / len(all_lats)
-        center_lon = sum(all_lons) / len(all_lons)
+        # Centre et zoom calculés sur l'emprise : fit_bounds n'est pas toujours
+        # appliqué quand la carte est recréée (changement d'itinéraire).
+        center_lat = (min(all_lats) + max(all_lats)) / 2
+        center_lon = (min(all_lons) + max(all_lons)) / 2
+        zoom = _zoom_for_bounds(max(all_lats) - min(all_lats), max(all_lons) - min(all_lons), center_lat)
 
-        m = folium.Map(location=[center_lat, center_lon], zoom_start=14, tiles=FOLIUM_TILES)
+        m = folium.Map(location=[center_lat, center_lon], zoom_start=zoom, tiles=FOLIUM_TILES)
 
         folium.Marker(
             [o_lat, o_lon],
@@ -310,6 +314,18 @@ def _render_map(
 
     except ImportError:
         st.warning("folium non disponible — affichage liste uniquement")
+
+
+def _zoom_for_bounds(
+    span_lat: float, span_lon: float, center_lat: float, width_px: int = 400, height_px: int = 400
+) -> int:
+    """Zoom Web Mercator le plus élevé qui fait tenir l'emprise dans la carte (marge comprise)."""
+    margin = 0.006  # même marge que fit_bounds (±0.003°)
+    lon_extent = max(span_lon + margin, 1e-4)
+    # En Mercator, 1° de latitude s'étire de 1/cos(lat) par rapport à 1° de longitude
+    lat_extent = max((span_lat + margin) / math.cos(math.radians(center_lat)), 1e-4)
+    zoom = math.log2(min(width_px * 360 / (256 * lon_extent), height_px * 360 / (256 * lat_extent)))
+    return max(10, min(16, math.floor(zoom)))
 
 
 def _segment_latlons(seg: ItinerarySegment) -> list[list[float]]:

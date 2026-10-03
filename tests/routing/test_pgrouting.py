@@ -583,3 +583,15 @@ def test_compute_itinerary_alternatives_sorts_alternatives_keeps_fastest_first()
 
     assert alts is not None
     assert [it.total_duration_s for it in alts] == [600.0, 700.0, 900.0]
+
+
+def test_zoom_for_bounds_fits_route_extent():
+    """Map zoom shrinks as the route extent grows, within [10, 16]."""
+    from dashboard.components.widgets.usager.itinerary import _zoom_for_bounds
+
+    # Villeurbanne → Part-Dieu (~0.011° lat × 0.022° lon) : zoom 14
+    assert _zoom_for_bounds(0.011, 0.022, 45.766) == 14
+    # Traversée de la métropole (~0.1° × 0.2°) : plus large
+    assert _zoom_for_bounds(0.1, 0.2, 45.75) < 14
+    assert _zoom_for_bounds(0.0, 0.0, 45.75) == 15  # marge ±0.003° incluse
+    assert _zoom_for_bounds(5.0, 5.0, 45.75) == 10
