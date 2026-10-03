@@ -52,6 +52,28 @@ def test_get_xgb_vs_tomtom_importable():
     assert "limit" in sig.parameters
 
 
+def test_get_xgb_vs_tomtom_sample_empty_when_db_down():
+    """get_xgb_vs_tomtom_sample() retourne un DataFrame vide si DB indispo."""
+    result = db_query.get_xgb_vs_tomtom_sample(from_hours=168, to_hours=24, limit=5000)
+    assert isinstance(result, pd.DataFrame)
+    assert result.empty
+
+
+def test_get_xgb_vs_tomtom_sample_samples_whole_window(monkeypatch):
+    """La requête borne les deux côtés de la fenêtre et tire au hasard (pas les N plus récentes)."""
+    captured: dict = {}
+
+    def fake_df_from_query(query, params):
+        captured["query"], captured["params"] = query, params
+        return pd.DataFrame()
+
+    monkeypatch.setattr(db_query, "_df_from_query", fake_df_from_query)
+    db_query.get_xgb_vs_tomtom_sample(from_hours=168, to_hours=24, limit=5000)
+    assert captured["params"] == (168, 24, 5000)
+    assert "ORDER BY random()" in captured["query"]
+    assert "calculated_at <= NOW()" in captured["query"]
+
+
 def test_get_xgb_accuracy_summary_empty_when_db_down():
     """get_xgb_accuracy_summary() doit retourner un DataFrame vide si DB indispo."""
     result = db_query.get_xgb_accuracy_summary(hours=168)

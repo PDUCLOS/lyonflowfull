@@ -248,3 +248,22 @@ class TestComputeDatasetDrift:
         assert result["_summary"]["n_columns_analyzed"] == 0
         assert result["_summary"]["drift_share"] == 0.0
         assert result["_summary"]["dataset_drift"] is False
+
+
+def test_compute_psi_accepts_decimal_values() -> None:
+    """Colonne Postgres NUMERIC → Decimal (dtype object) : ne doit pas lever.
+
+    Cas réel 2026-10-03 : gold.mv_xgb_vs_tomtom.xgb_speed_kmh est numeric(6,2) ;
+    pd.qcut levait TypeError dès que la référence n'était plus vide.
+    """
+    from decimal import Decimal
+
+    rng = np.random.default_rng(0)
+    ref = pd.Series([Decimal(str(round(v, 2))) for v in rng.normal(30, 5, 500)] + [None])
+    curr = pd.Series([Decimal(str(round(v, 2))) for v in rng.normal(30, 5, 500)])
+    assert ref.dtype == object
+
+    result = compute_psi(ref, curr)
+    assert result["n_ref"] == 500
+    assert result["status"] == "stable"
+    assert np.isfinite(result["psi"])

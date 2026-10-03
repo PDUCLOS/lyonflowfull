@@ -1898,6 +1898,35 @@ def get_xgb_vs_tomtom(hours: int = 24, limit: int = 500) -> pd.DataFrame:
     return _df_from_query(query, (hours, limit))
 
 
+def get_xgb_vs_tomtom_sample(from_hours: int, to_hours: int = 0, limit: int = 5000) -> pd.DataFrame:
+    """Échantillon aléatoire de paires sur la fenêtre ]NOW - from_hours, NOW - to_hours].
+
+    Contrairement à ``get_xgb_vs_tomtom`` (les N paires les plus récentes),
+    l'échantillon est réparti sur toute la fenêtre : indispensable pour
+    comparer deux périodes (rapport de drift). ~4 000 paires/heure, donc les
+    N plus récentes ne couvrent qu'environ une heure.
+
+    Args:
+        from_hours: début de fenêtre, en heures avant maintenant.
+        to_hours: fin de fenêtre, en heures avant maintenant (0 = maintenant).
+        limit: taille de l'échantillon.
+
+    Returns:
+        DataFrame avec les mêmes colonnes que ``get_xgb_vs_tomtom``.
+    """
+    query = """
+        SELECT axis_key, calculated_at, xgb_speed_kmh, tomtom_speed_kmh,
+               error_abs_kmh, error_pct, accuracy_band,
+               tomtom_confidence, model_version, etat_pred
+        FROM gold.mv_xgb_vs_tomtom
+        WHERE calculated_at > NOW() - (INTERVAL '1 hour' * %s)
+          AND calculated_at <= NOW() - (INTERVAL '1 hour' * %s)
+        ORDER BY random()
+        LIMIT %s
+    """
+    return _df_from_query(query, (from_hours, to_hours, limit))
+
+
 def get_xgb_accuracy_summary(hours: int = 168) -> pd.DataFrame:
     """KPIs agrégés par heure (MAE, MAPE, P90, distribution accuracy).
 

@@ -185,3 +185,35 @@ class TestRunDriftReport:
         if n_analyzed > 0:
             expected_share = result["n_drifted_features"] / n_analyzed
             assert result["share_drifted_features"] == pytest.approx(expected_share)
+
+
+def test_fetch_reference_current_samples_two_disjoint_windows(monkeypatch):
+    """Référence ]J-7, J-1] et courante ]J-1, maintenant] sont échantillonnées séparément.
+
+    Avant : un seul tirage des 5 000 paires les plus récentes, toutes dans la
+    dernière heure → référence toujours vide (n_ref = 0).
+    """
+    from src.monitoring import drift_detector
+
+    calls: list[tuple[int, int, int]] = []
+
+    def fake_sample(from_hours: int, to_hours: int = 0, limit: int = 5000) -> pd.DataFrame:
+        calls.append((from_hours, to_hours, limit))
+        return pd.DataFrame({"window": [f"{from_hours}-{to_hours}"]})
+
+    monkeypatch.setattr(drift_detector, "get_xgb_vs_tomtom_sample", fake_sample)
+    reference, current = drift_detector._fetch_reference_current(hours_current=24, hours_reference=168)
+
+    assert calls == [(168, 24, drift_detector.SAMPLE_SIZE), (24, 0, drift_detector.SAMPLE_SIZE)]
+    assert reference["window"].iloc[0] == "168-24"
+    assert current["window"].iloc[0] == "24-0"
+
+
+def test_json_safe_replaces_non_finite_floats():
+    """inf / -inf / NaN → None, sinon Postgres refuse le JSON (cas réel 2026-10-03)."""
+    from src.monitoring.drift_detector import _json_safe
+
+    details = {"x": {"psi": float("nan"), "bucket_edges": [float("-inf"), 1.5, float("inf")], "status": "stable"}}
+    safe = _json_safe(details)
+    assert safe == {"x": {"psi": None, "bucket_edges": [None, 1.5, None], "status": "stable"}}
+    json.dumps(safe, allow_nan=False)  # ne lève pas

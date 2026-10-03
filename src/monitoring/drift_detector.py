@@ -22,12 +22,13 @@ from __future__ import annotations
 
 import json
 import logging
+import math
 from datetime import UTC
 from typing import Any
 
 import pandas as pd
 
-from src.data.db_query import get_xgb_vs_tomtom
+from src.data.db_query import get_xgb_vs_tomtom_sample
 
 logger = logging.getLogger(__name__)
 
@@ -44,6 +45,9 @@ NUMERICAL_FEATURES = [
 ]
 
 
+SAMPLE_SIZE = 5000  # paires par fenêtre (référence et courante)
+
+
 def _fetch_reference_current(
     hours_current: int = 24,
     hours_reference: int = 168,
@@ -57,17 +61,12 @@ def _fetch_reference_current(
     Returns:
         Tuple (reference_df, current_df). DataFrames vides si pas de données.
     """
-    # Récupère toutes les paires sur 7 jours puis splitte
-    pairs_7d = get_xgb_vs_tomtom(hours=hours_reference, limit=5000)
-    if pairs_7d.empty:
-        return pd.DataFrame(), pd.DataFrame()
-
-    if "calculated_at" not in pairs_7d.columns:
-        return pairs_7d, pairs_7d  # fallback : tout en current
-
-    cutoff = pd.Timestamp.utcnow() - pd.Timedelta(hours=hours_current)
-    current = pairs_7d[pairs_7d["calculated_at"] >= cutoff]
-    reference = pairs_7d[pairs_7d["calculated_at"] < cutoff]
+    # Un échantillon par fenêtre. Avant (2026-10-03) : les 5 000 paires les
+    # plus récentes sur 7 j puis découpe à J-1 — à ~4 000 paires/heure elles
+    # tenaient toutes dans la dernière heure, la référence était donc toujours
+    # vide (n_ref = 0) et le drift n'était jamais réellement calculé.
+    reference = get_xgb_vs_tomtom_sample(from_hours=hours_reference, to_hours=hours_current, limit=SAMPLE_SIZE)
+    current = get_xgb_vs_tomtom_sample(from_hours=hours_current, to_hours=0, limit=SAMPLE_SIZE)
     return reference, current
 
 
@@ -189,6 +188,22 @@ def generate_html_drift_report(
         return None
 
 
+def _json_safe(obj: Any) -> Any:
+    """Remplace récursivement les flottants non finis (inf, -inf, NaN) par None.
+
+    json.dumps les écrit en `Infinity` / `NaN`, accepté par Python mais refusé
+    par le type JSON de Postgres ("invalid input syntax for type json"). Les
+    bornes extrêmes des buckets PSI valent toujours -inf / +inf par construction.
+    """
+    if isinstance(obj, float):
+        return obj if math.isfinite(obj) else None
+    if isinstance(obj, dict):
+        return {k: _json_safe(v) for k, v in obj.items()}
+    if isinstance(obj, (list, tuple)):
+        return [_json_safe(v) for v in obj]
+    return obj
+
+
 def persist_drift_report(report: dict[str, Any], db_connection) -> bool:
     """Insère le rapport dans gold.model_drift_reports.
 
@@ -228,7 +243,7 @@ def persist_drift_report(report: dict[str, Any], db_connection) -> bool:
                     ref_to,
                     cur_from,
                     cur_to,
-                    json.dumps(report["details"], default=str),
+                    json.dumps(_json_safe(report["details"]), default=str, allow_nan=False),
                 ),
             )
         db_connection.commit()

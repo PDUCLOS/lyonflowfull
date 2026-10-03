@@ -65,8 +65,10 @@ def compute_psi(
             - curr_pcts: list[float], % par bucket côté curr
             - status: str, "stable" | "moderate" | "significant"
     """
-    ref = reference.dropna()
-    curr = current.dropna()
+    # Conversion explicite : une colonne Postgres NUMERIC arrive en Decimal
+    # (dtype object) et fait échouer pd.qcut / np.isnan.
+    ref = pd.to_numeric(reference, errors="coerce").dropna()
+    curr = pd.to_numeric(current, errors="coerce").dropna()
     n_ref, n_curr = len(ref), len(curr)
     if n_ref == 0 or n_curr == 0:
         return {

@@ -54,6 +54,10 @@ def _run_and_persist(**context) -> dict:
         report["share_drifted_features"],
         ok,
     )
+    if not ok:
+        # Sans ce raise, un échec d'insertion laissait la tâche en SUCCESS et le
+        # dashboard affichait le rapport de la veille sans aucun signal.
+        raise RuntimeError("persist_drift_report a échoué (voir l'erreur ci-dessus)")
     return {
         "dataset_drift": report["dataset_drift"],
         "n_drifted_features": report["n_drifted_features"],

@@ -53,12 +53,16 @@ check_warn() {
 
 # psql avec statement_timeout (Sprint 15+) — évite les hangs sous charge DB.
 # Usage : psql_query "<sql>" [timeout]   (défaut 15s)
-# SET statement_timeout est session-level, OK en psql -c (chaque appel = nouvelle session).
+# 2026-10-03 : timeout passé par PGOPTIONS au lieu d'un "SET ...;" en tête de
+# requête. Avec le SET, psql écrivait "SET" sur stdout et l'éventuelle erreur
+# sur stderr ; sous charge l'erreur sortait avant le flush de stdout et
+# `tail -1` gardait "SET" → check "FAILED (SET)", lu comme panne dure par le
+# watchdog au lieu d'un simple timeout (vu à 03:10 le 2026-10-03).
 psql_query() {
     local query="$1"
     local timeout="${2:-15s}"
-    docker exec lyonflow-postgres psql -U lyonflow -d lyonflow -tAc \
-        "SET statement_timeout='${timeout}'; ${query}" 2>&1 | tail -1
+    docker exec -e PGOPTIONS="-c statement_timeout=${timeout}" lyonflow-postgres \
+        psql -U lyonflow -d lyonflow -tAc "${query}" 2>&1 | tail -1
 }
 
 echo "=== LyonFlow VPS Healthcheck (Sprint 15+) ==="
@@ -97,8 +101,8 @@ check "mem available" "free -h | grep Mem | awk '{print \$7, \"available\"}'"
 
 # 4. DB & tables critiques
 # Chaque requête psql passe par psql_query() qui :
-# - applique SET statement_timeout='15s' (fail fast sous charge)
-# - drop la ligne "SET" via tail -1
+# - applique statement_timeout=15s via PGOPTIONS (fail fast sous charge)
+# - garde la dernière ligne (résultat ou ERROR) via tail -1
 echo ""
 echo "--- DB Health ---"
 check "PG responsive" "docker exec lyonflow-postgres pg_isready -U lyonflow 2>&1 | head -1"
@@ -168,8 +172,8 @@ check "MLflow 5001" "curl -sk -o /dev/null -w '%{http_code}' http://localhost:50
 # statement_timeout court — même pattern que psql_query, mais db différente.
 airflow_dag_state() {
     local dag_id="$1"
-    docker exec lyonflow-postgres psql -U lyonflow -d airflow -tAc \
-        "SET statement_timeout='5s'; SELECT state FROM dag_run WHERE dag_id='${dag_id}' ORDER BY execution_date DESC LIMIT 1;" 2>&1 | tail -1
+    docker exec -e PGOPTIONS="-c statement_timeout=5s" lyonflow-postgres psql -U lyonflow -d airflow -tAc \
+        "SELECT state FROM dag_run WHERE dag_id='${dag_id}' ORDER BY execution_date DESC LIMIT 1;" 2>&1 | tail -1
 }
 echo ""
 echo "--- Airflow DAGs (last run state) ---"
