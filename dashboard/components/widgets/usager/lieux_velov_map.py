@@ -16,6 +16,7 @@ import streamlit as st
 
 from dashboard.components.a11y import st_folium_with_alt
 from dashboard.components.error_display import show_error
+from dashboard.components.map_tiles import FOLIUM_TILES
 from src.data.exceptions import DashboardDataError
 
 # Icônes par type de lieu
@@ -79,7 +80,7 @@ def render_lieux_velov_map(
     center_lat = sum(lieu["lieu_lat"] for lieu in lieux_with_velov) / len(lieux_with_velov)
     center_lon = sum(lieu["lieu_lon"] for lieu in lieux_with_velov) / len(lieux_with_velov)
 
-    m = folium.Map(location=[center_lat, center_lon], zoom_start=12, tiles="CartoDB positron")
+    m = folium.Map(location=[center_lat, center_lon], zoom_start=12, tiles=FOLIUM_TILES)
 
     # Markers lieux + polylines vers la borne Vélov la plus proche + markers bornes.
     # (2026-06-17) — fix carte jamais rendue : la boucle précédente

@@ -69,6 +69,7 @@ from dashboard.components.data_cache import (
 )
 from dashboard.components.error_display import show_error
 from dashboard.components.loading_state import loading_wrapper
+from dashboard.components.map_tiles import FOLIUM_TILES
 from src.data.exceptions import DashboardDataError
 
 # -----------------------------------------------------------------------------
@@ -659,7 +660,7 @@ def _build_folium_map(corr_df: pd.DataFrame) -> folium.Map:
     m = folium.Map(
         location=[45.760, 4.835],
         zoom_start=12,
-        tiles="CartoDB positron",
+        tiles=FOLIUM_TILES,
         control_scale=True,
     )
 

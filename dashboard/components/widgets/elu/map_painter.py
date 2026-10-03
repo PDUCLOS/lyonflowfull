@@ -15,6 +15,7 @@ from dashboard.components.a11y import st_folium_with_alt
 from dashboard.components.colors import COLORS
 from dashboard.components.data_cache import cached_bottlenecks_top
 from dashboard.components.loading_state import loading_wrapper
+from dashboard.components.map_tiles import FOLIUM_TILES
 
 
 def render_map_painter(height: int = 400) -> dict:
@@ -35,7 +36,7 @@ def render_map_painter(height: int = 400) -> dict:
         import folium
 
         # Carte avec marqueurs des bottlenecks existants
-        m = folium.Map(location=[45.76, 4.84], zoom_start=12, tiles="CartoDB positron")
+        m = folium.Map(location=[45.76, 4.84], zoom_start=12, tiles=FOLIUM_TILES)
 
         coords = {
             "Rue Garibaldi": (45.7575, 4.8461),

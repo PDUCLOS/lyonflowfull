@@ -18,6 +18,7 @@ from dashboard.components.colors import COLORS
 from dashboard.components.data_cache import cached_buses_positions
 from dashboard.components.error_display import show_error
 from dashboard.components.loading_state import loading_wrapper
+from dashboard.components.map_tiles import PYDECK_MAP_STYLE
 from src.data.db_query import clean_line_label  # libellé lisible des lignes TCL.
 from src.data.exceptions import DashboardDataError
 
@@ -120,7 +121,7 @@ def render_network_map(buses: list | None = None, height: int = 400) -> None:
         deck = pdk.Deck(
             layers=[layer],
             initial_view_state=view_state,
-            map_style="https://basemaps.cartocdn.com/gl/positron-gl-style/style.json",
+            map_style=PYDECK_MAP_STYLE,
             tooltip={
                 "html": "<b>{bus_id}</b><br/>Ligne: {line_id}<br/>Segment: {segment}<br/>Retard: {delay_min} min",
                 "style": {

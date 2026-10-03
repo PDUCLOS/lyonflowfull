@@ -1288,7 +1288,7 @@ def get_traffic_live_vs_predicted(limit: int = 2000) -> pd.DataFrame:
     """Live capteurs + prédictions H+1h par segment, avec vitesse limite.
 
     JOIN live × predictions sur channel_id = axis_key. Chaque ligne a :
-    - speed_now : vitesse capteur live (< 10 min)
+    - speed_now : vitesse capteur live (dernier calcul, < 30 min)
     - speed_pred_1h : vitesse prédite H+1h
     - vitesse_limite_kmh : vitesse max du segment
     - ratio_now : speed_now / vitesse_limite (0→1+, saturation relative)
@@ -1297,6 +1297,11 @@ def get_traffic_live_vs_predicted(limit: int = 2000) -> pd.DataFrame:
 
     Exclut les capteurs `stuck` (vitesse figée 24h, `gold.mv_sensor_saturation`,
     migration 034) — un capteur en panne fige la carte sur une valeur fausse.
+
+    Fenêtre de 30 min : transform_silver_to_gold tourne toutes les 15 min
+    (:05/:20/:35/:50) et dure ~6 min, la donnée a donc normalement 0 à ~22 min.
+    L'ancienne fenêtre de 10 min (calée sur un cycle de 10 min) laissait la
+    carte vide la majeure partie du temps.
     """
     query = """
         WITH live AS (
@@ -1305,7 +1310,7 @@ def get_traffic_live_vs_predicted(limit: int = 2000) -> pd.DataFrame:
                 t.lat, t.lon, t.computed_at
             FROM gold.traffic_features_live t
             JOIN gold.mv_sensor_saturation s ON s.channel_id = t.channel_id
-            WHERE t.computed_at >= NOW() - INTERVAL '10 minutes'
+            WHERE t.computed_at >= NOW() - INTERVAL '30 minutes'
               AND s.status = 'ok'
             ORDER BY t.channel_id, t.computed_at DESC
         ),

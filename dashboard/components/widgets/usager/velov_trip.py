@@ -22,6 +22,7 @@ from dashboard.components.a11y import st_folium_with_alt
 from dashboard.components.colors import COLORS
 from dashboard.components.error_display import show_error
 from dashboard.components.loading_state import loading_wrapper
+from dashboard.components.map_tiles import FOLIUM_TILES
 from dashboard.components.velov_safety_banner import render_velov_safety_banner
 from src.data.exceptions import DashboardDataError
 from src.routing.pathfinder_multimodal import (
@@ -303,7 +304,7 @@ def _render_velov_map(
     center_lat = sum(all_lats) / len(all_lats)
     center_lon = sum(all_lons) / len(all_lons)
 
-    m = folium.Map(location=[center_lat, center_lon], zoom_start=13, tiles="CartoDB positron")
+    m = folium.Map(location=[center_lat, center_lon], zoom_start=13, tiles=FOLIUM_TILES)
 
     # Marker origine
     folium.Marker(

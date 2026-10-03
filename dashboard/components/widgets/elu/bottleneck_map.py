@@ -19,6 +19,7 @@ from dashboard.components.a11y import st_folium_with_alt
 from dashboard.components.colors import COLORS
 from dashboard.components.data_cache import cached_bottlenecks_top
 from dashboard.components.loading_state import loading_wrapper
+from dashboard.components.map_tiles import FOLIUM_TILES
 
 # Couleur Folium par diagnostic (alignée avec la palette COLORS du projet)
 _DIAGNOSIS_FOLIUM_COLOR = {
@@ -45,7 +46,7 @@ def render_bottleneck_map(height: int = 500) -> None:
         import folium
 
         # Centre Lyon
-        m = folium.Map(location=[45.76, 4.84], zoom_start=12, tiles="CartoDB positron")
+        m = folium.Map(location=[45.76, 4.84], zoom_start=12, tiles=FOLIUM_TILES)
 
         n_rendered = 0
         n_skipped_no_coords = 0

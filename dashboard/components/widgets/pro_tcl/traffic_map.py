@@ -21,6 +21,7 @@ import streamlit as st
 
 from dashboard.components.colors import COLORS
 from dashboard.components.loading_state import loading_wrapper
+from dashboard.components.map_tiles import PYDECK_MAP_STYLE
 from src.ml.model_registry import is_traffic_map_visible
 
 logger = logging.getLogger(__name__)
@@ -179,7 +180,7 @@ def _render_pydeck_live_vs_pred(df: pd.DataFrame, height: int, zoom: float = 11.
     deck = pdk.Deck(
         layers=[layer],
         initial_view_state=view_state,
-        map_style="https://basemaps.cartocdn.com/gl/positron-gl-style/style.json",
+        map_style=PYDECK_MAP_STYLE,
         tooltip={
             "html": tooltip_html,
             "style": {
@@ -227,7 +228,7 @@ def _render_pydeck_predictions(df: pd.DataFrame, height: int, zoom: float = 11.0
     deck = pdk.Deck(
         layers=[layer],
         initial_view_state=view_state,
-        map_style="https://basemaps.cartocdn.com/gl/positron-gl-style/style.json",
+        map_style=PYDECK_MAP_STYLE,
         tooltip={
             "html": "<b>{axis_key}</b><br/>Prédit : <b>{speed_pred} km/h</b><br/>État: {etat_pred}",
             "style": {

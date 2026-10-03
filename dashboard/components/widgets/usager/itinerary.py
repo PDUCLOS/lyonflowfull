@@ -19,6 +19,7 @@ import streamlit as st
 from dashboard.components.a11y import st_folium_with_alt
 from dashboard.components.colors import COLORS
 from dashboard.components.error_display import show_error
+from dashboard.components.map_tiles import FOLIUM_TILES
 from src.data.data_loader import load_lyon_addresses
 from src.data.exceptions import DashboardDataError
 from src.routing import Itinerary, compute_itinerary_alternatives
@@ -224,7 +225,7 @@ def _render_map(
         center_lat = sum(all_lats) / len(all_lats)
         center_lon = sum(all_lons) / len(all_lons)
 
-        m = folium.Map(location=[center_lat, center_lon], zoom_start=14, tiles="CartoDB positron")
+        m = folium.Map(location=[center_lat, center_lon], zoom_start=14, tiles=FOLIUM_TILES)
 
         folium.Marker(
             [o_lat, o_lon],

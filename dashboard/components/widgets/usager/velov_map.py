@@ -20,6 +20,7 @@ import streamlit as st
 from dashboard.components.colors import COLORS
 from dashboard.components.data_cache import cached_velov_predictions
 from dashboard.components.loading_state import loading_wrapper
+from dashboard.components.map_tiles import PYDECK_MAP_STYLE
 from src.data.db_query import get_velov_stations_geo
 
 
@@ -99,7 +100,7 @@ def render_velov_map_compact(*, height: int = 280, key_suffix: str = "") -> None
         deck = pdk.Deck(
             layers=[layer],
             initial_view_state=view,
-            map_style="https://basemaps.cartocdn.com/gl/positron-gl-style/style.json",
+            map_style=PYDECK_MAP_STYLE,
             tooltip={
                 "html": (
                     "<b>{station_name}</b><br/>{bikes_available} · {docks_available}<br/>H+1h: {predicted_bikes_h1}"
