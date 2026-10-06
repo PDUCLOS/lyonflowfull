@@ -30,23 +30,26 @@ from dashboard.components.plotly_theme import LYF_TEMPLATE
 
 
 @st.cache_data(ttl=300, show_spinner=False)
-def _cached_training_history():
-    """Historique MLflow runs (7j). TTL 300s — retrain horaire au mieux,
-    était sans cache, requêtée à chaque rerun/auto-refresh (audit perf 2026-07-03).
-    """
-    from src.data.db_query import _df_from_query
+def _cached_training_history() -> pd.DataFrame:
+    """MAE moyenne par jour des runs MLflow des 7 derniers jours (speed + Vélov).
 
-    return _df_from_query(
-        """
-        SELECT
-            DATE_TRUNC('day', start_time) AS day,
-            run_name,
-            metrics_mae_speed_h1 AS mae_speed,
-            metrics_mae_velov_h1 AS mae_velov
-        FROM mlflow.runs_history
-        WHERE start_time >= NOW() - INTERVAL '7 days'
-        ORDER BY start_time ASC
-        """
+    Lit le tracking server MLflow. L'ancienne requête visait ``mlflow.runs_history``,
+    une table qui n'a jamais existé dans la base lyonflow : historique toujours vide.
+    TTL 300 s (audit perf 2026-07-03).
+    """
+    from src.ml.mlflow_integration import get_runs_history
+
+    runs = get_runs_history(("xgboost_speed", "xgboost_velov"), days=7)
+    if not runs:
+        return pd.DataFrame(columns=["day", "mae_speed", "mae_velov"])
+    df = pd.DataFrame(runs)
+    df["day"] = df["start_time"].dt.floor("D")
+    daily = df.pivot_table(index="day", columns="experiment", values="mae", aggfunc="mean")
+    return (
+        daily.rename(columns={"xgboost_speed": "mae_speed", "xgboost_velov": "mae_velov"})
+        .reindex(columns=["mae_speed", "mae_velov"])
+        .reset_index()
+        .sort_values("day")
     )
 
 
@@ -85,11 +88,10 @@ def render_model_registry() -> None:
             )
             return
 
-    # Bandeau source (transparence MLflow)
+    # Bandeau source (transparence MLflow). summary["run_count"] comptait en fait
+    # les modèles du registry (anciens horizons compris) : on affiche les modèles actifs.
     if summary.get("available"):
-        st.success(
-            f"**MLflow live** · {summary.get('run_count', 0)} runs · {len(summary.get('model_names', []))} modèles"
-        )
+        st.success(f"**MLflow live** · {len(models)} modèles en service (XGBoost speed H+1h, Vélov H+1h)")
     else:
         st.warning(
             "**MLflow non accessible** — aucun modèle à afficher. "
@@ -381,10 +383,9 @@ def render_training_history() -> None:
         history = _cached_training_history()
         if history.empty:
             st.info(
-                "Historique entraînement vide — branche Sprint 10+. "
-                "DAG `dag_daily_speed_train` (quotidien 03h00) et "
-                "`retrain_xgboost_velov` (horaire :50) alimentent "
-                "`mlflow.runs_history`."
+                "Aucun entraînement sur 7 jours. DAG `dag_daily_speed_train` "
+                "(quotidien 03h38) et `retrain_xgboost_velov` (horaire :50) "
+                "enregistrent leurs runs dans MLflow."
             )
             return
         try:
@@ -409,13 +410,13 @@ def render_training_history() -> None:
                         x=velov_rows["day"],
                         y=velov_rows["mae_velov"],
                         mode="lines+markers",
-                        name="XGBoost Velov H+30min",
+                        name="XGBoost Vélov H+1h",
                         line={"color": COLORS["status_warning"], "width": 3},
                         yaxis="y2",
                     )
                 )
             fig.update_layout(
-                title="MAE evolution (7 derniers jours)",
+                title="MAE moyenne par jour (7 derniers jours)",
                 xaxis_title="Jour",
                 yaxis_title="MAE Speed (km/h)",
                 yaxis2={"title": "MAE Velov (vélos)", "overlaying": "y", "side": "right"},
@@ -426,7 +427,7 @@ def render_training_history() -> None:
         except ImportError:
             st.dataframe(history, use_container_width=True, hide_index=True)
     except Exception as e:
-        st.info(f"Historique entraînement indisponible ({e}). Branchement MLflow runs history prévu Sprint 10+.")
+        st.info(f"Historique entraînement indisponible ({e}).")
 
 
 def render_drift_panel() -> None:

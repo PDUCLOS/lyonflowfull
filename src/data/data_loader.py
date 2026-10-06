@@ -32,6 +32,7 @@ Avantages :
 from __future__ import annotations
 
 import logging
+from datetime import UTC, datetime
 from typing import Any
 
 import pandas as pd
@@ -1480,11 +1481,21 @@ def load_traffic_speeds_for_propagation(hours: int = 6) -> pd.DataFrame:
     return df
 
 
+# Modèles servis en production (focus H+1h strict, Sprint VPS-6). Les anciens
+# horizons (h5/h180/h360, Vélov h30) restent dans le registry MLflow, figés
+# en stage Production depuis l'arrêt de leur entraînement : on ne les affiche pas.
+ACTIVE_MLFLOW_MODELS: tuple[str, ...] = ("xgboost_speed_h60", "xgb_velov_h60")
+
+
 def load_mlflow_models(
-    experiment: str = "lyonflow-traffic",
+    experiment: str | None = None,
     max_results: int = 50,
 ) -> list[dict]:
-    """Liste les modèles trackés dans un experiment MLflow.
+    """Liste les modèles actifs du registry MLflow (``ACTIVE_MLFLOW_MODELS``).
+
+    Avant 2026-10-06 le défaut ``experiment="lyonflow-traffic"`` filtrait les
+    modèles dont le NOM commence par ce préfixe : aucun (``xgboost_speed_h60``…),
+    d'où « Aucun modèle tracké » sur la page Model Monitoring depuis juin.
 
     Sprint VPS-6+ (2026-06-11) — retourne la liste des runs MLflow. Si MLflow
     ne répond pas, lève ``DashboardDataError``.
@@ -1510,13 +1521,20 @@ def load_mlflow_models(
     # (Sprint 9+ : plus de référence à MOCK_MODELS — fallback viré).
     out = []
     for r in runs:
+        if r.get("name") not in ACTIVE_MLFLOW_MODELS:
+            continue
+        trained_ms = r.get("trained_at")
         out.append(
             {
                 "name": r.get("name", "?"),
                 "version": r.get("version", "1.0.0"),
                 "stage": r.get("stage", "Production"),
                 "metrics": r.get("metrics", {}),
-                "trained_at": str(r.get("trained_at", "—")),
+                "trained_at": (
+                    datetime.fromtimestamp(trained_ms / 1000, tz=UTC).strftime("%Y-%m-%d %H:%M UTC")
+                    if isinstance(trained_ms, (int, float))
+                    else "—"
+                ),
                 "n_training_samples": int(r.get("params", {}).get("n_samples", 0)),
                 "feature_count": int(r.get("params", {}).get("n_features", 0)),
                 "drift_status": "ok",

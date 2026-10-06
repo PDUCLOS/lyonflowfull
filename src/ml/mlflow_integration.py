@@ -62,7 +62,7 @@ import logging
 import os
 from collections.abc import Generator
 from contextlib import contextmanager
-from datetime import datetime
+from datetime import UTC, datetime
 from typing import Any, cast
 
 logger = logging.getLogger(__name__)
@@ -552,6 +552,52 @@ def compare_models(model_a: str, model_b: str, metric: str = "mae", experiment: 
         "value_a": val_a,
         "value_b": val_b,
     }
+
+
+def get_runs_history(experiments: tuple[str, ...], days: int = 7, metric: str = "mae") -> list[dict]:
+    """Runs MLflow des ``days`` derniers jours pour les expériences données.
+
+    Remplace la lecture de ``mlflow.runs_history`` (table jamais créée : les
+    runs vivent dans la base du tracking server, pas dans la base lyonflow).
+
+    Returns:
+        list[dict]: ``{"experiment", "run_name", "start_time" (datetime UTC), metric}``.
+
+    Raises:
+        DashboardDataError: si MLflow est indisponible.
+    """
+    from src.data.exceptions import DashboardDataError
+
+    if not is_mlflow_available() or not is_tracking_server_reachable():
+        raise DashboardDataError(source="mlflow", detail=f"MLflow non joignable ({get_tracking_uri()}).")
+
+    from mlflow.tracking import MlflowClient
+
+    client = MlflowClient()
+    since_ms = int((datetime.now(UTC).timestamp() - days * 86400) * 1000)
+    out: list[dict] = []
+    for name in experiments:
+        exp = client.get_experiment_by_name(name)
+        if exp is None:
+            continue
+        runs = client.search_runs(
+            experiment_ids=[exp.experiment_id],
+            filter_string=f"attributes.start_time > {since_ms}",
+            max_results=5000,
+        )
+        for run in runs:
+            value = run.data.metrics.get(metric)
+            if value is None:
+                continue
+            out.append(
+                {
+                    "experiment": name,
+                    "run_name": run.info.run_name,
+                    "start_time": datetime.fromtimestamp(run.info.start_time / 1000, tz=UTC),
+                    metric: float(value),
+                }
+            )
+    return out
 
 
 def get_experiment_summary(experiment: str) -> dict:
