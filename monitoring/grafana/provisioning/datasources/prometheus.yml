@@ -7,8 +7,17 @@
 
 apiVersion: 1
 
+# uid fixe : les dashboards (monitoring/grafana/dashboards/*.json) référencent
+# la datasource par uid "prometheus". Sans uid ici, Grafana en générait un
+# aléatoire → « datasource not found » (triangle rouge) sur tous les panneaux.
+# deleteDatasources : recrée la datasource pour remplacer l'ancien uid aléatoire.
+deleteDatasources:
+  - name: Prometheus
+    orgId: 1
+
 datasources:
   - name: Prometheus
+    uid: prometheus
     type: prometheus
     access: proxy
     url: http://prometheus:9090
