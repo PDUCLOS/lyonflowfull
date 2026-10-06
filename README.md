@@ -8,7 +8,7 @@
 [![Licence](https://img.shields.io/badge/licence-MIT-lightgrey)]()
 
 Auteur : **Patrice DUCLOS** — Senior Data Analyst, Jedha RNCP 38777 (Architecte en IA)
-Repo : `PDUCLOS/lyonflow` · Déploiement production : VPS unique `51.83.159.224`
+Repo : `PDUCLOS/lyonflowfull` · Déploiement production : VPS unique `51.83.159.224`
 
 ---
 
@@ -136,8 +136,8 @@ Voir [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) et
 
 ```bash
 # 1. Cloner
-git clone https://github.com/PDUCLOS/lyonflow.git
-cd lyonflow
+git clone https://github.com/PDUCLOS/lyonflowfull.git
+cd lyonflowfull
 
 # 2. Configurer
 cp .env.example .env
