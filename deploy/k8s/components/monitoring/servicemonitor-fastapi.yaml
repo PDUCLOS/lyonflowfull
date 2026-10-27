@@ -1,0 +1,20 @@
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: fastapi
+  namespace: lyonflow
+  labels:
+    app.kubernetes.io/name: fastapi
+    release: kps           # selector du chart kube-prometheus-stack
+spec:
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: fastapi
+  namespaceSelector:
+    matchNames: [lyonflow]
+  endpoints:
+    - port: http
+      path: /metrics
+      interval: 30s
+      scrapeTimeout: 10s
+      honorLabels: true

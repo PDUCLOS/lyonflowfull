@@ -1,0 +1,49 @@
+# Overlay dev : 1 réplica, HPA 1→2, disque Postgres 10 Gi, hôtes *-dev.
+# Le Secret est généré avec des valeurs factices : à remplacer avant tout
+# usage hors poste local (kind / k3d / Docker Desktop).
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: lyonflow
+
+resources:
+  - ../../base
+
+patches:
+  - path: patches/replicas-dev.yaml
+    target:
+      kind: Deployment
+      name: fastapi|streamlit
+  - path: patches/hpa-dev.yaml
+    target:
+      kind: HorizontalPodAutoscaler
+      name: fastapi|streamlit
+  - path: patches/postgres-dev.yaml
+    target:
+      kind: StatefulSet
+      name: postgres
+  - path: patches/ingress-dev.yaml
+    target:
+      kind: Ingress
+      name: fastapi
+  - path: patches/ingress-streamlit-dev.yaml
+    target:
+      kind: Ingress
+      name: streamlit
+
+configMapGenerator:
+  - name: lyonflow-config
+    behavior: merge
+    literals:
+      - ENV=dev
+      - LOG_LEVEL=DEBUG
+
+secretGenerator:
+  - name: lyonflow-secrets
+    literals:
+      - POSTGRES_PASSWORD=change-me-dev
+      - LYONFLOW_API_KEY=change-me-dev
+      - JWT_SECRET_KEY=change-me-dev
+
+commonAnnotations:
+  app.kubernetes.io/environment: dev

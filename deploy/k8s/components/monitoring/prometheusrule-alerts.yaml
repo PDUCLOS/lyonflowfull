@@ -1,0 +1,85 @@
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: lyonflow-alerts
+  namespace: lyonflow
+  labels:
+    release: kps
+spec:
+  groups:
+    - name: lyonflow.fastapi
+      interval: 30s
+      rules:
+        - alert: FastapiHighErrorRate
+          expr: |
+            sum(rate(http_requests_total{job="fastapi",status=~"5.."}[5m]))
+              / sum(rate(http_requests_total{job="fastapi"}[5m])) > 0.05
+          for: 5m
+          labels:
+            severity: warning
+          annotations:
+            summary: "FastAPI 5xx rate > 5% (instance {{ $labels.instance }})"
+            description: "5xx ratio {{ $value | humanizePercentage }} sur 5m."
+
+        - alert: FastapiHighLatency
+          expr: |
+            histogram_quantile(0.95,
+              sum(rate(http_request_duration_seconds_bucket{job="fastapi"}[5m]))
+              by (le)) > 1
+          for: 10m
+          labels:
+            severity: warning
+          annotations:
+            summary: "FastAPI p95 latence > 1s"
+            description: "p95 = {{ $value }}s"
+
+        - alert: FastapiHpaMaxedOut
+          expr: |
+            kube_horizontalpodautoscaler_status_current_replicas{namespace="lyonflow",horizontalpodautoscaler="fastapi"}
+              >= kube_horizontalpodautoscaler_spec_max_replicas{namespace="lyonflow",horizontalpodautoscaler="fastapi"}
+          for: 15m
+          labels:
+            severity: critical
+          annotations:
+            summary: "FastAPI HPA au max ({{ $value }}/{{ $labels.spec_max_replicas }})"
+
+    - name: lyonflow.postgres
+      interval: 30s
+      rules:
+        - alert: PostgresHighConnections
+          expr: |
+            sum(pg_stat_activity_count{datname="lyonflow"}) by (datname)
+              / max(pg_settings_max_connections) > 0.85
+          for: 10m
+          labels:
+            severity: warning
+          annotations:
+            summary: "Postgres connexions > 85% du max"
+
+        - alert: PostgresReplicationLag
+          expr: pg_replication_lag > 60
+          for: 5m
+          labels:
+            severity: warning
+          annotations:
+            summary: "Postgres replication lag {{ $value }}s"
+
+    - name: lyonflow.pipeline
+      interval: 60s
+      rules:
+        - alert: BronzeStaleData
+          expr: |
+            time() - max(pg_bronze_last_insert_seconds) > 1800
+          for: 15m
+          labels:
+            severity: warning
+          annotations:
+            summary: "Bronze: aucune nouvelle donnee depuis > 30 min"
+
+        - alert: AirflowDagFailed
+          expr: increase(airflow_dag_runs_failed_total[1h]) > 0
+          for: 5m
+          labels:
+            severity: warning
+          annotations:
+            summary: "DAG Airflow en echec: {{ $labels.dag_id }}"

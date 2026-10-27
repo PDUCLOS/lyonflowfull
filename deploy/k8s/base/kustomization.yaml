@@ -1,0 +1,46 @@
+# LyonFlowFull — base Kubernetes commune aux overlays dev et prod.
+#
+# Réveillée depuis la branche dormante `kubernetes` (Phase 2, juin 2026) et
+# réalignée sur `main` : pgRouting (et plus seulement PostGIS), une seule image
+# applicative (même Dockerfile pour l'API et le dashboard, comme en Compose),
+# plus de Redis ni de trainer GNN (retirés de main), monitoring en composant.
+#
+# Rendu : kubectl kustomize --load-restrictor LoadRestrictionsNone overlays/dev
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: lyonflow
+
+labels:
+  - pairs:
+      app.kubernetes.io/part-of: lyonflowfull
+      app.kubernetes.io/managed-by: kustomize
+
+resources:
+  - namespace.yaml
+  - postgres
+  - mlflow
+  - fastapi
+  - streamlit
+
+# Variables non secrètes (miroir du bloc x-common-env de docker-compose.yml).
+# Les secrets (POSTGRES_PASSWORD, LYONFLOW_API_KEY, JWT_SECRET_KEY) vivent dans
+# le Secret `lyonflow-secrets`, fourni par l'overlay — jamais dans le dépôt.
+configMapGenerator:
+  - name: lyonflow-config
+    literals:
+      - LOG_LEVEL=INFO
+      - POSTGRES_HOST=postgres
+      - POSTGRES_PORT=5432
+      - POSTGRES_DB=lyonflow
+      - POSTGRES_USER=lyonflow
+      - MLFLOW_TRACKING_URI=http://mlflow:5000
+      - MINIO_ENDPOINT=minio:9000
+      - MINIO_BUCKET_BRONZE=lyonflow-bronze
+      - MINIO_BUCKET_GOLD=lyonflow-gold
+
+# Schéma Medallion : source unique deploy/init-db.sql (dump pg de main),
+# d'où le --load-restrictor (fichier hors de l'arborescence kustomize).
+  - name: postgres-init
+    files:
+      - init-db.sql=../../init-db.sql

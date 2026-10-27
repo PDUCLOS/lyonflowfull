@@ -1,0 +1,33 @@
+# Overlay prod : HPA FastAPI 3→15, Postgres 100 Gi / 4-8 Gi RAM, monitoring
+# Prometheus Operator. Le Secret `lyonflow-secrets` n'est PAS généré ici :
+# il est fourni par un SealedSecret (scripts/seal-secrets.sh) appliqué à part.
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: lyonflow
+
+resources:
+  - ../../base
+
+components:
+  - ../../components/monitoring
+
+patches:
+  - path: patches/postgres-prod.yaml
+    target:
+      kind: StatefulSet
+      name: postgres
+  - path: patches/hpa-prod.yaml
+    target:
+      kind: HorizontalPodAutoscaler
+      name: fastapi
+
+configMapGenerator:
+  - name: lyonflow-config
+    behavior: merge
+    literals:
+      - ENV=prod
+      - LOG_LEVEL=INFO
+
+commonAnnotations:
+  app.kubernetes.io/environment: prod

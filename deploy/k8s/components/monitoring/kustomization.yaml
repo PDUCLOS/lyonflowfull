@@ -1,0 +1,11 @@
+# Composant optionnel : nécessite les CRD du Prometheus Operator
+# (kube-prometheus-stack installé par Helm dans le namespace `monitoring`,
+# cf. README.md + values.yaml). Activé dans l'overlay prod uniquement.
+apiVersion: kustomize.config.k8s.io/v1alpha1
+kind: Component
+
+resources:
+  - servicemonitor-fastapi.yaml
+  - servicemonitor-postgres.yaml
+  - servicemonitor-airflow.yaml
+  - prometheusrule-alerts.yaml
