@@ -83,10 +83,16 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
         return await call_next(request)
 
     def _get_client_ip(self, request: Request) -> str:
-        """Récupère l'IP client (X-Forwarded-For en priorité)."""
+        """Récupère l'IP client (X-Forwarded-For en priorité).
+
+        Nginx (VPS) et ingress-nginx (k8s) AJOUTENT l'IP réelle en fin de
+        X-Forwarded-For ($proxy_add_x_forwarded_for) : la dernière entrée est
+        posée par notre proxy, les premières sont fournies par le client et
+        falsifiables (contournement du rate limit). On prend donc la dernière.
+        """
         xff = request.headers.get("X-Forwarded-For")
         if xff:
-            return xff.split(",")[0].strip()
+            return xff.split(",")[-1].strip()
         return request.client.host if request.client else "unknown"
 
     def _match_rule(self, path: str) -> tuple[str, int, int] | None:
