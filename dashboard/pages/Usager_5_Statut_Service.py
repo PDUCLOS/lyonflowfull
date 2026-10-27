@@ -26,6 +26,7 @@ from dashboard.components.loading_state import loading_wrapper
 from dashboard.components.navigation import render_sidebar_navigation
 from dashboard.components.persona_guard import apply_persona_guard
 from dashboard.components.theme import inject_theme
+from src.data.exceptions import DashboardDataError
 
 logger = logging.getLogger(__name__)
 
@@ -76,9 +77,17 @@ def _kpi_predictions() -> dict | None:
     return {"n_rows": len(df)}
 
 
-def _kpi_alerts() -> dict:
-    """KPI #4 — Alertes actives 6h."""
-    df = cached_recent_alerts(hours=6, limit=50)
+def _kpi_alerts() -> dict | None:
+    """KPI #4 — Alertes actives 6h.
+
+    Comme les 3 autres voyants : si la base ne répond pas, le voyant passe
+    en « Indéterminé » au lieu d'afficher une trace Python à l'usager.
+    """
+    try:
+        df = cached_recent_alerts(hours=6, limit=50)
+    except DashboardDataError:
+        logger.warning("Statut service : alertes indisponibles (DB injoignable)")
+        return None
     n_total = len(df)
     n_critical = int((df["severity"] == "critical").sum()) if "severity" in df.columns else 0
     return {"n_total": n_total, "n_critical": n_critical}
@@ -187,17 +196,22 @@ serv_value = f"{pill} {status}"
 serv_color = serv_color
 
 # --- Alertes
-n_alerts = k_alerts["n_total"]
-n_critical = k_alerts["n_critical"]
-if n_critical == 0 and n_alerts <= 3:
+if k_alerts is None:
+    pill, status = "", "Indéterminé"
+    alert_color = COLORS["text_muted"]
+    alert_sub = "Journal des alertes momentanément indisponible"
+elif k_alerts["n_critical"] == 0 and k_alerts["n_total"] <= 3:
+    n_alerts = k_alerts["n_total"]
     pill, status = "OK", "Tout roule"
     alert_color = COLORS["status_ok"]
     alert_sub = f"{n_alerts} alerte(s) info sur les 6 dernières heures"
-elif n_critical <= 1:
+elif k_alerts["n_critical"] <= 1:
+    n_alerts, n_critical = k_alerts["n_total"], k_alerts["n_critical"]
     pill, status = "Attention", "Quelques incidents"
     alert_color = COLORS["status_warning"]
     alert_sub = f"{n_critical} critique · {n_alerts - n_critical} info sur 6h"
 else:
+    n_alerts, n_critical = k_alerts["n_total"], k_alerts["n_critical"]
     pill, status = "Alerte", "Plusieurs incidents"
     alert_color = COLORS["status_critical"]
     alert_sub = f"{n_critical} critiques · {n_alerts - n_critical} info sur 6h"
@@ -231,10 +245,16 @@ st.markdown("---")
 # ── 2. Incidents récents (résumé des alertes) ──────────────────────────────
 st.markdown("##### Derniers incidents détectés")
 
+alerts_df = None
 with loading_wrapper("Chargement des alertes…", "🚨"):
-    alerts_df = cached_recent_alerts(hours=24, limit=10)
+    try:
+        alerts_df = cached_recent_alerts(hours=24, limit=10)
+    except DashboardDataError:
+        logger.warning("Statut service : journal des incidents indisponible (DB injoignable)")
 
-if alerts_df.empty:
+if alerts_df is None:
+    st.info("Journal des incidents momentanément indisponible : la base de données ne répond pas.")
+elif alerts_df.empty:
     st.success("Aucun incident détecté sur les dernières 24 heures.")
 else:
     # Limite à 5 alertes max pour ne pas noyer l'usager
