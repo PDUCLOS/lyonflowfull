@@ -1,0 +1,198 @@
+[
+  {
+    "file": "dags/bronze/collect_bronze.py",
+    "dag_id": "collect_bronze",
+    "schedule": "*/5 * * * *",
+    "paused_in_description": false,
+    "legacy": false
+  },
+  {
+    "file": "dags/bronze/collect_calendriers_monthly.py",
+    "dag_id": "collect_calendriers_monthly",
+    "schedule": "@monthly",
+    "paused_in_description": false,
+    "legacy": false
+  },
+  {
+    "file": "dags/bronze/collect_tomtom_traffic.py",
+    "dag_id": "collect_tomtom_traffic",
+    "schedule": "*/15 * * * *",
+    "paused_in_description": false,
+    "legacy": false
+  },
+  {
+    "file": "dags/bronze/collect_vigilance_meteo.py",
+    "dag_id": "collect_vigilance_meteo",
+    "schedule": "0 */6 * * *",
+    "paused_in_description": false,
+    "legacy": false
+  },
+  {
+    "file": "dags/legacy_github/dag_pipeline.py",
+    "dag_id": "lyonflow_traffic_pipeline",
+    "schedule": "*/5 * * * *",
+    "paused_in_description": false,
+    "legacy": true
+  },
+  {
+    "file": "dags/maintenance/backfill_dim_spatial_lat_lon.py",
+    "dag_id": "maintenance_backfill_dim_spatial_lat_lon",
+    "schedule": "*/5 * * * *",
+    "paused_in_description": false,
+    "legacy": false
+  },
+  {
+    "file": "dags/maintenance/critical_pipeline_health.py",
+    "dag_id": "dag_critical_pipeline_health",
+    "schedule": "2,17,32,47 * * * *",
+    "paused_in_description": false,
+    "legacy": false
+  },
+  {
+    "file": "dags/maintenance/maintenance.py",
+    "dag_id": "data_quality_daily",
+    "schedule": "15 4 * * *",
+    "paused_in_description": false,
+    "legacy": false
+  },
+  {
+    "file": "dags/maintenance/maintenance.py",
+    "dag_id": "purge_bronze",
+    "schedule": "8 3 * * *",
+    "paused_in_description": false,
+    "legacy": false
+  },
+  {
+    "file": "dags/maintenance/record_network_health.py",
+    "dag_id": "maintenance_record_network_health",
+    "schedule": "*/15 * * * *",
+    "paused_in_description": false,
+    "legacy": false
+  },
+  {
+    "file": "dags/maintenance/refresh_congestion_propagation.py",
+    "dag_id": "refresh_congestion_propagation",
+    "schedule": "10,40 * * * *",
+    "paused_in_description": false,
+    "legacy": false
+  },
+  {
+    "file": "dags/maintenance/refresh_lieux_calendrier.py",
+    "dag_id": "refresh_lieux_calendrier",
+    "schedule": "0 5 * * *",
+    "paused_in_description": false,
+    "legacy": false
+  },
+  {
+    "file": "dags/maintenance/refresh_meteo_impact.py",
+    "dag_id": "refresh_meteo_impact",
+    "schedule": "30 4 * * *",
+    "paused_in_description": false,
+    "legacy": false
+  },
+  {
+    "file": "dags/maintenance/refresh_osm_traffic_costs.py",
+    "dag_id": "refresh_osm_traffic_costs",
+    "schedule": "11,26,41,56 * * * *",
+    "paused_in_description": false,
+    "legacy": false
+  },
+  {
+    "file": "dags/maintenance/refresh_velov_transit_coupling.py",
+    "dag_id": "refresh_velov_transit_coupling",
+    "schedule": "12,27,42,57 * * * *",
+    "paused_in_description": false,
+    "legacy": false
+  },
+  {
+    "file": "dags/maintenance/silver_archive_to_minio.py",
+    "dag_id": "silver_archive_to_minio",
+    "schedule": "0 4 * * *",
+    "paused_in_description": false,
+    "legacy": false
+  },
+  {
+    "file": "dags/ml/build_xgb_training_set.py",
+    "dag_id": "build_xgb_training_set",
+    "schedule": "30 2 * * *",
+    "paused_in_description": false,
+    "legacy": false
+  },
+  {
+    "file": "dags/ml/dag_daily_speed_train.py",
+    "dag_id": "dag_daily_speed_train",
+    "schedule": "38 3 * * *",
+    "paused_in_description": false,
+    "legacy": false
+  },
+  {
+    "file": "dags/ml/dag_inference_velov.py",
+    "dag_id": "dag_inference_velov",
+    "schedule": "4,19,34,49 * * * *",
+    "paused_in_description": false,
+    "legacy": false
+  },
+  {
+    "file": "dags/ml/dag_inference_xgboost.py",
+    "dag_id": "dag_inference_xgboost",
+    "schedule": "*/15 * * * *",
+    "paused_in_description": false,
+    "legacy": false
+  },
+  {
+    "file": "dags/ml/daily_drift_report.py",
+    "dag_id": "daily_drift_report",
+    "schedule": "30 5 * * *",
+    "paused_in_description": false,
+    "legacy": false
+  },
+  {
+    "file": "dags/ml/refresh_xgb_vs_tomtom.py",
+    "dag_id": "refresh_xgb_vs_tomtom",
+    "schedule": "5,35 * * * *",
+    "paused_in_description": false,
+    "legacy": false
+  },
+  {
+    "file": "dags/ml/retrain_xgboost.py",
+    "dag_id": "retrain_xgboost_speed",
+    "schedule": "25 * * * *",
+    "paused_in_description": true,
+    "legacy": false
+  },
+  {
+    "file": "dags/ml/retrain_xgboost.py",
+    "dag_id": "retrain_xgboost_velov",
+    "schedule": "50 * * * *",
+    "paused_in_description": false,
+    "legacy": false
+  },
+  {
+    "file": "dags/transforms/build_spatial_mapping.py",
+    "dag_id": "build_spatial_mapping",
+    "schedule": "30 2 * * *",
+    "paused_in_description": false,
+    "legacy": false
+  },
+  {
+    "file": "dags/transforms/refresh_heavy_mv.py",
+    "dag_id": "refresh_heavy_mv",
+    "schedule": "15,45 * * * *",
+    "paused_in_description": false,
+    "legacy": false
+  },
+  {
+    "file": "dags/transforms/transform_bronze_to_silver.py",
+    "dag_id": "transform_bronze_to_silver",
+    "schedule": "2-57/5 * * * *",
+    "paused_in_description": false,
+    "legacy": false
+  },
+  {
+    "file": "dags/transforms/transform_silver_to_gold.py",
+    "dag_id": "transform_silver_to_gold",
+    "schedule": "5,20,35,50 * * * *",
+    "paused_in_description": false,
+    "legacy": false
+  }
+]

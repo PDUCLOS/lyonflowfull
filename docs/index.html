@@ -1,0 +1,432 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>LyonFlow MLOps</title>
+<meta name="description" content="LyonFlow : plateforme MLOps de prédiction du trafic multimodal lyonnais (Airflow, PostgreSQL Medallion, XGBoost, MLflow, dérive PSI, FastAPI, Streamlit, cible Kubernetes).">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Condensed:wght@500;600;700&family=IBM+Plex+Sans:ital,wght@0,400;0,500;0,600;1,400&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Mise en page : colonne de lecture de 1080 px ; bandeaux pleine largeur pour le héros et la démo.
+   Identité : vert « feu de circulation » des personas LyonFlow, sur fond nuit. */
+:root {
+  --bg: #f4f5f7;
+  --surface: #ffffff;
+  --ink: #141c2b;
+  --muted: #566074;
+  --line: #dbe0e8;
+  --accent: #1f7a4d;
+  --accent-ink: #ffffff;
+  --accent-soft: #e2f2e8;
+  --good: #1f7a4d; --good-soft: #e1f2e8;
+  --warn: #9a6200; --warn-soft: #fbefd9;
+  --bad: #b3261e; --bad-soft: #fbe3e1;
+  --hero: #0d1a14;
+  --hero-ink: #e9f2ec;
+  --hero-muted: #a8bcb0;
+  --code-bg: #0f1522;
+  --code-ink: #dfe5f2;
+  --f-display: "IBM Plex Sans Condensed", "Arial Narrow", system-ui, sans-serif;
+  --f-body: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --f-mono: "IBM Plex Mono", ui-monospace, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #0e121a; --surface: #161b25; --ink: #e6e9ef; --muted: #9aa3b5; --line: #283041;
+  --accent: #6fd39a; --accent-ink: #0e121a; --accent-soft: #163223;
+  --good: #5cc78f; --good-soft: #14301f; --warn: #e3a948; --warn-soft: #33270f; --bad: #f08079; --bad-soft: #3a1a18;
+  --hero: #08130e; --hero-ink: #e9f2ec; --hero-muted: #a8bcb0; --code-bg: #0a0e17; --code-ink: #dfe5f2;
+  color-scheme: dark; } }
+:root[data-theme="dark"] {
+  --bg: #0e121a; --surface: #161b25; --ink: #e6e9ef; --muted: #9aa3b5; --line: #283041;
+  --accent: #6fd39a; --accent-ink: #0e121a; --accent-soft: #163223;
+  --good: #5cc78f; --good-soft: #14301f; --warn: #e3a948; --warn-soft: #33270f; --bad: #f08079; --bad-soft: #3a1a18;
+  --hero: #08130e; --hero-ink: #e9f2ec; --hero-muted: #a8bcb0; --code-bg: #0a0e17; --code-ink: #dfe5f2;
+  color-scheme: dark; }
+
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+@media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } * { transition: none !important; } }
+body { margin: 0; background: var(--bg); color: var(--ink); font: 16px/1.62 var(--f-body); }
+img { max-width: 100%; height: auto; display: block; }
+a { color: var(--accent); text-underline-offset: 3px; }
+h1, h2, h3 { font-family: var(--f-display); text-wrap: balance; margin: 0; letter-spacing: -0.01em; }
+h2 { font-size: clamp(1.6rem, 3.2vw, 2.1rem); font-weight: 600; line-height: 1.15; }
+h3 { font-size: 1.15rem; font-weight: 600; line-height: 1.3; }
+p { margin: 0; }
+code { font-family: var(--f-mono); font-size: 0.86em; background: var(--accent-soft); padding: 1px 5px; border-radius: 3px; overflow-wrap: anywhere; }
+.wrap { max-width: 1080px; margin: 0 auto; padding-left: max(20px, env(safe-area-inset-left, 0px)); padding-right: max(20px, env(safe-area-inset-right, 0px)); }
+.eyebrow { font: 500 0.74rem var(--f-mono); letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); }
+.lead { font-size: 1.08rem; color: var(--muted); max-width: 68ch; }
+.muted { color: var(--muted); }
+section { padding-block: 72px 8px; }
+section > .wrap { display: grid; gap: 22px; }
+.prose { display: grid; gap: 14px; max-width: 72ch; }
+
+/* Navigation */
+nav.top { position: sticky; top: env(safe-area-inset-top, 0px); z-index: 10; background: color-mix(in srgb, var(--hero) 92%, transparent); backdrop-filter: blur(8px); border-bottom: 1px solid rgba(255,255,255,0.08); }
+nav.top .wrap { display: flex; align-items: center; gap: 18px; min-height: 52px; overflow-x: auto; scrollbar-width: none; }
+nav.top .brand { font: 600 1rem var(--f-display); color: var(--hero-ink); white-space: nowrap; text-decoration: none; }
+nav.top a.l { color: var(--hero-muted); text-decoration: none; font-size: 0.88rem; white-space: nowrap; }
+nav.top a.l:hover, nav.top a.l:focus-visible { color: var(--hero-ink); }
+nav.top .gh { margin-left: auto; color: var(--hero-ink); border: 1px solid rgba(255,255,255,0.25); padding: 4px 12px; border-radius: 4px; font-size: 0.85rem; text-decoration: none; white-space: nowrap; }
+
+/* Héros */
+.hero { background: var(--hero); color: var(--hero-ink); padding-block: 64px 56px; }
+.hero .wrap { display: grid; gap: 28px; }
+.hero h1 { font-size: clamp(2.1rem, 5.4vw, 3.6rem); font-weight: 700; line-height: 1.04; max-width: 18ch; }
+.hero h1 em { font-style: normal; color: #6fd39a; }
+.hero .lead { color: var(--hero-muted); font-size: 1.15rem; }
+.hero .eyebrow { color: var(--hero-muted); }
+.kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 1px; background: rgba(255,255,255,0.12); border: 1px solid rgba(255,255,255,0.12); border-radius: 6px; overflow: hidden; }
+.kpi { background: var(--hero); padding: 16px 18px; display: grid; gap: 2px; }
+.kpi b { font: 600 1.8rem var(--f-display); font-variant-numeric: tabular-nums; color: #fff; }
+.kpi span { font-size: 0.82rem; color: var(--hero-muted); }
+.shot { border-radius: 8px; overflow: hidden; border: 1px solid rgba(255,255,255,0.14); box-shadow: 0 24px 60px rgba(0,0,0,0.35); }
+.cta { display: flex; flex-wrap: wrap; gap: 10px; }
+.btn { display: inline-flex; align-items: center; gap: 8px; padding: 10px 16px; border-radius: 6px; font-weight: 600; text-decoration: none; font-size: 0.95rem; }
+.btn.primary { background: #6fd39a; color: #0d1a14; }
+.btn.ghost { border: 1px solid rgba(255,255,255,0.3); color: var(--hero-ink); }
+
+/* Problème */
+.duo { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 16px; }
+.card { background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 20px; display: grid; gap: 10px; align-content: start; min-width: 0; }
+.card ul { margin: 0; padding-left: 20px; display: grid; gap: 6px; }
+
+/* Démo */
+.gallery { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 18px; }
+figure { margin: 0; display: grid; gap: 10px; min-width: 0; }
+figure img { border-radius: 6px; border: 1px solid var(--line); }
+figcaption { font-size: 0.9rem; color: var(--muted); }
+figcaption b { color: var(--ink); }
+
+/* Étapes du pipeline */
+.steps { display: grid; gap: 14px; counter-reset: step; }
+.step { display: grid; grid-template-columns: 56px minmax(0, 1fr); gap: 18px; background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 20px; }
+.step::before { counter-increment: step; content: counter(step); font: 600 1.6rem var(--f-display); color: var(--accent); background: var(--accent-soft); border-radius: 6px; height: 56px; display: grid; place-items: center; }
+.step .body { display: grid; gap: 10px; min-width: 0; }
+.step dl { display: grid; grid-template-columns: max-content minmax(0, 1fr); gap: 6px 14px; margin: 0; font-size: 0.94rem; }
+.step dt { font: 500 0.72rem var(--f-mono); letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); padding-top: 3px; }
+.step dd { margin: 0; }
+@media (max-width: 560px) { .step { grid-template-columns: 1fr; } .step::before { width: 44px; height: 44px; font-size: 1.2rem; } .step dl { grid-template-columns: 1fr; } }
+
+/* Onglets d'architecture */
+.tabs { display: flex; flex-wrap: wrap; gap: 6px; }
+.tabs button { font: 500 0.88rem var(--f-body); padding: 7px 12px; border: 1px solid var(--line); background: var(--surface); color: var(--ink); border-radius: 4px; cursor: pointer; }
+.tabs button[aria-selected="true"] { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
+.tabs button:focus-visible, .copy:focus-visible, a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.diagram { background: #fff; border: 1px solid var(--line); border-radius: 8px; padding: 10px; overflow-x: auto; }
+.diagram img { min-width: 760px; }
+
+/* Tableaux */
+.scroll { overflow-x: auto; background: var(--surface); border: 1px solid var(--line); border-radius: 8px; }
+table { border-collapse: collapse; width: 100%; font-size: 0.92rem; }
+th, td { padding: 10px 14px; text-align: left; border-bottom: 1px solid var(--line); vertical-align: top; }
+th { font-weight: 500; font-size: 0.8rem; color: var(--muted); white-space: nowrap; }
+td.num, th.num { text-align: right; font-family: var(--f-mono); font-variant-numeric: tabular-nums; white-space: nowrap; }
+tr:last-child td { border-bottom: 0; }
+.up { color: var(--good); font-weight: 600; }
+.pill { font: 500 0.72rem var(--f-mono); padding: 2px 8px; border-radius: 999px; white-space: nowrap; }
+.pill.ok { background: var(--good-soft); color: var(--good); }
+.pill.warn { background: var(--warn-soft); color: var(--warn); }
+.pill.bad { background: var(--bad-soft); color: var(--bad); }
+
+/* Boucle LLMOps */
+.loop { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; }
+.loop .card { border-top: 3px solid var(--accent); }
+.loop .card:nth-child(2) { border-top-color: var(--bad); }
+.loop .card:nth-child(3) { border-top-color: var(--warn); }
+.loop .card:nth-child(4) { border-top-color: var(--good); }
+
+/* Journal de démarche */
+.journal { display: grid; gap: 0; border-left: 2px solid var(--line); margin-left: 8px; }
+.entry { position: relative; padding: 0 0 22px 26px; display: grid; gap: 4px; }
+.entry::before { content: ""; position: absolute; left: -7px; top: 6px; width: 12px; height: 12px; border-radius: 50%; background: var(--surface); border: 2px solid var(--accent); }
+.entry.fix::before { border-color: var(--warn); }
+.entry .tag { font: 500 0.72rem var(--f-mono); color: var(--muted); letter-spacing: 0.05em; text-transform: uppercase; }
+
+/* Code */
+.code { position: relative; background: var(--code-bg); color: var(--code-ink); border-radius: 8px; min-width: 0; }
+.code pre { margin: 0; padding: 16px 18px; overflow-x: auto; font: 0.85rem/1.6 var(--f-mono); }
+.code pre .c { color: #8a96b3; }
+.copy { position: absolute; top: 8px; right: 8px; font: 500 0.75rem var(--f-mono); background: rgba(255,255,255,0.08); color: var(--code-ink); border: 1px solid rgba(255,255,255,0.18); border-radius: 4px; padding: 3px 8px; cursor: pointer; }
+.k8s-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 16px; align-items: start; }
+.callout { border: 1px solid var(--line); border-left: 4px solid var(--warn); background: var(--surface); border-radius: 6px; padding: 14px 16px; display: grid; gap: 6px; }
+.callout.ok { border-left-color: var(--good); }
+
+/* Glossaire */
+dl.gloss { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 12px; margin: 0; }
+dl.gloss div { background: var(--surface); border: 1px solid var(--line); border-radius: 6px; padding: 14px 16px; }
+dl.gloss dt { font: 600 1rem var(--f-display); }
+dl.gloss dd { margin: 4px 0 0; color: var(--muted); font-size: 0.94rem; }
+
+footer { margin-top: 72px; padding-block: 32px; border-top: 1px solid var(--line); color: var(--muted); font-size: 0.9rem; }
+footer .wrap { display: flex; flex-wrap: wrap; gap: 8px 24px; justify-content: space-between; }
+
+.diagram img { min-width: 900px; }
+.fig2 { display:grid; grid-template-columns: repeat(auto-fit, minmax(320px,1fr)); gap:18px; }
+</style>
+</head>
+<body>
+
+<nav class="top" aria-label="Sommaire">
+  <div class="wrap">
+    <a class="brand" href="#top">LyonFlow</a>
+    <a class="l" href="#video">Vidéo</a>
+    <a class="l" href="#probleme">Besoin</a>
+    <a class="l" href="#captures">Captures</a>
+    <a class="l" href="#fonctionnement">Fonctionnement</a>
+    <a class="l" href="#architecture">Architecture</a>
+    <a class="l" href="#mesures">Mesures</a>
+    <a class="l" href="#demarche">Démarche</a>
+    <a class="l" href="#kubernetes">Kubernetes</a>
+    <a class="l" href="#limites">Limites</a>
+    <a class="gh" href="https://github.com/PDUCLOS/lyonflowfull">GitHub</a>
+  </div>
+</nav>
+
+<header class="hero" id="top">
+  <div class="wrap">
+    <span class="eyebrow">MLOps de production · Mobilité urbaine · Métropole de Lyon</span>
+    <h1>La mobilité lyonnaise <em>prédite à une heure</em>.</h1>
+    <p class="lead">LyonFlow collecte neuf flux open data (boucles de comptage, bus TCL, Vélo'v, météo, chantiers…) toutes les 5 minutes. Il les raffine en couches Bronze → Silver → Gold dans PostgreSQL, prédit la vitesse du trafic et la disponibilité Vélo'v à H+1h avec XGBoost, puis restitue le tout dans une application pensée pour trois publics : l'usager, l'opérateur TCL et l'élu.</p>
+    <div class="kpis" role="list">
+      <div class="kpi" role="listitem"><b>27</b><span>DAGs Airflow inventoriés dans le code</span></div>
+      <div class="kpi" role="listitem"><b>650</b><span>tests pytest verts, 0 échec (après 2 correctifs)</span></div>
+      <div class="kpi" role="listitem"><b>5,4 ms</b><span>prédiction médiane, 3 quantiles (jeu synthétique)</span></div>
+      <div class="kpi" role="listitem"><b>0,24</b><span>PSI pour un décalage d'un demi écart-type</span></div>
+      <div class="kpi" role="listitem"><b>2</b><span>overlays Kubernetes rendus par kustomize</span></div>
+    </div>
+    <div class="shot"><img src="screenshots/streamlit-accueil.png" alt="Accueil du dashboard Streamlit LyonFlow : trois cartes de persona Usager, Pro TCL et Élu" width="1440" height="900"></div>
+    <div class="cta">
+      <a class="btn primary" href="#mesures">Voir les mesures</a>
+      <a class="btn ghost" href="https://github.com/PDUCLOS/lyonflowfull">Voir le code</a>
+      <a class="btn ghost" href="https://github.com/PDUCLOS/lyonflowfull/blob/feat/vitrine-lyonflow/docs/PORTFOLIO.md">Fiche détaillée</a>
+    </div>
+  </div>
+</header>
+
+<section id="video">
+  <div class="wrap">
+    <span class="eyebrow">En 1 min 45</span>
+    <h2>Le projet en vidéo</h2>
+    <video controls preload="metadata" poster="video/poster.png" style="width:100%;border-radius:8px;border:1px solid var(--line);background:#0d1a14">
+      <source src="video/lyonflow-promo.mp4" type="video/mp4">
+      Votre navigateur ne lit pas la vidéo : <a href="video/lyonflow-promo.mp4">la télécharger</a>.
+    </video>
+    <p class="muted">Narration synthétique (voix Windows), captures et schémas réels. Généré par <code>scripts/vitrine/promo_video.py</code>.</p>
+  </div>
+</section>
+
+<section id="probleme">
+  <div class="wrap">
+    <span class="eyebrow">Le besoin</span>
+    <h2>Des données publiques abondantes, mais personne ne les croise</h2>
+    <div class="duo">
+      <div class="card"><h3>Ce que publie la Métropole</h3><ul>
+        <li>Vitesses mesurées par les boucles de comptage</li>
+        <li>Positions des bus TCL (SIRI Lite)</li>
+        <li>Stations Vélo'v (GBFS), météo, qualité de l'air, chantiers</li></ul></div>
+      <div class="card"><h3>Les questions sans réponse</h3><ul>
+        <li><b>Usager</b> : voiture, bus ou vélo, maintenant ?</li>
+        <li><b>Opérateur TCL</b> : où le réseau décroche-t-il ?</li>
+        <li><b>Élu</b> : ce retard de bus est-il opérationnel, ou faut-il une voie dédiée ?</li></ul></div>
+      <div class="card"><h3>Ce que fait LyonFlow</h3><ul>
+        <li>Collecte et historise chaque flux, sans le modifier</li>
+        <li>Prédit vitesse et Vélo'v à H+1h, avec intervalle P10–P90</li>
+        <li>Croise retard bus et congestion (<code>gold.mv_bus_traffic_spatial</code>, jointure à 100 m)</li></ul></div>
+    </div>
+  </div>
+</section>
+
+<section id="captures">
+  <div class="wrap">
+    <span class="eyebrow">Captures réelles · 27/10/2026</span>
+    <h2>L'application lancée sur la machine de test</h2>
+    <p class="lead">Ces captures viennent du code du dépôt, lancé localement (Ryzen 9 3900X, Windows 11, Python 3.12). La base PostgreSQL de production n'est pas accessible depuis ce poste : les pages affichent donc honnêtement « DB non joignable » plutôt que des données inventées. Le projet a une règle « zéro donnée simulée ».</p>
+    <div class="fig2">
+      <figure><img src="screenshots/streamlit-statut-service.png" alt="Page Statut du service : quatre voyants Données, Modèle, Service, Alertes en état Indéterminé" width="1440" height="1100" loading="lazy">
+        <figcaption><b>Statut du service, après correctif.</b> Sans base, la page affichait une trace Python. Désormais, chaque voyant passe en « Indéterminé ».</figcaption></figure>
+      <figure><img src="screenshots/streamlit-notre-modele.png" alt="Page Notre modèle : explication pédagogique de la prédiction à une heure" width="1440" height="900" loading="lazy">
+        <figcaption><b>Notre modèle.</b> La page usager explique en clair ce que voit le modèle et quand il se trompe.</figcaption></figure>
+      <figure><img src="screenshots/api-swagger.png" alt="Documentation Swagger de l'API LyonFlow : routes health, models, predict, recommend, itinerary, bottlenecks, rgpd, auth" width="1440" height="1300" loading="lazy">
+        <figcaption><b>API FastAPI.</b> 9 routes. Les routes de prédiction sont protégées par <code>X-API-Key</code>, <code>/health</code> reste publique.</figcaption></figure>
+    </div>
+  </div>
+</section>
+
+<section id="fonctionnement">
+  <div class="wrap">
+    <span class="eyebrow">Pas à pas</span>
+    <h2>Du capteur à la décision, en sept étapes</h2>
+    <div class="steps">
+      <article class="step"><div class="body"><h3>Collecter</h3>
+        <p class="muted">Airflow interroge les sources ouvertes selon leur rythme : toutes les 5 minutes pour le trafic, les bus et les Vélo'v, toutes les 15 minutes pour TomTom, toutes les 6 heures pour la vigilance météo.</p>
+        <dl><dt>Fichier</dt><dd><code>dags/bronze/collect_bronze.py</code></dd><dt>Pourquoi</dt><dd>Une source qui tombe ne bloque pas les autres : chaque collecteur échoue isolément.</dd></dl></div></article>
+      <article class="step"><div class="body"><h3>Bronze : tout garder, brut</h3>
+        <p class="muted">Les réponses JSON sont stockées telles quelles (JSONB), sans transformation.</p>
+        <dl><dt>Pourquoi</dt><dd>On peut toujours rejouer l'historique si une règle de nettoyage change.</dd></dl></div></article>
+      <article class="step"><div class="body"><h3>Silver : nettoyer</h3>
+        <p class="muted">Dédoublonnage (<code>DISTINCT ON</code>), parsing SIRI, reprojection géographique (4326 / 2154), filtrage des capteurs défaillants.</p>
+        <dl><dt>Cadence</dt><dd><code>transform_bronze_to_silver</code>, toutes les 5 min (décalé de 2 min)</dd></dl></div></article>
+      <article class="step"><div class="body"><h3>Gold : préparer pour le ML et le métier</h3>
+        <p class="muted">Features : vitesse courante, retards à 5/10/15 min, moyenne glissante, heure encodée en sinus/cosinus, météo, vacances, jours fériés. Vues matérialisées : goulots, retards par tronçon.</p>
+        <dl><dt>Fichier</dt><dd><code>src/models/xgboost_speed.py</code> (11 features)</dd></dl></div></article>
+      <article class="step"><div class="body"><h3>Prédire</h3>
+        <p class="muted">XGBoost entraîne trois modèles quantiles (P10, P50, P90). La médiane sert de prédiction, P10 et P90 forment l'intervalle de confiance. Entraînement chaque nuit à 03:38, inférence toutes les 15 minutes.</p>
+        <dl><dt>Pourquoi</dt><dd>Un usager comprend « entre 38 et 51 km/h » mieux qu'une valeur unique faussement précise.</dd></dl></div></article>
+      <article class="step"><div class="body"><h3>Surveiller</h3>
+        <p class="muted">Chaque matin à 05:30, un rapport de dérive (PSI) compare les erreurs du modèle aux vitesses TomTom de la veille et le publie dans <code>gold.model_drift_reports</code>, affiché aux personas.</p>
+        <dl><dt>Seuils</dt><dd>&lt; 0,1 stable · 0,1–0,2 modéré · &gt; 0,2 dérive significative</dd></dl></div></article>
+      <article class="step"><div class="body"><h3>Restituer</h3>
+        <p class="muted">FastAPI sert les prédictions. Streamlit les met en scène : 18 pages (16 par persona, plus RGPD et À propos) et un rapport PDF pour les élus.</p></div></article>
+    </div>
+  </div>
+</section>
+
+<section id="architecture">
+  <div class="wrap">
+    <span class="eyebrow">Schémas</span>
+    <h2>Trois vues de l'architecture</h2>
+    <p class="lead">Source unique : <a href="https://github.com/PDUCLOS/lyonflowfull/blob/feat/vitrine-lyonflow/docs/architecture.drawio"><code>docs/architecture.drawio</code></a> (3 pages, à ouvrir dans draw.io), générée par <code>scripts/vitrine/build_drawio.py</code>. Les planifications affichées sont lues dans le code des DAGs.</p>
+    <div class="tabs" id="archTabs" role="tablist">
+      <button role="tab" id="t1" aria-selected="true" data-img="diagrams/architecture-p1.png" data-alt="Vue d'ensemble : sources, ingestion Airflow, Medallion, modèles, restitution">1 · Vue d'ensemble</button>
+      <button role="tab" id="t2" aria-selected="false" data-img="diagrams/architecture-p2.png" data-alt="Cycle MLOps : jeu d'entraînement, entraînement, registre MLflow, inférence, comparaison TomTom, rapport de dérive">2 · Cycle MLOps</button>
+      <button role="tab" id="t3" aria-selected="false" data-img="diagrams/architecture-p3.png" data-alt="Cible Kubernetes : ingress, deployments fastapi et streamlit, statefulset postgres, mlflow, airflow Helm">3 · Cible Kubernetes</button>
+    </div>
+    <div class="diagram" role="tabpanel" aria-labelledby="t1"><img id="archImg" src="diagrams/architecture-p1.png" alt="Vue d'ensemble : sources, ingestion Airflow, Medallion, modèles, restitution" width="2555" height="1202"></div>
+  </div>
+</section>
+
+<section id="mesures">
+  <div class="wrap">
+    <span class="eyebrow">Mesuré le 27/10/2026</span>
+    <h2>Ce qui a été vérifié, et comment</h2>
+    <p class="lead">Les chiffres ci-dessous ont été mesurés sur cette machine, avec des scripts publiés dans <code>scripts/vitrine/</code>. Les résultats bruts sont dans <code>docs/measures/</code>. Ce qui n'a pas pu être mesuré est signalé.</p>
+    <div class="scroll"><table>
+      <thead><tr><th>Mesure</th><th class="num">Résultat</th><th>Méthode</th></tr></thead>
+      <tbody>
+        <tr><td>Suite pytest (configuration du dépôt)</td><td class="num">650 ✓ · 1 ignoré · 0 ✗</td><td>674 tests collectés, 23 d'intégration désélectionnés (exigent la stack), 18 s</td></tr>
+        <tr><td>DAGs Airflow</td><td class="num">27 (+1 legacy)</td><td>Inventaire statique AST (<code>count_dags.py</code>), 1 marqué PAUSED</td></tr>
+        <tr><td>Entraînement 3 quantiles, 50 k lignes</td><td class="num">8,2 s</td><td>Vraie classe <code>XGBoostSpeedModel</code>, <b>jeu synthétique</b></td></tr>
+        <tr><td>Prédiction d'un capteur (P10+P50+P90)</td><td class="num">5,4 ms méd. · 15,3 ms p95</td><td>1 000 appels de <code>predict()</code>, CPU Ryzen 9 3900X</td></tr>
+        <tr><td>Prédiction en lot, 10 000 lignes (P50)</td><td class="num">14,8 ms</td><td>Même modèle</td></tr>
+        <tr><td>Taille du modèle sérialisé</td><td class="num">2,7 Mo</td><td><code>xgb_speed_h60.pkl</code> (3 modèles)</td></tr>
+        <tr><td>PSI : même loi / +0,25 σ / +0,5 σ / +1 σ / variance ×2</td><td class="num">0,001 / 0,063 / 0,238 / 0,949 / 0,479</td><td><code>compute_psi</code>, 20 000 points par échantillon</td></tr>
+        <tr><td><code>GET /health</code> de l'API</td><td class="num">26,9 ms méd.</td><td>TestClient, 200 appels, base absente (inclut l'échec de connexion)</td></tr>
+        <tr><td>Rendu Kubernetes</td><td class="num">dev 1 759 · prod 1 972 lignes</td><td><code>kubectl kustomize</code></td></tr>
+      </tbody>
+    </table></div>
+    <div class="callout"><b>À lire avant de citer la précision</b><p class="muted">Le jeu synthétique sert à mesurer le <em>coût</em> du modèle (temps, taille), pas sa <em>qualité</em> : une MAE sur des données inventées ne voudrait rien dire. Les métriques de précision du projet (MAE 5,8 → 3,2 en séparant trois modèles, benchmark MAE 6,97 / R² 0,71) proviennent du dépôt de travail et du serveur de production. Elles n'ont <b>pas</b> pu être revérifiées ici.</p></div>
+    <div class="code"><button class="copy" type="button">Copier</button><pre><span class="c"># src/monitoring/psi.py — dérive PSI robuste, sans dépendance lourde</span>
+def _safe_psi_term(pct_ref: float, pct_curr: float, eps: float = 1e-6) -> float:
+    if pct_ref &lt; eps and pct_curr &lt; eps:
+        return 0.0
+    if pct_curr &lt; eps:
+        pct_curr = eps
+    if pct_ref &lt; eps:
+        pct_ref = eps
+    return (pct_curr - pct_ref) * np.log(pct_curr / pct_ref)</pre></div>
+  </div>
+</section>
+
+<section id="demarche">
+  <div class="wrap">
+    <span class="eyebrow">Journal</span>
+    <h2>La remise en route, dans l'ordre</h2>
+    <p class="lead">Ce qui a été fait, y compris les surprises.</p>
+    <div class="journal">
+      <div class="entry"><span class="tag">Analyse</span><h3>Quelle version tourne sur la machine ?</h3><p class="muted">Les conteneurs <code>lyonflow-*</code> de Docker Desktop ne viennent pas de ce dépôt. Ils viennent d'un autre projet LyonFlow (prototype ST-GRU-GNN avec Ray et Optuna, 2 DAGs, PostgreSQL 15 sans PostGIS, registre MLflow vide). Ce dépôt-ci (pgRouting, 27 DAGs, MinIO) n'y tourne pas. Toutes les vérifications ont donc été faites sur le code de <code>lyonflowfull</code>, lancé localement.</p></div>
+      <div class="entry"><span class="tag">Tests</span><h3>Suite pytest complète</h3><p class="muted">Premier passage : 649 verts, 1 rouge. Le test lisait un fichier source sans préciser l'encodage : il passe sous Linux ou macOS, échoue sous Windows (cp1252).</p></div>
+      <div class="entry fix"><span class="tag">Correctif · tests</span><h3>Encodage explicite</h3><p class="muted"><code>encoding="utf-8"</code> ajouté dans deux tests (<code>test_real_durations.py</code>, <code>test_audit_sprint22.py</code>). Résultat : 650 / 650.</p></div>
+      <div class="entry"><span class="tag">Mesure</span><h3>Coût du modèle et calibrage du PSI</h3><p class="muted">Sans données de production, la vraie classe de modèle a été mesurée sur un jeu synthétique. Le PSI a été soumis à des décalages connus : il reste « stable » à +0,25 σ et bascule en « dérive significative » à +0,5 σ.</p></div>
+      <div class="entry fix"><span class="tag">Correctif · dashboard</span><h3>La page « Statut du service » plantait</h3><p class="muted">Base injoignable, la page censée dire si le service va bien affichait une trace Python. Les trois autres voyants savaient déjà passer en « Indéterminé ». Le voyant Alertes et le journal des incidents suivent maintenant la même règle.</p></div>
+      <div class="entry"><span class="tag">Vérification</span><h3>Recoupement avec la fiche portfolio</h3><p class="muted">27 DAGs et 7 groupes d'alertes Prometheus : confirmés. 620 tests : il y en a désormais 674. « Réentraînement toutes les 30 min » : inexact, la vitesse est réentraînée chaque nuit (le DAG horaire est en pause depuis juillet) et Vélo'v chaque heure.</p></div>
+      <div class="entry"><span class="tag">Livraison</span><h3>Kubernetes réveillé</h3><p class="muted">La branche <code>kubernetes</code> (juin 2026) ne se construisait plus et visait encore le GNN et Redis, retirés depuis. Elle est réalignée en <code>deploy/k8s</code> et validée par <code>kubectl kustomize</code>.</p></div>
+    </div>
+  </div>
+</section>
+
+<section id="kubernetes">
+  <div class="wrap">
+    <span class="eyebrow">Cible de déploiement</span>
+    <h2>Du VPS unique au cluster</h2>
+    <p class="lead">La production tourne aujourd'hui en Docker Compose sur un seul serveur (déploiement et retour arrière scriptés, sauvegarde nocturne). Pour passer à l'échelle et à la haute disponibilité, <a href="https://github.com/PDUCLOS/lyonflowfull/tree/feat/vitrine-lyonflow/deploy/k8s"><code>deploy/k8s</code></a> fournit une base kustomize et deux overlays.</p>
+    <div class="k8s-grid">
+      <div class="card"><h3>Les pièces</h3><ul>
+        <li><b>StatefulSet postgres</b> : image pgRouting 16-3.5-3.7.3 (PostGIS seul casserait le routage)</li>
+        <li><b>Deployments fastapi / streamlit</b> : HPA, PodDisruptionBudget, sondes de vie</li>
+        <li><b>MLflow 2.12.1</b> : backend Postgres, PVC d'artefacts</li>
+        <li><b>CronJob</b> <code>pg_dump</code> quotidien, 7 copies</li>
+        <li><b>Airflow</b> via le chart Helm officiel, git-sync des DAGs</li>
+        <li><b>Monitoring</b> en composant (ServiceMonitor, règles), activé en prod</li></ul></div>
+      <div class="code"><button class="copy" type="button">Copier</button><pre><span class="c"># Valider le rendu des deux overlays</span>
+kubectl kustomize --load-restrictor LoadRestrictionsNone \
+  deploy/k8s/overlays/dev
+kubectl kustomize --load-restrictor LoadRestrictionsNone \
+  deploy/k8s/overlays/prod
+<span class="c"># --load-restrictor : le schéma deploy/init-db.sql
+# (2 501 lignes) reste la source unique partagée avec Compose</span></pre></div>
+    </div>
+    <div class="callout"><b>Ce qui reste à faire</b><p class="muted">Publier l'image applicative, ajouter MinIO, créer le <code>ClusterIssuer</code> cert-manager, valider les DAGs sous KubernetesExecutor, migrer les données du VPS, puis lancer un <code>apply</code> réel. Aucun pod n'a été démarré dans cette session.</p></div>
+  </div>
+</section>
+
+<section id="limites">
+  <div class="wrap">
+    <span class="eyebrow">Honnêteté</span>
+    <h2>Limites connues</h2>
+    <div class="scroll"><table>
+      <thead><tr><th>Sujet</th><th>État</th></tr></thead>
+      <tbody>
+        <tr><td><span class="pill warn">Non vérifié</span> Précision des modèles en production</td><td>Le serveur et sa base ne sont pas accessibles depuis le poste de test.</td></tr>
+        <tr><td><span class="pill warn">Non vérifié</span> Registre MLflow (6 modèles annoncés)</td><td>Même raison. Le MLflow local appartient à un autre projet et ne contient aucun modèle.</td></tr>
+        <tr><td><span class="pill bad">À corriger</span> <code>/api/v1/recommend</code></td><td>Renvoie encore un exemple codé en dur (marqué <em>Placeholder</em> dans le code). La vraie recommandation vit dans le dashboard.</td></tr>
+        <tr><td><span class="pill bad">À corriger</span> <code>/api/v1/models</code> sans MLflow</td><td>Renvoie des métriques figées (MAE 1,96, R² 0,947) au lieu d'un état « indisponible ».</td></tr>
+        <tr><td><span class="pill warn">Cosmétique</span> Accueil Streamlit</td><td>Une balise <code>&lt;/div&gt;</code> apparaît en texte sous les cartes Pro TCL et Élu.</td></tr>
+        <tr><td><span class="pill warn">Cohérence</span> Numéros de version</td><td>Badge README 0.12.1, <code>/health</code> 0.11.0, OpenAPI 0.6.1.</td></tr>
+        <tr><td><span class="pill">Infra</span> Serveur unique</td><td>Pas de haute disponibilité tant que la cible Kubernetes n'est pas déployée.</td></tr>
+      </tbody>
+    </table></div>
+  </div>
+</section>
+
+<section id="lancer">
+  <div class="wrap">
+    <span class="eyebrow">Reproduire</span>
+    <h2>Rejouer les vérifications</h2>
+    <div class="code"><button class="copy" type="button">Copier</button><pre>git clone -b feat/vitrine-lyonflow https://github.com/PDUCLOS/lyonflowfull.git && cd lyonflowfull
+python -m venv .venv && .venv/bin/pip install -r requirements.txt pytest pytest-cov pytest-asyncio
+.venv/bin/python -m pytest -q                       <span class="c"># 650 verts, 23 intégration désélectionnés</span>
+python scripts/vitrine/count_dags.py                <span class="c"># inventaire des DAGs</span>
+.venv/bin/python scripts/vitrine/measure.py         <span class="c"># coût XGBoost, PSI, /health</span>
+<span class="c"># Stack complète : cp .env.example .env && docker compose up -d  (PostgreSQL + pgRouting, Airflow, MLflow, MinIO…)</span></pre></div>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap">
+    <span>Patrice Duclos · Architecte IA (RNCP 38777) · Analytics Engineer</span>
+    <span><a href="https://github.com/PDUCLOS/lyonflowfull">github.com/PDUCLOS/lyonflowfull</a> · variante <a href="https://github.com/PDUCLOS/databrickslyonflow">Databricks</a></span>
+  </div>
+</footer>
+
+<script>
+const tabs = document.querySelectorAll("#archTabs button");
+const img = document.getElementById("archImg");
+const panel = img.parentElement;
+tabs.forEach(b => b.addEventListener("click", () => {
+  tabs.forEach(t => t.setAttribute("aria-selected", String(t === b)));
+  img.src = b.dataset.img; img.alt = b.dataset.alt; panel.setAttribute("aria-labelledby", b.id);
+}));
+document.querySelectorAll(".copy").forEach(btn => btn.addEventListener("click", () => {
+  const text = btn.nextElementSibling.innerText;
+  const done = () => { btn.textContent = "Copié"; setTimeout(() => (btn.textContent = "Copier"), 1500); };
+  if (navigator.clipboard) navigator.clipboard.writeText(text).then(done).catch(() => select(btn.nextElementSibling));
+  else select(btn.nextElementSibling);
+}));
+function select(el) { const r = document.createRange(); r.selectNodeContents(el); const s = getSelection(); s.removeAllRanges(); s.addRange(r); }
+</script>
+</body>
+</html>

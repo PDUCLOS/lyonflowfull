@@ -1,0 +1,70 @@
+{
+  "date": "2026-10-27 14:53",
+  "machine": "AMD64 Family 23 Model 113 Stepping 0, AuthenticAMD · Windows 11 · Python 3.12.3 · xgboost 3.4.1",
+  "xgboost_speed": {
+    "dataset": "SYNTHETIQUE (cycle journalier + bruit) — pas de donnée réelle disponible hors VPS",
+    "n_rows": 49985,
+    "n_features": 11,
+    "train_3_quantile_models_s": 8.19,
+    "model_pickle_kb": 2679.6,
+    "predict_one_channel_ms": {
+      "median": 5.429,
+      "p95": 15.287,
+      "p99": 46.565,
+      "n": 1000,
+      "note": "appel complet XGBoostSpeedModel.predict : DataFrame 1 ligne + 3 modèles P10/P50/P90"
+    },
+    "batch_10k_rows_p50_ms": 14.78,
+    "example_output": {
+      "predicted_speed_kmh": 44.27,
+      "confidence_low": 38.51,
+      "confidence_high": 50.68,
+      "model_name": "xgb_speed",
+      "model_version": "1.1.0"
+    }
+  },
+  "psi": {
+    "identique (même loi)": {
+      "psi": 0.0007,
+      "status": "stable"
+    },
+    "décalage +0,25 σ": {
+      "psi": 0.0626,
+      "status": "stable"
+    },
+    "décalage +0,5 σ": {
+      "psi": 0.2377,
+      "status": "significant"
+    },
+    "décalage +1 σ": {
+      "psi": 0.9491,
+      "status": "significant"
+    },
+    "variance ×2": {
+      "psi": 0.4794,
+      "status": "significant"
+    },
+    "dataset_drift_2_cols_ms": 13.22,
+    "dataset_drift_summary": {
+      "drift_share": 0.5,
+      "dataset_drift": false,
+      "n_columns_analyzed": 2,
+      "n_columns_drifted": 1
+    }
+  },
+  "api": {
+    "health_status_codes": [
+      200
+    ],
+    "health_body": {
+      "status": "ok",
+      "version": "0.11.0",
+      "db": false,
+      "timestamp": "2026-10-27T14:54:20.896847"
+    },
+    "health_ms_median": 26.87,
+    "health_ms_p95": 55.08,
+    "n": 200,
+    "note": "TestClient in-process, Postgres absent (db=false attendu)"
+  }
+}

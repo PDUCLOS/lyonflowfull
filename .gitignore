@@ -99,7 +99,15 @@ site/
 # docs/ complet (RNCP 38777 : pas versionné, conservable local pour traçabilité)
 # Sorti du tracking git Sprint 23 (2026-07-23) — les .md restent sur disque,
 # ne sont plus poussés sur GitHub. Voir archive/README.md pour l'historique.
-docs/
+docs/*
+# Exception : vitrine publique GitHub Pages (2026-10-27), le reste de docs/ reste local.
+!docs/index.html
+!docs/PORTFOLIO.md
+!docs/architecture.drawio
+!docs/diagrams/
+!docs/screenshots/
+!docs/video/
+!docs/measures/
 
 # Local orchestration plans
 .mavis/
