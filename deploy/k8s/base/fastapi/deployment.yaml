@@ -37,7 +37,9 @@ spec:
             - --port=8000
             - --workers=2
             - --proxy-headers
-            - --forwarded-allow-ips=*
+            # Ne faire confiance à X-Forwarded-For que depuis le réseau des pods
+            # (ingress-nginx) : adapter au pod CIDR du cluster. Jamais « * ».
+            - --forwarded-allow-ips=10.0.0.0/8
           ports:
             - name: http
               containerPort: 8000

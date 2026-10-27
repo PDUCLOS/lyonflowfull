@@ -18,17 +18,12 @@ dags:
     period: 60s
     wait: 60
 
-# Metastore = postgres du namespace lyonflow
+# Metastore = postgres du namespace lyonflow. La chaîne de connexion vient
+# d'un Secret créé hors dépôt (clé `connection`) :
+#   kubectl -n lyonflow create secret generic airflow-metadata #     --from-literal=connection='postgresql://lyonflow:<mdp>@postgres.lyonflow.svc.cluster.local:5432/airflow'
 data:
-  metadataConnection:
-    user: lyonflow
-    pass: "${POSTGRES_PASSWORD}"   # injecté depuis secret
-    host: postgres.lyonflow.svc.cluster.local
-    port: 5432
-    db: airflow
-    sslmode: disable
+  metadataSecretName: airflow-metadata
 
-# Pas de Postgres embedded (on utilise le nôtre)
 postgresql:
   enabled: false
 
@@ -48,19 +43,18 @@ webserver:
       memory: 1.5Gi
   service:
     type: ClusterIP
-  ingress:
-    web:
-      enabled: true
-      ingressClassName: nginx
-      annotations:
-        cert-manager.io/cluster-issuer: letsencrypt-prod
-        nginx.ingress.kubernetes.io/proxy-body-size: "20m"
-      hosts:
-        - name: airflow.lyonflow.fr
-      tls:
-        - hosts:
-            - airflow.lyonflow.fr
-          secretName: airflow-tls
+  # Pas de compte admin par défaut (admin/admin du chart) : créer les
+  # utilisateurs à la main (airflow users create) ou brancher un SSO.
+  defaultUser:
+    enabled: false
+
+# Interface Airflow NON exposée publiquement : accès d'administration par
+#   kubectl -n lyonflow port-forward svc/airflow-webserver 8080:8080
+# Pour l'exposer, activer ingress.web avec SSO (oauth2-proxy) ou
+# nginx.ingress.kubernetes.io/whitelist-source-range.
+ingress:
+  web:
+    enabled: false
 
 # Scheduler — singleton
 scheduler:
@@ -147,7 +141,7 @@ config:
     max_tis_per_query: "16"
 
 # Admin user créé via Job init
-webserverSecretKey: ""  # sera injecté depuis secret
+webserverSecretKeySecretName: airflow-webserver-secret  # Secret hors dépôt, clé webserver-secret-key
 createUserJob:
   useHelmHooks: true
   applyCustomEnv: true

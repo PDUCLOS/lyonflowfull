@@ -40,6 +40,12 @@ alertmanager:
     ingressClassName: nginx
     annotations:
       cert-manager.io/cluster-issuer: letsencrypt-prod
+      # Pas d'authentification native : basic auth obligatoire à l'ingress.
+      # Secret créé hors dépôt : htpasswd -c auth admin && kubectl -n monitoring
+      #   create secret generic monitoring-basic-auth --from-file=auth
+      nginx.ingress.kubernetes.io/auth-type: basic
+      nginx.ingress.kubernetes.io/auth-secret: monitoring-basic-auth
+      nginx.ingress.kubernetes.io/auth-realm: "LyonFlow monitoring"
     hosts:
       - alerts.lyonflow.fr
     tls:
@@ -91,6 +97,12 @@ prometheus:
     ingressClassName: nginx
     annotations:
       cert-manager.io/cluster-issuer: letsencrypt-prod
+      # Pas d'authentification native : basic auth obligatoire à l'ingress.
+      # Secret créé hors dépôt : htpasswd -c auth admin && kubectl -n monitoring
+      #   create secret generic monitoring-basic-auth --from-file=auth
+      nginx.ingress.kubernetes.io/auth-type: basic
+      nginx.ingress.kubernetes.io/auth-secret: monitoring-basic-auth
+      nginx.ingress.kubernetes.io/auth-realm: "LyonFlow monitoring"
     hosts:
       - prom.lyonflow.fr
     tls:

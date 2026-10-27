@@ -63,7 +63,7 @@ Scripts : `scripts/vitrine/measure.py`, `scripts/vitrine/count_dags.py`. Résult
 
 | Mesure | Résultat | Conditions |
 |---|---|---|
-| pytest (addopts du dépôt) | **650 passed, 1 skipped, 23 deselected, 0 failed**, 18,4 s | venv `requirements.txt` + pytest ; 1 skip = PostgreSQL absent |
+| pytest (addopts du dépôt) | **650 passed, 1 skipped, 23 deselected, 0 failed**, 18,4 s ; 653 après ajout de 3 tests de sécurité | venv `requirements.txt` + pytest ; 1 skip = PostgreSQL absent |
 | Entraînement `XGBoostSpeedModel.train_one` (3 modèles quantiles, 200 arbres, prof. 6) | **8,19 s** | 49 985 lignes **synthétiques**, 11 features, CPU |
 | `predict()` d'un capteur (P10 + P50 + P90) | **médiane 5,43 ms · p95 15,29 ms · p99 46,57 ms** | 1 000 appels, DataFrame d'une ligne |
 | Prédiction P50 en lot | **14,78 ms / 10 000 lignes** | même modèle |
@@ -93,6 +93,13 @@ Scripts : `scripts/vitrine/measure.py`, `scripts/vitrine/count_dags.py`. Résult
 3. **`.gitignore`** : `docs/` était entièrement ignoré (choix RNCP Sprint 23). La règle est conservée, avec
    une exception pour les seuls fichiers de la vitrine (`index.html`, `PORTFOLIO.md`, `architecture.drawio`,
    `diagrams/`, `screenshots/`, `video/`, `measures/`).
+
+4. **Sécurité (revue automatique des manifestes)** : sans authentification, l'UI Prometheus/Alertmanager aurait été publique.
+   Le chart Airflow aurait créé un compte `admin/admin` avec une UI publique, et `--forwarded-allow-ips=*` acceptait n'importe quel proxy.
+   Corrigé dans `deploy/k8s` (détail dans `deploy/k8s/README.md`). Dans l'application elle-même,
+   `src/api/middleware/rate_limit.py` prenait la **première** IP de `X-Forwarded-For`, que le client
+   choisit : le rate limit (dont l'anti brute-force du login) était contournable. Il prend maintenant la dernière,
+   ajoutée par nginx. 3 tests ajoutés (`tests/security/test_rate_limit_client_ip.py`) : suite **653 verts**.
 
 Extrait exact du correctif n° 2 :
 

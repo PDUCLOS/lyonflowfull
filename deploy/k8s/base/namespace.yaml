@@ -21,7 +21,7 @@ spec:
     - from:
         - namespaceSelector:
             matchLabels:
-              name: lyonflow
+              kubernetes.io/metadata.name: lyonflow
         - namespaceSelector:
             matchLabels:
-              name: ingress-nginx
+              kubernetes.io/metadata.name: ingress-nginx

@@ -11,6 +11,10 @@ metadata:
     nginx.ingress.kubernetes.io/limit-connections: "50"
     nginx.ingress.kubernetes.io/enable-cors: "false"
     cert-manager.io/cluster-issuer: letsencrypt-prod
+    # /metrics est réservé au scrape Prometheus interne (ServiceMonitor) :
+    # refusé depuis l'extérieur.
+    nginx.ingress.kubernetes.io/server-snippet: |
+      location = /metrics { return 404; }
 spec:
   ingressClassName: nginx
   tls:

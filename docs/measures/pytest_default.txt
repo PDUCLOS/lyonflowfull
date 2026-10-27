@@ -7,7 +7,7 @@
 ........................................................................ [ 77%]
 ........................................................................ [ 88%]
 ........................................................................ [ 99%]
-...                                                                      [100%]
+......                                                                   [100%]
 ============================== warnings summary ===============================
 <frozen importlib._bootstrap>:488
   <frozen importlib._bootstrap>:488: DeprecationWarning: Type google._upb._message.MessageMapContainer uses PyType_Spec with a metaclass that has custom tp_new. This is deprecated and will no longer be allowed in Python 3.14.
@@ -86,5 +86,5 @@ tests/ml/test_mlflow_integration.py::TestEnvironment::test_is_mlflow_available_r
 -- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
 =========================== short test summary info ===========================
 SKIPPED [1] tests\integration\test_infrastructure.py:43: PostgreSQL non disponible — test skipped
-650 passed, 1 skipped, 23 deselected, 19 warnings in 17.46s
+653 passed, 1 skipped, 23 deselected, 19 warnings in 13.00s
 rc=0

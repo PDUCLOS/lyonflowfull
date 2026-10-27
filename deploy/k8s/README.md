@@ -37,8 +37,8 @@ Résultat mesuré le 27/10/2026 (kubectl client Docker Desktop, kustomize intég
 
 | Overlay | Lignes rendues | Objets |
 |---------|---------------:|--------|
-| dev  | 1 759 | 3 Deployment, 1 StatefulSet, 4 Service, 2 HPA, 2 Ingress, 2 PDB, 2 PVC, 1 CronJob, 2 ConfigMap, 1 Secret, Namespace, NetworkPolicy |
-| prod | 1 972 | 4 Deployment (dont postgres-exporter), 1 StatefulSet, 5 Service, 2 HPA, 2 Ingress, 2 PDB, 2 PVC, 1 CronJob, 2 ConfigMap, 3 ServiceMonitor, 1 PrometheusRule, Namespace, NetworkPolicy |
+| dev  | 1 761 | 3 Deployment, 1 StatefulSet, 4 Service, 2 HPA, 2 Ingress, 2 PDB, 2 PVC, 1 CronJob, 2 ConfigMap, 1 Secret, Namespace, NetworkPolicy |
+| prod | 1 974 | 4 Deployment (dont postgres-exporter), 1 StatefulSet, 5 Service, 2 HPA, 2 Ingress, 2 PDB, 2 PVC, 1 CronJob, 2 ConfigMap, 3 ServiceMonitor, 1 PrometheusRule, Namespace, NetworkPolicy |
 
 Seul le **rendu** est validé. Aucun `kubectl apply` n'a été fait (pas de cluster
 disponible sur la machine de test), donc pas de validation côté serveur ni de pods démarrés.
@@ -55,6 +55,18 @@ disponible sur la machine de test), donc pas de validation côté serveur ni de 
 | référence `base/secrets` absente → build en échec | Secret factice en dev, SealedSecret en prod | la base ne rendait pas |
 | monitoring dans la base | `Component`, prod seulement | les CRD du Prometheus Operator ne sont pas présentes en dev |
 | git-sync des DAGs sur la branche `kubernetes` | branche `main` | |
+
+## Durcissement de sécurité (revue du 27/10/2026)
+
+| Point | Mesure |
+|---|---|
+| Prometheus et Alertmanager n'ont pas d'authentification | Ingress protégés par basic auth nginx (Secret `monitoring-basic-auth`, créé hors dépôt). Grafana garde sa propre connexion. |
+| Airflow : compte `admin/admin` du chart et UI publique | `webserver.defaultUser.enabled: false`, aucun Ingress (accès par `kubectl port-forward`), connexion metastore et clé webserver lues dans des Secrets (`airflow-metadata`, `airflow-webserver-secret`) |
+| `--forwarded-allow-ips=*` (IP client falsifiable) | limité à `10.0.0.0/8` (à ajuster au pod CIDR) ; le rate limit de l'API lit désormais la **dernière** entrée de X-Forwarded-For (`src/api/middleware/rate_limit.py`, testé) |
+| NetworkPolicy sur un label `name` posé à la main | sélection par `kubernetes.io/metadata.name` (label posé par Kubernetes) |
+| `/metrics` de l'API exposé par l'Ingress | `location = /metrics { return 404; }` à l'Ingress. Cela exige `allow-snippet-annotations: true` sur ingress-nginx, sinon il faut servir les métriques sur un port interne. |
+
+Restent à faire : des NetworkPolicy par application (Postgres accessible uniquement depuis l'API, le dashboard, MLflow, Airflow et l'exporter).
 
 ## Reste à faire avant une vraie bascule
 
