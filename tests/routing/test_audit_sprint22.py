@@ -109,7 +109,7 @@ def test_usager_uses_real_traffic_for_voiture_speed():
     from pathlib import Path
 
     usager_page = Path(__file__).resolve().parents[2] / "dashboard" / "pages" / "Usager_1_Mon_Trajet.py"
-    with open(usager_page) as f:
+    with open(usager_page, encoding="utf-8") as f:
         src = f.read()
 
     # Doit importer cached_traffic

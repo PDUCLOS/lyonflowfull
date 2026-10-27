@@ -55,7 +55,7 @@ def test_mode_comparison_source_badge_logic():
     from dashboard.components.widgets.usager import mode_comparison
 
     # Vérif que la constante source_badge utilise 'computed'/'estimated'
-    with open(WORKSPACE / "dashboard/components/widgets/usager/mode_comparison.py") as f:
+    with open(WORKSPACE / "dashboard/components/widgets/usager/mode_comparison.py", encoding="utf-8") as f:
         src = f.read()
     assert '"computed"' in src or "'computed'" in src
     assert '"estimated"' in src or "'estimated'" in src
